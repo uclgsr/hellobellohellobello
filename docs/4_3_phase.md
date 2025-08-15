@@ -1,108 +1,68 @@
-Of course. Here is a detailed breakdown of Phase 1 of the implementation plan. This phase focuses on establishing the foundational elements of the project, ensuring that the PC Controller and Android Sensor Node can communicate effectively before any sensor-specific logic is added.
+### Detailed Implementation Plan: Phase 3
 
-### Detailed Implementation Plan: Phase 1
-
-**Objective:** To establish the foundational project structures and implement the core network communication layer that allows the PC Hub and an Android Spoke to discover, connect, and exchange basic information with each other.
+**Objective:** To build the main user interface of the PC Controller and integrate sensors that connect directly to the PC, establishing the Hub as a standalone data collection station. This phase ensures the core PC application is robust and performant before adding the complexity of remote device management.
 
 -----
 
-#### **Task 1.1: Project Scaffolding and Version Control**
+#### **Task 3.1: GUI Development (`GUIManager`)**
 
-* **Description:** Create the initial project structures for both the PC and Android applications and place them under version control.
-* **PC Controller (Hub):**
-    * **Technology:** Python 3, PyQt6 for the GUI framework.[1]
-    * **Action:**
-        1.  Initialize a new Git repository.
-        2.  Set up a Python virtual environment.
-        3.  Create a `requirements.txt` file and add initial dependencies (`PyQt6`, `zeroconf`).
-        4.  Create the initial directory structure:
-            ```
-            /pc_controller/
-            ├── src/
-            │   ├── main.py           # Main application entry point
-            │   ├── gui/              # GUI-related modules
-            │   ├── network/          # Network communication modules
-            │   └── core/             # Core logic (e.g., session management)
-            └── tests/                # Unit tests
-            ```
-* **Android Sensor Node (Spoke):**
-    * **Technology:** Kotlin, Android Studio.
-    * **Action:**
-        1.  Initialize a new Git repository or a new directory within a monorepo.
-        2.  Create a new Android Studio project targeting a modern Android API level.
-        3.  Add necessary permissions to `AndroidManifest.xml` (`INTERNET`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`).
-        4.  Create the initial package structure:
-            ```
-            /com.example.sensorspoke/
-            ├── ui/                   # Activities and Fragments
-            ├── network/              # Network client and service discovery
-            └── service/              # Background services for recording
-            ```
+*   **Description:** Implement the main graphical user interface for the PC Controller application, focusing on session control and live data monitoring.
+*   **Technology:** Python, PyQt6 for the GUI framework, PyQtGraph for plotting.[1]
+*   **Action:**
+    1.  **Main Window and Layout:**
+        *   Create the main application window (`QMainWindow`) with a central tabbed widget (`QTabWidget`).
+        *   Implement the "Dashboard" and "Logs" tabs. The "Playback & Annotation" tab will be scaffolded but its functionality deferred to Phase 5.[1]
+    2.  **Dashboard Implementation:**
+        *   Design a dynamic grid layout that can accommodate widgets for multiple data streams (both local and remote).[1]
+        *   Create a reusable `DeviceWidget` class that will contain the visualization elements for a single data source.
+    3.  **Live Data Visualization:**
+        *   For video streams (from the local webcam in this phase), the `DeviceWidget` will contain a `QLabel` that is updated with new frames (`QImage`/`QPixmap`).[1]
+        *   For GSR data, the `DeviceWidget` will contain a `PlotWidget` from the PyQtGraph library. Implement a data buffer that the plot can read from to display a scrolling, real-time waveform of the GSR signal.[1]
+    4.  **Session Controls:**
+        *   Add "Start Session," "Stop Session," and "Connect Device" buttons to the main toolbar.
+        *   Connect these buttons to placeholder functions in the `SessionManager` and `NetworkController` that will be fully implemented in later phases.
 
 -----
 
-#### **Task 1.2: Communication Protocol Definition (Version 1.0)**
+#### **Task 3.2: High-Integrity Shimmer Integration (`NativeShimmer`)**
 
-* **Description:** Formally define the initial set of JSON messages that will be used for device discovery, connection, and basic control. This ensures both development teams are working from a common specification.
-* **Technology:** JSON for message payloads.[1]
-* **Action:** Create a `PROTOCOL.md` document in the repository that specifies the following message formats:
-    * **Device Advertisement (via Zeroconf):**
-        * Service Type: `_gsr-controller._tcp.local.`
-        * Service Name: e.g., "GSR Spoke - Pixel 7"
-        * Port: The port number the Android Spoke is listening on.
-    * **PC-to-Android Commands:**
-        * **Query Capabilities:**
-          ```json
-          {"id": 1, "command": "query_capabilities"}
-          ```
-    * **Android-to-PC Responses:**
-        * **Acknowledge Connection:**
-          ```json
-          {"ack_id": 0, "status": "connected", "device_id": "Pixel_7"}
-          ```
-        * **Capabilities Data:**
-          ```json
-          {"ack_id": 1, "status": "ok", "capabilities": {"has_thermal": true, "cameras": [...]}}
-          ```
+*   **Description:** Develop the high-performance C++ backend for connecting to a docked Shimmer3 GSR+ sensor via a wired USB connection. This provides the most reliable, low-latency option for ground-truth data collection (FR1).[1]
+*   **Technology:** C++, PyBind11 for Python bindings.[1]
+*   **Action:**
+    1.  **C++ Module (`NativeShimmer`):**
+        *   Create a C++ class that handles the low-level serial port communication (e.g., using the Win32 API on Windows or `termios` on Linux/macOS) to connect to the Shimmer Dock.[1]
+        *   Implement the logic to run the serial read loop in a dedicated C++ background thread, ensuring it operates independently of Python's Global Interpreter Lock (GIL).[1]
+        *   This thread will continuously read the 128 Hz data stream from the sensor, parse the incoming bytes, and convert the raw data into meaningful values (microsiemens).[1]
+    2.  **Data Marshalling:**
+        *   Implement a thread-safe, lock-free queue to pass the parsed and timestamped GSR samples from the C++ thread to the Python main thread.[1] This decouples the high-frequency data capture from the GUI updates, preventing performance issues.
+    3.  **PyBind11 Integration:**
+        *   Use PyBind11 to create a Python wrapper for the `NativeShimmer` class. This will expose methods like `connect(port)`, `start_streaming()`, `stop_streaming()`, and `get_latest_samples()` to the Python application.[1]
 
 -----
 
-#### **Task 1.3: Network Implementation**
+#### **Task 3.3: Local Webcam Integration (`NativeWebcam`)**
 
-* **Description:** Implement the software modules responsible for network discovery and communication on both the Hub and the Spoke.
-* **PC Controller (Hub):**
-    * **`NetworkController` Module:**
-        1.  Implement a `ZeroconfServiceBrowser` class that uses the `zeroconf` library to listen for the defined service type.
-        2.  When a service is discovered, add the device's information (name, IP, port) to a list that will be displayed in the GUI.
-        3.  Implement a `TcpServer` class that runs in a separate `QThread` to listen for incoming connections.[1]
-        4.  When a user initiates a connection, create a `WorkerThread` for that specific device to handle all subsequent message sending and receiving, ensuring the GUI remains responsive.[1]
-* **Android Sensor Node (Spoke):**
-    * **`NetworkClient` Module:**
-        1.  Use Android's `NsdManager` to register and advertise the Zeroconf service when the app starts.[1]
-        2.  Implement a `ForegroundService` to host a `ServerSocket` that listens for an incoming connection from the PC Hub. This ensures the connection remains active even if the app is in the background.
-        3.  Upon connection, the service will manage the `Socket`'s input and output streams, running the read loop in a background thread (e.g., using Kotlin Coroutines).
+*   **Description:** Implement a similar high-performance C++ module to capture video from a webcam connected directly to the PC.
+*   **Technology:** C++, OpenCV, PyBind11, NumPy.[1]
+*   **Action:**
+    1.  **C++ Module (`NativeWebcam`):**
+        *   Create a C++ class that uses OpenCV's `VideoCapture` to open and read frames from a local webcam.[1]
+        *   Run the frame capture loop in its own C++ thread to ensure a stable frame rate.
+    2.  **Zero-Copy Data Sharing:**
+        *   To pass video frames from C++ to Python with maximum efficiency, implement a zero-copy mechanism. The C++ module will expose the raw frame data buffer directly to Python, which can then be wrapped in a NumPy array without needing to copy the underlying memory.[1]
+    3.  **PyBind11 Integration:**
+        *   Expose methods like `start_capture(device_id)` and `get_latest_frame()` to the Python application. The `get_latest_frame()` method will return a NumPy array that can be easily converted to a `QImage` for display in the PyQt6 GUI.[1]
 
 -----
 
-#### **Task 1.4: Initial Handshake and Capabilities Exchange**
+#### **Phase 3 Deliverables and Verification**
 
-* **Description:** Implement the first logical interaction between the two applications to verify the end-to-end communication channel.
-* **Action:**
-    1.  **On the PC Hub:** Once a TCP connection is successfully established, the corresponding `WorkerThread` will immediately send the `query_capabilities` JSON command.
-    2.  **On the Android Spoke:** The `NetworkClient` service will receive and parse the command. It will then gather basic device information (e.g., model name, available cameras using `CameraManager`) and construct the JSON response containing these capabilities.
-    3.  **On the PC Hub:** The `WorkerThread` will receive the capabilities response, parse it, and use a Qt signal to pass the information back to the main thread. The `GUIManager` will then update the UI to reflect the status and capabilities of the newly connected device.
-
------
-
-#### **Phase 1 Deliverables and Verification**
-
-* **Software:**
-    * A runnable PC application that discovers and lists available Android devices on the network.
-    * A runnable Android application that advertises its presence and can accept a connection from the PC.
-* **Documentation:**
-    * A `PROTOCOL.md` file defining the initial JSON message formats.
-    * Initialized Git repositories with the project scaffolding.
-* **Verification Criteria:**
-    * **Successful Discovery:** The PC application's UI correctly displays the names of all Android devices running the Spoke app on the same local network.
-    * **Successful Connection:** The user can select a device from the list on the PC, and a stable TCP/IP connection is established.
-    * **Successful Handshake:** Logs on both the PC and Android device confirm that the `query_capabilities` command and its corresponding response are sent and received correctly. The PC UI updates to show the connected status of the device.
+*   **Software:**
+    *   A functional PC application that can connect to, display, and record live data streams from a locally docked Shimmer GSR+ sensor and a local webcam simultaneously.
+*   **Code:**
+    *   A stable and well-documented C++ extension module (`native_backend`) that can be compiled and imported into the Python application.
+*   **Verification Criteria:**
+    *   **GUI Responsiveness:** The user interface must remain fluid and responsive while both the Shimmer sensor and webcam are streaming data at their full rates.
+    *   **Data Integrity:** The live plot of the GSR data must accurately reflect the 128 Hz signal from the sensor. The live video feed must be smooth and display at the camera's native frame rate.
+    *   **Performance:** The C++ backend must demonstrate minimal latency and timing jitter, as verified by logging the timestamps at both the C++ capture point and the Python consumption point.
+    *   **Recording:** The application must be able to save the data from both local sensors to correctly formatted files on disk when a local recording is started and stopped.

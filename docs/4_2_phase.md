@@ -1,108 +1,79 @@
-Of course. Here is a detailed breakdown of Phase 1 of the implementation plan. This phase focuses on establishing the foundational elements of the project, ensuring that the PC Controller and Android Sensor Node can communicate effectively before any sensor-specific logic is added.
+### Detailed Implementation Plan: Phase 2
 
-### Detailed Implementation Plan: Phase 1
-
-**Objective:** To establish the foundational project structures and implement the core network communication layer that allows the PC Hub and an Android Spoke to discover, connect, and exchange basic information with each other.
+**Objective:** To implement the data capture and local storage logic for each sensor modality within the Android application. The goal of this phase is to create a fully functional, standalone data collection app on the Android device that can be tested and validated locally before integration with the PC Controller.
 
 -----
 
-#### **Task 1.1: Project Scaffolding and Version Control**
+#### **Task 2.1: Implement the Central `RecordingController`**
 
-* **Description:** Create the initial project structures for both the PC and Android applications and place them under version control.
-* **PC Controller (Hub):**
-    * **Technology:** Python 3, PyQt6 for the GUI framework.[1]
-    * **Action:**
-        1.  Initialize a new Git repository.
-        2.  Set up a Python virtual environment.
-        3.  Create a `requirements.txt` file and add initial dependencies (`PyQt6`, `zeroconf`).
-        4.  Create the initial directory structure:
-            ```
-            /pc_controller/
-            ├── src/
-            │   ├── main.py           # Main application entry point
-            │   ├── gui/              # GUI-related modules
-            │   ├── network/          # Network communication modules
-            │   └── core/             # Core logic (e.g., session management)
-            └── tests/                # Unit tests
-            ```
-* **Android Sensor Node (Spoke):**
-    * **Technology:** Kotlin, Android Studio.
-    * **Action:**
-        1.  Initialize a new Git repository or a new directory within a monorepo.
-        2.  Create a new Android Studio project targeting a modern Android API level.
-        3.  Add necessary permissions to `AndroidManifest.xml` (`INTERNET`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`).
-        4.  Create the initial package structure:
-            ```
-            /com.example.sensorspoke/
-            ├── ui/                   # Activities and Fragments
-            ├── network/              # Network client and service discovery
-            └── service/              # Background services for recording
-            ```
+*   **Description:** Develop the core orchestrator class within the Android app. This controller will manage the state of the recording session and coordinate all individual sensor modules.
+*   **Technology:** Kotlin, Android Architecture Components (ViewModel, LiveData).
+*   **Action:**
+    1.  Create a `RecordingController` class, likely managed by a ViewModel to survive configuration changes.
+    2.  Define the recording states (e.g., `IDLE`, `PREPARING`, `RECORDING`, `STOPPING`).
+    3.  Implement the main methods:
+        *   `startSession(sessionId: String)`: Creates a session-specific directory on the device's external storage. It then iterates through all registered sensor modules and calls their `startRecording` methods, passing the appropriate file paths.
+        *   `stopSession()`: Calls the `stopRecording` method on all active sensor modules and finalizes the session.
+    4.  Create a simple UI in the main `Activity` with "Start Recording" and "Stop Recording" buttons that trigger these methods for local testing.
 
 -----
 
-#### **Task 1.2: Communication Protocol Definition (Version 1.0)**
+#### **Task 2.2: RGB Camera Module (`RgbCameraRecorder`)**
 
-* **Description:** Formally define the initial set of JSON messages that will be used for device discovery, connection, and basic control. This ensures both development teams are working from a common specification.
-* **Technology:** JSON for message payloads.[1]
-* **Action:** Create a `PROTOCOL.md` document in the repository that specifies the following message formats:
-    * **Device Advertisement (via Zeroconf):**
-        * Service Type: `_gsr-controller._tcp.local.`
-        * Service Name: e.g., "GSR Spoke - Pixel 7"
-        * Port: The port number the Android Spoke is listening on.
-    * **PC-to-Android Commands:**
-        * **Query Capabilities:**
-          ```json
-          {"id": 1, "command": "query_capabilities"}
-          ```
-    * **Android-to-PC Responses:**
-        * **Acknowledge Connection:**
-          ```json
-          {"ack_id": 0, "status": "connected", "device_id": "Pixel_7"}
-          ```
-        * **Capabilities Data:**
-          ```json
-          {"ack_id": 1, "status": "ok", "capabilities": {"has_thermal": true, "cameras": [...]}}
-          ```
+*   **Description:** Implement the module for capturing both standard video and high-resolution still images from the device's camera.
+*   **Technology:** CameraX Jetpack library.[1]
+*   **Action:**
+    1.  Create a `RgbCameraRecorder` class that encapsulates all CameraX logic.
+    2.  In the `startRecording` method, configure and bind two simultaneous use cases to the camera lifecycle:
+        *   **`VideoCapture`:** Configure this to record video at the required resolution (e.g., 1080p) and frame rate (30 FPS).[1] The output will be an MP4 file saved directly to the session directory.[1]
+        *   **`ImageCapture`:** Configure this to capture high-resolution still images. Implement a loop on a background thread that calls `takePicture` at approximately 30 FPS. Each captured image should be saved as a JPEG file with a high-precision nanosecond timestamp in its filename (e.g., `frame_1660562000123456789.jpg`).[1]
+    3.  The `stopRecording` method will stop both the video recording and the image capture loop.
 
 -----
 
-#### **Task 1.3: Network Implementation**
+#### **Task 2.3: Thermal Camera Module (`ThermalCameraRecorder`)**
 
-* **Description:** Implement the software modules responsible for network discovery and communication on both the Hub and the Spoke.
-* **PC Controller (Hub):**
-    * **`NetworkController` Module:**
-        1.  Implement a `ZeroconfServiceBrowser` class that uses the `zeroconf` library to listen for the defined service type.
-        2.  When a service is discovered, add the device's information (name, IP, port) to a list that will be displayed in the GUI.
-        3.  Implement a `TcpServer` class that runs in a separate `QThread` to listen for incoming connections.[1]
-        4.  When a user initiates a connection, create a `WorkerThread` for that specific device to handle all subsequent message sending and receiving, ensuring the GUI remains responsive.[1]
-* **Android Sensor Node (Spoke):**
-    * **`NetworkClient` Module:**
-        1.  Use Android's `NsdManager` to register and advertise the Zeroconf service when the app starts.[1]
-        2.  Implement a `ForegroundService` to host a `ServerSocket` that listens for an incoming connection from the PC Hub. This ensures the connection remains active even if the app is in the background.
-        3.  Upon connection, the service will manage the `Socket`'s input and output streams, running the read loop in a background thread (e.g., using Kotlin Coroutines).
-
------
-
-#### **Task 1.4: Initial Handshake and Capabilities Exchange**
-
-* **Description:** Implement the first logical interaction between the two applications to verify the end-to-end communication channel.
-* **Action:**
-    1.  **On the PC Hub:** Once a TCP connection is successfully established, the corresponding `WorkerThread` will immediately send the `query_capabilities` JSON command.
-    2.  **On the Android Spoke:** The `NetworkClient` service will receive and parse the command. It will then gather basic device information (e.g., model name, available cameras using `CameraManager`) and construct the JSON response containing these capabilities.
-    3.  **On the PC Hub:** The `WorkerThread` will receive the capabilities response, parse it, and use a Qt signal to pass the information back to the main thread. The `GUIManager` will then update the UI to reflect the status and capabilities of the newly connected device.
+*   **Description:** Integrate the Topdon TC001 thermal camera and implement the logic to capture and save its radiometric data.
+*   **Technology:** Open-source `UVCCamera` library for USB Video Class device support.[1]
+*   **Action:**
+    1.  Create a `ThermalCameraRecorder` class.
+    2.  Use Android's `UsbManager` to detect when the Topdon camera is connected via USB-C and request the necessary permissions from the user.[1]
+    3.  Integrate the `UVCCamera` library to open the device and start the video stream at its native 256x192 resolution.[1]
+    4.  Implement the `IFrameCallback` interface. Within the callback:
+        *   Retrieve the raw frame data from the provided `ByteBuffer`.
+        *   Parse the buffer to get the temperature value for each of the 49,152 pixels.
+        *   Construct a CSV row consisting of the current nanosecond timestamp followed by all pixel values.
+        *   Append this row to the session's thermal data CSV file.
+    5.  Ensure all file I/O operations happen on a background thread to prevent blocking the camera stream or the main UI thread.[1]
 
 -----
 
-#### **Phase 1 Deliverables and Verification**
+#### **Task 2.4: GSR Sensor Module (`ShimmerRecorder`)**
 
-* **Software:**
-    * A runnable PC application that discovers and lists available Android devices on the network.
-    * A runnable Android application that advertises its presence and can accept a connection from the PC.
-* **Documentation:**
-    * A `PROTOCOL.md` file defining the initial JSON message formats.
-    * Initialized Git repositories with the project scaffolding.
-* **Verification Criteria:**
-    * **Successful Discovery:** The PC application's UI correctly displays the names of all Android devices running the Spoke app on the same local network.
-    * **Successful Connection:** The user can select a device from the list on the PC, and a stable TCP/IP connection is established.
-    * **Successful Handshake:** Logs on both the PC and Android device confirm that the `query_capabilities` command and its corresponding response are sent and received correctly. The PC UI updates to show the connected status of the device.
+*   **Description:** Implement the wireless connection and data streaming from the Shimmer3 GSR+ sensor.
+*   **Technology:** Nordic Semiconductor's Android BLE Library for robust Bluetooth communication.[1]
+*   **Action:**
+    1.  Create a `ShimmerRecorder` class that handles BLE scanning, connection, and data parsing.
+    2.  Implement the logic to send the specific byte commands to the Shimmer's UART-over-BLE characteristic to start (`0x07`) and stop (`0x20`) the 128 Hz data stream.[1]
+    3.  Set up a notification callback for the RX characteristic to receive the incoming 8-byte data packets.[1]
+    4.  In the callback, parse the byte payload to reconstruct the raw 16-bit values for GSR and PPG.[1]
+    5.  Implement the crucial conversion formula to transform the raw GSR value into microsiemens (μS). This logic must correctly account for the sensor's **12-bit ADC resolution** and its multiple gain ranges, as specified in the user guide.[2, 1]
+    6.  For each sample, capture a nanosecond timestamp and write the timestamp, the converted GSR value, and the raw PPG value as a new row in the session's GSR data CSV file.[1]
+
+-----
+
+#### **Phase 2 Deliverables and Verification**
+
+*   **Software:**
+    *   A functional Android application that can operate in a standalone mode. The UI will provide basic controls to initiate and stop a recording session for all connected sensors.
+*   **Data Output:**
+    *   Upon completing a local test recording, the device's storage will contain a uniquely named session folder. This folder will house the following data files, all correctly formatted:
+        *   An MP4 video file from the RGB camera.
+        *   A subdirectory containing a sequence of timestamped JPEG images.
+        *   A CSV file containing timestamped thermal data.
+        *   A CSV file containing timestamped GSR and PPG data.
+*   **Verification Criteria:**
+    *   **Functionality:** The app can reliably start and stop recordings from all three sensor modalities simultaneously using the local UI controls.
+    *   **Performance:** The application remains stable and responsive during recording, with no crashes or significant UI lag.
+    *   **Data Integrity:** The output files are correctly formatted and can be opened and inspected on a computer. The data within them should be plausible (e.g., video plays, CSVs contain the expected number of columns, GSR values are within a reasonable range).
+    *   **Timestamping:** All data files use high-precision nanosecond timestamps, providing the basis for the formal synchronization that will be verified in Phase 4.

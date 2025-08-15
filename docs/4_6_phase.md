@@ -1,108 +1,88 @@
-Of course. Here is a detailed breakdown of Phase 1 of the implementation plan. This phase focuses on establishing the foundational elements of the project, ensuring that the PC Controller and Android Sensor Node can communicate effectively before any sensor-specific logic is added.
+### Detailed Implementation Plan: Phase 6
 
-### Detailed Implementation Plan: Phase 1
-
-**Objective:** To establish the foundational project structures and implement the core network communication layer that allows the PC Hub and an Android Spoke to discover, connect, and exchange basic information with each other.
+**Objective:** To rigorously test the completed system against all requirements, create comprehensive documentation for both end-users and developers, and package the applications for deployment.
 
 -----
 
-#### **Task 1.1: Project Scaffolding and Version Control**
+#### **Task 6.1: Comprehensive System Testing**
 
-* **Description:** Create the initial project structures for both the PC and Android applications and place them under version control.
-* **PC Controller (Hub):**
-    * **Technology:** Python 3, PyQt6 for the GUI framework.[1]
-    * **Action:**
-        1.  Initialize a new Git repository.
-        2.  Set up a Python virtual environment.
-        3.  Create a `requirements.txt` file and add initial dependencies (`PyQt6`, `zeroconf`).
-        4.  Create the initial directory structure:
-            ```
-            /pc_controller/
-            ├── src/
-            │   ├── main.py           # Main application entry point
-            │   ├── gui/              # GUI-related modules
-            │   ├── network/          # Network communication modules
-            │   └── core/             # Core logic (e.g., session management)
-            └── tests/                # Unit tests
-            ```
-* **Android Sensor Node (Spoke):**
-    * **Technology:** Kotlin, Android Studio.
-    * **Action:**
-        1.  Initialize a new Git repository or a new directory within a monorepo.
-        2.  Create a new Android Studio project targeting a modern Android API level.
-        3.  Add necessary permissions to `AndroidManifest.xml` (`INTERNET`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`).
-        4.  Create the initial package structure:
-            ```
-            /com.example.sensorspoke/
-            ├── ui/                   # Activities and Fragments
-            ├── network/              # Network client and service discovery
-            └── service/              # Background services for recording
-            ```
+*   **Description:** Conduct a multi-level testing strategy to validate the functionality, performance, and reliability of the entire platform.
+*   **Technology:** `pytest` (Python), `JUnit`/`Robolectric` (Android), manual test scripts.
+*   **Action:**
+    1.  **Unit Testing:**
+        *   **PC Controller:** Write `pytest` tests for critical pure-logic components. Focus on the `SessionManager` (correct metadata generation), data parsers for incoming JSON messages, and the data export logic to ensure HDF5 file integrity.
+        *   **Android Spoke:** Use `JUnit` for logic tests and `Robolectric` for tests requiring the Android framework without an emulator. Validate the `ShimmerRecorder`'s data conversion algorithms and the `FileTransferManager`'s zipping logic.
+    2.  **Integration Testing:**
+        *   Verify the full communication loop between the PC and a single Android device. Script a test that sends every defined command and verifies the expected response and state change on both ends.
+        *   Test the C++ backend integration by running the PC application and ensuring that data from the `NativeShimmer` and `NativeWebcam` modules is streamed correctly to the Python GUI without memory leaks or crashes.[1]
+    3.  **System-Level Validation (Pilot Study):**
+        *   Conduct a full, end-to-end pilot data collection session simulating a real research scenario.
+        *   **Procedure:** Use the PC Controller, at least two Android Spokes, a wired Shimmer sensor, and a wireless Shimmer sensor. Start a session, record for at least 15 minutes, trigger the "Flash Sync" event multiple times, deliberately disconnect and reconnect one Android device's Wi-Fi, stop the session, and wait for the automated data transfer to complete.
+        *   **Verification:**
+            *   **Temporal Accuracy (NFR2):** Analyze the recorded videos and sensor logs. Use the "Flash Sync" events to confirm that the timestamps, once adjusted with the calculated clock offsets, are aligned to within the required <5 ms tolerance.[1]
+            *   **Data Integrity (NFR4):** Check for any data loss. The number of samples in the GSR CSV files should match the expected count (duration in seconds × 128). Video files should not be corrupted.[1]
+            *   **Fault Tolerance (NFR3):** Confirm that the disconnected device continued to record locally and that its data was successfully transferred upon reconnection.[1]
+    4.  **Endurance Testing:**
+        *   Run the system continuously for an 8-hour period with all sensors active to identify potential memory leaks, performance degradation, or long-term stability issues (NFR7).[1]
 
 -----
 
-#### **Task 1.2: Communication Protocol Definition (Version 1.0)**
+#### **Task 6.2: Finalize and Test Calibration Utility (FR9)**
 
-* **Description:** Formally define the initial set of JSON messages that will be used for device discovery, connection, and basic control. This ensures both development teams are working from a common specification.
-* **Technology:** JSON for message payloads.[1]
-* **Action:** Create a `PROTOCOL.md` document in the repository that specifies the following message formats:
-    * **Device Advertisement (via Zeroconf):**
-        * Service Type: `_gsr-controller._tcp.local.`
-        * Service Name: e.g., "GSR Spoke - Pixel 7"
-        * Port: The port number the Android Spoke is listening on.
-    * **PC-to-Android Commands:**
-        * **Query Capabilities:**
-          ```json
-          {"id": 1, "command": "query_capabilities"}
-          ```
-    * **Android-to-PC Responses:**
-        * **Acknowledge Connection:**
-          ```json
-          {"ack_id": 0, "status": "connected", "device_id": "Pixel_7"}
-          ```
-        * **Capabilities Data:**
-          ```json
-          {"ack_id": 1, "status": "ok", "capabilities": {"has_thermal": true, "cameras": [...]}}
-          ```
+*   **Description:** Complete the implementation of the camera calibration tool and verify its accuracy.
+*   **Technology:** OpenCV-Python.
+*   **Action:**
+    1.  **Implement the Calibration Workflow:**
+        *   Develop the UI on the PC Controller that guides the researcher through capturing multiple pairs of RGB and thermal images of a checkerboard pattern from different angles.
+        *   Implement the backend logic that uses OpenCV's `findChessboardCorners` and `calibrateCamera` functions to compute the intrinsic and extrinsic camera parameters.
+    2.  **Save and Apply Calibration:**
+        *   Save the resulting calibration matrices to a file within the session directory.
+        *   In the "Playback & Annotation" tool, add a feature to apply this calibration to undistort the images and overlay the thermal data onto the RGB video, visually confirming the alignment.
 
 -----
 
-#### **Task 1.3: Network Implementation**
+#### **Task 6.3: Create Comprehensive Documentation (NFR6, NFR8)**
 
-* **Description:** Implement the software modules responsible for network discovery and communication on both the Hub and the Spoke.
-* **PC Controller (Hub):**
-    * **`NetworkController` Module:**
-        1.  Implement a `ZeroconfServiceBrowser` class that uses the `zeroconf` library to listen for the defined service type.
-        2.  When a service is discovered, add the device's information (name, IP, port) to a list that will be displayed in the GUI.
-        3.  Implement a `TcpServer` class that runs in a separate `QThread` to listen for incoming connections.[1]
-        4.  When a user initiates a connection, create a `WorkerThread` for that specific device to handle all subsequent message sending and receiving, ensuring the GUI remains responsive.[1]
-* **Android Sensor Node (Spoke):**
-    * **`NetworkClient` Module:**
-        1.  Use Android's `NsdManager` to register and advertise the Zeroconf service when the app starts.[1]
-        2.  Implement a `ForegroundService` to host a `ServerSocket` that listens for an incoming connection from the PC Hub. This ensures the connection remains active even if the app is in the background.
-        3.  Upon connection, the service will manage the `Socket`'s input and output streams, running the read loop in a background thread (e.g., using Kotlin Coroutines).
-
------
-
-#### **Task 1.4: Initial Handshake and Capabilities Exchange**
-
-* **Description:** Implement the first logical interaction between the two applications to verify the end-to-end communication channel.
-* **Action:**
-    1.  **On the PC Hub:** Once a TCP connection is successfully established, the corresponding `WorkerThread` will immediately send the `query_capabilities` JSON command.
-    2.  **On the Android Spoke:** The `NetworkClient` service will receive and parse the command. It will then gather basic device information (e.g., model name, available cameras using `CameraManager`) and construct the JSON response containing these capabilities.
-    3.  **On the PC Hub:** The `WorkerThread` will receive the capabilities response, parse it, and use a Qt signal to pass the information back to the main thread. The `GUIManager` will then update the UI to reflect the status and capabilities of the newly connected device.
+*   **Description:** Produce clear and thorough documentation for both end-users (researchers) and future developers.
+*   **Action:**
+    1.  **User Manual:**
+        *   Write a step-by-step guide covering:
+            *   Installation of the PC application and Android APK.
+            *   Hardware setup (connecting cameras and sensors).
+            *   A complete walkthrough of a data collection session.
+            *   Instructions for using the calibration and playback tools.
+            *   A troubleshooting section for common issues (e.g., network problems, sensor not connecting).
+    2.  **Developer Documentation:**
+        *   Ensure all code is well-commented, particularly the complex modules (network protocol, C++ backend, data parsers).
+        *   Create a `README.md` file in the root of the repository that explains the project's architecture, how to build the code from source, and how to run the tests.
+        *   Finalize the `PROTOCOL.md` document with a complete specification of all JSON commands and message formats.
 
 -----
 
-#### **Phase 1 Deliverables and Verification**
+#### **Task 6.4: Application Packaging and Deployment**
 
-* **Software:**
-    * A runnable PC application that discovers and lists available Android devices on the network.
-    * A runnable Android application that advertises its presence and can accept a connection from the PC.
-* **Documentation:**
-    * A `PROTOCOL.md` file defining the initial JSON message formats.
-    * Initialized Git repositories with the project scaffolding.
-* **Verification Criteria:**
-    * **Successful Discovery:** The PC application's UI correctly displays the names of all Android devices running the Spoke app on the same local network.
-    * **Successful Connection:** The user can select a device from the list on the PC, and a stable TCP/IP connection is established.
-    * **Successful Handshake:** Logs on both the PC and Android device confirm that the `query_capabilities` command and its corresponding response are sent and received correctly. The PC UI updates to show the connected status of the device.
+*   **Description:** Package the PC and Android applications into distributable formats for easy installation.
+*   **Action:**
+    1.  **PC Controller:**
+        *   Use `PyInstaller` or a similar tool to bundle the Python application, all its dependencies, and the compiled C++ backend into a single standalone executable for Windows, macOS, and Linux.
+    2.  **Android Sensor Node:**
+        *   Generate a signed, release-ready APK file from the Android Studio project.
+    3.  **Final Release:**
+        *   Create a final release on the Git repository.
+        *   Upload the packaged PC executables and the Android APK.
+        *   Include the User Manual as a PDF and write clear release notes summarizing the features and any known issues.
+
+-----
+
+#### **Phase 6 Deliverables and Verification**
+
+*   **Software:**
+    *   A final, stable, and packaged version of the PC Controller application for all major operating systems.
+    *   A final, signed APK of the Android Sensor Node application.
+*   **Documentation:**
+    *   A complete User Manual in PDF format.
+    *   Comprehensive developer documentation within the source code repository.
+*   **Verification Criteria:**
+    *   **Test Report:** A summary document showing that all unit, integration, and system-level tests have passed and that all functional and non-functional requirements have been met.
+    *   **Successful Deployment:** The packaged applications can be successfully installed and run on a clean machine (one that was not used for development) without requiring manual dependency installation.
+    *   **Pilot Data Validation:** The data collected during the pilot study is complete, synchronized, and can be successfully loaded and analyzed using the provided export tools.
