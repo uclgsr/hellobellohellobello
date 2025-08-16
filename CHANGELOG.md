@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog and this project adheres to Conventional Commits.
 
 ## [Unreleased]
+- No unreleased changes at this time.
+
+## [1.0.0] - 2025-08-16
 ### Added
 - Phase 4 integration scaffolding (Remote Control, Time Sync, Flash Sync):
   - Protocol: Added JSON commands `start_recording`, `stop_recording`, `time_sync`, and `flash_sync` with line-delimited format; documented in PROTOCOL.md.
@@ -36,13 +39,18 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 - `pc_controller/requirements.txt` includes `pyinstaller` for packaging.
 - Standardized Python test invocation via Gradle task `:pc_controller:pyTest`.
 
-### Notes
-- Robust reconnection logic will be implemented later; current changes enable end-to-end remote start/stop, flash sync, time-sync handshake, and live preview streaming.
-- Playback timeline sync is basic and uses per-frame seek; further optimization and interpolation can be added in Phase 6.
+### Fixed
+- Resolved "No tests found" for Python unit tests by:
+  - Adding a repository-level pytest.ini that sets `testpaths = pc_controller/tests` and `pythonpath = pc_controller/src`.
+  - Ensuring all tests follow pytest discovery conventions (`test_*.py`, `def test_*`).
+  - Providing a Gradle task `:pc_controller:pyTest` that invokes `pytest` from the repository root so that pytest.ini is honored.
+- Added root placeholder Gradle tasks `:classes` and `:testClasses` to satisfy IDE/CI runners that invoke them on the root project.
+
+### Validation
+- System-level Flash Sync verification executed per `docs/Flash_Sync_Validation.md`. Using the computed NTP-like clock offsets, RGB, thermal, and GSR timestamps aligned within the ±5 ms requirement (FR3/NFR2) during pilot sessions.
 
 ### Security
 - No changes beyond existing permissions; Flash Sync uses an on-device overlay only and does not capture personal identifiers.
 
-
-### Fixed
-- Added root placeholder Gradle tasks `:classes` and `:testClasses` to satisfy IDE/CI runners that invoke them on the root project.
+### Notes
+- Robust reconnection logic will be implemented later; current changes enable end-to-end remote start/stop, flash sync, time-sync handshake, live preview streaming, automated data transfer, and export to HDF5.

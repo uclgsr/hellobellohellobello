@@ -1,34 +1,56 @@
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
-.env
-
-# PyQt generated/temporary
-*.pyqt6*
-
-# Native backend build artifacts
-pc_controller/native_backend/build/
-pc_controller/native_backend/*.pyd
-pc_controller/native_backend/*.so
-pc_controller/native_backend/*.dll
-
-# Session data output
-pc_controller_data/
-
-# Android / Gradle
-android_sensor_node/.gradle/
-android_sensor_node/.idea/
-android_sensor_node/build/
-android_sensor_node/app/build/
-local.properties
-*.iml
-
 # OS
 .DS_Store
 Thumbs.db
 
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
 
-# Ignore nested local.properties files across modules
-**/local.properties
+# Gradle
+.gradle/
+**/build/
+**/out/
+
+# Android
+local.properties
+android_sensor_node/local.properties
+**/.cxx/
+*.keystore
+*.jks
+
+# Python
+.venv/
+pc_controller/.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# PyInstaller / Python build outputs
+/dist/
+/build/
+*.spec
+pc_controller/build/
+pc_controller/dist/
+pc_controller/*.spec
+
+# Logs and temp
+*.log
+*.tmp
+*.swp
+*.swo
+
+# LaTeX build artifacts
+docs/latex/*.aux
+docs/latex/*.toc
+docs/latex/*.out
+docs/latex/*.log
