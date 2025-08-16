@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 import logging
 import os
 import time
@@ -28,6 +28,10 @@ from PyQt6.QtWidgets import (
     QToolBar,
     QVBoxLayout,
     QWidget,
+    QFileDialog,
+    QHBoxLayout,
+    QLineEdit,
+    QListWidget,
 )
 
 try:
@@ -36,6 +40,9 @@ except Exception:  # pragma: no cover - import guard for environments without Qt
     pg = None
 
 from network.network_controller import DiscoveredDevice, NetworkController
+from data.data_aggregator import DataAggregator, get_local_ip
+from data.data_loader import DataLoader
+from data.hdf5_exporter import export_session_to_hdf5
 
 # Local device interfaces (Python shim that optionally uses native backends)
 try:
@@ -108,6 +115,15 @@ class DeviceWidget(QWidget):
                 self.view.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
             ))
 
+    def update_qimage(self, qimg: QImage) -> None:
+        if self.kind != "video":
+            return
+        if qimg is None:
+            return
+        self.view.setPixmap(QPixmap.fromImage(qimg).scaled(
+            self.view.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+        ))
+
     def append_gsr_samples(self, ts: np.ndarray, vals: np.ndarray) -> None:
         if self.kind != "gsr" or pg is None or self.view is None:
             return
@@ -151,6 +167,92 @@ class GUIManager(QMainWindow):
         self.logs.setReadOnly(True)
         self.tabs.addTab(self.logs, "Logs")
 
+        # Playback & Annotation tab (Phase 5)
+        self.playback = QWidget(self)
+        self.playback_layout = QVBoxLayout(self.playback)
+        # Controls row
+        self.playback_controls = QHBoxLayout()
+        self.btn_load_session = QPushButton("Load Session", self.playback)
+        self.btn_play = QPushButton("Play", self.playback)
+        self.btn_pause = QPushButton("Pause", self.playback)
+        self.btn_export = QPushButton("Export to HDF5", self.playback)
+        self.btn_export.setEnabled(False)
+        self.playback_controls.addWidget(self.btn_load_session)
+        self.playback_controls.addWidget(self.btn_play)
+        self.playback_controls.addWidget(self.btn_pause)
+        self.playback_controls.addWidget(self.btn_export)
+        self.playback_layout.addLayout(self.playback_controls)
+        # Video area
+        self.video_label = QLabel(self.playback)
+        self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.video_label.setMinimumSize(480, 270)
+        self.playback_layout.addWidget(self.video_label)
+        # Timeline slider
+        self.timeline = QLabel("00:00.000", self.playback)
+        self.slider = None
+        try:
+            from PyQt6.QtWidgets import QSlider
+            self.slider = QSlider(Qt.Orientation.Horizontal, self.playback)
+            self.slider.setRange(0, 0)
+            self.playback_layout.addWidget(self.slider)
+        except Exception:
+            pass
+        # Plot area
+        if pg is not None:
+            self.plot = pg.PlotWidget(self.playback)
+            self.plot.setBackground("w")
+            self.playback_layout.addWidget(self.plot)
+            self.cursor = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color=(255, 0, 0), width=1))
+            self.plot.addItem(self.cursor)
+        else:
+            self.plot = None
+            self.cursor = None
+        # Annotation controls
+        ann_row = QHBoxLayout()
+        self.ann_input = QLineEdit(self.playback)
+        self.ann_input.setPlaceholderText("Annotation text...")
+        self.btn_add_ann = QPushButton("Add Annotation", self.playback)
+        ann_row.addWidget(self.ann_input)
+        ann_row.addWidget(self.btn_add_ann)
+        self.playback_layout.addLayout(ann_row)
+        self.ann_list = QListWidget(self.playback)
+        self.playback_layout.addWidget(self.ann_list)
+        self.tabs.addTab(self.playback, "Playback & Annotation")
+
+        # Wire buttons
+        self.btn_load_session.clicked.connect(self._on_load_session)
+        self.btn_play.clicked.connect(self._on_play)
+        self.btn_pause.clicked.connect(self._on_pause)
+        self.btn_add_ann.clicked.connect(self._on_add_annotation)
+        self.btn_export.clicked.connect(self._on_export_hdf5)
+
+        # Playback state
+        self._play_timer = QTimer(self)
+        self._play_timer.setInterval(33)
+        self._play_timer.timeout.connect(self._on_play_timer)
+        self._loaded_session_dir: Optional[str] = None
+        self._session_csv_data: Dict[str, object] = {}
+        self._plot_curves: Dict[str, object] = {}
+        self._annotations: list[dict] = []
+        self._video_cap = None
+        self._video_fps = 0.0
+        self._video_total_frames = 0
+        self._video_duration_ms = 0
+        self._current_ms = 0
+
+        if self.slider is not None:
+            self.slider.valueChanged.connect(self._on_slider_change)
+
+        # Data Aggregator for file transfers (Phase 5)
+        from data.data_aggregator import DataAggregator  # local import to avoid test import issues
+        self._data_aggregator = DataAggregator(os.path.join(os.getcwd(), "pc_controller_data"))
+        self._data_aggregator.log.connect(self._log)
+        try:
+            self._data_aggregator.progress.connect(lambda dev, done, total: self._log(f"Transfer {dev}: {done}/{total}"))
+            self._data_aggregator.file_received.connect(lambda sess, dev: self._log(f"Files received for {dev} into session {sess}"))
+        except Exception:
+            pass
+
         # Toolbar
         self._setup_toolbar()
 
@@ -173,11 +275,18 @@ class GUIManager(QMainWindow):
         self.gsr_timer.setInterval(50)  # 20 Hz UI updates, data @128 Hz aggregated
         self.gsr_timer.timeout.connect(self._on_gsr_timer)
 
-        # Wire network logs
+        # Wire network logs and preview frames
         self._network.device_discovered.connect(self._on_device_discovered)
         self._network.device_removed.connect(self._on_device_removed)
         self._network.log.connect(self._on_log)
+        try:
+            self._network.preview_frame.connect(self._on_preview_frame)  # type: ignore[attr-defined]
+        except Exception:
+            pass
         self.ui_log.connect(self._on_log)
+
+        # Remote device widgets registry
+        self._remote_widgets: Dict[str, DeviceWidget] = {}
 
         # Start discovery and local streaming by default
         self._network.start()
@@ -205,14 +314,17 @@ class GUIManager(QMainWindow):
 
         self.act_start = QAction("Start Session", self)
         self.act_stop = QAction("Stop Session", self)
+        self.act_flash = QAction("Flash Sync", self)
         self.act_connect = QAction("Connect Device", self)
 
         self.act_start.triggered.connect(self._on_start_session)
         self.act_stop.triggered.connect(self._on_stop_session)
+        self.act_flash.triggered.connect(self._on_flash_sync)
         self.act_connect.triggered.connect(self._on_connect_device)
 
         toolbar.addAction(self.act_start)
         toolbar.addAction(self.act_stop)
+        toolbar.addAction(self.act_flash)
         toolbar.addSeparator()
         toolbar.addAction(self.act_connect)
 
@@ -229,8 +341,14 @@ class GUIManager(QMainWindow):
         if self._recording:
             return
         ts = time.strftime("%Y%m%d_%H%M%S")
+        self._session_id = ts
         self._session_dir = os.path.join(os.getcwd(), "pc_controller_data", ts)
         os.makedirs(self._session_dir, exist_ok=True)
+        # Broadcast start to Android spokes with session_id
+        try:
+            self._network.broadcast_start_recording(self._session_id)
+        except Exception as exc:  # noqa: BLE001
+            self._log(f"Broadcast start failed: {exc}")
         self._open_recorders(self._session_dir)
         self._recording = True
         self._log(f"Session started: {self._session_dir}")
@@ -238,20 +356,62 @@ class GUIManager(QMainWindow):
     def _on_stop_session(self) -> None:
         if not self._recording:
             return
+        # Broadcast stop to Android spokes
+        try:
+            self._network.broadcast_stop_recording()
+        except Exception as exc:  # noqa: BLE001
+            self._log(f"Broadcast stop failed: {exc}")
+        # Close local recorders
         self._close_recorders()
         self._recording = False
         self._log("Session stopped.")
+        # Start file receiver and broadcast transfer_files per Phase 5 FR10
+        try:
+            from data.data_aggregator import get_local_ip  # local import to avoid test-time issues
+            port = self._data_aggregator.start_server(9001)
+            host = get_local_ip()
+            self._network.broadcast_transfer_files(host, port, getattr(self, "_session_id", ""))
+            self._log(f"Initiated file transfer to {host}:{port} for session {getattr(self, '_session_id', '')}")
+        except Exception as exc:  # noqa: BLE001
+            self._log(f"Failed to initiate file transfer: {exc}")
 
     def _on_connect_device(self) -> None:
         self._log("Connect Device action: use the Network tab in a future phase.")
 
+    def _on_flash_sync(self) -> None:
+        try:
+            self._network.broadcast_flash_sync()
+            self._log("Flash Sync broadcast sent.")
+        except Exception as exc:  # noqa: BLE001
+            self._log(f"Flash Sync failed: {exc}")
+
     @pyqtSlot(DiscoveredDevice)
     def _on_device_discovered(self, device: DiscoveredDevice) -> None:
         self._log(f"Discovered: {device.name} @ {device.address}:{device.port}")
+        # Create a remote video widget per device if not exists
+        if device.name not in self._remote_widgets:
+            widget = DeviceWidget("video", f"Remote: {device.name}", self)
+            self._remote_widgets[device.name] = widget
+            self._add_to_grid(widget)
 
     @pyqtSlot(str)
     def _on_device_removed(self, name: str) -> None:
         self._log(f"Removed: {name}")
+
+    @pyqtSlot(str, bytes, int)
+    def _on_preview_frame(self, device_name: str, jpeg_bytes: bytes, ts_ns: int) -> None:
+        try:
+            qimg = QImage.fromData(jpeg_bytes)
+            if qimg is None or qimg.isNull():
+                return
+            widget = self._remote_widgets.get(device_name)
+            if widget is None:
+                widget = DeviceWidget("video", f"Remote: {device_name}", self)
+                self._remote_widgets[device_name] = widget
+                self._add_to_grid(widget)
+            widget.update_qimage(qimg)
+        except Exception as exc:  # noqa: BLE001
+            self._log(f"Preview render error for {device_name}: {exc}")
 
     @pyqtSlot(str)
     def _on_log(self, message: str) -> None:
@@ -352,3 +512,205 @@ class GUIManager(QMainWindow):
             self._video_writer.write(fb)
         except Exception as exc:  # noqa: BLE001
             self._log(f"Video write error: {exc}")
+
+    # ==========================
+    # Playback & Annotation API
+    # ==========================
+    def _on_load_session(self) -> None:
+        try:
+            # Pick a session directory
+            base_dir = os.path.join(os.getcwd(), "pc_controller_data")
+            session_dir = QFileDialog.getExistingDirectory(self, "Select Session Directory", base_dir)
+            if not session_dir:
+                return
+            self._loaded_session_dir = session_dir
+            # Load annotations if present
+            self._load_annotations()
+            # Index files
+            try:
+                loader = DataLoader(session_dir)
+                sess = loader.index_files()
+                # Plot CSVs
+                if pg is not None and self.plot is not None:
+                    self.plot.clear()
+                    self.cursor = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color=(255, 0, 0), width=1))
+                    self.plot.addItem(self.cursor)
+                    self._plot_curves.clear()
+                    # Plot known columns
+                    for rel_name, path in sess.csv_files.items():
+                        df = loader.load_csv(rel_name)
+                        if df.empty:
+                            continue
+                        # time base (seconds relative)
+                        if isinstance(df.index.dtype, type) or df.index.dtype is not None:
+                            t0 = int(df.index.min())
+                            x = (df.index.astype('int64') - t0) / 1e9
+                        else:
+                            # fallback sequential index
+                            x = list(range(len(df)))
+                        # choose first numeric column for plotting
+                        for col in df.columns:
+                            try:
+                                y = df[col].astype(float)
+                            except Exception:
+                                continue
+                            name = f"{rel_name}::{col}"
+                            curve = self.plot.plot(x=list(x), y=list(y), pen=pg.mkPen(width=1))
+                            self._plot_curves[name] = curve
+                            break
+                # Open a video if available
+                vid_path = None
+                if sess.video_files:
+                    # take first video file
+                    vid_path = list(sess.video_files.values())[0]
+                if vid_path is not None:
+                    try:
+                        import cv2
+                        cap = cv2.VideoCapture(vid_path)
+                        if cap is not None and cap.isOpened():
+                            self._video_cap = cap
+                            self._video_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+                            self._video_total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+                            dur_s = (self._video_total_frames / self._video_fps) if self._video_fps > 0 else 0
+                            self._video_duration_ms = int(dur_s * 1000)
+                        else:
+                            self._video_cap = None
+                    except Exception as exc:
+                        self._video_cap = None
+                        self._log(f"OpenCV VideoCapture failed: {exc}")
+                # Set slider range
+                if self.slider is not None:
+                    total_ms = self._video_duration_ms if self._video_duration_ms > 0 else 0
+                    # If no video, estimate from plotted data x range
+                    if total_ms == 0 and pg is not None and self.plot is not None and len(self._plot_curves):
+                        # Assume last added curve x values
+                        try:
+                            items = list(self._plot_curves.values())
+                            data = items[0].getData()
+                            if data and len(data[0]):
+                                total_ms = int(float(data[0][-1]) * 1000)
+                        except Exception:
+                            pass
+                    self.slider.setRange(0, total_ms)
+                    self._current_ms = 0
+                self.btn_export.setEnabled(True)
+                self._log(f"Loaded session: {session_dir}")
+            except Exception as exc:
+                self._log(f"Load session failed: {exc}")
+        except Exception as exc:
+            self._log(f"Load session UI error: {exc}")
+
+    def _on_play(self) -> None:
+        try:
+            self._play_timer.start()
+        except Exception:
+            pass
+
+    def _on_pause(self) -> None:
+        try:
+            self._play_timer.stop()
+        except Exception:
+            pass
+
+    def _on_slider_change(self, value: int) -> None:
+        self._current_ms = int(value)
+        self._update_video_display()
+        self._update_plot_cursor()
+
+    def _on_play_timer(self) -> None:
+        self._current_ms += 33
+        if self.slider is not None and self.slider.maximum() > 0:
+            if self._current_ms > self.slider.maximum():
+                self._current_ms = self.slider.maximum()
+                self._play_timer.stop()
+            self.slider.blockSignals(True)
+            self.slider.setValue(self._current_ms)
+            self.slider.blockSignals(False)
+        self._update_video_display()
+        self._update_plot_cursor()
+
+    def _update_video_display(self) -> None:
+        if self._video_cap is None:
+            return
+        try:
+            import cv2
+            # Seek to current time
+            self._video_cap.set(cv2.CAP_PROP_POS_MSEC, float(self._current_ms))
+            ok, frame = self._video_cap.read()
+            if not ok or frame is None:
+                return
+            # Convert BGR->RGB
+            fb = frame[:, :, ::-1].copy()
+            h, w, ch = fb.shape
+            bytes_per_line = ch * w
+            qimg = QImage(fb.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+            self.video_label.setPixmap(QPixmap.fromImage(qimg).scaled(
+                self.video_label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+            ))
+        except Exception as exc:
+            self._log(f"Video display error: {exc}")
+
+    def _update_plot_cursor(self) -> None:
+        if pg is None or self.plot is None or self.cursor is None:
+            return
+        try:
+            self.cursor.setPos(float(self._current_ms) / 1000.0)
+        except Exception:
+            pass
+
+    def _on_add_annotation(self) -> None:
+        text = self.ann_input.text().strip()
+        if not text or not self._loaded_session_dir:
+            return
+        entry = {"ts_ms": int(self._current_ms), "text": text}
+        self._annotations.append(entry)
+        self.ann_list.addItem(f"{entry['ts_ms']} ms - {entry['text']}")
+        self.ann_input.clear()
+        self._save_annotations()
+
+    def _load_annotations(self) -> None:
+        import json
+        self._annotations = []
+        self.ann_list.clear()
+        if not self._loaded_session_dir:
+            return
+        path = os.path.join(self._loaded_session_dir, "annotations.json")
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        self._annotations = data
+                        for e in data:
+                            self.ann_list.addItem(f"{int(e.get('ts_ms', 0))} ms - {e.get('text', '')}")
+            except Exception:
+                pass
+
+    def _save_annotations(self) -> None:
+        import json
+        if not self._loaded_session_dir:
+            return
+        path = os.path.join(self._loaded_session_dir, "annotations.json")
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(self._annotations, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    def _on_export_hdf5(self) -> None:
+        if not self._loaded_session_dir:
+            self._log("No session loaded")
+            return
+        try:
+            # Choose output file
+            out_path, _ = QFileDialog.getSaveFileName(self, "Save HDF5", os.path.join(self._loaded_session_dir, "export.h5"), "HDF5 Files (*.h5 *.hdf5)")
+            if not out_path:
+                return
+            # Minimal metadata: session dir name
+            meta = {"session_dir": self._loaded_session_dir}
+            # Read annotations
+            ann = {"annotations": self._annotations}
+            export_session_to_hdf5(self._loaded_session_dir, out_path, metadata=meta, annotations=ann)
+            self._log(f"Exported HDF5: {out_path}")
+        except Exception as exc:
+            self._log(f"Export failed: {exc}")

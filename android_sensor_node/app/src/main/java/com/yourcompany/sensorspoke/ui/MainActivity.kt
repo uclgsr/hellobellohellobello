@@ -1,8 +1,16 @@
 package com.yourcompany.sensorspoke.ui
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -15,13 +23,16 @@ import com.yourcompany.sensorspoke.controller.RecordingController
 import com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder
 import com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
 import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
+import com.yourcompany.sensorspoke.service.RecordingService
 import kotlinx.coroutines.launch
+import java.io.File
 
 class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels()
 
     private var controller: RecordingController? = null
+    private var rootLayout: LinearLayout? = null
 
     private val requestCameraPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -32,17 +43,50 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    private val controlReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val action = intent?.action ?: return
+            when (action) {
+                RecordingService.ACTION_START_RECORDING -> {
+                    val sessionId = intent.getStringExtra(RecordingService.EXTRA_SESSION_ID)
+                    lifecycleScope.launch {
+                        try {
+                            ensureController().startSession(sessionId)
+                        } catch (_: Exception) { }
+                    }
+                }
+                RecordingService.ACTION_STOP_RECORDING -> {
+                    lifecycleScope.launch { runCatching { controller?.stopSession() } }
+                }
+                RecordingService.ACTION_FLASH_SYNC -> {
+                    val ts = intent.getLongExtra(RecordingService.EXTRA_FLASH_TS_NS, 0L)
+                    showFlashOverlay()
+                    logFlashEvent(ts)
+                }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Simple UI with Start/Stop buttons
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
+        rootLayout = layout
         val startBtn = Button(this).apply { text = "Start Recording" }
         val stopBtn = Button(this).apply { text = "Stop Recording" }
         layout.addView(startBtn)
         layout.addView(stopBtn)
         setContentView(layout)
+
+        // Ensure background service for NSD + TCP server is running
+        val svcIntent = Intent(this, RecordingService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(svcIntent)
+        } else {
+            startService(svcIntent)
+        }
 
         startBtn.setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -54,6 +98,21 @@ class MainActivity : ComponentActivity() {
             }
         }
         stopBtn.setOnClickListener { stopRecording() }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter().apply {
+            addAction(RecordingService.ACTION_START_RECORDING)
+            addAction(RecordingService.ACTION_STOP_RECORDING)
+            addAction(RecordingService.ACTION_FLASH_SYNC)
+        }
+        registerReceiver(controlReceiver, filter)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        runCatching { unregisterReceiver(controlReceiver) }
     }
 
     private fun ensureController(): RecordingController {
@@ -88,5 +147,27 @@ class MainActivity : ComponentActivity() {
                 Toast.makeText(this@MainActivity, "Failed: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun showFlashOverlay() {
+        val parent = rootLayout ?: return
+        val flash = View(this).apply {
+            setBackgroundColor(Color.WHITE)
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            alpha = 1f
+        }
+        parent.addView(flash)
+        flash.postDelayed({ parent.removeView(flash) }, 150)
+    }
+
+    private fun logFlashEvent(tsNs: Long) {
+        try {
+            val dir = getExternalFilesDir(null) ?: filesDir
+            val f = File(dir, "flash_sync_events.csv")
+            if (!f.exists()) {
+                f.writeText("timestamp_ns\n")
+            }
+            f.appendText("$tsNs\n")
+        } catch (_: Exception) { }
     }
 }

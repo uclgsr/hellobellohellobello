@@ -8,6 +8,9 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/android_sensor_node" />
+            <option value="$PROJECT_DIR$/android_sensor_node/app" />
+            <option value="$PROJECT_DIR$/pc_controller" />
           </set>
         </option>
       </GradleProjectSettings>

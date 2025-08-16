@@ -5,24 +5,44 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 
 ## [Unreleased]
 ### Added
-- Android Sensor Node: Phase 2 local recording functionality (standalone mode)
-  - RecordingController manages per-session directories (unique ID) and orchestrates sensor recorders using coroutines and StateFlow.
-  - RGB: CameraX-based RgbCameraRecorder records 1080p MP4 and saves continuous high-res JPEG frames named by nanosecond timestamp.
-  - Thermal: ThermalCameraRecorder scaffold creates `thermal.csv` with header (Topdon SDK integration point prepared).
-  - GSR: ShimmerRecorder scaffold creates `gsr.csv` with header and includes 12-bit ADC conversion helper for accurate μS calculation (ShimmerAndroidAPI integration point prepared).
-  - Simple Start/Stop UI in MainActivity to trigger recording sessions and request CAMERA permission.
-- Dependencies: Added CameraX libraries for video and image capture.
-- Tests: Added minimal JVM unit test for RecordingController session directory creation and state transitions (using a mock SensorRecorder).
-- PC Controller (Hub): Phase 3 GUI with Dashboard and Logs tabs using PyQt6 and PyQtGraph for live GSR plotting; dynamic grid with video and GSR widgets.
-- PC Controller (Hub): Local device interfaces (ShimmerInterface, WebcamInterface) with native-backend integration and robust Python fallbacks.
-- PC Controller (Hub): Native C++ backend scaffolding via PyBind11 (NativeShimmer + NativeWebcam) with simulated data sources and zero-copy NumPy frames.
-- PC Controller (Hub): Unit tests for local interfaces (fallback behavior) to keep GUI responsive without hardware.
+- Phase 4 integration scaffolding (Remote Control, Time Sync, Flash Sync):
+  - Protocol: Added JSON commands `start_recording`, `stop_recording`, `time_sync`, and `flash_sync` with line-delimited format; documented in PROTOCOL.md.
+  - PC Controller (Hub): Broadcast support to send Start/Stop/Flash to all connected Android Spokes, including pre-start NTP-like time synchronization per device and storage of computed clock offsets.
+  - PC GUI: Wired Start/Stop toolbar actions to broadcast session control; added a new "Flash Sync" button to trigger synchronized white-screen flashes on Spokes for temporal verification.
+  - Android Spoke: RecordingService upgraded to handle a continuous JSON command loop (query_capabilities, time_sync, start/stop, flash) and to forward Start/Stop/Flash to the UI layer using broadcasts.
+  - Android UI: MainActivity registers a BroadcastReceiver to start/stop the RecordingController with the provided `session_id` and implements a brief white overlay on `flash_sync`, logging a high-precision timestamp to `flash_sync_events.csv`.
+- Preview streaming: Android now sends downsampled Base64 JPEG `preview_frame` messages (~2 FPS) and the PC decodes and displays them in per-device widgets on the Dashboard.
+- Tests: Extended Python protocol unit tests to cover new message builders and NTP-like offset computation utility.
+- Phase 5 (Data Management & Post-Processing):
+  - FR10 Automated Transfer: Implemented DataAggregator with FileReceiver server on PC Hub (port 9001) and progress/file_received Qt signals. Added helper get_local_ip().
+  - Protocol: Added `transfer_files` command builder and constants.
+  - Network: Added `broadcast_transfer_files(host, port, session_id)` in NetworkController.
+  - Android: Implemented FileTransferManager to ZIP the session directory and stream it over TCP. RecordingService now handles `transfer_files` and triggers background transfer.
+  - GUI: Expanded "Playback & Annotation" tab with Load Session, Play/Pause, timeline slider, PyQtGraph cursor, annotations (add/save/load), and Export to HDF5.
+  - Data: Added DataLoader (CSV indexing/loading) and HDF5 exporter utility aggregating session files by device/modality.
+  - Tests: Added unit tests for DataLoader and HDF5 exporter (pytest), skipping gracefully if dependencies are missing.
+- Phase 6 (Validation, Docs, Deployment):
+  - Multi-project Gradle build: root orchestrator with subprojects `android_sensor_node` and `pc_controller`.
+  - Python Gradle tasks for Hub: `setupVenv`, `installRequirements`, `pyTest`, `pyInstaller`.
+  - Standardized pytest discovery via repository-level `pytest.ini`.
+  - Camera calibration utility (FR9): JSON save/load helpers and unit tests.
+  - Documentation: Added `docs/User_Manual.md`, `docs/Developer_Guide.md`, and `docs/Flash_Sync_Validation.md`.
+  - Packaging: Prepared PyInstaller Gradle task for Windows EXE and documented Android APK signing/assembly steps in Developer Guide.
 
 ### Changed
-- Refactored SensorRecorder interface to accept a session directory parameter for consistent file output handling.
-
-### Security
-- Manifest updated with required permissions for CAMERA and placeholders for BLE/USB to support upcoming integrations.
+- Documentation: PROTOCOL.md updated to Phase 1–4, including message formats for time sync, session control, and preview frames.
+- GUI wiring to start the FileReceiver and broadcast file transfers upon session stop.
+- Root `build.gradle.kts` now provides `checkAll` and `packageAll` aggregate tasks.
+- `pc_controller/requirements.txt` includes `pyinstaller` for packaging.
+- Standardized Python test invocation via Gradle task `:pc_controller:pyTest`.
 
 ### Notes
-- Integration with Topdon TC001 (topdon-sdk) and ShimmerAndroidAPI will be completed in a subsequent step; current scaffolds keep builds green while establishing file formats and session management.
+- Robust reconnection logic will be implemented later; current changes enable end-to-end remote start/stop, flash sync, time-sync handshake, and live preview streaming.
+- Playback timeline sync is basic and uses per-frame seek; further optimization and interpolation can be added in Phase 6.
+
+### Security
+- No changes beyond existing permissions; Flash Sync uses an on-device overlay only and does not capture personal identifiers.
+
+
+### Fixed
+- Added root placeholder Gradle tasks `:classes` and `:testClasses` to satisfy IDE/CI runners that invoke them on the root project.

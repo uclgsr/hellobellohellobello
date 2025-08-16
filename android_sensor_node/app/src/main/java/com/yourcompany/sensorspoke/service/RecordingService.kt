@@ -10,9 +10,12 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.os.Build
 import android.os.IBinder
+import android.util.Base64
 import androidx.core.app.NotificationCompat
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.network.NetworkClient
+import com.yourcompany.sensorspoke.network.FileTransferManager
+import com.yourcompany.sensorspoke.utils.PreviewBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,6 +28,7 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.Collections
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -36,15 +40,28 @@ import org.json.JSONObject
  */
 class RecordingService : Service() {
 
+    companion object {
+        const val ACTION_START_RECORDING = "com.yourcompany.sensorspoke.ACTION_START_RECORDING"
+        const val ACTION_STOP_RECORDING = "com.yourcompany.sensorspoke.ACTION_STOP_RECORDING"
+        const val ACTION_FLASH_SYNC = "com.yourcompany.sensorspoke.ACTION_FLASH_SYNC"
+        const val EXTRA_SESSION_ID = "session_id"
+        const val EXTRA_FLASH_TS_NS = "flash_ts_ns"
+    }
+
     private val scope = CoroutineScope(Dispatchers.IO + Job())
     private var serverSocket: ServerSocket? = null
     private var serverPort: Int = 0
     private lateinit var networkClient: NetworkClient
+    private val clientWriters = Collections.synchronizedList(mutableListOf<BufferedWriter>())
+    private var previewListener: ((ByteArray, Long) -> Unit)? = null
 
     override fun onCreate() {
         super.onCreate()
         networkClient = NetworkClient(applicationContext)
         startInForeground()
+        // Subscribe to preview frames and forward to connected clients
+        previewListener = { bytes, ts -> broadcastPreviewFrame(bytes, ts) }
+        previewListener?.let { PreviewBus.subscribe(it) }
         scope.launch { startServerAndAdvertise() }
     }
 
@@ -61,6 +78,8 @@ class RecordingService : Service() {
         try {
             serverSocket?.close()
         } catch (_: Exception) {}
+        previewListener?.let { PreviewBus.unsubscribe(it) }
+        previewListener = null
         scope.cancel()
     }
 
@@ -107,26 +126,114 @@ class RecordingService : Service() {
         socket.use { s ->
             val reader = BufferedReader(InputStreamReader(s.getInputStream()))
             val writer = BufferedWriter(OutputStreamWriter(s.getOutputStream()))
+            // Track this client for preview broadcasting
+            clientWriters.add(writer)
             try {
-                val line = reader.readLine() ?: return
-                val obj = JSONObject(line)
-                val command = obj.optString("command")
-                if (command == "query_capabilities") {
-                    val ackId = obj.optInt("id", 1)
-                    val caps = collectCapabilities()
-                    val response = JSONObject()
-                        .put("ack_id", ackId)
-                        .put("status", "ok")
-                        .put("capabilities", caps)
-                    writer.write(response.toString())
-                    writer.write("\n")
-                    writer.flush()
+                while (true) {
+                    val line = reader.readLine() ?: break
+                    val obj = JSONObject(line)
+                    val command = obj.optString("command")
+                    val id = obj.optInt("id", 0)
+                    when (command) {
+                        "query_capabilities" -> {
+                            val caps = collectCapabilities()
+                            val response = JSONObject()
+                                .put("ack_id", id)
+                                .put("status", "ok")
+                                .put("capabilities", caps)
+                            safeWrite(writer, response.toString())
+                        }
+                        "time_sync" -> {
+                            // PC sent t0; record t1 on arrival and reply immediately with t1 and t2
+                            val t1 = System.nanoTime()
+                            val t2 = System.nanoTime()
+                            val response = JSONObject()
+                                .put("ack_id", id)
+                                .put("status", "ok")
+                                .put("t1", t1)
+                                .put("t2", t2)
+                            safeWrite(writer, response.toString())
+                        }
+                        "start_recording" -> {
+                            val sessionId = obj.optString("session_id", "")
+                            // Forward to UI via broadcast
+                            val intent = Intent(ACTION_START_RECORDING)
+                                .putExtra(EXTRA_SESSION_ID, sessionId)
+                            sendBroadcast(intent)
+                            val response = JSONObject().put("ack_id", id).put("status", "ok")
+                            safeWrite(writer, response.toString())
+                        }
+                        "stop_recording" -> {
+                            val intent = Intent(ACTION_STOP_RECORDING)
+                            sendBroadcast(intent)
+                            val response = JSONObject().put("ack_id", id).put("status", "ok")
+                            safeWrite(writer, response.toString())
+                        }
+                        "flash_sync" -> {
+                            val ts = System.nanoTime()
+                            val intent = Intent(ACTION_FLASH_SYNC).putExtra(EXTRA_FLASH_TS_NS, ts)
+                            sendBroadcast(intent)
+                            val response = JSONObject().put("ack_id", id).put("status", "ok").put("ts", ts)
+                            safeWrite(writer, response.toString())
+                        }
+                        "transfer_files" -> {
+                            val host = obj.optString("host", "")
+                            val port = obj.optInt("port", -1)
+                            val sessionId = obj.optString("session_id", "")
+                            if (host.isNotEmpty() && port > 0 && sessionId.isNotEmpty()) {
+                                // Start transfer asynchronously
+                                scope.launch {
+                                    runCatching {
+                                        val ftm = FileTransferManager(applicationContext)
+                                        ftm.transferSession(sessionId, host, port)
+                                    }
+                                }
+                                val response = JSONObject().put("ack_id", id).put("status", "ok")
+                                safeWrite(writer, response.toString())
+                            } else {
+                                val response = JSONObject().put("ack_id", id).put("status", "error").put("message", "invalid parameters")
+                                safeWrite(writer, response.toString())
+                            }
+                        }
+                        else -> {
+                            // ignore unknown commands but acknowledge to keep pipeline moving
+                            val response = JSONObject().put("ack_id", id).put("status", "unknown_command")
+                            safeWrite(writer, response.toString())
+                        }
+                    }
                 }
             } catch (_: Exception) {
-                // swallow errors in Phase 1 prototype
+                // swallow errors but keep service alive
             } finally {
                 try { writer.flush() } catch (_: Exception) {}
+                clientWriters.remove(writer)
             }
+        }
+    }
+
+    private fun safeWrite(writer: BufferedWriter, text: String) {
+        try {
+            synchronized(writer) {
+                writer.write(text)
+                writer.write("\n")
+                writer.flush()
+            }
+        } catch (_: Exception) {
+            // ignore write errors; connection handler will close
+        }
+    }
+
+    private fun broadcastPreviewFrame(bytes: ByteArray, tsNs: Long) {
+        val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        val obj = JSONObject()
+            .put("type", "preview_frame")
+            .put("device_id", Build.MODEL ?: "device")
+            .put("jpeg_base64", b64)
+            .put("ts", tsNs)
+        val text = obj.toString()
+        val snapshot: List<BufferedWriter> = synchronized(clientWriters) { clientWriters.toList() }
+        for (w in snapshot) {
+            safeWrite(w, text)
         }
     }
 

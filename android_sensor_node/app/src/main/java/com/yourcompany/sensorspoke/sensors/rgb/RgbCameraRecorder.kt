@@ -1,6 +1,8 @@
 package com.yourcompany.sensorspoke.sensors.rgb
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Size
 import androidx.camera.core.CameraSelector
@@ -18,6 +20,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
 import com.yourcompany.sensorspoke.utils.TimeManager
+import com.yourcompany.sensorspoke.utils.PreviewBus
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -44,6 +48,7 @@ class RgbCameraRecorder(
     private var recording: Recording? = null
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
     private val scope = CoroutineScope(Dispatchers.IO + Job())
+    private var lastPreviewNs: Long = 0L
 
     override suspend fun start(sessionDir: File) {
         // Ensure directories
@@ -80,7 +85,7 @@ class RgbCameraRecorder(
             .prepareRecording(context, outputOpts)
             .start(ContextCompat.getMainExecutor(context)) { /* events ignored */ }
 
-        // Start still capture loop ~30 FPS
+        // Start still capture loop throttled to ~2 FPS for preview + file archival
         scope.launch {
             while (isActive) {
                 val ts = TimeManager.nowNanos()
@@ -89,13 +94,34 @@ class RgbCameraRecorder(
                 val ic = imageCapture ?: break
                 ic.takePicture(output, executor, object : ImageCapture.OnImageSavedCallback {
                     override fun onError(exception: ImageCaptureException) {
-                        // Swallow errors to keep loop running
+                        // Keep loop running on errors
                     }
                     override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                        // no-op
+                        // Build a downsampled, low-quality JPEG preview and emit
+                        val now = TimeManager.nowNanos()
+                        // throttle to ~2 FPS
+                        if (now - lastPreviewNs >= 500_000_000L) {
+                            lastPreviewNs = now
+                            runCatching {
+                                val bmp = BitmapFactory.decodeFile(outFile.absolutePath) ?: return@runCatching
+                                val w = 320
+                                val h = 240
+                                val scaled = Bitmap.createScaledBitmap(bmp, w, h, true)
+                                val baos = ByteArrayOutputStream()
+                                scaled.compress(Bitmap.CompressFormat.JPEG, 40, baos)
+                                val bytes = baos.toByteArray()
+                                PreviewBus.emit(bytes, now)
+                                try { baos.close() } catch (_: Exception) {}
+                                if (scaled != bmp) {
+                                    bmp.recycle()
+                                }
+                                scaled.recycle()
+                            }
+                        }
                     }
                 })
-                delay(33)
+                // 2 FPS loop (500ms)
+                delay(500)
             }
         }
     }
