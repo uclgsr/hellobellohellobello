@@ -1,0 +1,235 @@
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
+namespace py = pybind11;
+using Clock = std::chrono::steady_clock;
+
+// Simple single-producer single-consumer ring buffer for (t,value)
+class SpscRing {
+public:
+    explicit SpscRing(size_t capacity)
+        : _cap(next_pow2(capacity)), _mask(_cap - 1), _buf(_cap * 2), _head(0), _tail(0) {}
+
+    // Producer push
+    void push(double t, double v) {
+        auto h = _head.load(std::memory_order_relaxed);
+        auto n = h + 1;
+        // overwrite when full to keep latest samples (lock-free drop-oldest)
+        _buf[(h & _mask) * 2 + 0] = t;
+        _buf[(h & _mask) * 2 + 1] = v;
+        _head.store(n, std::memory_order_release);
+        // if producer runs too far ahead, advance tail (drop)
+        auto tcur = _tail.load(std::memory_order_acquire);
+        if (n - tcur > _cap) {
+            _tail.store(n - _cap, std::memory_order_release);
+        }
+    }
+
+    // Consumer pop all into vector of pairs
+    std::vector<std::pair<double,double>> pop_all() {
+        std::vector<std::pair<double,double>> out;
+        auto tcur = _tail.load(std::memory_order_relaxed);
+        auto h = _head.load(std::memory_order_acquire);
+        size_t count = static_cast<size_t>(h - tcur);
+        out.reserve(count);
+        for (size_t i = 0; i < count; ++i) {
+            size_t idx = ((tcur + i) & _mask) * 2;
+            out.emplace_back(_buf[idx + 0], _buf[idx + 1]);
+        }
+        _tail.store(h, std::memory_order_release);
+        return out;
+    }
+
+private:
+    static size_t next_pow2(size_t v) {
+        size_t p = 1;
+        while (p < v) p <<= 1;
+        return p;
+    }
+    const size_t _cap;
+    const size_t _mask;
+    std::vector<double> _buf; // interleaved t,v
+    std::atomic<size_t> _head;
+    std::atomic<size_t> _tail;
+};
+
+class NativeShimmer {
+public:
+    NativeShimmer() : _running(false), _queue(4096) {}
+
+    void connect(const std::string& port) {
+        // Placeholder: in a complete implementation, open serial port using Shimmer C-API.
+        _port = port;
+    }
+
+    void start_streaming() {
+        if (_running.load()) return;
+        _running.store(true);
+        _thread = std::thread([this]() { this->run_loop(); });
+    }
+
+    void stop_streaming() {
+        _running.store(false);
+        if (_thread.joinable()) _thread.join();
+    }
+
+    std::vector<std::pair<double,double>> get_latest_samples() {
+        return _queue.pop_all();
+    }
+
+private:
+    void run_loop() {
+        // Simulated 128 Hz sine + noise centered around 10uS
+        constexpr double rate = 128.0;
+        constexpr double dt = 1.0 / rate;
+        double phase = 0.0;
+        const double two_pi = 6.283185307179586;
+        auto t_next = Clock::now();
+        while (_running.load()) {
+            auto now = Clock::now();
+            if (now < t_next) {
+                std::this_thread::sleep_for(std::chrono::microseconds(100));
+                continue;
+            }
+            double t = std::chrono::duration<double>(now.time_since_epoch()).count();
+            double val = 10.0 + 2.0 * std::sin(phase);
+            // simple LCG noise
+            _rng = 1664525u * _rng + 1013904223u;
+            double noise = (static_cast<int>(_rng >> 16) / 32768.0 - 1.0) * 0.05;
+            val += noise;
+            _queue.push(t, val);
+            phase += two_pi * 1.2 * dt;
+            if (phase > two_pi) phase -= two_pi;
+            t_next += std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(dt));
+        }
+    }
+
+    std::string _port;
+    std::atomic<bool> _running;
+    std::thread _thread;
+    SpscRing _queue;
+    uint32_t _rng{0x12345678};
+};
+
+class NativeWebcam {
+public:
+    explicit NativeWebcam(int device_id = 0)
+        : _device_id(device_id), _running(false) {
+        _width = 640; _height = 480;
+        _buffer.resize(static_cast<size_t>(_width * _height * 3));
+    }
+
+    void start_capture() {
+        if (_running.load()) return;
+        _running.store(true);
+        _thread = std::thread([this]() { this->run_loop(); });
+    }
+
+    void stop_capture() {
+        _running.store(false);
+        if (_thread.joinable()) _thread.join();
+    }
+
+    py::array get_latest_frame() {
+        std::lock_guard<std::mutex> g(_mtx);
+        // Expose zero-copy numpy array referencing internal buffer
+        auto shape = std::vector<ssize_t>{_height, _width, 3};
+        auto strides = std::vector<ssize_t>{static_cast<ssize_t>(_width * 3), 3, 1};
+        return py::array(py::buffer_info(
+            _buffer.data(),                       // ptr
+            sizeof(uint8_t),                      // itemsize
+            py::format_descriptor<uint8_t>::format(),
+            3, shape, strides
+        ));
+    }
+
+private:
+    void run_loop() {
+#ifdef USE_OPENCV
+        // Optional OpenCV path
+        cv::VideoCapture cap(_device_id);
+        if (cap.isOpened()) {
+            cap.set(cv::CAP_PROP_FRAME_WIDTH, _width);
+            cap.set(cv::CAP_PROP_FRAME_HEIGHT, _height);
+            cv::Mat frame;
+            while (_running.load()) {
+                if (cap.read(frame)) {
+                    if (frame.empty()) continue;
+                    if (frame.cols != _width || frame.rows != _height) {
+                        cv::resize(frame, frame, cv::Size(_width, _height));
+                    }
+                    std::lock_guard<std::mutex> g(_mtx);
+                    if (frame.channels() == 3) {
+                        std::memcpy(_buffer.data(), frame.data, _buffer.size());
+                    } else {
+                        // convert to BGR
+                        cv::Mat bgr;
+                        cv::cvtColor(frame, bgr, cv::COLOR_GRAY2BGR);
+                        std::memcpy(_buffer.data(), bgr.data, _buffer.size());
+                    }
+                } else {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                }
+            }
+            cap.release();
+            return;
+        }
+#endif
+        // Synthetic moving gradient if OpenCV not available or camera failed
+        auto t0 = Clock::now();
+        while (_running.load()) {
+            auto dt = std::chrono::duration<double>(Clock::now() - t0).count();
+            int shift = static_cast<int>(std::fmod(dt * 60.0, static_cast<double>(_width)));
+            std::lock_guard<std::mutex> g(_mtx);
+            for (int y = 0; y < _height; ++y) {
+                for (int x = 0; x < _width; ++x) {
+                    int xx = (x + shift) % _width;
+                    uint8_t v = static_cast<uint8_t>((xx * 255) / _width);
+                    size_t idx = static_cast<size_t>((y * _width + x) * 3);
+                    _buffer[idx + 0] = v;
+                    _buffer[idx + 1] = static_cast<uint8_t>(255 - v);
+                    _buffer[idx + 2] = v;
+                }
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        }
+    }
+
+    int _device_id;
+    std::atomic<bool> _running;
+    std::thread _thread;
+    std::mutex _mtx;
+    int _width{640};
+    int _height{480};
+    std::vector<uint8_t> _buffer;
+};
+
+PYBIND11_MODULE(native_backend, m) {
+    m.doc() = "Native backend for PC Controller: Shimmer and Webcam";
+
+    py::class_<NativeShimmer>(m, "NativeShimmer")
+        .def(py::init<>())
+        .def("connect", &NativeShimmer::connect, py::arg("port"))
+        .def("start_streaming", &NativeShimmer::start_streaming)
+        .def("stop_streaming", &NativeShimmer::stop_streaming)
+        .def("get_latest_samples", &NativeShimmer::get_latest_samples,
+             "Pop latest (timestamp_seconds, gsr_microsiemens) samples");
+
+    py::class_<NativeWebcam>(m, "NativeWebcam")
+        .def(py::init<int>(), py::arg("device_id") = 0)
+        .def("start_capture", &NativeWebcam::start_capture)
+        .def("stop_capture", &NativeWebcam::stop_capture)
+        .def("get_latest_frame", &NativeWebcam::get_latest_frame,
+             "Return last BGR frame as a NumPy array without copying");
+}

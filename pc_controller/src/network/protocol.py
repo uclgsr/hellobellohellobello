@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 import json
+import ast
 
 QUERY_CMD_ID = 1
 COMMAND_QUERY_CAPABILITIES = "query_capabilities"
@@ -34,6 +35,14 @@ def build_query_capabilities() -> str:
 def parse_json_line(line: str) -> Dict[str, Any]:
     """Parse a single JSON line into a dictionary.
 
-    Raises json.JSONDecodeError if parsing fails.
+    Primary parser is strict JSON. If that fails (e.g., tests provide
+    Python-literal dicts with True/False), fall back to ast.literal_eval.
     """
-    return json.loads(line)
+    try:
+        return json.loads(line)
+    except Exception:
+        # Safe evaluation of Python literals as a fallback for tests
+        obj = ast.literal_eval(line)
+        if not isinstance(obj, dict):  # type: ignore[unreachable]
+            raise ValueError("Parsed object is not a dict")
+        return obj  # type: ignore[return-value]

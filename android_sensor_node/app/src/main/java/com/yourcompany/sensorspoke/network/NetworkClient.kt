@@ -13,12 +13,14 @@ class NetworkClient(private val context: Context) {
     private var nsdManager: NsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
     private var registrationListener: NsdManager.RegistrationListener? = null
 
-    fun register(serviceType: String, serviceName: String, port: Int) {
-        val info = NsdServiceInfo().apply {
-            serviceType = if (serviceType.endsWith(".local.")) serviceType else "$serviceType.local."
-            this.serviceName = serviceName
-            this.port = port
-        }
+    fun register(type: String, name: String, port: Int) {
+        val sanitizedType = if (type.endsWith(".local.")) type else "$type.local."
+        val info = NsdServiceInfo()
+        // Use explicit Java-style setters to avoid Kotlin property mutability issues
+        info.setServiceType(sanitizedType)
+        info.setServiceName(name)
+        info.setPort(port)
+
         val listener = object : NsdManager.RegistrationListener {
             override fun onServiceRegistered(NsdServiceInfo: NsdServiceInfo) {
                 // Service registered

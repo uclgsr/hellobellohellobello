@@ -1,17 +1,113 @@
 package com.yourcompany.sensorspoke.sensors.rgb
 
+import android.content.Context
+import android.net.Uri
+import android.util.Size
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
+import androidx.camera.video.FallbackStrategy
+import androidx.camera.video.Recorder
+import androidx.camera.video.Recording
+import androidx.camera.video.VideoCapture
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
+import com.yourcompany.sensorspoke.utils.TimeManager
+import java.io.File
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
- * Placeholder implementation for Phase 1. In later phases, this will use
- * CameraX to record MP4 and capture high-res JPEG frames.
+ * RgbCameraRecorder using CameraX to record a 1080p MP4 and capture high-res JPEGs with
+ * nanosecond timestamps in filenames.
  */
-class RgbCameraRecorder : SensorRecorder {
-    override suspend fun start() {
-        // TODO(Phase2): Initialize CameraX and start recording/streaming
+class RgbCameraRecorder(
+    private val context: Context,
+    private val lifecycleOwner: LifecycleOwner,
+    private val cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+) : SensorRecorder {
+
+    private var cameraProvider: ProcessCameraProvider? = null
+    private var imageCapture: ImageCapture? = null
+    private var videoCapture: VideoCapture<Recorder>? = null
+    private var recording: Recording? = null
+    private val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val scope = CoroutineScope(Dispatchers.IO + Job())
+
+    override suspend fun start(sessionDir: File) {
+        // Ensure directories
+        val rgbDir = sessionDir
+        if (!rgbDir.exists()) rgbDir.mkdirs()
+        val framesDir = File(rgbDir, "frames").apply { mkdirs() }
+        val videoFile = File(rgbDir, "video.mp4")
+
+        val provider = ProcessCameraProvider.getInstance(context).get()
+        cameraProvider = provider
+
+        // Build Recorder for 1080p
+        val recorder = Recorder.Builder()
+            .setQualitySelector(QualitySelector.from(Quality.FHD, FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)))
+            .build()
+        videoCapture = VideoCapture.withOutput(recorder)
+
+        // ImageCapture for high-res stills
+        imageCapture = ImageCapture.Builder()
+            .setTargetRotation(0)
+            .setJpegQuality(95)
+            .build()
+
+        // Unbind then bind
+        provider.unbindAll()
+        val useCases = mutableListOf<androidx.camera.core.UseCase>()
+        imageCapture?.let { useCases.add(it) }
+        videoCapture?.let { useCases.add(it) }
+        provider.bindToLifecycle(lifecycleOwner, cameraSelector, *useCases.toTypedArray())
+
+        // Start video recording
+        val outputOpts = FileOutputOptions.Builder(videoFile).build()
+        recording = videoCapture!!.output
+            .prepareRecording(context, outputOpts)
+            .start(ContextCompat.getMainExecutor(context)) { /* events ignored */ }
+
+        // Start still capture loop ~30 FPS
+        scope.launch {
+            while (isActive) {
+                val ts = TimeManager.nowNanos()
+                val outFile = File(framesDir, "frame_${ts}.jpg")
+                val output = ImageCapture.OutputFileOptions.Builder(outFile).build()
+                val ic = imageCapture ?: break
+                ic.takePicture(output, executor, object : ImageCapture.OnImageSavedCallback {
+                    override fun onError(exception: ImageCaptureException) {
+                        // Swallow errors to keep loop running
+                    }
+                    override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                        // no-op
+                    }
+                })
+                delay(33)
+            }
+        }
     }
 
     override suspend fun stop() {
-        // TODO(Phase2): Stop CameraX and release resources
+        try { recording?.stop() } catch (_: Exception) {}
+        recording = null
+        try { cameraProvider?.unbindAll() } catch (_: Exception) {}
+        cameraProvider = null
+        imageCapture = null
+        videoCapture = null
+        scope.coroutineContext[Job]?.cancel()
+        executor.shutdown()
     }
 }

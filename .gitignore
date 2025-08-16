@@ -8,6 +8,15 @@ venv/
 # PyQt generated/temporary
 *.pyqt6*
 
+# Native backend build artifacts
+pc_controller/native_backend/build/
+pc_controller/native_backend/*.pyd
+pc_controller/native_backend/*.so
+pc_controller/native_backend/*.dll
+
+# Session data output
+pc_controller_data/
+
 # Android / Gradle
 android_sensor_node/.gradle/
 android_sensor_node/.idea/
@@ -19,3 +28,7 @@ local.properties
 # OS
 .DS_Store
 Thumbs.db
+
+
+# Ignore nested local.properties files across modules
+**/local.properties
