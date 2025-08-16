@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Sensor Spoke</string>
+    <string name="notification_channel_name">Recording Service</string>
+    <string name="notification_channel_desc">Foreground service for network communication</string>
+    <string name="notification_title">Sensor Spoke Running</string>
+    <string name="notification_text">Advertising service and awaiting PC connection</string>
+</resources>
