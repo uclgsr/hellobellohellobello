@@ -265,6 +265,10 @@ class NetworkController(QObject):
         self._stream_workers: Dict[str, PreviewStreamWorker] = {}
         self._clock_offsets_ns: Dict[str, int] = {}
 
+    def get_clock_offsets(self) -> Dict[str, int]:
+        """Return a copy of the last known per-device clock offsets (ns)."""
+        return dict(self._clock_offsets_ns)
+
     def start(self) -> None:
         if self._browser is None:
             self._browser = ServiceBrowser(self._zeroconf, SERVICE_TYPE, self._listener)

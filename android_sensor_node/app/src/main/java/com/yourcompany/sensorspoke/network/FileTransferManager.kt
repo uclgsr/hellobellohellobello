@@ -48,6 +48,25 @@ class FileTransferManager(private val context: Context) {
             // Now stream ZIP content
             ZipOutputStream(out).use { zos ->
                 zipDirectoryContents(dir, dir, zos)
+                // Also include flash_sync_events.csv if present at app files root
+                try {
+                    val root = context.getExternalFilesDir(null) ?: context.filesDir
+                    val flash = File(root, "flash_sync_events.csv")
+                    if (flash.exists() && flash.isFile) {
+                        val entry = ZipEntry("flash_sync_events.csv")
+                        entry.time = flash.lastModified()
+                        zos.putNextEntry(entry)
+                        FileInputStream(flash).use { fis ->
+                            val buf = ByteArray(64 * 1024)
+                            while (true) {
+                                val n = fis.read(buf)
+                                if (n <= 0) break
+                                zos.write(buf, 0, n)
+                            }
+                        }
+                        zos.closeEntry()
+                    }
+                } catch (_: Exception) { /* best-effort inclusion */ }
                 zos.finish()
                 zos.flush()
             }

@@ -7,6 +7,10 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 ### Added
 - Root README.md with build, test, packaging, and architecture overview.
 - Root .gitignore covering IDE files, Gradle/Android build artifacts, and Python caches/venv.
+- System-level validation summary: docs/System_Validation_Report.md.
+
+### Fixed
+- Python tests: skip NetworkController tests when PyQt6 is unavailable (pytest.importorskip) to ensure CI runners without GUI deps still pass.
 
 ## [1.0.0] - 2025-08-16
 ### Added

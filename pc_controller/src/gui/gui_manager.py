@@ -14,6 +14,7 @@ from typing import Optional, Tuple, Dict
 import logging
 import os
 import time
+import json
 
 import numpy as np
 from PyQt6.QtCore import QObject, QTimer, Qt, pyqtSignal, pyqtSlot
@@ -365,6 +366,32 @@ class GUIManager(QMainWindow):
         self._close_recorders()
         self._recording = False
         self._log("Session stopped.")
+        # Write session metadata with clock offsets for validation
+        try:
+            sess_id = getattr(self, "_session_id", "")
+            sess_dir = getattr(self, "_session_dir", None)
+            if sess_dir:
+                meta_path = os.path.join(sess_dir, "session_metadata.json")
+                offsets = {}
+                try:
+                    offsets = self._network.get_clock_offsets()  # type: ignore[attr-defined]
+                except Exception:
+                    offsets = {}
+                meta = {
+                    "version": 1,
+                    "session_id": sess_id,
+                    "created_at_ns": int(time.time_ns()),
+                    "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    "clock_offsets_ns": offsets,
+                }
+                try:
+                    with open(meta_path, "w", encoding="utf-8") as f:
+                        json.dump(meta, f, indent=2)
+                    self._log(f"Wrote session metadata: {meta_path}")
+                except Exception as exc:
+                    self._log(f"Failed to write session metadata: {exc}")
+        except Exception as exc:
+            self._log(f"Session metadata error: {exc}")
         # Start file receiver and broadcast transfer_files per Phase 5 FR10
         try:
             from data.data_aggregator import get_local_ip  # local import to avoid test-time issues
