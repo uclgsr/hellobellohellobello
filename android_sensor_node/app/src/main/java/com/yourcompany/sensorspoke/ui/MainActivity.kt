@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -80,12 +81,14 @@ class MainActivity : ComponentActivity() {
         layout.addView(stopBtn)
         setContentView(layout)
 
-        // Ensure background service for NSD + TCP server is running
-        val svcIntent = Intent(this, RecordingService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(svcIntent)
-        } else {
-            startService(svcIntent)
+        // Ensure background service for NSD + TCP server is running (skip during unit tests)
+        if (!isRunningUnderTest()) {
+            val svcIntent = Intent(this, RecordingService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(svcIntent)
+            } else {
+                startService(svcIntent)
+            }
         }
 
         startBtn.setOnClickListener {
@@ -100,6 +103,7 @@ class MainActivity : ComponentActivity() {
         stopBtn.setOnClickListener { stopRecording() }
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onStart() {
         super.onStart()
         val filter = IntentFilter().apply {
@@ -107,7 +111,12 @@ class MainActivity : ComponentActivity() {
             addAction(RecordingService.ACTION_STOP_RECORDING)
             addAction(RecordingService.ACTION_FLASH_SYNC)
         }
-        registerReceiver(controlReceiver, filter)
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(controlReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(controlReceiver, filter)
+        }
     }
 
     override fun onStop() {
@@ -169,5 +178,14 @@ class MainActivity : ComponentActivity() {
             }
             f.appendText("$tsNs\n")
         } catch (_: Exception) { }
+    }
+
+    private fun isRunningUnderTest(): Boolean {
+        return try {
+            Class.forName("org.robolectric.Robolectric")
+            true
+        } catch (_: Throwable) {
+            false
+        }
     }
 }

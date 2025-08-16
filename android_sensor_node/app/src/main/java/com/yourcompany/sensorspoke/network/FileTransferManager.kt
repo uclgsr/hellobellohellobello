@@ -4,12 +4,12 @@ import android.content.Context
 import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.OutputStream
 import java.net.Socket
+import java.net.InetSocketAddress
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -18,11 +18,18 @@ import java.util.zip.ZipOutputStream
  * - Compress a session directory into a ZIP stream
  * - Transfer it to the PC Hub's FileReceiver over TCP
  */
-class FileTransferManager(private val context: Context) {
+class FileTransferManager(
+    private val context: Context? = null,
+    private val sessionsRootOverride: File? = null,
+    private val flashEventsFileOverride: File? = null,
+    private val deviceIdOverride: String? = null
+) {
 
     private fun sessionRoot(): File {
-        val base: File? = context.getExternalFilesDir(null)
-        return File(base ?: context.filesDir, "sessions")
+        sessionsRootOverride?.let { return it }
+        val ctx = context ?: throw IllegalStateException("sessionsRootOverride is required when context is null")
+        val base: File? = ctx.getExternalFilesDir(null)
+        return File(base ?: ctx.filesDir, "sessions")
     }
 
     private fun sessionDir(sessionId: String): File = File(sessionRoot(), sessionId)
@@ -35,24 +42,35 @@ class FileTransferManager(private val context: Context) {
         val dir = sessionDir(sessionId)
         if (!dir.exists() || !dir.isDirectory) throw IllegalArgumentException("Session not found: ${dir.absolutePath}")
 
-        val deviceId = (Build.MODEL ?: "device").replace(" ", "_")
-        Socket(host, port).use { socket ->
-            val out = BufferedOutputStream(socket.getOutputStream())
-            // Send header JSON line first
-            val header = JSONObject()
-                .put("session_id", sessionId)
-                .put("device_id", deviceId)
-                .put("filename", "${deviceId}_data.zip")
-            out.write((header.toString() + "\n").toByteArray(Charsets.UTF_8))
+        val deviceId = deviceIdOverride ?: (Build.MODEL ?: "device").replace(" ", "_")
+        val socket = Socket()
+        // 2s connect timeout; 5s read timeout to avoid hangs in tests/CI
+        socket.connect(InetSocketAddress(host, port), 2000)
+        socket.tcpNoDelay = true
+        socket.soTimeout = 5000
+        socket.use {
+            val out = BufferedOutputStream(it.getOutputStream())
+            // Send header JSON line first (avoid org.json for JVM tests)
+            val headerLine = "{" +
+                    "\"session_id\":\"$sessionId\"," +
+                    "\"device_id\":\"$deviceId\"," +
+                    "\"filename\":\"${deviceId}_data.zip\"" +
+                    "}"
+            out.write((headerLine + "\n").toByteArray(Charsets.UTF_8))
             out.flush()
             // Now stream ZIP content
             ZipOutputStream(out).use { zos ->
                 zipDirectoryContents(dir, dir, zos)
-                // Also include flash_sync_events.csv if present at app files root
+                // Also include flash_sync_events.csv if present (override or derived)
                 try {
-                    val root = context.getExternalFilesDir(null) ?: context.filesDir
-                    val flash = File(root, "flash_sync_events.csv")
-                    if (flash.exists() && flash.isFile) {
+                    val flash: File? = flashEventsFileOverride ?: run {
+                        val ctx = context
+                        if (ctx != null) {
+                            val root = ctx.getExternalFilesDir(null) ?: ctx.filesDir
+                            File(root, "flash_sync_events.csv")
+                        } else null
+                    }
+                    if (flash != null && flash.exists() && flash.isFile) {
                         val entry = ZipEntry("flash_sync_events.csv")
                         entry.time = flash.lastModified()
                         zos.putNextEntry(entry)

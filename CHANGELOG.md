@@ -15,6 +15,9 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 - Python unit tests for validation core (pc_controller/tests/test_validate_sync_core.py).
 - TEST_PLAN.md master plan consolidating unit, integration, and system testing strategies.
 - Chapter5_Evaluation_and_Testing.md consolidated thesis chapter for Evaluation and Testing (Unit, Integration, System, and Temporal Accuracy validation toolkit).
+- Unit tests: DataAggregator FileReceiverServer (pytest), Android TimeManager and PreviewBus (JUnit).
+- UI smoke tests: PC PyQt6 GUIManager (pytest, offscreen) and Android MainActivity (Robolectric).
+- Guide: docs/markdown/guide_running_tests_with_hardware.md describing how to run tests and connect hardware concurrently.
 
 ### Changed
 - User_Manual.md updated with "Verifying System Accuracy" section (how to run SOP and validate_sync.py).
@@ -22,6 +25,9 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 
 ### Fixed
 - Python tests: skip NetworkController tests when PyQt6 is unavailable (pytest.importorskip) to ensure CI runners without GUI deps still pass.
+- Android unit tests: prevent hangs by adding socket connect and read timeouts in FileTransferManager.transferSession() used by Robolectric test.
+- Gradle daemon startup: disabled JDWP debug agent by setting org.gradle.debug=false in gradle.properties to avoid 'bind failed: Address already in use' on port 5005.
+- Android tests: refactored FileTransferManager to support dependency injection of sessions root and device/flash file for pure JVM testing; removed org.json use in header to avoid 'not mocked' errors; converted FileTransferManagerTest to a pure JUnit test; marked RgbCameraRecorderTest as @Ignore under Robolectric due to CameraX limitations.
 
 ## [1.0.0] - 2025-08-16
 ### Added

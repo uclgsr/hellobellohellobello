@@ -83,3 +83,14 @@ To run from sources (development):
 ## License
 
 This repository is intended for research use. See headers in source files and institutional policies for licensing details.
+
+
+## Running Tests with Hardware Connected
+
+See docs/markdown/guide_running_tests_with_hardware.md for a step-by-step two-terminal workflow on Windows, covering prerequisites, hardware setup, ports, and safe co-execution of tests and integration sessions.
+
+Quick commands:
+- pytest -q
+- .\gradlew.bat --no-daemon :android_sensor_node:app:testDebugUnitTest
+- python pc_controller\src\main.py
+- python scripts\validate_sync.py --session-id <SESSION_ID>

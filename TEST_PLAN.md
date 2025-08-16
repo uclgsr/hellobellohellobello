@@ -46,6 +46,10 @@ Focus Areas and Existing Tests:
   - Module: pc_controller/src/tools/validate_sync_core.py
   - Tests: pc_controller/tests/test_validate_sync_core.py
   - Verifies peak detection, video time-origin estimation, and PASS/FAIL computation.
+- File Receiver and Data Aggregation (FileReceiverServer)
+  - Module: pc_controller/src/data/data_aggregator.py
+  - Tests: pc_controller/tests/test_data_aggregator.py (skips if PyQt6 unavailable)
+  - Verifies JSON header parsing and end-to-end receive/unpack of ZIP into session/device directory via a live TCP connection.
 
 How to Run (from repository root):
 - Windows PowerShell
@@ -172,3 +176,9 @@ Outputs: Console report including per-event spread (ms), overall max spread (ms)
 - Python unit tests: pytest -q
 - Android unit tests: gradlew.bat :android_sensor_node:test
 - Validation: python scripts\validate_sync.py --session-id <SESSION_ID>
+
+
+### 1.3 UI Tests (Smoke)
+
+- PC Controller (PyQt6): pc_controller/tests/test_gui_manager_ui_smoke.py verifies tab titles (Dashboard, Logs, Playback & Annotation) and toolbar actions exist using offscreen Qt; auto-skips if PyQt6 is unavailable on CI.
+- Android (Robolectric): android_sensor_node/app/src/test/java/com/yourcompany/sensorspoke/ui/MainActivityTest.kt launches MainActivity and asserts presence of Start/Stop buttons; MainActivity conditionally skips starting services when running under tests to keep the test fast and isolated.
