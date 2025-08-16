@@ -17,6 +17,7 @@ class RecordingControllerTest {
             startedDir = sessionDir
             if (!sessionDir.exists()) sessionDir.mkdirs()
         }
+
         override suspend fun stop() {
             stopCount++
         }

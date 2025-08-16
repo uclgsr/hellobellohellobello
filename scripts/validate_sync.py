@@ -26,12 +26,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import numpy as np
 import os
 import sys
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple
-
-import numpy as np
 
 # Local imports
 sys.path.append(os.path.join(os.getcwd(), "pc_controller", "src"))

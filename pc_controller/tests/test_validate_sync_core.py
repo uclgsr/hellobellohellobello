@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 import numpy as np
-
 from tools.validate_sync_core import (
     detect_flash_indices_from_brightness,
     estimate_T0_ns,

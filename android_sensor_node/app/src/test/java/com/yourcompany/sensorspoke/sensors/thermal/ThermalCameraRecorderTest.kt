@@ -1,15 +1,16 @@
 package com.yourcompany.sensorspoke.sensors.thermal
 
 import com.google.common.truth.Truth.assertThat
-import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
+import java.io.File
+import kotlin.io.path.createTempDirectory
 
 class ThermalCameraRecorderTest {
 
     @Test
     fun start_createsCsvWithHeader_and_stop_closes() = runBlocking {
-        val tmp = createTempDir(prefix = "thermal_test_")
+        val tmp = createTempDirectory("thermal_test_").toFile()
         try {
             val recorder = ThermalCameraRecorder()
             recorder.start(tmp)

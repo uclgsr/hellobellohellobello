@@ -5,13 +5,12 @@ organized by device and modality.
 """
 from __future__ import annotations
 
-from typing import Dict
+import glob
+import h5py
 import json
 import os
-import glob
-
-import h5py
 import pandas as pd
+from typing import Dict
 
 
 def export_session_to_hdf5(session_dir: str, output_path: str, metadata: Dict | None = None, annotations: Dict | None = None) -> str:

@@ -7,10 +7,9 @@ pandas is unavailable.
 from __future__ import annotations
 
 import os
+import pytest
 import tempfile
 from pathlib import Path
-
-import pytest
 
 pd = pytest.importorskip("pandas")
 

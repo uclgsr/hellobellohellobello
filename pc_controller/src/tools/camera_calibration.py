@@ -9,12 +9,12 @@ calibration.
 """
 from __future__ import annotations
 
+import json
+import numpy as np
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Iterable, List, Sequence, Tuple, Dict, Any
-import json
 
-import numpy as np
 try:
     import cv2  # type: ignore
     CV2_AVAILABLE = True
@@ -102,7 +102,11 @@ def find_checkerboard_corners(
     image_size: Tuple[int, int] | None = None
 
     for p in image_paths:
-        img = cv2.imread(str(p), cv2.IMREAD_GRAYSCALE)
+        pp = Path(p)
+        if not pp.exists():
+            # Skip non-existent paths to avoid OpenCV WARN logs from imread
+            continue
+        img = cv2.imread(str(pp), cv2.IMREAD_GRAYSCALE)
         if img is None:
             # Skip unreadable images but continue; we will validate later
             continue

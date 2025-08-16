@@ -7,8 +7,8 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
-import org.junit.Test
 import org.junit.Ignore
+import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -18,7 +18,11 @@ class RgbCameraRecorderTest {
 
     private class TestOwner : LifecycleOwner {
         private val registry = LifecycleRegistry(this)
-        init { registry.currentState = Lifecycle.State.CREATED }
+
+        init {
+            registry.currentState = Lifecycle.State.CREATED
+        }
+
         override val lifecycle: Lifecycle
             get() = registry
     }

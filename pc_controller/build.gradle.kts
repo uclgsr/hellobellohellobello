@@ -1,6 +1,3 @@
-import org.gradle.api.tasks.Exec
-import java.io.File
-
 plugins {
     base
 }
@@ -25,7 +22,8 @@ val installRequirements by tasks.registering(Exec::class) {
     group = "python"
     description = "Install Python dependencies into the venv (requirements + pytest + pyinstaller)"
     dependsOn(setupVenv)
-    val cmd = "\"${pythonExe()}\" -m pip install -U pip && \"${pythonExe()}\" -m pip install -r requirements.txt && \"${pythonExe()}\" -m pip install pytest pyinstaller"
+    val cmd =
+        "\"${pythonExe()}\" -m pip install -U pip && \"${pythonExe()}\" -m pip install -r requirements.txt && \"${pythonExe()}\" -m pip install pytest pyinstaller"
     commandLine("cmd", "/c", cmd)
     workingDir = project.projectDir
 }
@@ -46,7 +44,8 @@ val pyInstaller by tasks.registering(Exec::class) {
     dependsOn(installRequirements)
     val entry = File(project.projectDir, "src/main.py").absolutePath
     val distDir = File(project.buildDir, "dist").absolutePath
-    val cmd = "\"${pythonExe()}\" -m PyInstaller --noconfirm --clean -F --name pc_controller --distpath \"${distDir}\" \"${entry}\""
+    val cmd =
+        "\"${pythonExe()}\" -m PyInstaller --noconfirm --clean -F --name pc_controller --distpath \"${distDir}\" \"${entry}\""
     commandLine("cmd", "/c", cmd)
     workingDir = project.projectDir
 }

@@ -59,9 +59,9 @@ class FileTransferManagerTest {
             require(header != null) { "Header was null" }
             // Header is a single JSON line; avoid JSON lib dependency in pure JVM test
             assertThat(header.trim().startsWith("{")).isTrue()
-            assertThat(header.contains("\"session_id\":\"$sessionId\"")) .isTrue()
-            assertThat(header.contains("\"device_id\":\"TestDevice\"")) .isTrue()
-            assertThat(header.contains("\"filename\":\"TestDevice_data.zip\"")) .isTrue()
+            assertThat(header.contains("\"session_id\":\"$sessionId\"")).isTrue()
+            assertThat(header.contains("\"device_id\":\"TestDevice\"")).isTrue()
+            assertThat(header.contains("\"filename\":\"TestDevice_data.zip\"")).isTrue()
 
             // Zip contained both files relative paths
             // Depending on OS zip uses forward slashes

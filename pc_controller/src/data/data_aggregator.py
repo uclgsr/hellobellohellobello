@@ -8,15 +8,14 @@ It follows the design in docs/4_5_phase.md Task 5.1.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import os
 import socket
 import threading
 import zipfile
-from typing import Optional, Tuple
-
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
 
 def get_local_ip() -> str:

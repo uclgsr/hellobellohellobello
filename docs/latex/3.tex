@@ -5,9 +5,11 @@
 \chapter{Requirements and Analysis}
 \label{ch:requirements}
 
+
 \section{Problem Statement}
 
 The system tackles the challenge of contactless physiological monitoring by synchronously collecting wearable GSR measurements and remote sensory data [1]. Unlike traditional GSR, which needs skin-contact sensors, this platform provides ground-truth GSR signals alongside contactless data (thermal imagery, RGB video), aiding research on predicting skin conductance from non-invasive cues [1]. It combines thermal cameras, video, inertial sensors, and GSR to create a comprehensive multi-modal dataset for stress and emotion analysis [2]. Focusing on temporal precision and data integrity, the system captures and aligns subtle physiological responses across modalities [3]. Ultimately, the goal is to facilitate experiments that correlate a participant's physiological responses with visual and thermal cues, establishing a basis for contactless stress detection [3].
+
 
 \section{Requirements Structure and Approach}
 
@@ -15,39 +17,51 @@ Requirements were developed through an iterative, research-driven process [4]. H
 
 Requirements engineering adhered to IEEE 29148 practices [6]: each requirement has a unique ID and is classified (functional or non-functional). Implementation and code changes were systematically traced to specific requirements, ensuring full traceability (see the matrix in Section 3.6) [6]. This incremental, user-focused approach began with core research use cases and refined requirements as development insights emerged [6].
 
+
 \section{Functional Requirements}
 
 \begin{description}[style=unboxed,leftmargin=0cm]
     \item[\textbf{FR1}] \textbf{(Platform: PC, Android; Priority: Essential; Verification: Test) – Multi-Device Sensor Integration:} The system shall support connecting and managing multiple sensor devices simultaneously. This includes discovering and pairing Shimmer GSR sensors via Bluetooth (direct to PC or via an Android device). If no physical sensor is connected, the system shall provide a simulation mode that generates dummy sensor data.
+
     \paragraph{Acceptance Criteria:} The system successfully discovers and connects to all available Shimmer devices (PC or Android) and streams their data; if no sensor is present, the researcher can enable simulation mode and observe continuous dummy GSR output.
 
     \item[\textbf{FR2}] \textbf{(Platform: PC, Android; Priority: Essential; Verification: Test) – Synchronised Multi-Modal Recording:} The system shall start and stop data recording synchronously across all connected devices. Upon “Start Recording”, the PC must instruct all Android devices and any connected sensors to begin capturing GSR, video (RGB), thermal, and other enabled modalities in parallel. All data streams shall share a common session timestamp to enable later alignment.
+
     \paragraph{Acceptance Criteria:} A single start/stop command initiates or ends recording on all devices within a sub-second window; recorded data from each device/session is timestamped to reflect a shared timeline.
 
     \item[\textbf{FR3}] \textbf{(Platform: PC, Android; Priority: Essential; Verification: Test) – Time Synchronisation Service:} The system shall synchronise clocks across devices to ensure time-aligned data. The PC shall run a time synchronisation service (e.g. NTP-like) so that each Android device periodically calibrates its clock to the PC’s reference.
+
     \paragraph{Acceptance Criteria:} All devices adjust to the PC’s clock; measured timestamp offsets between devices remain very low (e.g. within 5 ms) during recording.
 
     \item[\textbf{FR4}] \textbf{(Platform: PC; Priority: Essential; Verification: Test) – Session Management:} The system shall organise recordings into discrete sessions, each with a unique ID or name. The user can create a new session (which the system timestamps) and later terminate it. On session start, the PC creates a directory and a metadata file; on session end, it finalises metadata (including start/end times and duration). Only one session may be active at a time.
+
     \paragraph{Acceptance Criteria:} A new session command generates a session folder and metadata JSON on disk; ending the session correctly updates metadata with the session’s end time and duration; attempts to start a second session while one is active are disallowed.
 
     \item[\textbf{FR5}] \textbf{(Platform: PC, Android; Priority: Essential; Verification: Test) – Data Recording and Storage:} For each session, the system shall record all enabled sensor and video/thermal data streams. Specifically: (a) GSR and other physiological channels from the Shimmer sensor(s) at 128\,Hz, and (b) video ($\geq 1920 \times 1080$, 30\,FPS) and thermal data from each Android. Sensor readings shall stream to the PC in real time and be written to local CSV files immediately. Each Android stores raw video/thermal files locally during recording and transfers them to the PC after the session. Audio (e.g. microphone at 44.1\,kHz) shall also be recorded and synchronised if enabled.
+
     \paragraph{Acceptance Criteria:} During a test session, GSR data is logged at 128 Hz without gap, and each Android records full HD video and thermal streams; all files exist on disk after session. No data loss or buffering occurs under expected loads (e.g. 3+ devices).
 
     \item[\textbf{FR6}] \textbf{(Platform: PC; Priority: Essential; Verification: Test) – User Interface for Monitoring \& Control:} The system shall provide a graphical UI on the PC for the researcher to control sessions and monitor devices. The UI shall list connected devices and show status indicators (e.g. battery level, recording status). It must allow the user to start/stop sessions and display real-time indicators such as recording time elapsed and sample counts. If a device disconnects or errors, the UI should clearly highlight that device.
+
     \paragraph{Acceptance Criteria:} The PC GUI displays all connected devices, their states (streaming/recording, battery, etc.), and provides Start/Stop buttons. UI elements update in real time based on device messages, and disconnects trigger visible alerts.
 
     \item[\textbf{FR7}] \textbf{(Platform: PC, Android; Priority: Important; Verification: Test) – Device Synchronisation and Signals:} The system shall coordinate devices by sending synchronisation commands and cues. For example, the PC should be able to broadcast a sync signal (e.g. a screen flash or buzzer) to all Android devices to mark a common event. The system shall use a JSON command protocol so that all devices can start/stop recording or perform other actions in unison.
+
     \paragraph{Acceptance Criteria:} Activating a synchronisation control (e.g. “Flash Sync”) causes all Android devices to execute the signal simultaneously (observable as simultaneous flashes in recorded videos) and logs this event in the data timeline.
 
     \item[\textbf{FR8}] \textbf{(Platform: PC, Android; Priority: Important; Verification: Test) – Fault Tolerance and Recovery:} The system shall detect if any device (Android or sensor) disconnects or fails during a session and continue operating with the remaining devices. The PC shall log a warning and mark offline devices. When a device reconnects, it shall automatically rejoin the ongoing session, resynchronise, and execute any missed commands.
+
     \paragraph{Acceptance Criteria:} In a test, if an Android’s network is disconnected during recording, the system flags it as offline while other streams continue. Upon reconnection, the Android automatically resumes recording and sends any queued commands without user intervention.
 
     \item[\textbf{FR9}] \textbf{(Platform: PC, Android; Priority: Important; Verification: Test) – Calibration Utilities:} The system shall include tools for calibrating sensors and cameras. In particular, it shall allow aligning the thermal camera’s view with the RGB camera using a checkerboard pattern. The researcher shall be able to run a calibration session (capturing paired images) and compute calibration parameters. These parameters (pattern type, size, etc.) shall be configurable and saved for use in later analysis.
+
     \paragraph{Acceptance Criteria:} The user can capture multiple RGB-thermal image pairs and compute calibration. Calibration results (intrinsic/extrinsic parameters) are stored. If reprojection error is high, the system warns and allows repeating the process.
 
     \item[\textbf{FR10}] \textbf{(Platform: PC, Android; Priority: Essential; Verification: Test) – Data Transfer and Aggregation:} When a session ends, the system shall automatically transfer all recorded data from each Android to the PC. The Android apps shall package video, thermal, and local sensor files and send them over the network. The PC shall save each incoming file into the session folder and update metadata (including file name and size). The system shall retry failed transfers and log errors if files remain missing.
+
     \paragraph{Acceptance Criteria:} After stopping a session, all Android-recorded files (video, thermal, etc.) appear in the PC’s session directory, with entries in the metadata JSON. The researcher is notified when the transfer completes; any missing files are reported.
 \end{description}
+
 
 \section{Non-Functional Requirements}
 
@@ -69,13 +83,19 @@ Requirements engineering adhered to IEEE 29148 practices [6]: each requirement h
     \item[\textbf{NFR8}] \textbf{(Maintainability and Modularity):} The system shall be modular and configurable [14]. Components (e.g. \textit{Session Manager}, \textit{Shimmer Manager}, \textit{Network Server}) shall have clear interfaces, allowing parts to be updated independently (for example, swapping a thermal camera SDK). Configuration parameters (e.g. sensor types, sampling rates) shall be externalised (in files like \texttt{config.json}) so changing requirements can be accommodated without code changes. Extensive logging and test scripts shall support debugging and future development.
 \end{description}
 
+
 \section{Use Case Scenarios}
 
 \subsection{Conducting a Multi-Modal Recording Session}
+
 \paragraph{Description:} A researcher captures synchronised GSR data, video, and thermal streams from multiple devices during a recording session. This is the primary experimental workflow.
+
 \paragraph{Primary Actor:} Researcher.
+
 \paragraph{Secondary Actors:} Participant (passive subject of recording).
+
 \paragraph{Preconditions:} The Shimmer GSR sensor is charged and connected to the PC via Bluetooth or paired with an Android device. All Android devices are powered, running the app, and on the same network as the PC. Device clocks are synchronised, and the researcher has configured session settings (name, camera focus, etc.).
+
 \paragraph{Main Flow:}
 \begin{enumerate}
     \item The researcher opens the PC control interface and creates a new session (entering a name or accepting a default). The system validates it and sets up a session folder and metadata file.
@@ -89,7 +109,9 @@ Requirements engineering adhered to IEEE 29148 practices [6]: each requirement h
     \item The system then automatically initiates data transfer: each Android’s \textit{FileTransferManager} sends its recorded video, thermal, and sensor files to the PC. The PC saves each file into the session folder and records its details in the metadata. A progress indicator may be shown.
     \item Once transfers complete, the system notifies the researcher that the session is complete (e.g. “Session ‘StressTest1’ completed – 5 files saved”). The researcher can review summary stats (e.g. total data size). The session is closed and resources are freed.
 \end{enumerate}
+
 \paragraph{Postconditions:} All data (GSR CSV, videos, thermal images) are stored in the PC's session directory. The metadata JSON lists all devices and files. The system returns to an idle state, ready for a new session. Participant data is available for offline analysis. Transfer failures are logged for the researcher to retrieve missing files.
+
 \paragraph{Alternate Flows:}
 \begin{itemize}
     \item \textbf{No Shimmer Available:} If the Shimmer sensor is absent or fails, the researcher proceeds without GSR. The system logs that no GSR data will be captured and may enable a simulated GSR signal for demonstration. Other modalities record normally.
@@ -99,9 +121,13 @@ Requirements engineering adhered to IEEE 29148 practices [6]: each requirement h
 \end{itemize}
 
 \subsection{Camera Calibration for Thermal Alignment}
+
 \paragraph{Description:} Before using a thermal camera, the researcher calibrates it with the RGB camera for pixel correspondence in analysis. This ensures pixel correspondence in analysis.
+
 \paragraph{Primary Actor:} Researcher.
+
 \paragraph{Preconditions:} An Android device has an RGB and a thermal camera. A calibration pattern (e.g. checkerboard) is prepared for both. Calibration settings (pattern size, image count) are configured as needed.
+
 \paragraph{Main Flow:}
 \begin{enumerate}
     \item The researcher opens the Calibration Tool on the PC and selects the device to calibrate. The system instructs the device to enter calibration mode.
@@ -111,13 +137,16 @@ Requirements engineering adhered to IEEE 29148 practices [6]: each requirement h
     \item The system saves the calibration parameters (to a file or configuration). It may display an error metric (reprojection error).
     \item If the error is acceptable, the researcher confirms and saves the calibration profile. The system will use this data for future sessions or post-processing.
 \end{enumerate}
+
 \paragraph{Postconditions:} Calibration parameters are stored on the PC/device. Future recordings will use this data to correlate thermal and RGB frames.
+
 \paragraph{Alternate Flows:}
 \begin{itemize}
     \item \textbf{Calibration Failure:} If the system fails to detect the checkerboard (e.g. poor contrast), it notifies the researcher. The researcher can recapture images (perhaps adjusting lighting or pattern distance) until the algorithm succeeds.
     \item \textbf{Partial Calibration:} The researcher may opt to calibrate only camera intrinsics (for each camera separately) without aligning thermal to RGB. In that case, the flow would involve capturing images of a calibration pattern for each camera independently.
     \item \textbf{Using Stored Calibration:} If a valid calibration exists from a prior session, the researcher can skip this use case by loading the saved calibration profile. The system will then apply those parameters without re-running the procedure.
 \end{itemize}
+
 
 \section{System Analysis (Architecture \& Data Flow)}
 
@@ -135,6 +164,7 @@ Communication and data flow follow a client-server model [20]. A TCP server on t
     \item \textbf{Data Aggregation:} Once all data are collected on the PC, the \textit{Session Manager} can perform any post-session processing (e.g. indexing timestamps, running computer vision algorithms). At this point, all distributed data is centralised on the PC file system for analysis.
 \end{itemize}
 
+
 \section{Requirements Summary Table}
 
 \begin{table}[h!]
@@ -143,16 +173,16 @@ Communication and data flow follow a client-server model [20]. A TCP server on t
     \label{tab:fr_summary}
     \begin{tabular}{@{}lllll@{}}
         \toprule
-        \textbf{FR ID} & \textbf{Description} & \textbf{Platform} & \textbf{Priority} & \textbf{Verification} \\ \midrule
-        FR1 & Multi-device sensor integration (includes simulation mode) & PC, Android & Essential & Test (T) \\
-        FR2 & Synchronized start/stop of recordings across devices & PC, Android & Essential & Test (T) \\
-        FR3 & Time synchronization of all device clocks & PC, Android & Essential & Test (T) \\
-        FR4 & Session creation and management (unique IDs, metadata) & PC & Essential & Test (T) \\
-        FR5 & Concurrent recording and storage of GSR, sensors, video, audio & PC, Android & Essential & Test (T) \\
-        FR6 & PC-based GUI for session control and device monitoring & PC & Essential & Test (T) \\
-        FR7 & Device coordination with sync signals (e.g. flash) & PC, Android & Important & Test (T) \\
-        FR8 & Fault detection and recovery for disconnected devices & PC, Android & Important & Test (T) \\
-        FR9 & Calibration tools for sensor/camera alignment & PC, Android & Important & Test (T) \\
-        FR10 & Automatic data transfer from Android devices to PC & PC, Android & Essential & Test (T) \\ \bottomrule
+        \textbf{FR ID} & \textbf{Description}                                           & \textbf{Platform} & \textbf{Priority} & \textbf{Verification} \\ \midrule
+        FR1            & Multi-device sensor integration (includes simulation mode)     & PC, Android       & Essential & Test (T) \\
+        FR2            & Synchronized start/stop of recordings across devices           & PC, Android       & Essential         & Test (T)              \\
+        FR3            & Time synchronization of all device clocks                      & PC, Android       & Essential         & Test (T)              \\
+        FR4            & Session creation and management (unique IDs, metadata)         & PC                & Essential         & Test (T)              \\
+        FR5            & Concurrent recording and storage of GSR, sensors, video, audio & PC, Android       & Essential & Test (T) \\
+        FR6            & PC-based GUI for session control and device monitoring         & PC                & Essential         & Test (T)              \\
+        FR7            & Device coordination with sync signals (e.g. flash)             & PC, Android       & Important         & Test (T)              \\
+        FR8            & Fault detection and recovery for disconnected devices          & PC, Android       & Important         & Test (T)              \\
+        FR9            & Calibration tools for sensor/camera alignment                  & PC, Android       & Important         & Test (T)              \\
+        FR10           & Automatic data transfer from Android devices to PC             & PC, Android       & Essential         & Test (T)              \\ \bottomrule
     \end{tabular}
 \end{table}

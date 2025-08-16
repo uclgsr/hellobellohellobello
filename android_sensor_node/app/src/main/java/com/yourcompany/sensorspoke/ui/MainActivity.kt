@@ -1,6 +1,7 @@
 package com.yourcompany.sensorspoke.ui
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -8,7 +9,6 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
-import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -53,12 +53,15 @@ class MainActivity : ComponentActivity() {
                     lifecycleScope.launch {
                         try {
                             ensureController().startSession(sessionId)
-                        } catch (_: Exception) { }
+                        } catch (_: Exception) {
+                        }
                     }
                 }
+
                 RecordingService.ACTION_STOP_RECORDING -> {
                     lifecycleScope.launch { runCatching { controller?.stopSession() } }
                 }
+
                 RecordingService.ACTION_FLASH_SYNC -> {
                     val ts = intent.getLongExtra(RecordingService.EXTRA_FLASH_TS_NS, 0L)
                     showFlashOverlay()
@@ -112,7 +115,7 @@ class MainActivity : ComponentActivity() {
             addAction(RecordingService.ACTION_FLASH_SYNC)
         }
         if (Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(controlReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(controlReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
             @Suppress("DEPRECATION")
             registerReceiver(controlReceiver, filter)
@@ -162,7 +165,8 @@ class MainActivity : ComponentActivity() {
         val parent = rootLayout ?: return
         val flash = View(this).apply {
             setBackgroundColor(Color.WHITE)
-            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            layoutParams =
+                ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             alpha = 1f
         }
         parent.addView(flash)
@@ -177,7 +181,8 @@ class MainActivity : ComponentActivity() {
                 f.writeText("timestamp_ns\n")
             }
             f.appendText("$tsNs\n")
-        } catch (_: Exception) { }
+        } catch (_: Exception) {
+        }
     }
 
     private fun isRunningUnderTest(): Boolean {

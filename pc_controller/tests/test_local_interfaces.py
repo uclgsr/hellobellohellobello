@@ -5,9 +5,9 @@ compiled native extensions or actual hardware.
 """
 from __future__ import annotations
 
+import pytest
 import time
 
-import pytest
 np = pytest.importorskip("numpy")
 
 from pc_controller.src.core.local_interfaces import ShimmerInterface, WebcamInterface

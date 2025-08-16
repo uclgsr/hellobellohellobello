@@ -29,7 +29,8 @@ tasks.register("packageAll") {
 // This repository's root project does not produce Java classes.
 tasks.register("classes") {
     group = "build"
-    description = "No-op placeholder for root project; use module-specific tasks instead (e.g., :android_sensor_node:app:assembleDebug, :pc_controller:pyInstaller)."
+    description =
+        "No-op placeholder for root project; use module-specific tasks instead (e.g., :android_sensor_node:app:assembleDebug, :pc_controller:pyInstaller)."
 }
 
 
@@ -37,5 +38,6 @@ tasks.register("classes") {
 // This repository's root project does not have Java tests; use module-specific tasks instead.
 tasks.register("testClasses") {
     group = "verification"
-    description = "No-op placeholder for root project; use module-specific tasks instead (e.g., :android_sensor_node:app:testDebugUnitTest, :pc_controller:pyTest)."
+    description =
+        "No-op placeholder for root project; use module-specific tasks instead (e.g., :android_sensor_node:app:testDebugUnitTest, :pc_controller:pyTest)."
 }

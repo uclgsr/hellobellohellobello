@@ -1,6 +1,6 @@
 import os
-import sys
 import pytest
+import sys
 
 # Skip if PyQt6 is not available
 PyQt6 = pytest.importorskip("PyQt6")  # noqa: N816 (external import name)

@@ -7,9 +7,8 @@ synchronously, so no Qt event loop is required here.
 """
 from __future__ import annotations
 
-from typing import List
-
 import pytest
+from typing import List
 
 pytest.importorskip("PyQt6")
 from pc_controller.src.network.network_controller import NetworkController

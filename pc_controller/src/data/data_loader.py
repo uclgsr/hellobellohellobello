@@ -4,12 +4,11 @@ Loads sensor CSVs via pandas and locates videos for OpenCV playback.
 """
 from __future__ import annotations
 
+import glob
+import os
+import pandas as pd
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-import os
-import glob
-
-import pandas as pd
 
 
 @dataclass

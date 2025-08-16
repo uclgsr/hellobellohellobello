@@ -21,6 +21,7 @@ Unit tests cover both architectural and security aspects of the PC code beyond e
 
 The PC unit tests cover file handling, data serialisation, networking protocols, and system monitoring. Many tests use \textbf{mock objects} and patching to isolate the unit under test. For example, endurance runner tests replace actual system monitors or performance optimisers with patched versions that return controlled data. This simulates scenarios like stable CPU load or predictable memory availability, ensuring metrics collection and logging yield expected results (e.g., generating a JSON report). These tests validate logic thoroughly without relying on real hardware or external services. Similar to the Android side, some PC tests serve as basic scaffolding or sanity checks, such as verifying that a method executes without error or that an object is non-null. These are likely placeholders for more detailed tests.
 
+
 \section{Integration Testing (Multi-Device Synchronisation \& Networking)}
 After verifying individual modules, integration tests ensured seamless operation among Android devices, PC applications, and network components. These tests simulated realistic usage scenarios with multiple devices and sensors, emphasising action synchronisation (like recording start/stop) and reliable data exchange across the network.
 

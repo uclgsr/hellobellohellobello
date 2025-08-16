@@ -1,7 +1,6 @@
 package com.yourcompany.sensorspoke.sensors.thermal
 
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
-import com.yourcompany.sensorspoke.utils.TimeManager
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
@@ -41,8 +40,14 @@ class ThermalCameraRecorder : SensorRecorder {
     }
 
     override suspend fun stop() {
-        try { csvWriter?.flush() } catch (_: Exception) {}
-        try { csvWriter?.close() } catch (_: Exception) {}
+        try {
+            csvWriter?.flush()
+        } catch (_: Exception) {
+        }
+        try {
+            csvWriter?.close()
+        } catch (_: Exception) {
+        }
         csvWriter = null
     }
 }

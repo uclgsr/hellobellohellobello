@@ -17,17 +17,19 @@ class NetworkClient(private val context: Context) {
         val sanitizedType = if (type.endsWith(".local.")) type else "$type.local."
         val info = NsdServiceInfo()
         // Use explicit Java-style setters to avoid Kotlin property mutability issues
-        info.setServiceType(sanitizedType)
-        info.setServiceName(name)
-        info.setPort(port)
+        info.serviceType = sanitizedType
+        info.serviceName = name
+        info.port = port
 
         val listener = object : NsdManager.RegistrationListener {
             override fun onServiceRegistered(NsdServiceInfo: NsdServiceInfo) {
                 // Service registered
             }
+
             override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
                 // Log or handle registration failure
             }
+
             override fun onServiceUnregistered(serviceInfo: NsdServiceInfo) {}
             override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {}
         }
@@ -39,7 +41,8 @@ class NetworkClient(private val context: Context) {
         registrationListener?.let {
             try {
                 nsdManager.unregisterService(it)
-            } catch (_: Exception) { }
+            } catch (_: Exception) {
+            }
         }
         registrationListener = null
     }

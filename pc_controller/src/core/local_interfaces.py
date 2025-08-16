@@ -16,18 +16,17 @@ thread. No blocking operations are performed on the GUI thread.
 """
 from __future__ import annotations
 
-from collections import deque
-import threading
-import time
-from typing import Optional, Tuple
-
-import numpy as np
-
 # Attempt to locate the native extension.
 # We support two layouts:
 # 1) pc_controller.native_backend.native_backend (compiled module as submodule)
 # 2) pc_controller.native_backend (compiled module as package-level)
 import importlib
+import numpy as np
+import threading
+import time
+from collections import deque
+from typing import Optional, Tuple
+
 _ns_cls = None
 _nw_cls = None
 try:  # compiled as submodule
@@ -185,6 +184,10 @@ class WebcamInterface:
                 self._native.start_capture()
                 self._thread = threading.Thread(target=self._native_loop, daemon=True)
                 self._thread.start()
+                # Seed immediate placeholder frame to avoid race in tests
+                with self._lock:
+                    if self._frame is None:
+                        self._frame = np.zeros((self._height, self._width, 3), dtype=np.uint8)
                 return
             except Exception:
                 self._use_native = False
@@ -201,12 +204,20 @@ class WebcamInterface:
                     pass
                 self._thread = threading.Thread(target=self._cv_loop, daemon=True)
                 self._thread.start()
+                # Seed immediate placeholder frame to avoid race in tests
+                with self._lock:
+                    if self._frame is None:
+                        self._frame = np.zeros((self._height, self._width, 3), dtype=np.uint8)
                 return
         except Exception:
             self._cap = None
         # Fallback synthetic
         self._thread = threading.Thread(target=self._synthetic_loop, daemon=True)
         self._thread.start()
+        # Seed immediate placeholder frame to avoid race in tests
+        with self._lock:
+            if self._frame is None:
+                self._frame = np.zeros((self._height, self._width, 3), dtype=np.uint8)
 
     def stop(self) -> None:
         self._running = False

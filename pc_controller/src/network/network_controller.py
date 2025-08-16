@@ -14,14 +14,13 @@ Note: The Android Spoke advertises service type: _gsr-controller._tcp.local.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+import base64
 import json
 import socket
 import time
-import base64
-from typing import Dict, Optional
-
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from dataclasses import dataclass
+from typing import Dict, Optional
 from zeroconf import IPVersion, ServiceBrowser, Zeroconf
 
 from .protocol import (

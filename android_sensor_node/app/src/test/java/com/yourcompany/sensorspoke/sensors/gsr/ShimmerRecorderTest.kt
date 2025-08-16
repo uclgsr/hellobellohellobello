@@ -1,15 +1,16 @@
 package com.yourcompany.sensorspoke.sensors.gsr
 
 import com.google.common.truth.Truth.assertThat
-import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
+import java.io.File
+import kotlin.io.path.createTempDirectory
 
 class ShimmerRecorderTest {
 
     @Test
     fun start_createsCsvHeader_and_stop_closes() = runBlocking {
-        val tmp = createTempDir(prefix = "shimmer_test_")
+        val tmp = createTempDirectory("shimmer_test_").toFile()
         try {
             val recorder = ShimmerRecorder()
             recorder.start(tmp)

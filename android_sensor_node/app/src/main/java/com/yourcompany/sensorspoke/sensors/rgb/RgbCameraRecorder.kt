@@ -3,34 +3,21 @@ package com.yourcompany.sensorspoke.sensors.rgb
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
-import android.util.Size
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.video.FileOutputOptions
-import androidx.camera.video.Quality
-import androidx.camera.video.QualitySelector
-import androidx.camera.video.FallbackStrategy
-import androidx.camera.video.Recorder
-import androidx.camera.video.Recording
-import androidx.camera.video.VideoCapture
+import androidx.camera.video.*
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
-import com.yourcompany.sensorspoke.utils.TimeManager
 import com.yourcompany.sensorspoke.utils.PreviewBus
+import com.yourcompany.sensorspoke.utils.TimeManager
+import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
 /**
  * RgbCameraRecorder using CameraX to record a 1080p MP4 and capture high-res JPEGs with
@@ -62,7 +49,12 @@ class RgbCameraRecorder(
 
         // Build Recorder for 1080p
         val recorder = Recorder.Builder()
-            .setQualitySelector(QualitySelector.from(Quality.FHD, FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)))
+            .setQualitySelector(
+                QualitySelector.from(
+                    Quality.FHD,
+                    FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
+                )
+            )
             .build()
         videoCapture = VideoCapture.withOutput(recorder)
 
@@ -96,6 +88,7 @@ class RgbCameraRecorder(
                     override fun onError(exception: ImageCaptureException) {
                         // Keep loop running on errors
                     }
+
                     override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                         // Build a downsampled, low-quality JPEG preview and emit
                         val now = TimeManager.nowNanos()
@@ -111,7 +104,10 @@ class RgbCameraRecorder(
                                 scaled.compress(Bitmap.CompressFormat.JPEG, 40, baos)
                                 val bytes = baos.toByteArray()
                                 PreviewBus.emit(bytes, now)
-                                try { baos.close() } catch (_: Exception) {}
+                                try {
+                                    baos.close()
+                                } catch (_: Exception) {
+                                }
                                 if (scaled != bmp) {
                                     bmp.recycle()
                                 }
@@ -127,9 +123,15 @@ class RgbCameraRecorder(
     }
 
     override suspend fun stop() {
-        try { recording?.stop() } catch (_: Exception) {}
+        try {
+            recording?.stop()
+        } catch (_: Exception) {
+        }
         recording = null
-        try { cameraProvider?.unbindAll() } catch (_: Exception) {}
+        try {
+            cameraProvider?.unbindAll()
+        } catch (_: Exception) {
+        }
         cameraProvider = null
         imageCapture = null
         videoCapture = null

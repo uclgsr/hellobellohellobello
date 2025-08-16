@@ -7,9 +7,8 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
-import java.io.OutputStream
-import java.net.Socket
 import java.net.InetSocketAddress
+import java.net.Socket
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -84,7 +83,8 @@ class FileTransferManager(
                         }
                         zos.closeEntry()
                     }
-                } catch (_: Exception) { /* best-effort inclusion */ }
+                } catch (_: Exception) { /* best-effort inclusion */
+                }
                 zos.finish()
                 zos.flush()
             }

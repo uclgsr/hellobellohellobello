@@ -1,12 +1,11 @@
 import io
 import json
 import os
+import pytest
 import socket
 import time
 import zipfile
 from pathlib import Path
-
-import pytest
 
 PyQt6 = pytest.importorskip("PyQt6")  # Skip these tests if PyQt6 is not available
 

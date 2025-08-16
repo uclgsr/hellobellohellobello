@@ -6,29 +6,31 @@
 % NOTE: Content preserved via verbatim for speed and fidelity. TODO: Convert key tables to LaTeX tabular and render Mermaid to static images for print in a later pass.
 
 % Rendered Mermaid examples (compiled by LaTeX). See README for build requirements.
+
+
 \section*{Rendered Mermaid Diagrams (LaTeX)}
 
 \begin{mermaid}
-flowchart TD
-  A[Researcher] -->|controls| PC[Desktop Controller]
-  PC -->|start/stop| A1[Android Device 1]
-  PC -->|start/stop| A2[Android Device 2]
-  A1 -->|record| Store[(Local Storage)]
-  A2 -->|record| Store
-  PC -->|sync| NTP[NTP Clock]
+    flowchart TD
+    A[Researcher] -->|controls| PC[Desktop Controller]
+    PC -->|start/stop| A1[Android Device 1]
+    PC -->|start/stop| A2[Android Device 2]
+    A1 -->|record| Store[(Local Storage)]
+    A2 -->|record| Store
+    PC -->|sync| NTP[NTP Clock]
 \end{mermaid}
 
 \begin{mermaid}
-sequenceDiagram
-  participant R as Researcher
-  participant PC as Controller
-  participant A as Android
-  R->>PC: Start Recording
-  PC->>A: start(timestamp)
-  A-->>PC: ack(started)
-  R->>PC: Stop Recording
-  PC->>A: stop()
-  A-->>PC: files(session.zip)
+    sequenceDiagram
+    participant R as Researcher
+    participant PC as Controller
+    participant A as Android
+    R->>PC: Start Recording
+    PC->>A: start(timestamp)
+    A-->>PC: ack(started)
+    R->>PC: Stop Recording
+    PC->>A: stop()
+    A-->>PC: files(session.zip)
 \end{mermaid}
 
 \begin{verbatim}

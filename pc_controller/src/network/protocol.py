@@ -12,10 +12,10 @@ Service Type (mDNS/Zeroconf):
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple
-import json
 import ast
+import json
 import time
+from typing import Any, Dict, Tuple
 
 # Phase 1
 QUERY_CMD_ID = 1

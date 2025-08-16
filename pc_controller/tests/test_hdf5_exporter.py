@@ -5,10 +5,9 @@ Skips if pandas or h5py are not available in the environment.
 from __future__ import annotations
 
 import os
+import pytest
 import tempfile
 from pathlib import Path
-
-import pytest
 
 pd = pytest.importorskip("pandas")
 h5py = pytest.importorskip("h5py")

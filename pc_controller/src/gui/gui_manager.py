@@ -8,15 +8,11 @@ core local interfaces that optionally use native C++ backends via PyBind11.
 """
 from __future__ import annotations
 
-from collections import deque
-from dataclasses import dataclass
-from typing import Optional, Tuple, Dict
+import json
 import logging
+import numpy as np
 import os
 import time
-import json
-
-import numpy as np
 from PyQt6.QtCore import QObject, QTimer, Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QAction, QImage, QPixmap
 from PyQt6.QtWidgets import (
@@ -34,6 +30,9 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QListWidget,
 )
+from collections import deque
+from dataclasses import dataclass
+from typing import Optional, Tuple, Dict
 
 try:
     import pyqtgraph as pg

@@ -56,6 +56,23 @@ dependencies {
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-video:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // TLS networking, background work, and encryption
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // Local SDKs (Topdon TC001 and Shimmer Android API)
+    implementation(files("src/main/libs/topdon_1.3.7.aar"))
+    implementation(files("src/main/libs/libusbdualsdk_1.3.4_2406271906_standard.aar"))
+    implementation(files("src/main/libs/opengl_1.3.2_standard.aar"))
+    implementation(files("src/main/libs/suplib-release.aar"))
+
+    implementation(files("src/main/libs/shimmerandroidinstrumentdriver-3.2.3_beta.aar"))
+    implementation(files("src/main/libs/shimmerbluetoothmanager-0.11.4_beta.jar"))
+    implementation(files("src/main/libs/shimmerdriver-0.11.4_beta.jar"))
+    implementation(files("src/main/libs/shimmerdriverpc-0.11.4_beta.jar"))
 
     // Unit testing
     testImplementation("junit:junit:4.13.2")
@@ -63,4 +80,23 @@ dependencies {
     testImplementation("androidx.test:core:1.5.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("com.google.truth:truth:1.4.2")
+}
+
+
+// Enable detailed per-test logging for JVM unit tests
+// Note: Use fully-qualified names to avoid script-level imports.
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    testLogging {
+        events(
+            org.gradle.api.tasks.testing.logging.TestLogEvent.STARTED,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.PASSED,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR,
+        )
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
