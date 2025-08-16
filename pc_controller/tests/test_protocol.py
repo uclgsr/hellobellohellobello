@@ -12,6 +12,7 @@ from pc_controller.src.network.protocol import (
     build_time_sync_request,
     build_transfer_files,
     compute_time_sync,
+    compute_time_sync_stats,
     parse_json_line,
     QUERY_CMD_ID,
     COMMAND_QUERY_CAPABILITIES,
@@ -63,3 +64,19 @@ def test_parse_json_line_roundtrip() -> None:
     text = str(original).replace("'", '"')  # naive JSON from dict
     parsed = parse_json_line(text)
     assert parsed == original
+
+
+
+def test_compute_time_sync_stats_robustness() -> None:
+    # Offsets with a couple of strong outliers; delays with large outliers too
+    offsets = [100, 102, 98, 5000, -4800, 101, 99, 100]
+    delays = [1000, 900, 1100, 50000, 45000, 950, 980, 1005]
+    median, min_delay, std_dev, used = compute_time_sync_stats(offsets, delays, trim_ratio=0.2)
+    # Median should be close to ~100 after trimming outliers
+    assert abs(median - 100) <= 3
+    # Min delay should equal the minimum of provided delays
+    assert min_delay == min(delays)
+    # trials used should be >= 3 after trimming
+    assert used >= 3
+    # std_dev should be reasonable (non-negative integer)
+    assert isinstance(std_dev, int) and std_dev >= 0

@@ -10,6 +10,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import android.view.Surface
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
 import com.yourcompany.sensorspoke.utils.PreviewBus
 import com.yourcompany.sensorspoke.utils.TimeManager
@@ -36,13 +37,24 @@ class RgbCameraRecorder(
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
     private val scope = CoroutineScope(Dispatchers.IO + Job())
     private var lastPreviewNs: Long = 0L
+    private var csvWriter: java.io.BufferedWriter? = null
+    private var csvFile: File? = null
 
     override suspend fun start(sessionDir: File) {
         // Ensure directories
         val rgbDir = sessionDir
         if (!rgbDir.exists()) rgbDir.mkdirs()
         val framesDir = File(rgbDir, "frames").apply { mkdirs() }
-        val videoFile = File(rgbDir, "video.mp4")
+        // Open CSV for JPEG index
+        csvFile = File(rgbDir, "rgb.csv")
+        csvWriter = java.io.BufferedWriter(java.io.FileWriter(csvFile!!, true))
+        if (csvFile!!.length() == 0L) {
+            csvWriter!!.write("timestamp_ns,filename\n")
+            csvWriter!!.flush()
+        }
+        // Use session start timestamp in video filename for traceability
+        val sessionStartTs = TimeManager.nowNanos()
+        val videoFile = File(rgbDir, "video_${sessionStartTs}.mp4")
 
         val provider = ProcessCameraProvider.getInstance(context).get()
         cameraProvider = provider
@@ -60,7 +72,7 @@ class RgbCameraRecorder(
 
         // ImageCapture for high-res stills
         imageCapture = ImageCapture.Builder()
-            .setTargetRotation(0)
+            .setTargetRotation(Surface.ROTATION_0)
             .setJpegQuality(95)
             .build()
 
@@ -77,7 +89,7 @@ class RgbCameraRecorder(
             .prepareRecording(context, outputOpts)
             .start(ContextCompat.getMainExecutor(context)) { /* events ignored */ }
 
-        // Start still capture loop throttled to ~2 FPS for preview + file archival
+        // Start still capture loop throttled to ~6–8 FPS for preview + file archival
         scope.launch {
             while (isActive) {
                 val ts = TimeManager.nowNanos()
@@ -90,10 +102,18 @@ class RgbCameraRecorder(
                     }
 
                     override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                        // Log JPEG to CSV: timestamp_ns,filename (relative)
+                        try {
+                            csvWriter?.apply {
+                                write("${ts},frames/${outFile.name}\n")
+                                flush()
+                            }
+                        } catch (_: Exception) {
+                        }
                         // Build a downsampled, low-quality JPEG preview and emit
                         val now = TimeManager.nowNanos()
-                        // throttle to ~2 FPS
-                        if (now - lastPreviewNs >= 500_000_000L) {
+                        // throttle to ~6–8 FPS
+                        if (now - lastPreviewNs >= 150_000_000L) {
                             lastPreviewNs = now
                             runCatching {
                                 val bmp = BitmapFactory.decodeFile(outFile.absolutePath) ?: return@runCatching
@@ -116,8 +136,8 @@ class RgbCameraRecorder(
                         }
                     }
                 })
-                // 2 FPS loop (500ms)
-                delay(500)
+                // ~6–8 FPS loop (~150ms)
+                delay(150)
             }
         }
     }
@@ -135,7 +155,19 @@ class RgbCameraRecorder(
         cameraProvider = null
         imageCapture = null
         videoCapture = null
+        // Cancel capture loop before closing CSV to avoid writes after close
         scope.coroutineContext[Job]?.cancel()
+        // Close CSV resources
+        try {
+            csvWriter?.flush()
+        } catch (_: Exception) {
+        }
+        try {
+            csvWriter?.close()
+        } catch (_: Exception) {
+        }
+        csvWriter = null
+        csvFile = null
         executor.shutdown()
     }
 }

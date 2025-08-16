@@ -27,7 +27,7 @@ class ShimmerRecorder : SensorRecorder {
         try {
             csvWriter = BufferedWriter(FileWriter(csvFile!!, true))
             if (csvFile!!.length() == 0L) {
-                csvWriter!!.write("timestamp_nanos,gsr_uS,ppg_raw\n")
+                csvWriter!!.write("timestamp_ns,gsr_microsiemens,ppg_raw\n")
                 csvWriter!!.flush()
             }
         } catch (e: IOException) {

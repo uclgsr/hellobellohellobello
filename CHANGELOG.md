@@ -8,6 +8,13 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 
 ### Added
 
+- Time Sync (Priority 2): Hardened NTP-like handshake with 10–20 trials per device, robust stats (median offset, min delay, std dev, trials used), and per-device storage in NetworkController.
+- Time Sync (Priority 2): Exposed get_clock_sync_stats() for richer metadata export; added broadcast_time_sync() API for on-demand refresh.
+- GUI (Priority 2): Periodic re-sync timer (default 3 minutes) during recording to detect/compensate clock drift automatically.
+- Validation: New pytest for compute_time_sync_stats robustness (outlier trimming, min delay, std dev calculations).
+- Protocol (Priority 5): Implemented v=1 length-prefix framing utilities (encode_frame/decode_frames), standardized error envelope, and new unit tests (pc_controller/tests/test_protocol_v1.py). Added compute_backoff_schedule helper.
+- Network (Priority 5): Added per-device exponential backoff with jitter for broadcast commands; logs now surface per-attempt and per-device results.
+- Android (Priority 5): RecordingService now supports v=1 length-prefixed framing and standardized ack/error envelopes; preview_frame events are sent as v=1 events using length-prefix framing with legacy fallback for incoming commands.
 - Root README.md with build, test, packaging, and architecture overview.
 - Root .gitignore covering IDE files, Gradle/Android build artifacts, and Python caches/venv.
 - System-level validation summary: docs/System_Validation_Report.md.
@@ -30,6 +37,20 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 - Android app: added mandatory dependencies for TLS (OkHttp 4.12.0), background transfers (WorkManager 2.9.1),
   Android Keystore-based AES-GCM (Security Crypto 1.1.0-alpha06), and CameraX camera-view; referenced local Topdon TC001
   and Shimmer SDK AAR/JARs under app/src/main/libs for immediate compilation.
+- Android Spoke: ThermalCameraRecorder now writes a metadata.json file (sensor, width, height, emissivity, format) alongside thermal.csv to document acquisition parameters.
+- Android Spoke: RgbCameraRecorder improved to emit preview frames at ~6–8 FPS and to name the MP4 with a start timestamp (ns) for traceability.
+- Android Spoke: Enhanced query_capabilities response to include device_id, Android version, service_port, sensor flags, and camera list for richer Hub discovery.
+- Native backend: Detailed Windows CMake build steps and Shimmer C-API linking guidance in pc_controller/native_backend/README.md.
+- GUI: Implemented preview throttling/backpressure limiting local and remote previews to ~10 FPS with drop logging.
+- Tests: Added pytest pc_controller/tests/test_preview_throttling.py to validate throttling behavior.
+- Tests: TLS sockets and TLS context behavior (pc_controller/tests/test_tls_utils.py).
+- Tooling: Added Ruff and Mypy configuration (pyproject.toml) for static analysis.
+- CI: Python job now runs pytest with coverage (XML, term-missing) and uploads coverage.xml as an artifact.
+- CI: Android job runs JVM unit tests (Robolectric) and uploads HTML/XML test reports as artifacts.
+- Data Export: HDF5 exporter now uses gzip compression (level 4) and attaches units attributes; added /sync datasets (device_ids, clock_offsets_ns, stats_json) to ease downstream analysis.
+- Data Export: HDF5 exporter now estimates and stores sample_rate_hz (from median timestamp delta) as a group attribute and on numeric datasets when timestamps are present.
+- Tests: Extended HDF5 exporter unit test to assert presence of /sync/stats_json when clock_sync metadata is provided.
+- Data Model: Standardized CSV schemas — Shimmer: timestamp_ns,gsr_microsiemens,ppg_raw; RGB: timestamp_ns,filename (JPEGs in frames/); Thermal: timestamp_ns,w,h,v0..v49151; PC-local GSR mirrors Shimmer schema with blank ppg_raw.
 
 ### Changed
 
@@ -41,6 +62,7 @@ The format is based on Keep a Changelog and this project adheres to Conventional
   per-test logs are shown in aggregate runs.
 - PowerShell test runner: re-enabled streaming of Gradle and pytest outputs to console (removed stdout suppression) so
   per-test STARTED/PASSED/FAILED and [TEST_START]/[TEST_RESULT] markers are visible.
+- Maintenance: Verified full Python (pytest) and Android JVM unit test suites passed in this session; no code changes required.
 
 ### Fixed
 
@@ -64,6 +86,18 @@ The format is based on Keep a Changelog and this project adheres to Conventional
   scripts\run_all_tests.ps1 output clean.
 - Windows test runner: filtered out JVM “sun.misc.Unsafe” terminal deprecation warnings in scripts\run_all_tests.ps1 to
   keep logs clean; no functional impact.
+- Android Spoke: aligned CSV headers in ThermalCameraRecorder and ShimmerRecorder with unit tests (timestamp fields and column names).
+- Android: Declared foregroundServiceType="dataSync|connectedDevice|camera" on RecordingService and added
+  FOREGROUND_SERVICE_DATA_SYNC and FOREGROUND_SERVICE_CONNECTED_DEVICE permissions to satisfy startForeground
+  requirements on Android 10+ and Robolectric.
+- GUI: Made remote preview throttling deterministic under burst load by introducing a dedicated _remote_min_interval_s
+  and counting the initial burst frame as a drop; fixes flaky test_remote_preview_throttling on slow/fast machines.
+- Android GSR: unified gsr.csv header to "timestamp_ns,gsr_microsiemens,ppg_raw" across modules to match spec and tests.
+- Network (Priority 2): Automatic re-sync trigger when measured min RTT delay exceeds threshold with cooldown (env: PC_RESYNC_DELAY_THRESHOLD_NS, PC_RESYNC_COOLDOWN_S).
+- Validation CLI: Enhanced reporting to print per-device clock_sync stats (offset_ns, min_delay, std_dev, trials, timestamp) from session_metadata.json.
+- Data Export: Do not attach sample_rate_hz to non-numeric datasets (e.g., RGB filename); apply only to numeric arrays.
+- Data Export: Preserve row alignment when a timestamp column exists (mask invalid timestamps once; keep NaNs in numeric datasets) to maintain per-row alignment across datasets.
+- Data Export: More robust sample_rate_hz estimation (sorted timestamps + trimmed median of positive deltas) to reduce outlier impact.
 
 ## [1.0.0] - 2025-08-16
 

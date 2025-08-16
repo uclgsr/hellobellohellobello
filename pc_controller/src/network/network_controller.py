@@ -18,10 +18,13 @@ import base64
 import json
 import socket
 import time
+import random
+import os
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from dataclasses import dataclass
 from typing import Dict, Optional
 from zeroconf import IPVersion, ServiceBrowser, Zeroconf
+
 
 from .protocol import (
     build_query_capabilities,
@@ -31,9 +34,51 @@ from .protocol import (
     build_time_sync_request,
     compute_time_sync,
     build_transfer_files,
+    encode_frame,
+    decode_frames,
+    build_v1_query_capabilities,
+    build_v1_time_sync_req,
+    build_v1_start_recording,
+    build_v1_ack,
+    build_v1_error,
+    build_v1_cmd,
+    compute_backoff_schedule,
+    compute_time_sync_stats,
 )
 
+# TLS (optional)
+try:
+    from .tls_utils import create_client_ssl_context
+except Exception:  # pragma: no cover - optional import guard
+    create_client_ssl_context = lambda: None  # type: ignore
+
 SERVICE_TYPE = "_gsr-controller._tcp.local."
+
+
+def _connect(host: str, port: int, timeout: float) -> socket.socket:
+    """Create a TCP connection and optionally wrap with TLS if configured.
+
+    Uses tls_utils.create_client_ssl_context() when available and PC_TLS_ENABLE=1.
+    The returned object behaves like a socket with recv/sendall/close.
+    """
+    s = socket.create_connection((host, port), timeout=timeout)
+    try:
+        ctx = None
+        try:
+            ctx = create_client_ssl_context()
+        except Exception:
+            ctx = None
+        if ctx is not None:
+            # If hostname verification is enabled, pass server_hostname
+            server_hostname = host if getattr(ctx, "check_hostname", False) else None
+            return ctx.wrap_socket(s, server_hostname=server_hostname)
+        return s
+    except Exception:
+        try:
+            s.close()
+        except Exception:
+            pass
+        raise
 
 
 @dataclass(frozen=True)
@@ -84,39 +129,58 @@ class ConnectionWorker(QThread):
 
     def run(self) -> None:  # noqa: D401
         try:
-            with socket.create_connection((self._device.address, self._device.port), timeout=self._timeout) as sock:
+            sock = _connect(self._device.address, self._device.port, self._timeout)
+            try:
                 sock.settimeout(self._timeout)
-                # Send query
-                data = build_query_capabilities().encode("utf-8")
-                sock.sendall(data)
-                self.log.emit(f"Sent query_capabilities to {self._device.name}")
+                # Prefer v1 length-prefixed query, fall back accepted on receive
+                v1 = build_v1_query_capabilities(msg_id=int(time.time() * 1000) % 2_000_000_000)
+                sock.sendall(encode_frame(v1))
+                self.log.emit(f"Sent v1 query_capabilities to {self._device.name}")
 
-                # Receive single line
-                chunks: list[bytes] = []
-                while True:
-                    b = sock.recv(4096)
-                    if not b:
+                # Receive response: try length-prefixed first, then legacy newline
+                buf = b""
+                payload = None
+                deadline = time.monotonic() + self._timeout
+                while time.monotonic() < deadline:
+                    chunk = sock.recv(4096)
+                    if not chunk:
                         break
-                    chunks.append(b)
-                    if b"\n" in b:
+                    buf += chunk
+                    # Try length-prefixed decode
+                    res = decode_frames(buf)
+                    if res.messages:
+                        payload = res.messages[0]
                         break
-                raw = b"".join(chunks).split(b"\n", 1)[0].decode("utf-8", errors="replace")
-                self.log.emit(f"Received: {raw}")
-                try:
-                    payload = json.loads(raw)
-                except json.JSONDecodeError as exc:  # noqa: BLE001
-                    self.log.emit(f"Failed to parse JSON: {exc}")
+                    # If buffer looks like legacy (no numeric length prefix), try newline-delimited
+                    nl = buf.find(b"\n")
+                    if nl != -1 and not buf[:nl].isdigit():
+                        line, buf = buf.split(b"\n", 1)
+                        try:
+                            payload = json.loads(line.decode("utf-8", errors="replace"))
+                            break
+                        except Exception:
+                            continue
+                    # otherwise wait for more data (likely length-prefixed incomplete)
+                    buf = res.remainder
+                if payload is None:
+                    self.log.emit("No response to capabilities query")
                     return
+                self.log.emit(f"Received: {payload}")
                 self.capabilities.emit(self._device.name, payload)
+            finally:
+                try:
+                    sock.close()
+                except Exception:
+                    pass
         except Exception as exc:  # noqa: BLE001
             self.log.emit(f"Connection error to {self._device.name}: {exc}")
 
 
 class _BroadcastWorker(QThread):
-    """Send commands to all devices in a background thread.
+    """Send commands to all devices in a background thread with retries.
 
-    Optionally performs a time sync handshake prior to sending start.
-    For transfer_files, it sends host/port/session_id to each device.
+    - Uses v1 length-prefixed framing by default with legacy fallback.
+    - Implements exponential backoff with jitter for retries per device.
     """
 
     log = pyqtSignal(str)
@@ -132,60 +196,158 @@ class _BroadcastWorker(QThread):
         self._controller = controller
         self._receiver_host = receiver_host
         self._receiver_port = receiver_port
+        self._attempts = 3
+        self._base_delay_ms = 100
 
-    def _read_line(self, sock: socket.socket) -> str:
-        chunks: list[bytes] = []
-        while True:
-            b = sock.recv(4096)
-            if not b:
+    def _recv_message(self, sock: socket.socket, timeout: float) -> Optional[dict]:
+        """Receive a single message using v1 framing first, fallback to legacy."""
+        deadline = time.monotonic() + timeout
+        buf = b""
+        while time.monotonic() < deadline:
+            chunk = sock.recv(4096)
+            if not chunk:
                 break
-            chunks.append(b)
-            if b"\n" in b:
-                break
-        return b"".join(chunks).split(b"\n", 1)[0].decode("utf-8", errors="replace")
+            buf += chunk
+            res = decode_frames(buf)
+            if res.messages:
+                return res.messages[0]
+            # Legacy fallback if prefix isn't numeric length
+            nl = buf.find(b"\n")
+            if nl != -1 and not buf[:nl].isdigit():
+                line, buf = buf.split(b"\n", 1)
+                try:
+                    return json.loads(line.decode("utf-8", errors="replace"))
+                except Exception:
+                    continue
+            buf = res.remainder
+        return None
+
+    def _time_sync(self, sock: socket.socket, name: str, trials: int = 12, trim_ratio: float = 0.1) -> None:
+        """Perform multiple NTP-like exchanges to robustly estimate clock offset.
+
+        Stores median offset via controller._store_offset and detailed stats via
+        controller._store_sync_stats when available.
+        """
+        try:
+            offsets: list[int] = []
+            delays: list[int] = []
+            for i in range(max(1, int(trials))):
+                msg_id = int(time.time() * 1000) % 2_000_000_000
+                v1 = build_v1_time_sync_req(msg_id=msg_id, seq=i + 1)
+                try:
+                    sock.sendall(encode_frame(v1))
+                except Exception as exc:
+                    self.log.emit(f"Time sync send failed to {name}: {exc}")
+                    break
+                t0 = int(v1.get("t0", time.time_ns()))
+                payload = self._recv_message(sock, self._timeout)
+                t3 = time.time_ns()
+                if not isinstance(payload, dict):
+                    continue
+                if payload.get("type") == "error":
+                    self.log.emit(f"Time sync error from {name}: {payload}")
+                    continue
+                # Accept both v1 ack and legacy shape
+                try:
+                    t1 = int(payload.get("t1", 0))
+                    t2 = int(payload.get("t2", 0))
+                    offset, delay = compute_time_sync(int(t0), t1, t2, t3)
+                    offsets.append(int(offset))
+                    delays.append(int(delay))
+                except Exception:
+                    continue
+                # tiny pacing to avoid back-to-back bursts
+                time.sleep(0.005)
+            if offsets and delays:
+                median_off, min_delay, std_dev, used = compute_time_sync_stats(offsets, delays, trim_ratio=trim_ratio)
+                if self._controller is not None:
+                    self._controller._store_offset(name, int(median_off))
+                    try:
+                        self._controller._store_sync_stats(name, {
+                            "offset_ns": int(median_off),
+                            "delay_ns": int(min_delay),
+                            "std_dev_ns": int(std_dev),
+                            "trials": int(used),
+                            "timestamp_ns": int(time.time_ns()),
+                        })
+                    except Exception:
+                        pass
+                self.log.emit(f"Time sync {name}: median_offset={median_off}ns min_delay={min_delay}ns std_dev={std_dev}ns trials={used}")
+            else:
+                self.log.emit(f"Time sync {name}: no valid samples collected")
+        except Exception as exc:
+            self.log.emit(f"Time sync to {name} failed: {exc}")
+
+    def _send_command(self, sock: socket.socket, name: str) -> bool:
+        msg_id = int(time.time() * 1000) % 2_000_000_000
+        if self._command == "start_recording" and self._session_id:
+            v1 = build_v1_start_recording(msg_id, self._session_id)
+        elif self._command == "stop_recording":
+            v1 = build_v1_cmd("stop_recording", msg_id)
+        elif self._command == "flash_sync":
+            v1 = build_v1_cmd("flash_sync", msg_id)
+        elif self._command == "transfer_files" and self._session_id and self._receiver_host and self._receiver_port:
+            v1 = build_v1_cmd("transfer_files", msg_id, host=self._receiver_host, port=int(self._receiver_port), session_id=self._session_id)
+        else:
+            self.log.emit(f"Unknown or incomplete command {self._command}")
+            return False
+        try:
+            sock.sendall(encode_frame(v1))
+        except Exception as exc:
+            self.log.emit(f"Send failed to {name}: {exc}")
+            return False
+        # Try to receive ack/error but don't require it
+        payload = None
+        try:
+            payload = self._recv_message(sock, self._timeout)
+        except Exception:
+            payload = None
+        if isinstance(payload, dict):
+            if payload.get("type") == "ack":
+                self.log.emit(f"Ack from {name}: {payload}")
+                return True
+            if payload.get("type") == "error":
+                self.log.emit(f"Error from {name}: {payload}")
+                return False
+        return True  # consider success if send succeeded
 
     def run(self) -> None:  # noqa: D401
         try:
             for name, dev in self._devices.items():
-                try:
-                    with socket.create_connection((dev.address, dev.port), timeout=self._timeout) as sock:
-                        sock.settimeout(self._timeout)
-                        # optional time sync before start
-                        if self._command == "start_recording":
-                            t0 = time.time_ns()
-                            sock.sendall(build_time_sync_request(100, t0).encode("utf-8"))
-                            raw = self._read_line(sock)
-                            t3 = time.time_ns()
-                            payload = json.loads(raw)
-                            t1 = int(payload.get("t1", 0))
-                            t2 = int(payload.get("t2", 0))
-                            offset, delay = compute_time_sync(t0, t1, t2, t3)
-                            if self._controller is not None:
-                                self._controller._store_offset(name, offset)
-                            self.log.emit(f"Time sync {name}: offset={offset}ns delay={delay}ns")
-                        # send the command
-                        msg_id = int(time.time()*1000) % 2_000_000_000
-                        if self._command == "start_recording" and self._session_id:
-                            msg = build_start_recording(self._session_id, msg_id)
-                        elif self._command == "stop_recording":
-                            msg = build_stop_recording(msg_id)
-                        elif self._command == "flash_sync":
-                            msg = build_flash_sync(msg_id)
-                        elif self._command == "transfer_files" and self._session_id and self._receiver_host and self._receiver_port:
-                            msg = build_transfer_files(self._receiver_host, int(self._receiver_port), self._session_id, msg_id)
-                        else:
-                            self.log.emit(f"Unknown or incomplete command {self._command}")
-                            continue
-                        sock.sendall(msg.encode("utf-8"))
-                        # read optional ack without blocking overall process too long
+                schedule = compute_backoff_schedule(self._base_delay_ms, self._attempts)
+                success = False
+                for attempt_idx, delay_ms in enumerate(schedule, start=1):
+                    try:
+                        sock = _connect(dev.address, dev.port, self._timeout)
                         try:
-                            raw = self._read_line(sock)
-                            if raw:
-                                self.log.emit(f"Ack from {name}: {raw}")
-                        except Exception:
-                            pass
-                except Exception as exc:  # noqa: BLE001
-                    self.log.emit(f"Broadcast to {name} failed: {exc}")
+                            sock.settimeout(self._timeout)
+                            if self._command == "start_recording":
+                                self._time_sync(sock, name)
+                                ok = self._send_command(sock, name)
+                            elif self._command == "time_sync":
+                                self._time_sync(sock, name)
+                                ok = True  # time_sync-only: no further command to send
+                            else:
+                                ok = self._send_command(sock, name)
+                            if ok:
+                                success = True
+                                self.log.emit(f"Attempt {attempt_idx}/{len(schedule)} to {name}: success")
+                                break
+                            else:
+                                self.log.emit(f"Attempt {attempt_idx}/{len(schedule)} to {name}: failed")
+                        finally:
+                            try:
+                                sock.close()
+                            except Exception:
+                                pass
+                    except Exception as exc:
+                        self.log.emit(f"Attempt {attempt_idx}/{len(schedule)} to {name} failed to connect: {exc}")
+                    # backoff before next attempt if not success
+                    if not success and attempt_idx < len(schedule):
+                        jitter = random.randint(0, max(1, self._base_delay_ms // 2))
+                        time.sleep((delay_ms + jitter) / 1000.0)
+                if not success:
+                    self.log.emit(f"Broadcast to {name} failed after {len(schedule)} attempts")
         except Exception as exc:  # noqa: BLE001
             self.log.emit(f"Broadcast worker error: {exc}")
 
@@ -193,7 +355,8 @@ class _BroadcastWorker(QThread):
 class PreviewStreamWorker(QThread):
     """Maintains a persistent TCP connection to receive asynchronous messages.
 
-    Specifically listens for type=="preview_frame" messages and emits frames.
+    Specifically listens for preview frame events.
+    Supports both v1 length-prefixed framing and legacy newline-delimited JSON.
     """
 
     log = pyqtSignal(str)
@@ -208,10 +371,30 @@ class PreviewStreamWorker(QThread):
     def stop(self) -> None:
         self._stopped = True
 
+    def _handle_message(self, payload: dict) -> None:
+        try:
+            if not isinstance(payload, dict):
+                return
+            # v1 event
+            if payload.get("v") == 1 and payload.get("type") == "event" and payload.get("name") == "preview_frame":
+                b64 = str(payload.get("jpeg_base64", ""))
+                ts = int(payload.get("ts", 0))
+            # legacy event
+            elif payload.get("type") == "preview_frame":
+                b64 = str(payload.get("jpeg_base64", ""))
+                ts = int(payload.get("ts", 0))
+            else:
+                return
+            data = base64.b64decode(b64)
+            self.frame.emit(self._device.name, data, ts)
+        except Exception:
+            pass
+
     def run(self) -> None:  # noqa: D401
         while not self._stopped:
             try:
-                with socket.create_connection((self._device.address, self._device.port), timeout=self._timeout) as sock:
+                sock = _connect(self._device.address, self._device.port, self._timeout)
+                try:
                     sock.settimeout(self._timeout)
                     buf = b""
                     while not self._stopped:
@@ -219,25 +402,27 @@ class PreviewStreamWorker(QThread):
                         if not chunk:
                             break
                         buf += chunk
-                        while b"\n" in buf:
+                        # First try to decode v1 length-prefixed frames
+                        res = decode_frames(buf)
+                        if res.messages:
+                            for msg in res.messages:
+                                self._handle_message(msg)
+                            buf = res.remainder
+                            continue
+                        # Fallback: only treat as legacy when prefix is not numeric length
+                        nl = buf.find(b"\n")
+                        if nl != -1 and not buf[:nl].isdigit():
                             line, buf = buf.split(b"\n", 1)
-                            text = line.decode("utf-8", errors="replace")
                             try:
-                                payload = json.loads(text)
+                                payload = json.loads(line.decode("utf-8", errors="replace"))
+                                self._handle_message(payload)
                             except Exception:
                                 continue
-                            # If this is a preview frame, decode and emit
-                            if isinstance(payload, dict) and payload.get("type") == "preview_frame":
-                                b64 = payload.get("jpeg_base64", "")
-                                ts = int(payload.get("ts", 0))
-                                try:
-                                    data = base64.b64decode(b64)
-                                    self.frame.emit(self._device.name, data, ts)
-                                except Exception:
-                                    pass
-                            else:
-                                # Other messages ignored or logged
-                                pass
+                finally:
+                    try:
+                        sock.close()
+                    except Exception:
+                        pass
                 # Socket closed; retry after short delay
                 time.sleep(1.0)
             except Exception as exc:  # noqa: BLE001
@@ -263,10 +448,33 @@ class NetworkController(QObject):
         self._workers: Dict[str, ConnectionWorker] = {}
         self._stream_workers: Dict[str, PreviewStreamWorker] = {}
         self._clock_offsets_ns: Dict[str, int] = {}
+        self._clock_sync_stats: Dict[str, dict] = {}
+        # Auto re-sync policy (Priority 2 extension)
+        try:
+            self._resync_delay_threshold_ns: int = int(os.environ.get("PC_RESYNC_DELAY_THRESHOLD_NS", str(25_000_000)))  # 25 ms
+        except Exception:
+            self._resync_delay_threshold_ns = 25_000_000
+        try:
+            self._resync_cooldown_s: float = float(os.environ.get("PC_RESYNC_COOLDOWN_S", "120"))
+        except Exception:
+            self._resync_cooldown_s = 120.0
+        self._last_auto_resync_monotonic: float = 0.0
+        self._auto_resync_in_flight: bool = False
 
     def get_clock_offsets(self) -> Dict[str, int]:
         """Return a copy of the last known per-device clock offsets (ns)."""
         return dict(self._clock_offsets_ns)
+
+    def get_clock_sync_stats(self) -> Dict[str, dict]:
+        """Return a copy of the last known per-device clock sync stats.
+
+        Shape per device:
+        {"offset_ns": int, "delay_ns": int, "std_dev_ns": int, "trials": int, "timestamp_ns": int}
+        """
+        try:
+            return dict(self._clock_sync_stats)  # type: ignore[attr-defined]
+        except Exception:
+            return {}
 
     def start(self) -> None:
         if self._browser is None:
@@ -333,6 +541,48 @@ class NetworkController(QObject):
     def _store_offset(self, name: str, offset_ns: int) -> None:
         self._clock_offsets_ns[name] = offset_ns
 
+    def _store_sync_stats(self, name: str, stats: dict) -> None:
+        """Internal: store detailed sync stats for a device and trigger auto re-sync when needed."""
+        self._clock_sync_stats[name] = dict(stats)
+        # Evaluate auto re-sync policy
+        try:
+            self._maybe_auto_resync(name, stats)
+        except Exception:
+            pass
+
+    def _maybe_auto_resync(self, name: str, stats: dict) -> None:
+        """If measured delay is high, trigger a time_sync broadcast with cooldown.
+
+        Environment variables to tune behavior:
+        - PC_RESYNC_DELAY_THRESHOLD_NS (default 25_000_000 = 25 ms)
+        - PC_RESYNC_COOLDOWN_S (default 120 s)
+        """
+        try:
+            delay_ns = int(stats.get("delay_ns", 0))
+            now = time.monotonic()
+            if (
+                delay_ns >= int(self._resync_delay_threshold_ns)
+                and (now - float(self._last_auto_resync_monotonic)) >= float(self._resync_cooldown_s)
+                and not bool(self._auto_resync_in_flight)
+            ):
+                self._auto_resync_in_flight = True
+                self._last_auto_resync_monotonic = now
+                try:
+                    self._emit_log(
+                        f"High sync delay for {name}: {delay_ns/1e6:.2f} ms >= threshold {self._resync_delay_threshold_ns/1e6:.2f} ms — triggering broadcast_time_sync()"
+                    )
+                except Exception:
+                    pass
+                # Launch re-sync broadcast (non-blocking)
+                try:
+                    self.broadcast_time_sync()
+                except Exception:
+                    pass
+                # Clear in-flight flag immediately; cooldown prevents rapid retriggering
+                self._auto_resync_in_flight = False
+        except Exception:
+            pass
+
     # Public API
     def connect_to_device(self, name: str, address: str, port: int) -> None:
         device = DiscoveredDevice(name=name, address=address, port=port)
@@ -373,6 +623,13 @@ class NetworkController(QObject):
         worker.log.connect(self._emit_log)
         worker.start()
         self._emit_log(f"Broadcast transfer_files to {host}:{port} for session {session_id}")
+
+    def broadcast_time_sync(self) -> None:
+        """Broadcast a time_sync-only operation to refresh offsets/stats."""
+        worker = _BroadcastWorker(self._devices, "time_sync", controller=self)
+        worker.log.connect(self._emit_log)
+        worker.start()
+        self._emit_log("Broadcast time_sync")
 
     def broadcast_flash_sync(self) -> None:
         worker = _BroadcastWorker(self._devices, "flash_sync", controller=self)

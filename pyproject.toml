@@ -1,0 +1,43 @@
+[tool.ruff]
+# Target Python version consistent with project requirements
+target-version = "py311"
+line-length = 100
+# Enable common rule sets: 
+# - E/F/W (pycodestyle/pyflakes), I (isort), B (flake8-bugbear), UP (pyupgrade)
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = [
+  # Allow module-level prints in tools/scripts
+  "T201",
+]
+exclude = [
+  ".pytest_tmp",
+  ".venv",
+  "build",
+  "dist",
+  "android_sensor_node",
+  "pc_controller/native_backend",
+  "docs",
+]
+
+[tool.ruff.isort]
+known-first-party = ["pc_controller"]
+
+[tool.mypy]
+python_version = "3.11"
+# Check only our Python controller package by default
+packages = ["pc_controller"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+strict_optional = true
+no_implicit_optional = true
+follow_imports = "silent"
+show_error_codes = true
+exclude = [
+  "android_sensor_node",
+  "pc_controller/native_backend",
+  "docs",
+  "tests?",
+  ".pytest_tmp",
+]

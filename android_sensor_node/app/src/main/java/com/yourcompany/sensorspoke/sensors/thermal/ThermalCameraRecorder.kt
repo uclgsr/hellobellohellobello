@@ -24,10 +24,10 @@ class ThermalCameraRecorder : SensorRecorder {
         try {
             csvWriter = BufferedWriter(FileWriter(csvFile!!, true))
             if (csvFile!!.length() == 0L) {
-                // Write header: timestamp_nanos followed by 256x192 = 49152 pixel columns placeholder
-                csvWriter!!.write("timestamp_nanos")
+                // Write header per spec: timestamp_ns,w,h, then flattened pixel values v0..v49151
+                csvWriter!!.write("timestamp_ns,w,h")
                 for (i in 0 until 49152) {
-                    csvWriter!!.write(",p${i}")
+                    csvWriter!!.write(",v${i}")
                 }
                 csvWriter!!.write("\n")
                 csvWriter!!.flush()
@@ -35,6 +35,21 @@ class ThermalCameraRecorder : SensorRecorder {
         } catch (e: IOException) {
             throw e
         }
+        // Write basic metadata file to align with spec (placeholder until SDK integration)
+        try {
+            val meta = File(sessionDir, "metadata.json")
+            if (!meta.exists()) {
+                val json = "{" +
+                        "\"sensor\":\"Topdon TC001\"," +
+                        "\"width\":256," +
+                        "\"height\":192," +
+                        "\"emissivity\":0.95," +
+                        "\"format\":\"raw16\"," +
+                        "\"notes\":\"Placeholder metadata; SDK integration pending\"" +
+                        "}"
+                meta.writeText(json)
+            }
+        } catch (_: Exception) { }
         // TODO(Phase 2+): Initialize Topdon SDK, request USB permission, and stream frames.
         // For now, we do not generate rows without the actual device.
     }

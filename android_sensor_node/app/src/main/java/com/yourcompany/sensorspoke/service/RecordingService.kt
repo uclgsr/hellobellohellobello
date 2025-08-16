@@ -4,7 +4,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
@@ -12,6 +11,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Base64
 import androidx.core.app.NotificationCompat
+import androidx.annotation.VisibleForTesting
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.network.FileTransferManager
 import com.yourcompany.sensorspoke.network.NetworkClient
@@ -23,6 +23,9 @@ import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.io.BufferedInputStream
+import java.io.InputStream
+import java.io.ByteArrayOutputStream
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.*
@@ -121,14 +124,15 @@ class RecordingService : Service() {
 
     private fun handleConnection(socket: Socket) {
         socket.use { s ->
-            val reader = BufferedReader(InputStreamReader(s.getInputStream()))
+            val bis = BufferedInputStream(s.getInputStream(), 8192)
             val writer = BufferedWriter(OutputStreamWriter(s.getOutputStream()))
             // Track this client for preview broadcasting
             clientWriters.add(writer)
             try {
                 while (true) {
-                    val line = reader.readLine() ?: break
-                    val obj = JSONObject(line)
+                    val text = readJsonFromSocket(bis) ?: break
+                    val obj = JSONObject(text)
+                    val isV1 = obj.optInt("v", 0) == 1
                     val command = obj.optString("command")
                     val id = obj.optInt("id", 0)
                     when (command) {
@@ -138,7 +142,12 @@ class RecordingService : Service() {
                                 .put("ack_id", id)
                                 .put("status", "ok")
                                 .put("capabilities", caps)
-                            safeWrite(writer, response.toString())
+                            if (isV1) {
+                                response.put("v", 1).put("type", "ack")
+                                safeWriteFrame(writer, response)
+                            } else {
+                                safeWriteLine(writer, response.toString())
+                            }
                         }
 
                         "time_sync" -> {
@@ -150,7 +159,12 @@ class RecordingService : Service() {
                                 .put("status", "ok")
                                 .put("t1", t1)
                                 .put("t2", t2)
-                            safeWrite(writer, response.toString())
+                            if (isV1) {
+                                response.put("v", 1).put("type", "ack")
+                                safeWriteFrame(writer, response)
+                            } else {
+                                safeWriteLine(writer, response.toString())
+                            }
                         }
 
                         "start_recording" -> {
@@ -160,14 +174,24 @@ class RecordingService : Service() {
                                 .putExtra(EXTRA_SESSION_ID, sessionId)
                             sendBroadcast(intent)
                             val response = JSONObject().put("ack_id", id).put("status", "ok")
-                            safeWrite(writer, response.toString())
+                            if (isV1) {
+                                response.put("v", 1).put("type", "ack")
+                                safeWriteFrame(writer, response)
+                            } else {
+                                safeWriteLine(writer, response.toString())
+                            }
                         }
 
                         "stop_recording" -> {
                             val intent = Intent(ACTION_STOP_RECORDING)
                             sendBroadcast(intent)
                             val response = JSONObject().put("ack_id", id).put("status", "ok")
-                            safeWrite(writer, response.toString())
+                            if (isV1) {
+                                response.put("v", 1).put("type", "ack")
+                                safeWriteFrame(writer, response)
+                            } else {
+                                safeWriteLine(writer, response.toString())
+                            }
                         }
 
                         "flash_sync" -> {
@@ -175,7 +199,12 @@ class RecordingService : Service() {
                             val intent = Intent(ACTION_FLASH_SYNC).putExtra(EXTRA_FLASH_TS_NS, ts)
                             sendBroadcast(intent)
                             val response = JSONObject().put("ack_id", id).put("status", "ok").put("ts", ts)
-                            safeWrite(writer, response.toString())
+                            if (isV1) {
+                                response.put("v", 1).put("type", "ack")
+                                safeWriteFrame(writer, response)
+                            } else {
+                                safeWriteLine(writer, response.toString())
+                            }
                         }
 
                         "transfer_files" -> {
@@ -191,18 +220,38 @@ class RecordingService : Service() {
                                     }
                                 }
                                 val response = JSONObject().put("ack_id", id).put("status", "ok")
-                                safeWrite(writer, response.toString())
+                                if (isV1) {
+                                    response.put("v", 1).put("type", "ack")
+                                    safeWriteFrame(writer, response)
+                                } else {
+                                    safeWriteLine(writer, response.toString())
+                                }
                             } else {
-                                val response = JSONObject().put("ack_id", id).put("status", "error")
+                                val response = JSONObject()
+                                    .put("ack_id", id)
+                                    .put("status", "error")
                                     .put("message", "invalid parameters")
-                                safeWrite(writer, response.toString())
+                                if (isV1) {
+                                    response.put("v", 1).put("type", "error").put("code", "E_BAD_PARAM")
+                                    safeWriteFrame(writer, response)
+                                } else {
+                                    safeWriteLine(writer, response.toString())
+                                }
                             }
                         }
 
                         else -> {
-                            // ignore unknown commands but acknowledge to keep pipeline moving
-                            val response = JSONObject().put("ack_id", id).put("status", "unknown_command")
-                            safeWrite(writer, response.toString())
+                            // Unknown commands acknowledged as error
+                            val response = JSONObject()
+                                .put("ack_id", id)
+                                .put("status", "error")
+                                .put("message", "unknown command")
+                            if (isV1) {
+                                response.put("v", 1).put("type", "error").put("code", "E_UNKNOWN_CMD")
+                                safeWriteFrame(writer, response)
+                            } else {
+                                safeWriteLine(writer, response.toString())
+                            }
                         }
                     }
                 }
@@ -218,7 +267,7 @@ class RecordingService : Service() {
         }
     }
 
-    private fun safeWrite(writer: BufferedWriter, text: String) {
+    private fun safeWriteLine(writer: BufferedWriter, text: String) {
         try {
             synchronized(writer) {
                 writer.write(text)
@@ -230,24 +279,81 @@ class RecordingService : Service() {
         }
     }
 
+    private fun safeWriteFrame(writer: BufferedWriter, obj: JSONObject) {
+        try {
+            synchronized(writer) {
+                val json = obj.toString()
+                val len = json.toByteArray(Charsets.UTF_8).size
+                writer.write(len.toString())
+                writer.write("\n")
+                writer.write(json)
+                writer.flush()
+            }
+        } catch (_: Exception) {
+            // ignore write errors; connection handler will close
+        }
+    }
+
+    private fun readJsonFromSocket(bis: BufferedInputStream): String? {
+        // Read first line
+        val first = readAsciiLine(bis) ?: return null
+        val isDigits = first.isNotEmpty() && first.all { it in '0'..'9' }
+        return if (isDigits) {
+            // length-prefixed payload follows
+            val length = try { first.toInt() } catch (_: Exception) { return null }
+            val buf = ByteArray(length)
+            var off = 0
+            while (off < length) {
+                val r = bis.read(buf, off, length - off)
+                if (r == -1) return null
+                off += r
+            }
+            String(buf, Charsets.UTF_8)
+        } else {
+            // legacy newline-delimited JSON
+            first
+        }
+    }
+
+    private fun readAsciiLine(bis: BufferedInputStream): String? {
+        val out = ByteArrayOutputStream()
+        while (true) {
+            val b = bis.read()
+            if (b == -1) break
+            if (b == '\n'.code) break
+            if (b != '\r'.code) out.write(b)
+        }
+        if (out.size() == 0) return null
+        return out.toString("US-ASCII")
+    }
+
     private fun broadcastPreviewFrame(bytes: ByteArray, tsNs: Long) {
         val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
         val obj = JSONObject()
-            .put("type", "preview_frame")
+            .put("v", 1)
+            .put("type", "event")
+            .put("name", "preview_frame")
             .put("device_id", Build.MODEL ?: "device")
             .put("jpeg_base64", b64)
             .put("ts", tsNs)
-        val text = obj.toString()
         val snapshot: List<BufferedWriter> = synchronized(clientWriters) { clientWriters.toList() }
         for (w in snapshot) {
-            safeWrite(w, text)
+            safeWriteFrame(w, obj)
         }
     }
 
     private fun collectCapabilities(): JSONObject {
         val result = JSONObject()
-        result.put("device_model", Build.MODEL ?: "unknown")
-        result.put("has_thermal", false)
+        val model = Build.MODEL ?: "unknown"
+        result.put("device_id", model)
+        result.put("device_model", model)
+        result.put("android_sdk", Build.VERSION.SDK_INT)
+        result.put("android_release", Build.VERSION.RELEASE ?: "")
+        result.put("service_port", serverPort)
+        // Sensor availability (software capability flags)
+        result.put("has_rgb", true)
+        result.put("has_thermal", true)
+        result.put("has_gsr", true)
         val cameras = JSONArray()
         try {
             val cm = getSystemService(CAMERA_SERVICE) as CameraManager

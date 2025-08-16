@@ -17,6 +17,13 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
+# TLS optional server context
+try:
+    from network.tls_utils import create_server_ssl_context  # type: ignore
+except Exception:  # pragma: no cover - optional import guard
+    def create_server_ssl_context():
+        return None
+
 
 def get_local_ip() -> str:
     """Best-effort local IPv4 address for outward connections.
@@ -109,6 +116,12 @@ class FileReceiverServer(QThread):
                 s.listen(5)
                 self._sock = s
                 self.log.emit(f"FileReceiver listening on port {self._port}")
+                # Prepare optional TLS server context
+                ssl_ctx = None
+                try:
+                    ssl_ctx = create_server_ssl_context()
+                except Exception:
+                    ssl_ctx = None
                 while not self._stopped.is_set():
                     try:
                         s.settimeout(1.0)
@@ -120,7 +133,14 @@ class FileReceiverServer(QThread):
                         continue
                     # Handle single connection
                     with conn:
+                        # Wrap with TLS if configured
                         try:
+                            if ssl_ctx is not None:
+                                try:
+                                    conn = ssl_ctx.wrap_socket(conn, server_side=True)
+                                except Exception as exc:
+                                    self.log.emit(f"TLS wrap failed from {addr}: {exc}")
+                                    continue
                             conn.settimeout(10.0)
                             # Read the header line
                             header_line = b""

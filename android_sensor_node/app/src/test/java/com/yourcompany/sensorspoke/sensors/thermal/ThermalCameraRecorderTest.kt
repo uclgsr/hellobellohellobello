@@ -18,9 +18,9 @@ class ThermalCameraRecorderTest {
             assertThat(csv.exists()).isTrue()
             val firstLine = csv.bufferedReader().use { it.readLine() }
             assertThat(firstLine).isNotNull()
-            assertThat(firstLine!!.startsWith("timestamp_nanos")).isTrue()
-            assertThat(firstLine.contains(",p0")).isTrue()
-            assertThat(firstLine.contains(",p49151")).isTrue()
+            assertThat(firstLine!!.startsWith("timestamp_ns,w,h")).isTrue()
+            assertThat(firstLine.contains(",v0")).isTrue()
+            assertThat(firstLine.contains(",v49151")).isTrue()
             recorder.stop()
         } finally {
             tmp.deleteRecursively()

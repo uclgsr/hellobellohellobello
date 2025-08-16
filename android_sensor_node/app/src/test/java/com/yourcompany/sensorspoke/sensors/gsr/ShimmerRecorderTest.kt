@@ -17,7 +17,7 @@ class ShimmerRecorderTest {
             val csv = File(tmp, "gsr.csv")
             assertThat(csv.exists()).isTrue()
             val first = csv.bufferedReader().use { it.readLine() }
-            assertThat(first).isEqualTo("timestamp_nanos,gsr_uS,ppg_raw")
+            assertThat(first).isEqualTo("timestamp_ns,gsr_microsiemens,ppg_raw")
             recorder.stop()
         } finally {
             tmp.deleteRecursively()

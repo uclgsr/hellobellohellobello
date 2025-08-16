@@ -211,11 +211,16 @@ def main() -> int:
 
     meta_path = os.path.join(session_dir, "session_metadata.json")
     offsets: Dict[str, int] = {}
+    clock_sync: Dict[str, dict] = {}
     if os.path.exists(meta_path):
         try:
             with open(meta_path, "r", encoding="utf-8") as f:
                 meta = json.load(f)
             offsets = {str(k): int(v) for k, v in (meta.get("clock_offsets_ns") or {}).items()}
+            try:
+                clock_sync = {str(k): dict(v) for k, v in (meta.get("clock_sync") or {}).items()}
+            except Exception:
+                clock_sync = {}
         except Exception as exc:
             print(f"WARNING: Failed to load session metadata offsets: {exc}")
     else:
@@ -296,6 +301,19 @@ def main() -> int:
     print("\nDevices and Offsets (ns):")
     for d in devices:
         print(f"- {d.name}: offset={d.offset_ns} sign={d.offset_sign} events={len(d.aligned_events_ns)} video={'yes' if d.video_path else 'no'}")
+    # Print detailed clock sync stats if available
+    if 'clock_sync' in locals() and clock_sync:
+        print("\nClock Sync Stats (from session_metadata.json):")
+        for dev_name, st in clock_sync.items():
+            try:
+                off = int(st.get('offset_ns', 0))
+                dly = int(st.get('delay_ns', 0))
+                sd = int(st.get('std_dev', st.get('std_dev_ns', 0)))
+                tri = int(st.get('trials', 0))
+                ts = int(st.get('timestamp_ns', 0))
+                print(f"- {dev_name}: offset={off} ns, min_delay={dly/1e6:.3f} ms, std_dev={sd} ns, trials={tri}, ts={ts}")
+            except Exception:
+                print(f"- {dev_name}: {st}")
     # Streams
     if detections:
         print("\nDetected Streams:")
