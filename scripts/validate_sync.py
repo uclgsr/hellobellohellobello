@@ -42,11 +42,7 @@ from tools.validate_sync_core import (  # type: ignore
     choose_offset_direction,
 )
 
-try:
-    import cv2  # type: ignore
-except Exception as exc:  # pragma: no cover
-    print(f"ERROR: OpenCV import failed: {exc}", file=sys.stderr)
-    sys.exit(2)
+# OpenCV is imported lazily inside functions to allow --help without dependency.
 
 
 @dataclass
@@ -164,8 +160,14 @@ def _map_offsets_to_devices(session_dir: str, offsets: Dict[str, int]) -> Dict[s
 
 
 def _read_video_brightness(path: str) -> Tuple[List[float], float]:
+    try:
+        import cv2  # type: ignore
+    except Exception as exc:  # pragma: no cover - environment specific
+        raise RuntimeError(
+            "OpenCV (cv2) is required to analyze videos. Install opencv-python as per pc_controller/requirements.txt."
+        ) from exc
     cap = cv2.VideoCapture(path)
-    if not cap or not cap.isOpened():
+    if cap is None or not cap.isOpened():
         return [], 0.0
     fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
     means: List[float] = []
