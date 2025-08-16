@@ -8,6 +8,15 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 - Root README.md with build, test, packaging, and architecture overview.
 - Root .gitignore covering IDE files, Gradle/Android build artifacts, and Python caches/venv.
 - System-level validation summary: docs/System_Validation_Report.md.
+- Hardware Validation Protocol SOP: docs/Hardware_Validation_Protocol.md.
+- Validation CLI: scripts/validate_sync.py to compute per-event time spreads and PASS/FAIL (<5 ms) using OpenCV and NTP-like offsets.
+- PC Controller writes session_metadata.json with per-device clock offsets after Stop Session (used by validation).
+- Android FileTransferManager now includes flash_sync_events.csv in the transferred ZIP archive.
+- Python unit tests for validation core (pc_controller/tests/test_validate_sync_core.py).
+
+### Changed
+- User_Manual.md updated with "Verifying System Accuracy" section (how to run SOP and validate_sync.py).
+- Developer_Guide.md updated with Validation Toolkit internals and workflow.
 
 ### Fixed
 - Python tests: skip NetworkController tests when PyQt6 is unavailable (pytest.importorskip) to ensure CI runners without GUI deps still pass.

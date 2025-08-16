@@ -32,8 +32,22 @@ Use a checkerboard target and capture several images at different orientations.
 - Use the calibration utility (Tools) to compute intrinsics and save parameters as JSON.
 - Parameters are used for undistortion and improved pose accuracy.
 
-## 5. Validating Time Synchronization
-After file transfer completes, open the Flash Sync Validation tool (or follow docs/Flash_Sync_Validation.md). Ensure timestamps across streams align within ±5 ms.
+## 5. Verifying System Accuracy (Flash Sync Validation)
+Follow the Hardware Validation Protocol (docs/Hardware_Validation_Protocol.md) to run a 5-minute session with at least five Flash Sync events.
+
+After the Android devices finish transferring files to the PC (the PC Controller logs will indicate receipt and unpacking):
+
+1. Locate the session directory under: pc_controller_data/<session_id>/
+2. From a PowerShell terminal at the repository root, run:
+   
+   python scripts\validate_sync.py --session-id <YOUR_SESSION_ID>
+   
+   Optional:
+   - --base-dir <path> to override the default ./pc_controller_data
+   - --tolerance-ms <float> to adjust the PASS/FAIL threshold (default 5.0)
+3. The tool will detect flash frames in each video, align timestamps using the recorded NTP-like offsets, and print per-event spreads and an overall verdict.
+
+PASS criteria: All events must be within <5 ms across streams (NFR2). If the verdict is FAIL, review camera positioning/lighting and repeat the protocol.
 
 ## 6. Packaging
 - PC Controller (Windows): `./gradlew.bat :pc_controller:assemblePcController` produces an EXE under `pc_controller/build/dist/`.

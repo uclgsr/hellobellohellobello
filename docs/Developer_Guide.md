@@ -143,7 +143,38 @@ Security: Never commit keystores or passwords. Use environment variables or loca
 - Update `CHANGELOG.md` with Every notable change (Keep a Changelog; Conventional Commits).
 
 ## 8. Troubleshooting
-
 - If `gradlew` is not recognized, use `./gradlew.bat` on Windows.
 - If Android build fails due to SDKs, ensure Android Studio installed the required components and `local.properties` points to your SDK.
 - If PyInstaller build misses DLLs, use `--add-binary` in a custom spec or ensure dependencies are importable at runtime.
+
+## 9. Validation Toolkit Internals
+
+This project includes a hardware-in-the-loop Validation Toolkit to verify temporal synchronization (<5 ms):
+
+- Core module: `pc_controller/src/tools/validate_sync_core.py`
+  - `detect_flash_indices_from_brightness(brightness, n_events, min_separation) -> List[int]`:
+    Detects flash peaks from per-frame luminance using a combined z-score and derivative score with non-maximum suppression.
+  - `estimate_T0_ns(aligned_event_ts_ns, rel_times_ns) -> int`:
+    Estimates absolute video start time (T0) on the PC master clock by averaging `aligned_ts - rel_times` across events.
+  - `choose_offset_direction(ref_ts_ns, device_ts_ns, offset_ns) -> int`:
+    Chooses whether to add or subtract the NTP-like offset for a device by minimizing the median absolute error to a reference device.
+  - `compute_validation_report(aligned_events_by_device, detections_by_stream, tolerance_ms) -> ValidationResult`:
+    Produces per-event spreads (ms), overall max spread, PASS/FAIL, and stream T0 details.
+
+- CLI: `scripts/validate_sync.py`
+  - Inputs: `--session-id`, optional `--base-dir` (default `./pc_controller_data`), `--tolerance-ms` (default 5.0).
+  - Loads `session_metadata.json` to get `clock_offsets_ns` and maps them to device folders.
+  - Reads each device's `flash_sync_events.csv` and RGB video (`rgb/video.*`), plus the PC webcam video if present (`webcam.avi`).
+  - Computes per-frame brightness via OpenCV, detects flash indices, and converts indices to relative times using FPS.
+  - Aligns device flash timestamps to the PC master clock by applying the offsets with the selected sign.
+  - Estimates each stream's absolute T0 and computes per-event time spreads across all streams.
+  - Exits 0 on PASS (all events within tolerance) or 1 on FAIL.
+
+Assumptions and Notes:
+- Android devices log flash timestamps using a local monotonic clock; the PC stores NTP-like per-device offsets at Stop Session.
+- The mapping between device names in offsets and session folders is fuzzy-matched (case-insensitive, alphanumeric subset).
+- Peak detection expects full-screen white flashes or clear scene illumination spikes; ensure camera placement/lighting per SOP.
+- Extendable to additional streams (e.g., thermal) by adding corresponding video inputs and flash detection logic.
+
+Testing:
+- Unit tests in `pc_controller/tests/test_validate_sync_core.py` cover peak detection and the PASS path for report computation using synthetic data.
