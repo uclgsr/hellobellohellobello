@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog and this project adheres to Conventional Commits.
 
 ## [Unreleased]
-- No unreleased changes at this time.
+### Added
+- Root README.md with build, test, packaging, and architecture overview.
+- Root .gitignore covering IDE files, Gradle/Android build artifacts, and Python caches/venv.
 
 ## [1.0.0] - 2025-08-16
 ### Added
