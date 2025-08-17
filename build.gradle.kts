@@ -9,12 +9,51 @@ allprojects {
 }
 
 // Aggregate verification: Android unit tests + Python pytest
+// Also provide a root-level pyTest task so this repo can run tests without a Gradle subproject in pc_controller.
+
+// Detect whether an Android SDK is available on this machine
+val localPropsFile = rootProject.file("local.properties")
+val props = java.util.Properties()
+var hasAndroidSdk = false
+if (localPropsFile.exists()) {
+    localPropsFile.inputStream().use { props.load(it) }
+    val sdkDir = props.getProperty("sdk.dir")
+    if (sdkDir != null) {
+        hasAndroidSdk = file(sdkDir).exists()
+    }
+}
+if (!hasAndroidSdk) {
+    val envSdk = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
+    if (envSdk != null) {
+        hasAndroidSdk = file(envSdk).exists()
+    }
+}
+
+// Root-level pytest task
+val pyTest = tasks.register<Exec>("pyTest") {
+    group = "verification"
+    description = "Run Python pytest suite as defined by pytest.ini"
+    workingDir = rootDir
+    commandLine("python3", "-m", "pytest")
+}
+
+// Combined check task
 tasks.register("checkAll") {
     group = "verification"
-    description = "Run Android unit tests and Python pytest"
-    dependsOn(":pc_controller:pyTest")
-    // Android unit test task (Debug)
-    dependsOn(":android_sensor_node:app:testDebugUnitTest")
+    description = if (hasAndroidSdk) {
+        "Run Android unit tests and Python pytest"
+    } else {
+        "Run Python pytest (Android SDK not found; skipping Android unit tests)"
+    }
+    dependsOn(pyTest)
+    if (hasAndroidSdk) {
+        // Android unit test task (Debug)
+        dependsOn(":android_sensor_node:app:testDebugUnitTest")
+    } else {
+        doFirst {
+            println("[checkAll] Android SDK not found; skipping Android unit tests")
+        }
+    }
 }
 
 // Packaging tasks

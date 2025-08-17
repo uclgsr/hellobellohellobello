@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "session_id": "20250817_211710_e2e_fr4",
+  "name": "e2e_fr4",
+  "created_at_ns": 1755461830630804000,
+  "created_at": "2025-08-17T21:17:10",
+  "state": "Stopped",
+  "start_time_ns": 1755461830630958000,
+  "end_time_ns": 1755461830631087000,
+  "duration_ns": 129000
+}
