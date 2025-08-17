@@ -1,0 +1,11 @@
+{
+  "server_ip": "0.0.0.0",
+  "command_port": 8080,
+  "timesync_port": 8081,
+  "file_transfer_port": 8082,
+  "shimmer_sampling_rate": 128,
+  "video_resolution": null,
+  "video_fps": 30,
+  "use_tls": false,
+  "heartbeat_timeout_seconds": 10
+}

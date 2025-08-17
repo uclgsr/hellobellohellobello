@@ -7,18 +7,48 @@ connections to Android Spokes, and log capability handshakes.
 
 This module intentionally keeps GUI light for Phase 1; the focus is the
 core communication layer. GUI will be expanded in later phases.
+
+Additionally, start the async UDP TimeSyncServer (FR3) as a background
+thread so Android clients can synchronize clocks via UDP echo of
+monotonic_ns. The server reads its port/host from config.json (NFR8).
 """
 from __future__ import annotations
 
 import sys
+import threading
+import asyncio
 from PyQt6.QtWidgets import QApplication
 
 from gui.gui_manager import GUIManager
 from network.network_controller import NetworkController
+from network.time_server import TimeSyncServer
+
+
+def _time_server_thread(stop_flag: threading.Event) -> None:
+    async def _runner() -> None:
+        server = TimeSyncServer()
+        await server.start()
+        try:
+            # Poll stop flag periodically without busy waiting
+            while not stop_flag.is_set():
+                await asyncio.sleep(0.5)
+        finally:
+            await server.stop()
+
+    try:
+        asyncio.run(_runner())
+    except Exception:
+        # On exit or unexpected error, just return; app shutdown will proceed
+        return
 
 
 def main() -> int:
     app = QApplication(sys.argv)
+
+    # Start TimeSyncServer in background thread
+    _stop_flag = threading.Event()
+    _ts_thread = threading.Thread(target=_time_server_thread, args=(_stop_flag,), daemon=True)
+    _ts_thread.start()
 
     network = NetworkController()
     gui = GUIManager(network)
@@ -28,6 +58,11 @@ def main() -> int:
 
     # Ensure proper shutdown
     network.shutdown()
+    try:
+        _stop_flag.set()
+        _ts_thread.join(timeout=2.0)
+    except Exception:
+        pass
     return code
 
 

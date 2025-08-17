@@ -2,6 +2,12 @@
 
 This document tracks near-term tasks and priorities. It complements CHANGELOG.md and TEST_PLAN.md.
 
+## Done in this session (2025-08-17)
+- Added centralized pc_controller/config.json and config loader (NFR8).
+- Implemented asyncio-based UDP TimeSyncServer replying with monotonic ns (FR3).
+- PC main.py now starts the TimeSyncServer in a background thread and shuts it down on exit (FR3/NFR8).
+- Android TimeManager: added sync_with_server() and getSyncedTimestamp() (FR3/NFR2).
+
 ## Done in this session (2025-08-16)
 - Verified all Python unit tests (pc_controller) passed: 31/31 green.
 - Verified all Android JVM unit tests (android_sensor_node) passed; CameraX/UI smoke tests are intentionally skipped.

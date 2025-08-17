@@ -8,6 +8,11 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 
 ### Added
 
+- PC (Phase 1): Central configuration file pc_controller/config.json (NFR8) and config loader; future modules can read server_ip, command_port, timesync_port, file_transfer_port, shimmer_sampling_rate, video_resolution, video_fps, use_tls, heartbeat_timeout_seconds.
+- PC (Phase 1): Async UDP TimeSyncServer (pc_controller/src/network/time_server.py) using asyncio; replies with time.monotonic_ns on any datagram (FR3).
+- PC (Phase 1): main.py now starts the TimeSyncServer in a background thread and shuts it down gracefully on exit, enabling Android time sync out of the box (FR3/NFR8).
+- Android (Phase 1): TimeManager.kt now supports sync_with_server(serverIp, serverPort) and getSyncedTimestamp() to apply clock offset (FR3/NFR2).
+
 - Time Sync (Priority 2): Hardened NTP-like handshake with 10–20 trials per device, robust stats (median offset, min delay, std dev, trials used), and per-device storage in NetworkController.
 - Time Sync (Priority 2): Exposed get_clock_sync_stats() for richer metadata export; added broadcast_time_sync() API for on-demand refresh.
 - GUI (Priority 2): Periodic re-sync timer (default 3 minutes) during recording to detect/compensate clock drift automatically.
