@@ -39,6 +39,14 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    packaging {
+        jniLibs {
+            pickFirsts += setOf(
+                "lib/**/libUSBUVCCamera.so"
+            )
+        }
+    }
 }
 
 dependencies {

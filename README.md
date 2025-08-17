@@ -111,3 +111,66 @@ Quick commands:
 - .\gradlew.bat --no-daemon :android_sensor_node:app:testDebugUnitTest
 - python pc_controller\src\main.py
 - python scripts\validate_sync.py --session-id <SESSION_ID>
+
+
+---
+
+# Getting Started (Cross-Platform)
+
+This section provides a simple, step-by-step path for new users and examiners to install dependencies, run a basic session, and execute validation scripts.
+
+## PC Controller Environment Setup
+- Install Python 3.11+
+- (Recommended) Create and activate a virtual environment
+  - Windows (PowerShell):
+    - python -m venv .venv
+    - .\.venv\Scripts\Activate.ps1
+  - macOS/Linux (bash):
+    - python3 -m venv .venv
+    - source .venv/bin/activate
+- Install Python dependencies:
+  - pip install -r pc_controller/requirements.txt
+
+## Android Sensor Node (APK Build in Android Studio)
+1. Open Android Studio and choose "Open" then select this repository root.
+2. Ensure the Android module is at android_sensor_node/app.
+3. Connect an Android device with USB debugging enabled.
+4. Build and run:
+   - Debug build: Gradle task :android_sensor_node:app:assembleDebug, or press Run in Android Studio.
+   - Release APK: Gradle task :android_sensor_node:app:assembleRelease (signing config required).
+
+## Quick Start (Run a Basic Recording Session)
+1. Launch the PC Controller from sources:
+   - Windows: python pc_controller\src\main.py
+   - macOS/Linux: python3 pc_controller/src/main.py
+2. Ensure your Android device(s) are on the same network as the PC.
+3. Start the Android app; wait until it appears in the PC Controller device list.
+4. Create a new session in the PC Controller (e.g., TEST_<date>).
+5. Click Start Recording to begin a synchronized session.
+6. Record for ~30 seconds, then click Stop Recording.
+7. After stop, confirm the session folder under pc_controller_data/<SESSION_ID> contains metadata.json and incoming files from devices.
+
+## Run System Verification Tests
+- Automated (pytest):
+  - pytest -q pc_controller/tests/test_system_end_to_end.py
+  - These tests validate FR4 (Session Management) and FR1 (Simulation Mode) without hardware.
+- Manual Checklist:
+  - Follow docs/markdown/System_Test_Checklist.md to validate FR2, FR3/NFR2, FR5, FR8, FR10, and Endurance.
+
+## Performance & Endurance Testing
+- Simulated load with multiple clients:
+  - python scripts/run_performance_test.py --clients 8 --rate 30 --duration 900
+  - Monitors CPU/Memory; verifies NetworkController stability under load.
+
+## Post-Session Sync Validation
+- Validate cross-device timing (FR3/NFR2):
+  - python scripts/validate_sync.py --session <PATH_TO_SESSION_FOLDER>
+  - PASS: |Δt| < 5 ms across compared streams.
+
+
+
+## Repository Hygiene
+- Do not commit machine-specific files like local.properties (already covered by .gitignore). If one appears in VCS, remove it from version control and keep it local-only.
+- Keep build artifacts out of Git: Gradle .gradle/, **/build/, Android .cxx/, and Python caches/venvs are ignored via the root .gitignore.
+- Prefer adding new ignore patterns to the root .gitignore rather than project-specific files to maintain a single source of truth.
+- Before committing, run tests (pytest for PC, Gradle unit tests for Android) to avoid breaking main.

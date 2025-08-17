@@ -78,3 +78,56 @@ positioning/lighting and repeat the protocol.
 - If no devices appear: check firewall, TLS certificates, and that both PC and phone are on the same network.
 - If HDF5 export fails: validate CSV paths and ensure `h5py` is installed.
 - If calibration cannot find corners: verify checkerboard size matches settings and lighting is adequate.
+
+
+
+## 9. PC GUI Overview
+
+This section provides a quick tour of the main PC Controller GUI and how to operate it during data collections.
+
+### 9.1 Device List
+- Columns typically include: Device Name, IP/Port, Status, Sync Offset, Preview.
+- Status indicators:
+  - Discovered: Device has been seen via Zeroconf.
+  - Online: PC successfully connected and exchanged capabilities.
+  - Recording: Device is actively recording (after Start Recording).
+  - Offline/Disconnected: Device connection lost (see FR8 fault tolerance in the Checklist).
+- Sync Offset:
+  - Shows last measured clock offset (ns or ms). Values near 0 indicate good alignment.
+  - Auto re-sync may trigger if delay/variance exceeds thresholds.
+- Preview:
+  - Thumbnails or a count of incoming preview frames for quick health checks.
+
+### 9.2 Session Control Panel
+- Create Session: Creates a new session folder and metadata.json on the PC. The new session becomes active.
+- Start Recording: Broadcasts a start_recording command to all connected devices. The Shimmer (if managed on PC) also starts streaming/recording.
+- Stop Recording: Broadcasts stop to all devices; finalizes metadata.json with end_time_ns and triggers data transfer (FR10).
+- Transfer Files: If supported, requests devices to upload their session artifacts to the PC FileTransferServer.
+- Time Sync All: Runs NTP-like handshake to estimate per-device clock offsets and update the Sync Offset column.
+- Flash Sync: Triggers bright flash on devices to create a visual timing marker across streams.
+
+### 9.3 Using Flash Sync
+- Click Flash Sync while devices are online (recording optional but recommended during validation runs).
+- For validation sessions, trigger several flashes spaced ~30–60 s apart.
+- After the session, run scripts/validate_sync.py to quantify inter-stream timing differences.
+
+### 9.4 Camera Calibration Workflow
+1. Prepare a checkerboard target (size per your lab’s standard, e.g., 9×6 inner corners).
+2. In the PC Controller Tools/Calibration view:
+   - Capture several images at varying angles and distances.
+   - Verify the checkerboard corners are detected in previews.
+3. Run calibration to compute intrinsics. Save parameters as JSON in your project (e.g., docs/calibration/<device>.json).
+4. Use saved intrinsics for undistortion and improved pose estimation in downstream analysis.
+
+### 9.5 Locating and Interpreting Session Data
+- Session Root: pc_controller_data/<SESSION_ID>/
+- Contents:
+  - metadata.json: Includes session_id, created_at_ns, start_time_ns, end_time_ns, and state.
+  - gsr.csv: (If PC-side GSR capture is enabled/simulated) timestamp_ns, gsr_dummy (or calibrated units if real sensor).
+  - device_<NAME>/ subfolders: Per-Android-device artifacts such as:
+    - rgb.mp4 (or similar): RGB video.
+    - thermal.csv/.mp4 or frames: Thermal data per device capability.
+    - logs/*.txt: Optional logs.
+- Time Semantics:
+  - Timestamps are typically monotonic clock-based. Use validate_sync.py and stored offsets to align streams.
+  - PASS criteria for NFR2: |Δt| < 5 ms across compared streams.

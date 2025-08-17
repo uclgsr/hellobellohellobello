@@ -37,6 +37,7 @@ class SessionMetadata:
     state: str  # Created | Recording | Stopped
     start_time_ns: Optional[int] = None
     end_time_ns: Optional[int] = None
+    duration_ns: Optional[int] = None
 
 
 class SessionManager:
@@ -116,7 +117,15 @@ class SessionManager:
         if self._meta.state == "Stopped":
             return
         self._meta.state = "Stopped"
-        self._meta.end_time_ns = time.time_ns()
+        end_ns = time.time_ns()
+        self._meta.end_time_ns = end_ns
+        try:
+            if self._meta.start_time_ns is not None:
+                dur = max(0, int(end_ns - int(self._meta.start_time_ns)))
+                self._meta.duration_ns = int(dur)
+        except Exception:
+            # Keep duration_ns as None if computation fails
+            pass
         self._write_metadata()
 
 
