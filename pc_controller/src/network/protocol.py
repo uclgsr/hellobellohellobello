@@ -31,6 +31,9 @@ COMMAND_PREVIEW_REQUEST = "preview_request"
 # Phase 5 command
 COMMAND_TRANSFER_FILES = "transfer_files"
 
+# Rejoin/Recovery (FR8)
+COMMAND_REJOIN_SESSION = "rejoin_session"
+
 V1 = 1
 
 

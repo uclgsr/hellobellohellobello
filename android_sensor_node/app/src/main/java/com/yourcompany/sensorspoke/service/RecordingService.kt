@@ -53,6 +53,10 @@ class RecordingService : Service() {
     private val clientWriters = Collections.synchronizedList(mutableListOf<BufferedWriter>())
     private var previewListener: ((ByteArray, Long) -> Unit)? = null
 
+    // FR8: track current session state to support rejoin notification
+    private var currentSessionId: String? = null
+    private var isRecording: Boolean = false
+
     override fun onCreate() {
         super.onCreate()
         networkClient = NetworkClient(applicationContext)
@@ -128,6 +132,8 @@ class RecordingService : Service() {
             val writer = BufferedWriter(OutputStreamWriter(s.getOutputStream()))
             // Track this client for preview broadcasting
             clientWriters.add(writer)
+            // FR8: On new connection, notify PC of current or last session
+            maybeSendRejoin(writer)
             try {
                 while (true) {
                     val text = readJsonFromSocket(bis) ?: break
@@ -173,6 +179,9 @@ class RecordingService : Service() {
                             val intent = Intent(ACTION_START_RECORDING)
                                 .putExtra(EXTRA_SESSION_ID, sessionId)
                             sendBroadcast(intent)
+                            // FR8: update local session state for rejoin purposes
+                            if (sessionId.isNotEmpty()) currentSessionId = sessionId
+                            isRecording = true
                             val response = JSONObject().put("ack_id", id).put("status", "ok")
                             if (isV1) {
                                 response.put("v", 1).put("type", "ack")
@@ -185,6 +194,8 @@ class RecordingService : Service() {
                         "stop_recording" -> {
                             val intent = Intent(ACTION_STOP_RECORDING)
                             sendBroadcast(intent)
+                            // FR8: update local session state — session ended but keep id for rejoin-triggered transfer
+                            isRecording = false
                             val response = JSONObject().put("ack_id", id).put("status", "ok")
                             if (isV1) {
                                 response.put("v", 1).put("type", "ack")
@@ -291,6 +302,23 @@ class RecordingService : Service() {
             }
         } catch (_: Exception) {
             // ignore write errors; connection handler will close
+        }
+    }
+
+    // FR8 helper: notify PC of current or last session upon connection
+    private fun maybeSendRejoin(writer: BufferedWriter) {
+        val sid = currentSessionId
+        if (sid.isNullOrEmpty()) return
+        try {
+            val obj = JSONObject()
+                .put("v", 1)
+                .put("type", "cmd")
+                .put("command", "rejoin_session")
+                .put("session_id", sid)
+                .put("device_id", Build.MODEL ?: "device")
+                .put("recording", isRecording)
+            safeWriteFrame(writer, obj)
+        } catch (_: Exception) {
         }
     }
 

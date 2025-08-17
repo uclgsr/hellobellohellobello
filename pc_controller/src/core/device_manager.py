@@ -40,6 +40,16 @@ class DeviceManager:
                 status="Online",
             )
 
+    def set_status(self, device_id: str, status: str) -> None:
+        """Set a device's status string (e.g., Online, Offline, Recording)."""
+        now = time.time_ns()
+        info = self._devices.get(device_id)
+        if info is None:
+            self.register(device_id)
+            info = self._devices[device_id]
+        info.status = status
+        info.last_heartbeat_ns = now
+
     def remove(self, device_id: str) -> None:
         self._devices.pop(device_id, None)
 

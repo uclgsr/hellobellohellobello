@@ -25,7 +25,10 @@ from dataclasses import dataclass
 from typing import Dict, Optional
 from zeroconf import IPVersion, ServiceBrowser, Zeroconf
 
-
+from core.device_manager import DeviceManager
+from data.data_aggregator import get_local_ip
+from ..config import get as cfg_get
+from .file_transfer_server import FileTransferServer
 from .protocol import (
     build_query_capabilities,
     build_start_recording,
@@ -355,12 +358,13 @@ class _BroadcastWorker(QThread):
 class PreviewStreamWorker(QThread):
     """Maintains a persistent TCP connection to receive asynchronous messages.
 
-    Specifically listens for preview frame events.
+    Specifically listens for preview frame events and rejoin_session notifications.
     Supports both v1 length-prefixed framing and legacy newline-delimited JSON.
     """
 
     log = pyqtSignal(str)
     frame = pyqtSignal(str, bytes, int)  # device name, jpeg bytes, ts
+    rejoin = pyqtSignal(str, dict)  # device name, payload
 
     def __init__(self, device: DiscoveredDevice, timeout: float = 5.0) -> None:
         super().__init__()
@@ -374,6 +378,10 @@ class PreviewStreamWorker(QThread):
     def _handle_message(self, payload: dict) -> None:
         try:
             if not isinstance(payload, dict):
+                return
+            # v1 rejoin command from Android
+            if payload.get("v") == 1 and payload.get("type") == "cmd" and payload.get("command") == "rejoin_session":
+                self.rejoin.emit(self._device.name, dict(payload))
                 return
             # v1 event
             if payload.get("v") == 1 and payload.get("type") == "event" and payload.get("name") == "preview_frame":
@@ -460,6 +468,20 @@ class NetworkController(QObject):
             self._resync_cooldown_s = 120.0
         self._last_auto_resync_monotonic: float = 0.0
         self._auto_resync_in_flight: bool = False
+        # Session/Device state tracking
+        self._active_session_id: Optional[str] = None
+        self._is_recording: bool = False
+        self._device_manager = DeviceManager()
+        # Start FileTransferServer (FR10)
+        try:
+            base_dir = os.path.join(os.getcwd(), "pc_controller_data")
+            os.makedirs(base_dir, exist_ok=True)
+            self._file_server = FileTransferServer(base_dir)
+            port = int(cfg_get("file_transfer_port", 8082))
+            self._file_server.start(port)
+            self._emit_log(f"FileTransferServer started on port {port}")
+        except Exception as exc:
+            self._emit_log(f"FileTransferServer start failed: {exc}")
 
     def get_clock_offsets(self) -> Dict[str, int]:
         """Return a copy of the last known per-device clock offsets (ns)."""
@@ -488,6 +510,21 @@ class NetworkController(QObject):
                 worker.quit()
                 worker.wait(1000)
         self._workers.clear()
+        # Stop preview stream workers
+        for name, sw in list(self._stream_workers.items()):
+            try:
+                sw.stop()
+                sw.wait(1000)
+            except Exception:
+                pass
+        self._stream_workers.clear()
+        # Stop FileTransferServer if running (FR10)
+        try:
+            srv = getattr(self, "_file_server", None)
+            if srv is not None:
+                srv.stop()
+        except Exception:
+            pass
         # Stop discovery
         if self._browser is not None:
             self._browser.cancel()
@@ -507,6 +544,10 @@ class NetworkController(QObject):
             worker = PreviewStreamWorker(device)
             worker.log.connect(self._emit_log)
             worker.frame.connect(self._on_preview_frame)
+            try:
+                worker.rejoin.connect(self._on_rejoin)
+            except Exception:
+                pass
             self._stream_workers[device.name] = worker
             worker.start()
             self._emit_log(f"PreviewStreamWorker started for {device.name}")
@@ -599,16 +640,72 @@ class NetworkController(QObject):
 
     # Phase 4 broadcast API
     def broadcast_start_recording(self, session_id: str) -> None:
+        # Track session state for FR8 rejoin logic
+        self._active_session_id = session_id
+        self._is_recording = True
         worker = _BroadcastWorker(self._devices, "start_recording", session_id, controller=self)
         worker.log.connect(self._emit_log)
         worker.start()
         self._emit_log(f"Broadcast start_recording for session {session_id}")
 
     def broadcast_stop_recording(self) -> None:
+        # Update session flag but keep _active_session_id for potential FR8 rejoin/transfer
+        self._is_recording = False
         worker = _BroadcastWorker(self._devices, "stop_recording", controller=self)
         worker.log.connect(self._emit_log)
         worker.start()
         self._emit_log("Broadcast stop_recording")
+
+    # FR8: Handle rejoin_session notifications from PreviewStreamWorker
+    def _on_rejoin(self, device_name: str, payload: dict) -> None:
+        try:
+            sid = str(payload.get("session_id", ""))
+        except Exception:
+            sid = ""
+        # If we're still recording this session, mark device back to Recording
+        if self._is_recording and self._active_session_id and sid == self._active_session_id:
+            try:
+                self._device_manager.set_status(device_name, "Recording")
+            except Exception:
+                pass
+            self._emit_log(f"Device {device_name} rejoined active session {sid}; status set to Recording")
+            return
+        # Otherwise, request file transfer for the provided or last active session id
+        session_id = sid or (self._active_session_id or "")
+        if not session_id:
+            self._emit_log(f"Device {device_name} rejoined but no known session id; ignoring")
+            return
+        try:
+            host = get_local_ip()
+        except Exception:
+            host = "127.0.0.1"
+        try:
+            port = int(cfg_get("file_transfer_port", 8082))
+        except Exception:
+            port = 8082
+        self._send_transfer_files_to(device_name, session_id, host, port)
+        self._emit_log(f"Requested file transfer from {device_name} for session {session_id} to {host}:{port}")
+
+    def _send_transfer_files_to(self, device_name: str, session_id: str, host: str, port: int) -> None:
+        dev = self._devices.get(device_name)
+        if not dev:
+            self._emit_log(f"Cannot transfer_files: device {device_name} not known")
+            return
+        # Reuse broadcast worker with a single-device map
+        devices = {device_name: dev}
+        worker = _BroadcastWorker(
+            devices,
+            "transfer_files",
+            session_id=session_id,
+            controller=self,
+            receiver_host=host,
+            receiver_port=port,
+        )
+        try:
+            worker.log.connect(self._emit_log)
+        except Exception:
+            pass
+        worker.start()
 
     def broadcast_transfer_files(self, host: str, port: int, session_id: str) -> None:
         """Broadcast a transfer_files command with receiver host/port and session id."""
