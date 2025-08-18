@@ -55,6 +55,8 @@ docs/latex/*.toc
 docs/latex/*.out
 docs/latex/*.log
 
-*.md
-*.*/
-.gradle
+# Ignore auto-generated docs but allow documentation
+!README.md
+!CHANGELOG.md
+!docs/*.md
+!docs/**/*.md
