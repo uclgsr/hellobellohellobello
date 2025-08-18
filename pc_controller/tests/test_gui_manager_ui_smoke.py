@@ -2,11 +2,19 @@ import os
 import pytest
 import sys
 
-# Skip if PyQt6 is not available
-PyQt6 = pytest.importorskip("PyQt6")  # noqa: N816 (external import name)
+# Force offscreen mode before importing PyQt6 to avoid EGL issues
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+# Skip if PyQt6 is not available or if GUI libraries are missing
+try:
+    PyQt6 = pytest.importorskip("PyQt6")  # noqa: N816 (external import name)
+    from PyQt6.QtCore import QObject, pyqtSignal
+    from PyQt6.QtWidgets import QApplication
+except ImportError as e:
+    if "libEGL" in str(e) or "cannot open shared object" in str(e):
+        pytest.skip(f"GUI libraries not available: {e}", allow_module_level=True)
+    else:
+        raise
 
 # Ensure pc_controller/src is on path (pytest.ini usually does this)
 sys.path.append(os.path.join(os.getcwd(), "pc_controller", "src"))

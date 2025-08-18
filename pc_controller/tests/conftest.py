@@ -22,6 +22,9 @@ if str(REPO_ROOT) not in sys.path:
 # Set env before importing cv2 so the native C++ logger honors it.
 import os
 os.environ.setdefault("OPENCV_LOG_LEVEL", "ERROR")
+# Set Qt platform to offscreen for headless testing
+os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+
 try:
     import cv2  # type: ignore
     # Prefer new logging API
@@ -74,3 +77,27 @@ def pytest_runtest_logreport(report: pytest.TestReport) -> None:
         outcome = report.outcome.upper()
         duration = getattr(report, "duration", 0.0)
         print(f"[TEST_RESULT] {_ts()} {report.nodeid} -> {outcome} ({duration:.3f}s)")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Add timeout markers and handle GUI tests appropriately."""
+    for item in items:
+        # Add timeout marker to tests that don't have one
+        if not item.get_closest_marker("timeout"):
+            item.add_marker(pytest.mark.timeout(30))
+        
+        # Skip GUI tests if PyQt6 not available in headless environment
+        if any(keyword in item.name.lower() for keyword in ["gui", "preview", "ui_smoke"]):
+            try:
+                # Try to import PyQt6 and test basic functionality
+                import PyQt6.QtWidgets
+                import PyQt6.QtCore
+                
+                # Test if we can use Qt in current environment
+                app = PyQt6.QtWidgets.QApplication.instance()
+                if app is None:
+                    test_app = PyQt6.QtWidgets.QApplication([])
+                    test_app.quit()
+                    
+            except Exception as e:
+                item.add_marker(pytest.mark.skip(reason=f"GUI testing unavailable: {e}"))
