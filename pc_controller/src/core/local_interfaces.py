@@ -21,11 +21,11 @@ from __future__ import annotations
 # 1) pc_controller.native_backend.native_backend (compiled module as submodule)
 # 2) pc_controller.native_backend (compiled module as package-level)
 import importlib
-import numpy as np
 import threading
 import time
 from collections import deque
-from typing import Optional, Tuple
+
+import numpy as np
 
 _ns_cls = None
 _nw_cls = None
@@ -57,8 +57,8 @@ class ShimmerInterface:
         self._running = False
         self._buf_ts: deque[float] = deque(maxlen=4096)
         self._buf_vals: deque[float] = deque(maxlen=4096)
-        self._thread: Optional[threading.Thread] = None
-        self._native: Optional[object] = None
+        self._thread: threading.Thread | None = None
+        self._native: object | None = None
 
     # Public API
     def start(self) -> None:
@@ -98,7 +98,7 @@ class ShimmerInterface:
                 pass
             self._native = None
 
-    def get_latest_samples(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_latest_samples(self) -> tuple[np.ndarray, np.ndarray]:
         """Return all currently buffered samples and clear internal buffers.
 
         The returned arrays are sorted by timestamp to guarantee monotonic
@@ -169,9 +169,9 @@ class WebcamInterface:
         self._use_native = _nw_cls is not None
         self._lock = threading.Lock()
         self._running = False
-        self._frame: Optional[np.ndarray] = None
-        self._thread: Optional[threading.Thread] = None
-        self._native: Optional[object] = None
+        self._frame: np.ndarray | None = None
+        self._thread: threading.Thread | None = None
+        self._native: object | None = None
         self._cap = None
 
     def start(self) -> None:
@@ -237,7 +237,7 @@ class WebcamInterface:
                 pass
             self._cap = None
 
-    def get_latest_frame(self) -> Optional[np.ndarray]:
+    def get_latest_frame(self) -> np.ndarray | None:
         with self._lock:
             return None if self._frame is None else self._frame.copy()
 
@@ -257,7 +257,6 @@ class WebcamInterface:
             time.sleep(poll_dt)
 
     def _cv_loop(self) -> None:
-        import cv2  # type: ignore
 
         while self._running and self._cap is not None:
             ok, frame = self._cap.read()

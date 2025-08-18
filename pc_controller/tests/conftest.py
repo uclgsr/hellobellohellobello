@@ -7,11 +7,11 @@ Also emits explicit per-test start and result markers to improve CI/console
 visibility of which test is running and its outcome.
 """
 
-import pytest
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Tuple
+
+import pytest
 
 # pc_controller/tests/conftest.py -> repo root is two levels up from pc_controller
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -21,7 +21,15 @@ if str(REPO_ROOT) not in sys.path:
 # Reduce noisy OpenCV WARN logs (e.g., imread of missing files) to avoid cluttering CI output.
 # Set env before importing cv2 so the native C++ logger honors it.
 import os
+
 os.environ.setdefault("OPENCV_LOG_LEVEL", "ERROR")
+# Set Qt platform to offscreen for headless testing
+os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+# Disable OpenGL to prevent EGL issues in CI environments
+os.environ.setdefault("QT_QUICK_BACKEND", "software")
+os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
+os.environ.setdefault("QT_LOGGING_RULES", "*=false")
+
 try:
     import cv2  # type: ignore
     # Prefer new logging API
@@ -49,7 +57,7 @@ def _ts() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def pytest_runtest_logstart(nodeid: str, location: Optional[Tuple[str, int, str]]) -> None:
+def pytest_runtest_logstart(nodeid: str, location: tuple[str, int, str] | None) -> None:
     """Log the start of each test node.
 
     Parameters
@@ -74,3 +82,36 @@ def pytest_runtest_logreport(report: pytest.TestReport) -> None:
         outcome = report.outcome.upper()
         duration = getattr(report, "duration", 0.0)
         print(f"[TEST_RESULT] {_ts()} {report.nodeid} -> {outcome} ({duration:.3f}s)")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Add timeout markers and handle GUI tests appropriately."""
+    for item in items:
+        # Add timeout marker to tests that don't have one
+        if not item.get_closest_marker("timeout"):
+            item.add_marker(pytest.mark.timeout(30))
+
+        # Skip GUI tests if PyQt6 not available in headless environment
+        if any(keyword in item.name.lower() for keyword in ["gui", "preview", "ui_smoke"]):
+            # Check if we're in a CI environment where GUI isn't available
+            is_ci = os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS")
+
+            try:
+                # Try to import PyQt6 and test basic functionality
+                import PyQt6.QtCore
+                import PyQt6.QtWidgets
+
+                # Test if we can use Qt in current environment
+                app = PyQt6.QtWidgets.QApplication.instance()
+                if app is None:
+                    test_app = PyQt6.QtWidgets.QApplication([])
+                    test_app.setAttribute(test_app.ApplicationAttribute.AA_DontShowIconsInMenus, True)
+                    # Keep app alive for other tests
+
+            except Exception as e:
+                if is_ci:
+                    # In CI, mark as expected skip
+                    item.add_marker(pytest.mark.skip(reason=f"GUI testing skipped in CI: {e}"))
+                else:
+                    # In dev environment, this might be a real issue
+                    item.add_marker(pytest.mark.skip(reason=f"GUI testing unavailable: {e}"))

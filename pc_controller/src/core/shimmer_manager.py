@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 import threading
 import time
-from typing import Callable, Optional
+from collections.abc import Callable
 
 try:
     from ..config import get as cfg_get
@@ -20,13 +20,13 @@ except Exception:  # pragma: no cover
 
 
 class SimulatedShimmer:
-    def __init__(self, sample_rate_hz: Optional[int] = None) -> None:
+    def __init__(self, sample_rate_hz: int | None = None) -> None:
         self._rate = int(sample_rate_hz or int(cfg_get("shimmer_sampling_rate", 128)))
         if self._rate <= 0:
             self._rate = 128
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._running = threading.Event()
-        self._callback: Optional[Callable[[int, float], None]] = None
+        self._callback: Callable[[int, float], None] | None = None
 
     # Public API mirroring a real manager
     def connect(self) -> bool:

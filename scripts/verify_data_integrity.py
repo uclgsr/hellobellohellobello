@@ -34,11 +34,9 @@ import argparse
 import hashlib
 import json
 import os
-import sys
 import tempfile
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Tuple
-
 
 SUPPORTED_ALGS = {"sha256", "md5"}
 
@@ -49,9 +47,9 @@ class Entry:
     session_dir: str
     filename: str
     abs_path: str
-    size_meta: Optional[int]
+    size_meta: int | None
     alg: str
-    expected: Optional[str]
+    expected: str | None
 
 
 def _iter_metadata_files(session_dir: str) -> Iterable[str]:
@@ -68,7 +66,7 @@ def _iter_metadata_files(session_dir: str) -> Iterable[str]:
                     yield p
 
 
-def _normalize_alg(s: Optional[str], default_alg: str) -> str:
+def _normalize_alg(s: str | None, default_alg: str) -> str:
     if not s:
         return default_alg
     s = s.lower().strip()
@@ -88,16 +86,16 @@ def _digest_file(path: str, alg: str) -> str:
     return h.hexdigest()
 
 
-def _collect_entries(meta_path: str, session_dir: str, default_alg: str) -> List[Entry]:
+def _collect_entries(meta_path: str, session_dir: str, default_alg: str) -> list[Entry]:
     try:
-        with open(meta_path, "r", encoding="utf-8") as f:
+        with open(meta_path, encoding="utf-8") as f:
             data = json.load(f)
     except Exception:
         return []
 
-    entries: List[Entry] = []
+    entries: list[Entry] = []
 
-    def add(filename: str, expected: Optional[str], alg: Optional[str], size: Optional[int]) -> None:
+    def add(filename: str, expected: str | None, alg: str | None, size: int | None) -> None:
         if not filename:
             return
         abs_path = os.path.join(session_dir, filename)
@@ -148,7 +146,7 @@ def _format_status(ok: bool | None) -> str:
     return "MISSING"
 
 
-def _find_common_files(session_dir: str) -> List[str]:
+def _find_common_files(session_dir: str) -> list[str]:
     # Typical files we want to suggest checksums for
     cands = [
         "gsr.csv",
@@ -157,7 +155,7 @@ def _find_common_files(session_dir: str) -> List[str]:
         os.path.join("rgb", "video.avi"),
         os.path.join("rgb", "video.mkv"),
     ]
-    found: List[str] = []
+    found: list[str] = []
     for root, _dirs, files in os.walk(session_dir):
         for f in files:
             rel = os.path.relpath(os.path.join(root, f), session_dir)
@@ -171,7 +169,7 @@ def verify(session_dir: str, default_alg: str, generate: bool) -> int:
         print(f"Error: session directory not found: {session_dir}")
         return 2
 
-    all_entries: List[Entry] = []
+    all_entries: list[Entry] = []
     for meta_path in _iter_metadata_files(session_dir):
         all_entries.extend(_collect_entries(meta_path, session_dir, default_alg))
 
@@ -195,7 +193,7 @@ def verify(session_dir: str, default_alg: str, generate: bool) -> int:
     failures = 0
     for ent in all_entries:
         exists = os.path.exists(ent.abs_path) and os.path.isfile(ent.abs_path)
-        ok: Optional[bool] = None
+        ok: bool | None = None
         reason = ""
         if not exists:
             ok = None
@@ -252,7 +250,7 @@ def _dry_run(default_alg: str) -> int:
         return rc
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Verify session data integrity against metadata checksums.")
     p.add_argument("--session", help="Path to the session directory")
     p.add_argument("--alg", default="sha256", choices=sorted(SUPPORTED_ALGS), help="Default checksum algorithm to use when metadata does not specify one")

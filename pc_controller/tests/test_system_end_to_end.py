@@ -55,7 +55,7 @@ def test_fr1_simulation_mode_generates_gsr_csv(tmp_path: Path) -> None:
     base_dir = tmp_path / "pc_data"
     sm = SessionManager(base_dir=str(base_dir))
 
-    sid = sm.create_session("e2e_fr1_simulated_gsr")
+    sm.create_session("e2e_fr1_simulated_gsr")
     sm.start_recording()
 
     sdir = sm.session_dir

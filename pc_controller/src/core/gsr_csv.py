@@ -2,7 +2,7 @@
 
 Usage:
     from core.gsr_csv import GsrCsvWriter
-    
+
     with GsrCsvWriter(path) as w:
         w.write(ts_ns, value)
 
@@ -14,15 +14,15 @@ from __future__ import annotations
 import csv
 import threading
 from pathlib import Path
-from typing import Optional, TextIO
+from typing import TextIO
 
 
 class GsrCsvWriter:
     def __init__(self, file_path: str | Path, newline: str = "") -> None:
         self._path = Path(file_path)
         self._lock = threading.Lock()
-        self._fh: Optional[TextIO] = None
-        self._writer: Optional[csv.writer] = None
+        self._fh: TextIO | None = None
+        self._writer: csv.writer | None = None
         self._newline = newline
 
     def open(self) -> None:
@@ -56,7 +56,7 @@ class GsrCsvWriter:
                 self._fh = None
                 self._writer = None
 
-    def __enter__(self) -> "GsrCsvWriter":
+    def __enter__(self) -> GsrCsvWriter:
         self.open()
         return self
 

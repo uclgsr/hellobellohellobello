@@ -57,11 +57,10 @@ To run from sources (development):
 
 ## Communication and Time Sync
 
-- TLS 1.2+ TCP/IP socket with JSON control messages. See PROTOCOL.md for full message formats.
-- NTP-like handshake upon connection to compute per-device clock offsets. All data is timestamped using device-local
-  monotonic clocks; alignment is performed in post-processing.
-- Flash Sync: The Hub can broadcast a `flash_sync` command to trigger simultaneous on-screen flashes across devices for
-  temporal validation (docs/Flash_Sync_Validation.md).
+- **Enterprise TLS Security**: TLS 1.2+ TCP/IP socket with mutual authentication and secure message framing. See docs/TLS_API_Documentation.md for comprehensive security configuration.
+- **Fault Tolerance System**: Automatic heartbeat monitoring with device health tracking and exponential backoff reconnection. See docs/Heartbeat_API_Documentation.md for implementation details.
+- **NTP-like Time Sync**: Handshake upon connection to compute per-device clock offsets. All data is timestamped using device-local monotonic clocks; alignment is performed in post-processing.
+- **Flash Sync**: The Hub can broadcast a `flash_sync` command to trigger simultaneous on-screen flashes across devices for temporal validation (docs/Flash_Sync_Validation.md).
 
 ## Data Handling
 
@@ -76,7 +75,29 @@ To run from sources (development):
   Shimmer via Shimmer C-API and local webcam via OpenCV). Consult pc_controller/native_backend/README.md for build
   guidance.
 
+## Documentation
+
+### Production Documentation
+- **[TLS API Documentation](docs/TLS_API_Documentation.md)**: Complete guide to TLS security implementation with API reference and examples
+- **[Heartbeat API Documentation](docs/Heartbeat_API_Documentation.md)**: Comprehensive fault tolerance system documentation with cross-platform implementation
+- **[Production Deployment Guide](docs/Production_Deployment_Guide.md)**: Enterprise deployment procedures with security hardening and infrastructure setup
+- **[Troubleshooting Guide](docs/Troubleshooting_Guide.md)**: Systematic diagnostic procedures for all common issues and recovery procedures
+
+### Development Documentation
+- **[User Manual](docs/markdown/User_Manual.md)**: End-user guide for operating the platform
+- **[Developer Guide](docs/markdown/Developer_Guide.md)**: Technical implementation details and development procedures
+- **[Hardware Validation Protocol](docs/markdown/Hardware_Validation_Protocol.md)**: Standard operating procedures for hardware validation
+
+### Technical Specifications
+- **[PROTOCOL.md](PROTOCOL.md)**: Complete communication protocol specification
+- **[TEST_PLAN.md](TEST_PLAN.md)**: Comprehensive testing strategy and procedures
+- **[BACKUP_STRATEGY.md](BACKUP_STRATEGY.md)**: Data backup and recovery procedures
+
 ## Security & Ethics
+
+- **Production Security**: Enterprise-grade TLS encryption with certificate-based authentication, comprehensive input validation, and security hardening. See docs/Production_Deployment_Guide.md for security configuration.
+- **Data Protection**: Local recording with optional encrypted transfer and secure data handling throughout the pipeline.
+- **Privacy Compliance**: Designed for research environments with appropriate consent and data protection procedures.
 
 - Android local storage is encrypted using Android Keystore (AES256-GCM) for sensitive artifacts. The PC Controller
   requires authentication (see GUI docs) and supports anonymized participant IDs.

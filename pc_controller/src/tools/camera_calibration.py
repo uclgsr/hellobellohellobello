@@ -10,10 +10,12 @@ calibration.
 from __future__ import annotations
 
 import json
-import numpy as np
-from dataclasses import dataclass, asdict
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Sequence, Tuple, Dict, Any
+from typing import Any
+
+import numpy as np
 
 try:
     import cv2  # type: ignore
@@ -38,11 +40,11 @@ class CalibrationResult:
     camera_matrix: np.ndarray
     dist_coeffs: np.ndarray
     rms_error: float
-    image_size: Tuple[int, int]
-    board_size: Tuple[int, int]
+    image_size: tuple[int, int]
+    board_size: tuple[int, int]
     square_size: float
 
-    def to_json_dict(self) -> Dict[str, Any]:
+    def to_json_dict(self) -> dict[str, Any]:
         return {
             "camera_matrix": self.camera_matrix.tolist(),
             "dist_coeffs": self.dist_coeffs.tolist(),
@@ -53,7 +55,7 @@ class CalibrationResult:
         }
 
     @staticmethod
-    def from_json_dict(data: Dict[str, Any]) -> "CalibrationResult":
+    def from_json_dict(data: dict[str, Any]) -> CalibrationResult:
         return CalibrationResult(
             camera_matrix=np.array(data["camera_matrix"], dtype=np.float64),
             dist_coeffs=np.array(data["dist_coeffs"], dtype=np.float64),
@@ -64,7 +66,7 @@ class CalibrationResult:
         )
 
 
-def _prepare_object_points(board_size: Tuple[int, int], square_size: float) -> np.ndarray:
+def _prepare_object_points(board_size: tuple[int, int], square_size: float) -> np.ndarray:
     cols, rows = board_size
     objp = np.zeros((rows * cols, 3), np.float32)
     # grid of points (0,0), (1,0), ... scaled by square_size
@@ -75,9 +77,9 @@ def _prepare_object_points(board_size: Tuple[int, int], square_size: float) -> n
 
 def find_checkerboard_corners(
     image_paths: Sequence[Path | str],
-    board_size: Tuple[int, int],
+    board_size: tuple[int, int],
     square_size: float,
-) -> Tuple[List[np.ndarray], List[np.ndarray], Tuple[int, int]]:
+) -> tuple[list[np.ndarray], list[np.ndarray], tuple[int, int]]:
     """Finds checkerboard corners in the given images.
 
     Returns object_points (list per image), image_points (list per image), and image_size (w, h).
@@ -97,9 +99,9 @@ def find_checkerboard_corners(
         raise ValueError("No readable images provided for calibration.")
 
     objp_template = _prepare_object_points(board_size, square_size)
-    objpoints: List[np.ndarray] = []
-    imgpoints: List[np.ndarray] = []
-    image_size: Tuple[int, int] | None = None
+    objpoints: list[np.ndarray] = []
+    imgpoints: list[np.ndarray] = []
+    image_size: tuple[int, int] | None = None
 
     for p in image_paths:
         pp = Path(p)
@@ -142,7 +144,7 @@ def find_checkerboard_corners(
 
 def calibrate_camera(
     image_paths: Sequence[Path | str],
-    board_size: Tuple[int, int],
+    board_size: tuple[int, int],
     square_size: float,
 ) -> CalibrationResult:
     """Performs camera calibration using the provided checkerboard images.

@@ -1,14 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hellobellohellobello"
+version = "0.1.0"
+description = "Multi-Modal Sensor Platform for Advanced Research Data Collection"
+requires-python = ">=3.11"
+dependencies = [
+    "PyQt6>=6.6.0",
+    "pyqtgraph>=0.13.3",
+    "numpy>=1.24",
+    "opencv-python>=4.8",
+    "zeroconf>=0.132.2",
+    "pybind11>=2.11",
+    "pandas>=2.2",
+    "h5py>=3.10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-timeout>=2.1",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+    "pyinstaller>=6.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pc_controller*"]
+exclude = ["tests*", "android_sensor_node*", "build*", "dist*"]
+
 [tool.ruff]
 # Target Python version consistent with project requirements
 target-version = "py311"
 line-length = 100
-# Enable common rule sets: 
-# - E/F/W (pycodestyle/pyflakes), I (isort), B (flake8-bugbear), UP (pyupgrade)
-select = ["E", "F", "W", "I", "B", "UP"]
-ignore = [
-  # Allow module-level prints in tools/scripts
-  "T201",
-]
 exclude = [
   ".pytest_tmp",
   ".venv",
@@ -19,7 +47,16 @@ exclude = [
   "docs",
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint]
+# Enable common rule sets: 
+# - E/F/W (pycodestyle/pyflakes), I (isort), B (flake8-bugbear), UP (pyupgrade)
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = [
+  # Allow module-level prints in tools/scripts
+  "T201",
+]
+
+[tool.ruff.lint.isort]
 known-first-party = ["pc_controller"]
 
 [tool.mypy]

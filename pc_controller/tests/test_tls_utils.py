@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import os
 import ssl
 import types
+
 import pytest
 
 from pc_controller.src.network import tls_utils

@@ -16,44 +16,37 @@ from __future__ import annotations
 
 import base64
 import json
+import os
+import random
 import socket
 import time
-import random
-import os
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from dataclasses import dataclass
-from typing import Dict, Optional
-from zeroconf import IPVersion, ServiceBrowser, Zeroconf
 
 from core.device_manager import DeviceManager
 from data.data_aggregator import get_local_ip
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from zeroconf import IPVersion, ServiceBrowser, Zeroconf
+
 from ..config import get as cfg_get
 from .file_transfer_server import FileTransferServer
 from .protocol import (
-    build_query_capabilities,
-    build_start_recording,
-    build_stop_recording,
-    build_flash_sync,
-    build_time_sync_request,
-    compute_time_sync,
-    build_transfer_files,
-    encode_frame,
-    decode_frames,
-    build_v1_query_capabilities,
-    build_v1_time_sync_req,
-    build_v1_start_recording,
-    build_v1_ack,
-    build_v1_error,
     build_v1_cmd,
+    build_v1_query_capabilities,
+    build_v1_start_recording,
+    build_v1_time_sync_req,
     compute_backoff_schedule,
+    compute_time_sync,
     compute_time_sync_stats,
+    decode_frames,
+    encode_frame,
 )
 
 # TLS (optional)
 try:
     from .tls_utils import create_client_ssl_context
 except Exception:  # pragma: no cover - optional import guard
-    create_client_ssl_context = lambda: None  # type: ignore
+    def create_client_ssl_context():
+        return None  # type: ignore
 
 SERVICE_TYPE = "_gsr-controller._tcp.local."
 
@@ -94,7 +87,7 @@ class DiscoveredDevice:
 class _ZeroconfListener:
     """Listener object for Zeroconf service browser."""
 
-    def __init__(self, parent: "NetworkController") -> None:
+    def __init__(self, parent: NetworkController) -> None:
         self._parent = parent
 
     def remove_service(self, zeroconf: Zeroconf, type_: str, name: str) -> None:  # noqa: D401
@@ -188,9 +181,9 @@ class _BroadcastWorker(QThread):
 
     log = pyqtSignal(str)
 
-    def __init__(self, devices: Dict[str, DiscoveredDevice], command: str, session_id: Optional[str] = None,
-                 controller: "NetworkController" = None, timeout: float = 5.0,
-                 receiver_host: Optional[str] = None, receiver_port: Optional[int] = None) -> None:
+    def __init__(self, devices: dict[str, DiscoveredDevice], command: str, session_id: str | None = None,
+                 controller: NetworkController = None, timeout: float = 5.0,
+                 receiver_host: str | None = None, receiver_port: int | None = None) -> None:
         super().__init__()
         self._devices = dict(devices)
         self._command = command
@@ -202,7 +195,7 @@ class _BroadcastWorker(QThread):
         self._attempts = 3
         self._base_delay_ms = 100
 
-    def _recv_message(self, sock: socket.socket, timeout: float) -> Optional[dict]:
+    def _recv_message(self, sock: socket.socket, timeout: float) -> dict | None:
         """Receive a single message using v1 framing first, fallback to legacy."""
         deadline = time.monotonic() + timeout
         buf = b""
@@ -450,13 +443,13 @@ class NetworkController(QObject):
     def __init__(self) -> None:
         super().__init__()
         self._zeroconf = Zeroconf(ip_version=IPVersion.All)
-        self._browser: Optional[ServiceBrowser] = None
+        self._browser: ServiceBrowser | None = None
         self._listener = _ZeroconfListener(self)
-        self._devices: Dict[str, DiscoveredDevice] = {}
-        self._workers: Dict[str, ConnectionWorker] = {}
-        self._stream_workers: Dict[str, PreviewStreamWorker] = {}
-        self._clock_offsets_ns: Dict[str, int] = {}
-        self._clock_sync_stats: Dict[str, dict] = {}
+        self._devices: dict[str, DiscoveredDevice] = {}
+        self._workers: dict[str, ConnectionWorker] = {}
+        self._stream_workers: dict[str, PreviewStreamWorker] = {}
+        self._clock_offsets_ns: dict[str, int] = {}
+        self._clock_sync_stats: dict[str, dict] = {}
         # Auto re-sync policy (Priority 2 extension)
         try:
             self._resync_delay_threshold_ns: int = int(os.environ.get("PC_RESYNC_DELAY_THRESHOLD_NS", str(25_000_000)))  # 25 ms
@@ -469,7 +462,7 @@ class NetworkController(QObject):
         self._last_auto_resync_monotonic: float = 0.0
         self._auto_resync_in_flight: bool = False
         # Session/Device state tracking
-        self._active_session_id: Optional[str] = None
+        self._active_session_id: str | None = None
         self._is_recording: bool = False
         self._device_manager = DeviceManager()
         # Start FileTransferServer (FR10)
@@ -483,11 +476,11 @@ class NetworkController(QObject):
         except Exception as exc:
             self._emit_log(f"FileTransferServer start failed: {exc}")
 
-    def get_clock_offsets(self) -> Dict[str, int]:
+    def get_clock_offsets(self) -> dict[str, int]:
         """Return a copy of the last known per-device clock offsets (ns)."""
         return dict(self._clock_offsets_ns)
 
-    def get_clock_sync_stats(self) -> Dict[str, dict]:
+    def get_clock_sync_stats(self) -> dict[str, dict]:
         """Return a copy of the last known per-device clock sync stats.
 
         Shape per device:
@@ -505,13 +498,13 @@ class NetworkController(QObject):
 
     def shutdown(self) -> None:
         # Stop workers
-        for name, worker in list(self._workers.items()):
+        for _name, worker in list(self._workers.items()):
             if worker.isRunning():
                 worker.quit()
                 worker.wait(1000)
         self._workers.clear()
         # Stop preview stream workers
-        for name, sw in list(self._stream_workers.items()):
+        for _name, sw in list(self._stream_workers.items()):
             try:
                 sw.stop()
                 sw.wait(1000)

@@ -1,6 +1,6 @@
 import os
-import sys
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -36,7 +36,7 @@ class TestRunPytestViaUnittest(unittest.TestCase):
             if ret == 0:
                 return
             # If API invocation failed, fall back to subprocess for more isolation
-        
+
         # Fallback: try subprocess with `python -m pytest`
         try:
             proc = subprocess.run(

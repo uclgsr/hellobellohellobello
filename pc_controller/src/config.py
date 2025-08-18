@@ -9,10 +9,10 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 # Internal cache
-__CONFIG_CACHE: Optional[Dict[str, Any]] = None
+__CONFIG_CACHE: dict[str, Any] | None = None
 
 
 def _default_config_path() -> Path:
@@ -22,7 +22,7 @@ def _default_config_path() -> Path:
     return here.parents[2] / "config.json"
 
 
-def _load_from_file(path: Path) -> Dict[str, Any]:
+def _load_from_file(path: Path) -> dict[str, Any]:
     try:
         with path.open("r", encoding="utf-8") as f:
             return json.load(f)
@@ -39,7 +39,7 @@ def reload_config() -> None:
     __CONFIG_CACHE = None
 
 
-def get_config() -> Dict[str, Any]:
+def get_config() -> dict[str, Any]:
     """Return the loaded configuration as a dictionary (cached).
 
     Resolution order:

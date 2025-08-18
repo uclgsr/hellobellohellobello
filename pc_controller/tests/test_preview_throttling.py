@@ -1,20 +1,35 @@
+import base64
 import os
 import sys
 import time
-import base64
+
+# Set Qt environment BEFORE any Qt imports to prevent EGL issues
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
+os.environ.setdefault("QT_QUICK_BACKEND", "software")
+
 import pytest
 
-# Skip if PyQt6 is not available
-PyQt6 = pytest.importorskip("PyQt6")  # noqa: N816
+# Skip if PyQt6 is not available or if GUI libraries are missing
+try:
+    PyQt6 = pytest.importorskip("PyQt6")  # noqa: N816
+    from PyQt6.QtCore import QObject, pyqtSignal
+    from PyQt6.QtWidgets import QApplication
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+    # Test basic Qt functionality
+    test_app = QApplication.instance()
+    if test_app is None:
+        test_app = QApplication([])
+        # Don't quit immediately, let it be managed by conftest.py
+
+except ImportError as e:
+    if "libEGL" in str(e) or "cannot open shared object" in str(e) or "qt.qpa.plugin" in str(e).lower():
+        pytest.skip(f"GUI libraries not available: {e}", allow_module_level=True)
+    else:
+        raise
 
 # Ensure pc_controller/src is on path
 sys.path.append(os.path.join(os.getcwd(), "pc_controller", "src"))
-
-# Force offscreen to avoid GUI requirements in CI
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 # Tiny 1x1 PNG (black) base64
 _PNG_1x1_B64 = (

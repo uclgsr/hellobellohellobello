@@ -8,7 +8,6 @@ synchronously, so no Qt event loop is required here.
 from __future__ import annotations
 
 import pytest
-from typing import List
 
 pytest.importorskip("PyQt6")
 from pc_controller.src.network.network_controller import NetworkController
@@ -44,7 +43,7 @@ def test_store_offset(controller: NetworkController) -> None:
 
 def test_on_service_removed_stops_stream_worker_and_emits_signal(controller: NetworkController) -> None:
     # Arrange: inject a fake worker and device
-    removed_names: List[str] = []
+    removed_names: list[str] = []
     controller.device_removed.connect(lambda name: removed_names.append(name))
 
     fake = _FakeWorker()

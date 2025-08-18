@@ -26,19 +26,19 @@ from __future__ import annotations
 
 import argparse
 import json
-import numpy as np
 import os
 import sys
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple
+
+import numpy as np
 
 # Local imports
 sys.path.append(os.path.join(os.getcwd(), "pc_controller", "src"))
 from tools.validate_sync_core import (  # type: ignore
     StreamDetection,
+    choose_offset_direction,
     compute_validation_report,
     detect_flash_indices_from_brightness,
-    choose_offset_direction,
 )
 
 # OpenCV is imported lazily inside functions to allow --help without dependency.
@@ -48,10 +48,10 @@ from tools.validate_sync_core import (  # type: ignore
 class DeviceSession:
     name: str  # folder/device id
     path: str
-    flash_csv: Optional[str]
-    video_path: Optional[str]
-    raw_events_ns: List[int]
-    aligned_events_ns: List[int]
+    flash_csv: str | None
+    video_path: str | None
+    raw_events_ns: list[int]
+    aligned_events_ns: list[int]
     offset_ns: int
     offset_sign: int
 
@@ -63,7 +63,7 @@ def _normalize_name(s: str) -> str:
     return "".join(ch for ch in s.lower() if ch.isalnum())
 
 
-def _find_file_case_insensitive(root: str, rel: str) -> Optional[str]:
+def _find_file_case_insensitive(root: str, rel: str) -> str | None:
     # Try direct
     full = os.path.join(root, rel)
     if os.path.exists(full):
@@ -78,7 +78,7 @@ def _find_file_case_insensitive(root: str, rel: str) -> Optional[str]:
     return None
 
 
-def _find_flash_csv(dev_dir: str) -> Optional[str]:
+def _find_flash_csv(dev_dir: str) -> str | None:
     # Prefer at root of device dir
     cand = _find_file_case_insensitive(dev_dir, "flash_sync_events.csv")
     if cand:
@@ -91,7 +91,7 @@ def _find_flash_csv(dev_dir: str) -> Optional[str]:
     return None
 
 
-def _find_android_video(dev_dir: str) -> Optional[str]:
+def _find_android_video(dev_dir: str) -> str | None:
     # Prefer rgb/video.*
     rgb_dir = os.path.join(dev_dir, "rgb")
     if os.path.isdir(rgb_dir):
@@ -107,11 +107,11 @@ def _find_android_video(dev_dir: str) -> Optional[str]:
     return None
 
 
-def _load_flash_csv(path: str) -> List[int]:
-    arr: List[int] = []
+def _load_flash_csv(path: str) -> list[int]:
+    arr: list[int] = []
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            header = f.readline()
+        with open(path, encoding="utf-8") as f:
+            f.readline()
             for line in f:
                 s = line.strip().split(",")
                 if not s:
@@ -126,11 +126,11 @@ def _load_flash_csv(path: str) -> List[int]:
     return arr
 
 
-def _map_offsets_to_devices(session_dir: str, offsets: Dict[str, int]) -> Dict[str, int]:
+def _map_offsets_to_devices(session_dir: str, offsets: dict[str, int]) -> dict[str, int]:
     # Map per device folder to an offset using normalized name matching
-    result: Dict[str, int] = {}
+    result: dict[str, int] = {}
     # Build normalized offsets index
-    norm_offset: Dict[str, Tuple[str, int]] = {
+    norm_offset: dict[str, tuple[str, int]] = {
         _normalize_name(k): (k, v) for k, v in offsets.items()
     }
     for name in sorted(os.listdir(session_dir)):
@@ -158,7 +158,7 @@ def _map_offsets_to_devices(session_dir: str, offsets: Dict[str, int]) -> Dict[s
     return result
 
 
-def _read_video_brightness(path: str) -> Tuple[List[float], float]:
+def _read_video_brightness(path: str) -> tuple[list[float], float]:
     try:
         import cv2  # type: ignore
     except Exception as exc:  # pragma: no cover - environment specific
@@ -169,7 +169,7 @@ def _read_video_brightness(path: str) -> Tuple[List[float], float]:
     if cap is None or not cap.isOpened():
         return [], 0.0
     fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
-    means: List[float] = []
+    means: list[float] = []
     ok, frame = cap.read()
     while ok:
         try:
@@ -182,9 +182,9 @@ def _read_video_brightness(path: str) -> Tuple[List[float], float]:
     return means, fps
 
 
-def build_device_sessions(session_dir: str, offsets: Dict[str, int]) -> Tuple[List[DeviceSession], Dict[str, int]]:
+def build_device_sessions(session_dir: str, offsets: dict[str, int]) -> tuple[list[DeviceSession], dict[str, int]]:
     mapped_offsets = _map_offsets_to_devices(session_dir, offsets)
-    sessions: List[DeviceSession] = []
+    sessions: list[DeviceSession] = []
     for name, offset in mapped_offsets.items():
         dev_dir = os.path.join(session_dir, name)
         if not os.path.isdir(dev_dir):
@@ -210,11 +210,11 @@ def main() -> int:
         return 2
 
     meta_path = os.path.join(session_dir, "session_metadata.json")
-    offsets: Dict[str, int] = {}
-    clock_sync: Dict[str, dict] = {}
+    offsets: dict[str, int] = {}
+    clock_sync: dict[str, dict] = {}
     if os.path.exists(meta_path):
         try:
-            with open(meta_path, "r", encoding="utf-8") as f:
+            with open(meta_path, encoding="utf-8") as f:
                 meta = json.load(f)
             offsets = {str(k): int(v) for k, v in (meta.get("clock_offsets_ns") or {}).items()}
             try:
@@ -257,12 +257,12 @@ def main() -> int:
         dev.aligned_events_ns = [int(v + sign * dev.offset_ns) for v in dev.raw_events_ns]
 
     # Build aligned events dict (only devices with events)
-    aligned_by_device: Dict[str, List[int]] = {
+    aligned_by_device: dict[str, list[int]] = {
         d.name: d.aligned_events_ns for d in devices if d.aligned_events_ns
     }
 
     # Build detections for videos (Android + PC webcam)
-    detections: Dict[str, StreamDetection] = {}
+    detections: dict[str, StreamDetection] = {}
 
     # PC webcam video (optional)
     pc_webcam_path = None

@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, asdict
-from typing import Dict, Optional, Any
+from dataclasses import asdict, dataclass
+from typing import Any
 
 try:
     from ..config import get as cfg_get
@@ -19,16 +19,16 @@ class DeviceInfo:
     last_heartbeat_ns: int
     status: str  # Online | Offline
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 class DeviceManager:
-    def __init__(self, heartbeat_timeout_seconds: Optional[int] = None) -> None:
+    def __init__(self, heartbeat_timeout_seconds: int | None = None) -> None:
         if heartbeat_timeout_seconds is None:
             heartbeat_timeout_seconds = int(cfg_get("heartbeat_timeout_seconds", 10))
         self._timeout_ns = int(heartbeat_timeout_seconds) * 1_000_000_000
-        self._devices: Dict[str, DeviceInfo] = {}
+        self._devices: dict[str, DeviceInfo] = {}
 
     def register(self, device_id: str) -> None:
         now = time.time_ns()
@@ -62,17 +62,17 @@ class DeviceManager:
         info.last_heartbeat_ns = now
         info.status = "Online"
 
-    def get_status(self, device_id: str) -> Optional[str]:
+    def get_status(self, device_id: str) -> str | None:
         info = self._devices.get(device_id)
         return info.status if info else None
 
-    def get_info(self, device_id: str) -> Optional[DeviceInfo]:
+    def get_info(self, device_id: str) -> DeviceInfo | None:
         return self._devices.get(device_id)
 
-    def list_devices(self) -> Dict[str, DeviceInfo]:
+    def list_devices(self) -> dict[str, DeviceInfo]:
         return dict(self._devices)
 
-    def check_timeouts(self, now_ns: Optional[int] = None) -> None:
+    def check_timeouts(self, now_ns: int | None = None) -> None:
         if now_ns is None:
             now_ns = time.time_ns()
         for info in self._devices.values():
