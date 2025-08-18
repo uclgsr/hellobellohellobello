@@ -56,4 +56,5 @@ docs/latex/*.out
 docs/latex/*.log
 
 *.md
-*.*
+*.*/
+.gradle
