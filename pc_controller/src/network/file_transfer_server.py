@@ -28,23 +28,22 @@ import socket
 import threading
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
 class _Header:
     session_id: str
     filename: str
-    size: Optional[int]
+    size: int | None
     device_id: str
 
     @staticmethod
-    def parse(line: str) -> "_Header":
+    def parse(line: str) -> _Header:
         obj = json.loads(line)
         session_id = str(obj.get("session_id") or "unknown_session")
         filename = str(obj.get("filename") or "data.bin")
         size = obj.get("size")
-        size_i: Optional[int] = int(size) if size is not None else None
+        size_i: int | None = int(size) if size is not None else None
         device_id = str(obj.get("device_id") or "unknown_device")
         return _Header(session_id=session_id, filename=filename, size=size_i, device_id=device_id)
 
@@ -53,10 +52,10 @@ class FileTransferServer:
     def __init__(self, base_dir: str) -> None:
         self._base_dir = os.path.abspath(base_dir)
         os.makedirs(self._base_dir, exist_ok=True)
-        self._sock: Optional[socket.socket] = None
-        self._thread: Optional[threading.Thread] = None
+        self._sock: socket.socket | None = None
+        self._thread: threading.Thread | None = None
         self._stop_ev = threading.Event()
-        self._port: Optional[int] = None
+        self._port: int | None = None
 
     def start(self, port: int) -> None:
         if self._thread and self._thread.is_alive():
@@ -89,7 +88,7 @@ class FileTransferServer:
         data = {}
         try:
             if os.path.exists(meta_path):
-                with open(meta_path, "r", encoding="utf-8") as f:
+                with open(meta_path, encoding="utf-8") as f:
                     data = json.load(f)
         except Exception:
             data = {}
@@ -121,7 +120,7 @@ class FileTransferServer:
                 while not self._stop_ev.is_set():
                     try:
                         conn, _ = s.accept()
-                    except socket.timeout:
+                    except TimeoutError:
                         continue
                     except Exception:
                         if self._stop_ev.is_set():
@@ -170,7 +169,7 @@ class FileTransferServer:
             # fatal socket error; exit thread
             return
 
-    def _read_line(self, conn: socket.socket) -> Optional[str]:
+    def _read_line(self, conn: socket.socket) -> str | None:
         buf = bytearray()
         while True:
             try:

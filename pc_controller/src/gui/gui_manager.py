@@ -10,14 +10,21 @@ from __future__ import annotations
 
 import json
 import logging
-import numpy as np
 import os
 import time
-from PyQt6.QtCore import QObject, QTimer, Qt, pyqtSignal, pyqtSlot
+from collections import deque
+from dataclasses import dataclass
+
+import numpy as np
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QAction, QImage, QPixmap
 from PyQt6.QtWidgets import (
+    QFileDialog,
     QGridLayout,
+    QHBoxLayout,
     QLabel,
+    QLineEdit,
+    QListWidget,
     QMainWindow,
     QPushButton,
     QTabWidget,
@@ -25,24 +32,17 @@ from PyQt6.QtWidgets import (
     QToolBar,
     QVBoxLayout,
     QWidget,
-    QFileDialog,
-    QHBoxLayout,
-    QLineEdit,
-    QListWidget,
 )
-from collections import deque
-from dataclasses import dataclass
-from typing import Optional, Tuple, Dict
 
 try:
     import pyqtgraph as pg
 except Exception:  # pragma: no cover - import guard for environments without Qt backend
     pg = None
 
-from network.network_controller import DiscoveredDevice, NetworkController
-from data.data_aggregator import DataAggregator, get_local_ip
+from data.data_aggregator import DataAggregator
 from data.data_loader import DataLoader
 from data.hdf5_exporter import export_session_to_hdf5
+from network.network_controller import DiscoveredDevice, NetworkController
 
 # Local device interfaces (Python shim that optionally uses native backends)
 try:
@@ -66,7 +66,7 @@ class DeviceWidget(QWidget):
     - gsr: displays a scrolling waveform using PyQtGraph
     """
 
-    def __init__(self, kind: str, title: str, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, kind: str, title: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.kind = kind
         self.title = title
@@ -230,9 +230,9 @@ class GUIManager(QMainWindow):
         self._play_timer = QTimer(self)
         self._play_timer.setInterval(33)
         self._play_timer.timeout.connect(self._on_play_timer)
-        self._loaded_session_dir: Optional[str] = None
-        self._session_csv_data: Dict[str, object] = {}
-        self._plot_curves: Dict[str, object] = {}
+        self._loaded_session_dir: str | None = None
+        self._session_csv_data: dict[str, object] = {}
+        self._plot_curves: dict[str, object] = {}
         self._annotations: list[dict] = []
         self._video_cap = None
         self._video_fps = 0.0
@@ -244,7 +244,6 @@ class GUIManager(QMainWindow):
             self.slider.valueChanged.connect(self._on_slider_change)
 
         # Data Aggregator for file transfers (Phase 5)
-        from data.data_aggregator import DataAggregator  # local import to avoid test import issues
         self._data_aggregator = DataAggregator(os.path.join(os.getcwd(), "pc_controller_data"))
         self._data_aggregator.log.connect(self._log)
         try:
@@ -278,9 +277,9 @@ class GUIManager(QMainWindow):
         # Use a slightly stricter throttle for remote frames to ensure coalescing even on slow machines.
         # This helps avoid UI overload and makes behavior deterministic in tests.
         self._remote_min_interval_s: float = max(self._video_min_interval_s, 0.99)
-        self._remote_last_render_s: Dict[str, float] = {}
-        self._remote_drop_counts: Dict[str, int] = {}
-        self._remote_drop_last_log_s: Dict[str, float] = {}
+        self._remote_last_render_s: dict[str, float] = {}
+        self._remote_drop_counts: dict[str, int] = {}
+        self._remote_drop_last_log_s: dict[str, float] = {}
 
         self.video_timer = QTimer(self)
         # Keep a reasonably fast poll, actual render limited by _video_min_interval_s
@@ -326,7 +325,7 @@ class GUIManager(QMainWindow):
         self.ui_log.connect(self._on_log)
 
         # Remote device widgets registry
-        self._remote_widgets: Dict[str, DeviceWidget] = {}
+        self._remote_widgets: dict[str, DeviceWidget] = {}
 
         # Start discovery and local streaming by default
         self._network.start()
@@ -618,7 +617,7 @@ class GUIManager(QMainWindow):
     def _write_gsr_samples(self, ts: np.ndarray, vals: np.ndarray) -> None:
         if not self._gsr_file:
             return
-        for t, v in zip(ts, vals):
+        for t, v in zip(ts, vals, strict=False):
             # PC-local does not have PPG; write empty placeholder for schema consistency
             self._gsr_file.write(f"{int(t*1e9)},{v:.6f},\n")
         self._gsr_file.flush()
@@ -664,7 +663,7 @@ class GUIManager(QMainWindow):
                     self.plot.addItem(self.cursor)
                     self._plot_curves.clear()
                     # Plot known columns
-                    for rel_name, path in sess.csv_files.items():
+                    for rel_name, _path in sess.csv_files.items():
                         df = loader.load_csv(rel_name)
                         if df.empty:
                             continue
@@ -804,7 +803,7 @@ class GUIManager(QMainWindow):
         path = os.path.join(self._loaded_session_dir, "annotations.json")
         if os.path.exists(path):
             try:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, list):
                         self._annotations = data

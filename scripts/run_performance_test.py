@@ -27,16 +27,13 @@ from __future__ import annotations
 import argparse
 import base64
 import os
-import queue
 import random
-import signal
 import socket
 import sys
 import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 # Ensure we can import the controller and protocol from the repo checkout
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -45,12 +42,15 @@ if str(PC_SRC) not in sys.path:
     sys.path.insert(0, str(PC_SRC))
 
 # Imports after sys.path tweak
-from network.network_controller import NetworkController, DiscoveredDevice  # type: ignore  # noqa: E402
+from network.network_controller import (  # type: ignore  # noqa: E402
+    DiscoveredDevice,
+    NetworkController,
+)
 from network.protocol import (  # type: ignore  # noqa: E402
-    encode_frame,
-    decode_frames,
     build_v1_ack,
     build_v1_preview_frame,
+    decode_frames,
+    encode_frame,
 )
 
 # Optional psutil for resource monitoring
@@ -95,13 +95,13 @@ class SimulatedAndroidClient:
         self.host = host
         self.rate_hz = max(1, int(rate_hz))
         self.recording = False
-        self._srv_thread: Optional[threading.Thread] = None
+        self._srv_thread: threading.Thread | None = None
         self._stop = threading.Event()
-        self._sock: Optional[socket.socket] = None
-        self.port: Optional[int] = None
+        self._sock: socket.socket | None = None
+        self.port: int | None = None
         self._lock = threading.Lock()
-        self._connections: List[socket.socket] = []
-        self._stream_threads: List[threading.Thread] = []
+        self._connections: list[socket.socket] = []
+        self._stream_threads: list[threading.Thread] = []
         self.stats = ClientStats()
 
     def start(self) -> None:
@@ -158,7 +158,7 @@ class SimulatedAndroidClient:
             while not self._stop.is_set():
                 try:
                     cli, _ = srv.accept()
-                except socket.timeout:
+                except TimeoutError:
                     continue
                 except OSError:
                     break
@@ -191,7 +191,7 @@ class SimulatedAndroidClient:
                 peek = sock.recv(1, socket.MSG_PEEK)
             except BlockingIOError:
                 peek = b""
-            except socket.timeout:
+            except TimeoutError:
                 peek = b""
             except Exception:
                 peek = b""
@@ -322,7 +322,7 @@ def _ensure_logs_dir() -> Path:
     return out_dir
 
 
-def _open_log_file(prefix: str) -> Tuple[Path, "typing.TextIO"]:
+def _open_log_file(prefix: str) -> tuple[Path, typing.TextIO]:
     ts = time.strftime("%Y%m%d_%H%M%S")
     out_dir = _ensure_logs_dir()
     path = out_dir / f"{prefix}_{ts}.csv"
@@ -331,7 +331,7 @@ def _open_log_file(prefix: str) -> Tuple[Path, "typing.TextIO"]:
     return path, f
 
 
-def _sample_resources(proc=None) -> Tuple[float, float]:
+def _sample_resources(proc=None) -> tuple[float, float]:
     """Return (cpu_percent, rss_mb) for current process or given psutil.Process."""
     if psutil is not None:
         try:
@@ -348,7 +348,7 @@ def _sample_resources(proc=None) -> Tuple[float, float]:
 
 def run_test(num_clients: int, rate_hz: int, duration_s: int) -> int:
     # Create simulated clients
-    clients: List[SimulatedAndroidClient] = []
+    clients: list[SimulatedAndroidClient] = []
     for i in range(num_clients):
         c = SimulatedAndroidClient(name=f"SimClient_{i+1:02d}", rate_hz=rate_hz)
         c.start()
@@ -434,7 +434,7 @@ def run_test(num_clients: int, rate_hz: int, duration_s: int) -> int:
     return exit_code
 
 
-def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run performance test with simulated clients")
     p.add_argument("--clients", type=int, default=8, help="Number of simulated clients (>=8)")
     p.add_argument("--rate", type=int, default=30, help="Preview frames per second per client")

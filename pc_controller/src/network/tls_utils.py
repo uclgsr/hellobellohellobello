@@ -24,14 +24,13 @@ from __future__ import annotations
 
 import os
 import ssl
-from typing import Optional
 
 
 def _is_enabled() -> bool:
     return os.environ.get("PC_TLS_ENABLE", "0") == "1"
 
 
-def create_client_ssl_context() -> Optional[ssl.SSLContext]:
+def create_client_ssl_context() -> ssl.SSLContext | None:
     """Create an SSLContext for client connections or return None if disabled.
 
     Returns:
@@ -58,7 +57,7 @@ def create_client_ssl_context() -> Optional[ssl.SSLContext]:
     return ctx
 
 
-def create_server_ssl_context() -> Optional[ssl.SSLContext]:
+def create_server_ssl_context() -> ssl.SSLContext | None:
     """Create an SSLContext for server sockets or return None if disabled.
 
     Expects PC_TLS_SERVER_CERT_FILE and PC_TLS_SERVER_KEY_FILE when enabled.

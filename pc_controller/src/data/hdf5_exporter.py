@@ -6,15 +6,20 @@ organized by device and modality.
 from __future__ import annotations
 
 import glob
-import h5py
 import json
 import os
-import pandas as pd
+
+import h5py
 import numpy as np
-from typing import Dict
+import pandas as pd
 
 
-def export_session_to_hdf5(session_dir: str, output_path: str, metadata: Dict | None = None, annotations: Dict | None = None) -> str:
+def export_session_to_hdf5(
+    session_dir: str,
+    output_path: str,
+    metadata: dict | None = None,
+    annotations: dict | None = None
+) -> str:
     """Export a session directory to an HDF5 file.
 
     The HDF5 layout is /<device>/<modality>/ with datasets derived from CSV columns.
@@ -122,7 +127,7 @@ def export_session_to_hdf5(session_dir: str, output_path: str, metadata: Dict | 
             if meta_src is None:
                 meta_path = os.path.join(session_dir, "session_metadata.json")
                 if os.path.exists(meta_path):
-                    with open(meta_path, "r", encoding="utf-8") as mf:
+                    with open(meta_path, encoding="utf-8") as mf:
                         meta_src = json.load(mf)
             if isinstance(meta_src, dict):
                 offsets = meta_src.get("clock_offsets_ns", {})

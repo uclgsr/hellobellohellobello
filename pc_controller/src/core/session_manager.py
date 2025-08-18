@@ -10,11 +10,10 @@ This module is independent of the GUI; other components can import and use it.
 from __future__ import annotations
 
 import json
-import os
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any
 
 try:
     # Centralized config loader (NFR8)
@@ -35,18 +34,18 @@ class SessionMetadata:
     created_at_ns: int
     created_at: str
     state: str  # Created | Recording | Stopped
-    start_time_ns: Optional[int] = None
-    end_time_ns: Optional[int] = None
-    duration_ns: Optional[int] = None
+    start_time_ns: int | None = None
+    end_time_ns: int | None = None
+    duration_ns: int | None = None
 
 
 class SessionManager:
-    def __init__(self, base_dir: Optional[str] = None) -> None:
+    def __init__(self, base_dir: str | None = None) -> None:
         # Align default with GUI's current behavior
         self._base_dir = Path(base_dir or (Path.cwd() / "pc_controller_data")).resolve()
-        self._active_id: Optional[str] = None
-        self._active_dir: Optional[Path] = None
-        self._meta: Optional[SessionMetadata] = None
+        self._active_id: str | None = None
+        self._active_dir: Path | None = None
+        self._meta: SessionMetadata | None = None
 
     # Read-only properties
     @property
@@ -55,18 +54,22 @@ class SessionManager:
 
     @property
     def is_active(self) -> bool:
-        return self._active_id is not None and self._meta is not None and self._meta.state != "Stopped"
+        return (
+            self._active_id is not None
+            and self._meta is not None
+            and self._meta.state != "Stopped"
+        )
 
     @property
-    def session_id(self) -> Optional[str]:
+    def session_id(self) -> str | None:
         return self._active_id
 
     @property
-    def session_dir(self) -> Optional[Path]:
+    def session_dir(self) -> Path | None:
         return self._active_dir
 
     @property
-    def metadata(self) -> Optional[Dict[str, Any]]:
+    def metadata(self) -> dict[str, Any] | None:
         return asdict(self._meta) if self._meta else None
 
     def _ensure_base(self) -> None:
@@ -131,4 +134,6 @@ class SessionManager:
 
 def _sanitize(name: str) -> str:
     # Remove path separators and trim spaces
-    return "".join(ch for ch in name if ch.isalnum() or ch in ("-", "_", ".")).strip("._-") or "session"
+    return "".join(ch for ch in name if ch.isalnum() or ch in ("-", "_", ".")).strip(
+        "._-"
+    ) or "session"

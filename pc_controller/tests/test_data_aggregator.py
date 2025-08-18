@@ -1,15 +1,15 @@
 import io
 import json
-import os
-import pytest
 import socket
 import time
 import zipfile
 from pathlib import Path
 
+import pytest
+
 PyQt6 = pytest.importorskip("PyQt6")  # Skip these tests if PyQt6 is not available
 
-from data.data_aggregator import _ClientHeader, FileReceiverServer  # type: ignore
+from data.data_aggregator import FileReceiverServer, _ClientHeader  # type: ignore
 
 
 def _find_free_port() -> int:

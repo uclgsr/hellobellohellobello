@@ -6,16 +6,16 @@ from __future__ import annotations
 
 import glob
 import os
-import pandas as pd
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+
+import pandas as pd
 
 
 @dataclass
 class SessionData:
     session_dir: str
-    csv_files: Dict[str, str]
-    video_files: Dict[str, str]
+    csv_files: dict[str, str]
+    video_files: dict[str, str]
 
 
 class DataLoader:
@@ -27,8 +27,8 @@ class DataLoader:
         self.session_dir = session_dir
 
     def index_files(self) -> SessionData:
-        csv_files: Dict[str, str] = {}
-        video_files: Dict[str, str] = {}
+        csv_files: dict[str, str] = {}
+        video_files: dict[str, str] = {}
         # Find CSVs recursively
         for path in glob.glob(os.path.join(self.session_dir, "**", "*.csv"), recursive=True):
             name = os.path.relpath(path, self.session_dir)

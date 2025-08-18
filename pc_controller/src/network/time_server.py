@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-import socket
-from typing import Optional, Tuple
 
 try:
     # Local config loader (added for NFR8)
@@ -25,12 +23,12 @@ class TimeSyncProtocol(asyncio.DatagramProtocol):
 
     def __init__(self) -> None:
         super().__init__()
-        self.transport: Optional[asyncio.transports.DatagramTransport] = None
+        self.transport: asyncio.transports.DatagramTransport | None = None
 
     def connection_made(self, transport: asyncio.transports.DatagramTransport) -> None:  # noqa: D401
         self.transport = transport
 
-    def datagram_received(self, data: bytes, addr: Tuple[str, int]) -> None:  # noqa: D401
+    def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:  # noqa: D401
         # Capture high-resolution monotonic timestamp immediately
         ts_ns = time.monotonic_ns()
         payload = str(ts_ns).encode("ascii")
@@ -51,11 +49,11 @@ class TimeSyncServer:
         await server.stop()
     """
 
-    def __init__(self, host: Optional[str] = None, port: Optional[int] = None) -> None:
+    def __init__(self, host: str | None = None, port: int | None = None) -> None:
         self._host = host if host is not None else cfg_get("server_ip", "0.0.0.0")
         self._port = port if port is not None else int(cfg_get("timesync_port", 8081))
-        self._transport: Optional[asyncio.transports.DatagramTransport] = None
-        self._protocol: Optional[TimeSyncProtocol] = None
+        self._transport: asyncio.transports.DatagramTransport | None = None
+        self._protocol: TimeSyncProtocol | None = None
 
     @property
     def host(self) -> str:

@@ -13,9 +13,9 @@ import os
 import socket
 import threading
 import zipfile
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from dataclasses import dataclass
-from typing import Optional, Tuple
+
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 # TLS optional server context
 try:
@@ -48,10 +48,10 @@ class _ClientHeader:
     session_id: str
     device_id: str
     filename: str
-    size: Optional[int]
+    size: int | None
 
     @staticmethod
-    def parse(text: str) -> "_ClientHeader":
+    def parse(text: str) -> _ClientHeader:
         obj = json.loads(text)
         return _ClientHeader(
             session_id=str(obj.get("session_id", "unknown_session")),
@@ -65,21 +65,23 @@ class FileReceiverServer(QThread):
     """A simple line-prefixed JSON header + raw-bytes receiver.
 
     Protocol per connection:
-      1) Client sends a single JSON line with keys: session_id, device_id, filename, size (optional).
-      2) Then client streams raw bytes (ZIP archive). If `size` is provided, we read exactly `size` bytes; otherwise
-         we read until the socket closes.
-    After receiving, we unpack into base_dir/<session_id>/<device_id>/ and delete the temporary archive.
+      1) Client sends a single JSON line with keys: session_id, device_id,
+         filename, size (optional).
+      2) Then client streams raw bytes (ZIP archive). If `size` is provided,
+         we read exactly `size` bytes; otherwise we read until the socket closes.
+    After receiving, we unpack into base_dir/<session_id>/<device_id>/ and delete
+    the temporary archive.
     """
 
     log = pyqtSignal(str)
     progress = pyqtSignal(str, int, int)  # device_id, bytes_received, total_bytes(-1 if unknown)
     file_received = pyqtSignal(str, str)  # session_id, device_id
 
-    def __init__(self, base_dir: str, port: int = 9001, parent: Optional[QObject] = None) -> None:
+    def __init__(self, base_dir: str, port: int = 9001, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._base_dir = base_dir
         self._port = port
-        self._sock: Optional[socket.socket] = None
+        self._sock: socket.socket | None = None
         self._stopped = threading.Event()
 
     @property
@@ -126,7 +128,7 @@ class FileReceiverServer(QThread):
                     try:
                         s.settimeout(1.0)
                         conn, addr = s.accept()
-                    except socket.timeout:
+                    except TimeoutError:
                         continue
                     except Exception as exc:  # noqa: BLE001
                         self.log.emit(f"Accept error: {exc}")
@@ -152,7 +154,9 @@ class FileReceiverServer(QThread):
                                 if len(header_line) > 1024 * 1024:
                                     raise RuntimeError("Header too large")
                             header_text, _, remainder = header_line.partition(b"\n")
-                            header = _ClientHeader.parse(header_text.decode("utf-8", errors="replace"))
+                            header = _ClientHeader.parse(
+                        header_text.decode("utf-8", errors="replace")
+                    )
                             target_dir = self._ensure_dirs(header.session_id, header.device_id)
                             tmp_zip_path = os.path.join(target_dir, header.filename or "data.zip")
                             # Write any remainder + subsequent stream to file
@@ -206,7 +210,7 @@ class DataAggregator(QObject):
     def __init__(self, base_dir: str) -> None:
         super().__init__()
         self._base_dir = base_dir
-        self._server: Optional[FileReceiverServer] = None
+        self._server: FileReceiverServer | None = None
 
     def start_server(self, port: int = 9001) -> int:
         if self._server and self._server.isRunning():

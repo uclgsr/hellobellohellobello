@@ -5,22 +5,20 @@ These tests avoid PyQt6 imports by testing only the pure-protocol helpers.
 from __future__ import annotations
 
 from pc_controller.src.network.protocol import (
-    build_query_capabilities,
-    build_start_recording,
-    build_stop_recording,
-    build_flash_sync,
-    build_time_sync_request,
-    build_transfer_files,
-    compute_time_sync,
-    compute_time_sync_stats,
-    parse_json_line,
-    QUERY_CMD_ID,
+    COMMAND_FLASH_SYNC,
     COMMAND_QUERY_CAPABILITIES,
     COMMAND_START_RECORDING,
     COMMAND_STOP_RECORDING,
-    COMMAND_FLASH_SYNC,
     COMMAND_TIME_SYNC,
-    COMMAND_TRANSFER_FILES,
+    QUERY_CMD_ID,
+    build_flash_sync,
+    build_query_capabilities,
+    build_start_recording,
+    build_stop_recording,
+    build_time_sync_request,
+    compute_time_sync,
+    compute_time_sync_stats,
+    parse_json_line,
 )
 
 

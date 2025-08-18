@@ -14,14 +14,14 @@ monotonic_ns. The server reads its port/host from config.json (NFR8).
 """
 from __future__ import annotations
 
+import asyncio
 import sys
 import threading
-import asyncio
-from PyQt6.QtWidgets import QApplication
 
 from gui.gui_manager import GUIManager
 from network.network_controller import NetworkController
 from network.time_server import TimeSyncServer
+from PyQt6.QtWidgets import QApplication
 
 
 def _time_server_thread(stop_flag: threading.Event) -> None:

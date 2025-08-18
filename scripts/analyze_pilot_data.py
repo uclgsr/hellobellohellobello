@@ -25,13 +25,13 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 import os
 import sys
 import tempfile
-import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple
 
 # Insert repo pc_controller/src into path
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -49,11 +49,11 @@ except Exception:  # pragma: no cover
 
 @dataclass
 class Series:
-    t_s: List[float]
-    y: List[float]
+    t_s: list[float]
+    y: list[float]
 
 
-def _find_first_matching(d: dict, name: str) -> Optional[str]:
+def _find_first_matching(d: dict, name: str) -> str | None:
     # exact file at root
     if name in d:
         return d[name]
@@ -92,7 +92,7 @@ def load_gsr(session_dir: str, column: str = "gsr") -> Series:
     return Series(t_s=list(map(float, t_s)), y=list(map(float, y)))
 
 
-def _roi_mean(flat_vals: Sequence[float], w: int, h: int, roi: Optional[Tuple[int, int, int, int]]) -> float:
+def _roi_mean(flat_vals: Sequence[float], w: int, h: int, roi: tuple[int, int, int, int] | None) -> float:
     if roi is None:
         # global mean
         return float(sum(flat_vals) / max(1, len(flat_vals)))
@@ -114,16 +114,16 @@ def _roi_mean(flat_vals: Sequence[float], w: int, h: int, roi: Optional[Tuple[in
     return s / max(1, count)
 
 
-def load_thermal_means(session_dir: str, roi: Optional[Tuple[int, int, int, int]]) -> Series:
+def load_thermal_means(session_dir: str, roi: tuple[int, int, int, int] | None) -> Series:
     dl = DataLoader(session_dir)
     idx = dl.index_files()
     tpath = _find_first_matching(idx.csv_files, "thermal.csv")
     if not tpath:
         raise FileNotFoundError("thermal.csv not found in session")
 
-    t_s: List[float] = []
-    y: List[float] = []
-    with open(tpath, "r", encoding="utf-8") as f:
+    t_s: list[float] = []
+    y: list[float] = []
+    with open(tpath, encoding="utf-8") as f:
         reader = csv.reader(f)
         header = next(reader, None)
         if header is None:
@@ -169,7 +169,7 @@ def load_thermal_means(session_dir: str, roi: Optional[Tuple[int, int, int, int]
     return Series(t_s=t_s, y=y)
 
 
-def _estimate_sample_rate(t_s: List[float]) -> float:
+def _estimate_sample_rate(t_s: list[float]) -> float:
     if len(t_s) < 2:
         return 1.0
     # median delta
@@ -182,7 +182,7 @@ def _estimate_sample_rate(t_s: List[float]) -> float:
     return 1.0 / med
 
 
-def smooth_gsr(series: Series, cutoff_hz: Optional[float], window_sec: Optional[float]) -> Series:
+def smooth_gsr(series: Series, cutoff_hz: float | None, window_sec: float | None) -> Series:
     if cutoff_hz is None and window_sec is None:
         return series
     try:
@@ -209,7 +209,7 @@ def smooth_gsr(series: Series, cutoff_hz: Optional[float], window_sec: Optional[
     win = max(1, int(round(fs * float(window_sec))))
     if win <= 1 or win >= len(y):
         return series
-    acc: List[float] = []
+    acc: list[float] = []
     s = 0.0
     for i, v in enumerate(y):
         s += v
@@ -249,7 +249,7 @@ def plot_combined(out_path: str, gsr: Series, thermal: Series, show: bool) -> No
     plt.close(fig)
 
 
-def _synthesize_series(n: int = 300, fs: float = 10.0) -> Tuple[Series, Series]:
+def _synthesize_series(n: int = 300, fs: float = 10.0) -> tuple[Series, Series]:
     dt = 1.0 / fs
     t = [i * dt for i in range(n)]
     # GSR: slow-varying sine + drift
@@ -259,7 +259,7 @@ def _synthesize_series(n: int = 300, fs: float = 10.0) -> Tuple[Series, Series]:
     return Series(t_s=t, y=gsr), Series(t_s=t, y=thermal)
 
 
-def _dry_run(out_path: Optional[str]) -> int:
+def _dry_run(out_path: str | None) -> int:
     # Try to plot if matplotlib available; otherwise just synthesize and report success
     try:
         import matplotlib
@@ -287,7 +287,7 @@ def _dry_run(out_path: Optional[str]) -> int:
         return 0
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Analyze pilot session data and produce a combined GSR vs Thermal plot.")
     p.add_argument("--session", help="Path to session directory")
     p.add_argument("--out", help="Path to output PNG file")

@@ -29,7 +29,7 @@ def setup_logger(log_path: Path | None) -> None:
 
 
 def copy_tree(src: Path, dst: Path) -> None:
-    for root, dirs, files in os.walk(src):
+    for root, _dirs, files in os.walk(src):
         rel = Path(root).relative_to(src)
         target_dir = dst / rel
         target_dir.mkdir(parents=True, exist_ok=True)

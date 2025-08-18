@@ -1,12 +1,13 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
-from pathlib import Path
 
 from pc_controller.src.tools.camera_calibration import (
     CalibrationResult,
-    save_calibration,
-    load_calibration,
     find_checkerboard_corners,
+    load_calibration,
+    save_calibration,
 )
 
 

@@ -1,6 +1,7 @@
 import os
-import pytest
 import sys
+
+import pytest
 
 # Force offscreen mode before importing PyQt6 to avoid EGL issues
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

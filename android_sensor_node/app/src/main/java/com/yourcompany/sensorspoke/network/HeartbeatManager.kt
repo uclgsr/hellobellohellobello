@@ -1,5 +1,6 @@
 package com.yourcompany.sensorspoke.network
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -18,6 +19,7 @@ import java.util.concurrent.atomic.AtomicLong
  * - Local recording continuation during disconnection
  */
 class HeartbeatManager(
+    private val context: Context,
     private val deviceId: String,
     private val networkClient: NetworkClient,
     private val heartbeatIntervalMs: Long = 3000L, // 3 seconds
@@ -225,29 +227,45 @@ class HeartbeatManager(
 
     /**
      * Get device battery level (0-100).
-     * This should be implemented to return actual battery level.
      */
     private fun getBatteryLevel(): Int {
-        // TODO: Implement actual battery level retrieval
-        return 100
+        return try {
+            val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
+            batteryManager.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get battery level", e)
+            -1 // Unknown
+        }
     }
 
     /**
      * Check if recording is currently active.
-     * This should be implemented to check actual recording state.
      */
     private fun isRecordingActive(): Boolean {
-        // TODO: Implement actual recording state check
-        return false
+        return try {
+            // Check if RecordingService is running
+            val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            activityManager.getRunningServices(Integer.MAX_VALUE).any { serviceInfo ->
+                serviceInfo.service.className.contains("RecordingService")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to check recording state", e)
+            false
+        }
     }
 
     /**
      * Get available storage in MB.
-     * This should be implemented to return actual storage info.
      */
     private fun getAvailableStorageMB(): Long {
-        // TODO: Implement actual storage check
-        return 1000
+        return try {
+            val statsFs = android.os.StatFs(context.filesDir.path)
+            val availableBytes = statsFs.availableBytes
+            availableBytes / (1024 * 1024) // Convert to MB
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get storage info", e)
+            -1L // Unknown
+        }
     }
 
     /**

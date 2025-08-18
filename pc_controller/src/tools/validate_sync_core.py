@@ -10,16 +10,16 @@ All functions are pure and unit-testable.
 """
 from __future__ import annotations
 
-import math
-import numpy as np
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Dict, List, Sequence, Tuple
+
+import numpy as np
 
 
 @dataclass
 class StreamDetection:
     name: str
-    frame_indices: List[int]
+    frame_indices: list[int]
     fps: float
 
     @property
@@ -29,7 +29,7 @@ class StreamDetection:
         return (np.array(self.frame_indices, dtype=np.float64) / float(self.fps) * 1e9).astype(np.int64)
 
 
-def detect_flash_indices_from_brightness(brightness: Sequence[float], n_events: int, min_separation: int = 3) -> List[int]:
+def detect_flash_indices_from_brightness(brightness: Sequence[float], n_events: int, min_separation: int = 3) -> list[int]:
     """Detect indices of flash events from a per-frame brightness sequence.
 
     Parameters
@@ -63,7 +63,7 @@ def detect_flash_indices_from_brightness(brightness: Sequence[float], n_events: 
     score = 0.6 * z + 0.4 * dz_z
     # Greedy selection of top peaks with separation
     idxs = list(np.argsort(-score))  # descending
-    selected: List[int] = []
+    selected: list[int] = []
     used = np.zeros_like(x, dtype=bool)
     for idx in idxs:
         if len(selected) >= n_events:
@@ -120,15 +120,15 @@ def choose_offset_direction(ref_ts_ns: Sequence[int], device_ts_ns: Sequence[int
 
 @dataclass
 class ValidationResult:
-    per_event_ranges_ms: List[float]
+    per_event_ranges_ms: list[float]
     overall_max_ms: float
     passed: bool
-    details: Dict[str, Dict[str, int]]  # e.g., offset_sign per device, T0 per stream
+    details: dict[str, dict[str, int]]  # e.g., offset_sign per device, T0 per stream
 
 
 def compute_validation_report(
-    aligned_events_by_device: Dict[str, List[int]],
-    detections_by_stream: Dict[str, StreamDetection],
+    aligned_events_by_device: dict[str, list[int]],
+    detections_by_stream: dict[str, StreamDetection],
     tolerance_ms: float = 5.0,
 ) -> ValidationResult:
     """Compute per-event time spreads across all provided streams.
@@ -155,16 +155,16 @@ def compute_validation_report(
     n_events = ref_events.size
 
     # Estimate T0 for each stream vs reference timeline
-    T0_by_stream: Dict[str, int] = {}
+    T0_by_stream: dict[str, int] = {}
     for sname, det in detections_by_stream.items():
         T0_by_stream[sname] = estimate_T0_ns(ref_events, det.rel_times_ns)
 
     # For each event index, compute absolute times across streams and range
-    per_event_ranges_ms: List[float] = []
+    per_event_ranges_ms: list[float] = []
     for k in range(n_events):
-        times_ns: List[int] = []
+        times_ns: list[int] = []
         # include device aligned events (they represent the ground-truth schedule)
-        for dev, arr in aligned_events_by_device.items():
+        for _dev, arr in aligned_events_by_device.items():
             if k < len(arr):
                 times_ns.append(int(arr[k]))
         # include each video stream's predicted time from T0 + rel

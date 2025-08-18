@@ -5,9 +5,10 @@ Skips if pandas or h5py are not available in the environment.
 from __future__ import annotations
 
 import os
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
 
 pd = pytest.importorskip("pandas")
 h5py = pytest.importorskip("h5py")
@@ -100,4 +101,4 @@ def test_export_session_to_hdf5_structure_and_attrs() -> None:
                 assert "clock_offsets_ns" in sync
                 assert "stats_json" in sync
                 s = sync["stats_json"][()]
-                assert isinstance(s, (bytes, str))
+                assert isinstance(s, bytes | str)

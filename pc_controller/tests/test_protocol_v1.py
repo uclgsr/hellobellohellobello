@@ -1,22 +1,19 @@
 from __future__ import annotations
 
 import base64
-import json
-from typing import Dict
 
 from pc_controller.src.network.protocol import (
-    encode_frame,
-    decode_frames,
-    build_v1_cmd,
     build_v1_ack,
     build_v1_error,
     build_v1_preview_frame,
     compute_backoff_schedule,
+    decode_frames,
+    encode_frame,
 )
 
 
 def test_encode_decode_single_frame_roundtrip() -> None:
-    msg: Dict[str, object] = {"v": 1, "id": 123, "type": "cmd", "command": "query_capabilities"}
+    msg: dict[str, object] = {"v": 1, "id": 123, "type": "cmd", "command": "query_capabilities"}
     framed = encode_frame(msg)
     # prefix should be ascii length then newline
     nl = framed.find(b"\n")
