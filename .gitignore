@@ -54,3 +54,6 @@ docs/latex/*.aux
 docs/latex/*.toc
 docs/latex/*.out
 docs/latex/*.log
+
+*.md
+*.*
