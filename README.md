@@ -77,21 +77,23 @@ To run from sources (development):
 
 ## Documentation
 
-### Production Documentation
-- **[TLS API Documentation](docs/TLS_API_Documentation.md)**: Complete guide to TLS security implementation with API reference and examples
-- **[Heartbeat API Documentation](docs/Heartbeat_API_Documentation.md)**: Comprehensive fault tolerance system documentation with cross-platform implementation
-- **[Production Deployment Guide](docs/Production_Deployment_Guide.md)**: Enterprise deployment procedures with security hardening and infrastructure setup
-- **[Troubleshooting Guide](docs/Troubleshooting_Guide.md)**: Systematic diagnostic procedures for all common issues and recovery procedures
+📋 **[Complete Documentation Index](docs/Documentation_Index.md)** - Comprehensive guide to all documentation in this repository
 
-### Development Documentation
-- **[User Manual](docs/markdown/User_Manual.md)**: End-user guide for operating the platform
-- **[Developer Guide](docs/markdown/Developer_Guide.md)**: Technical implementation details and development procedures
-- **[Hardware Validation Protocol](docs/markdown/Hardware_Validation_Protocol.md)**: Standard operating procedures for hardware validation
+### Quick Links
 
-### Technical Specifications
-- **[PROTOCOL.md](PROTOCOL.md)**: Complete communication protocol specification
-- **[TEST_PLAN.md](TEST_PLAN.md)**: Comprehensive testing strategy and procedures
-- **[BACKUP_STRATEGY.md](BACKUP_STRATEGY.md)**: Data backup and recovery procedures
+**Essential Documentation:**
+- **[User Manual](docs/markdown/User_Manual.md)** - End-user guide for operating the platform
+- **[Developer Guide](docs/markdown/Developer_Guide.md)** - Technical implementation and development procedures
+- **[Production Deployment Guide](docs/Production_Deployment_Guide.md)** - Enterprise deployment and security hardening
+
+**API References:**
+- **[TLS API Documentation](docs/TLS_API_Documentation.md)** - Complete TLS security implementation guide
+- **[Heartbeat API Documentation](docs/Heartbeat_API_Documentation.md)** - Fault tolerance system documentation
+
+**Technical Specifications:**
+- **[PROTOCOL.md](PROTOCOL.md)** - Complete communication protocol specification
+- **[TEST_PLAN.md](TEST_PLAN.md)** - Comprehensive testing strategy and procedures
+- **[BACKUP_STRATEGY.md](BACKUP_STRATEGY.md)** - Data backup and recovery procedures
 
 ## Security & Ethics
 
