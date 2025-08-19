@@ -57,11 +57,11 @@ python3 scripts/generate_sample_visualizations.py
 
 These visualizations are referenced throughout the enhanced documentation:
 
-- **Architecture.md**: System overview and component interactions
+- **System_Design.md**: Complete architecture with C4 views and component interactions
 - **Flows.md**: Runtime behavior and state management
 - **Data.md**: Data schemas and quality validation
 - **NonFunctional.md**: Performance budgets and timing analysis
-- **Testing.md**: Data quality validation procedures
+- **TEST_PLAN.md**: Comprehensive testing strategy and data quality procedures
 
 ## Research Applications
 

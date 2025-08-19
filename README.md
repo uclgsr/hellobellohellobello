@@ -68,7 +68,7 @@ To run from sources (development):
 - Android records locally per session (RGB MP4 + FR5 JPEGs, thermal CSV, GSR CSV). On stop, the device can transfer a
   ZIP of the session to the Hub over TCP.
 - On PC, DataLoader and HDF5 exporter utilities aggregate and export into a research-ready HDF5 file.
-- Backup strategy and automation: see BACKUP_STRATEGY.md and scripts/backup_script.py.
+- Backup strategy and automation: see docs/BACKUP_STRATEGY.md and scripts/backup_script.py.
 
 ## Native Backend
 
@@ -93,8 +93,8 @@ To run from sources (development):
 
 **Technical Specifications:**
 - **[PROTOCOL.md](PROTOCOL.md)** - Complete communication protocol specification
-- **[TEST_PLAN.md](TEST_PLAN.md)** - Comprehensive testing strategy and procedures
-- **[BACKUP_STRATEGY.md](BACKUP_STRATEGY.md)** - Data backup and recovery procedures
+- **[TEST_PLAN.md](docs/TEST_PLAN.md)** - Comprehensive testing strategy and procedures
+- **[BACKUP_STRATEGY.md](docs/BACKUP_STRATEGY.md)** - Data backup and recovery procedures
 
 ### System Documentation Diagrams
 - **[docs/diagrams/](docs/diagrams/)**: **NEW** - Comprehensive visual documentation including:

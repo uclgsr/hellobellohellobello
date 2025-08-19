@@ -1,5 +1,31 @@
 # Test and Validation Plan — Multi-Modal Physiological Sensing Platform
 
+## Quick Reference
+
+- **Unit Testing**: Test individual components in isolation using pytest (Python) and JUnit (Android)
+- **Integration Testing**: Test component interactions and data flows between Hub-Spoke
+- **System Testing**: Test complete end-to-end functionality including hardware integration
+- **Hardware Testing**: Test with real sensors and devices in controlled environment
+
+**Quick Commands:**
+```bash
+# Python Unit Testing
+pytest -q                    # Run all tests quietly
+pytest -q -k "not gui"      # Skip GUI tests 
+pytest -v                   # Verbose output
+
+# Android Unit Testing  
+./gradlew :android_sensor_node:app:testDebugUnitTest
+
+# Integration Testing
+pytest tests/integration/ -v
+
+# Full Build and Test
+./gradlew build test
+```
+
+---
+
 This master plan defines the complete testing strategy for the platform across Unit, Integration, and System levels. It
 consolidates procedures, responsibilities, and acceptance criteria for verifying functionality, performance,
 reliability, and data integrity.
@@ -213,3 +239,67 @@ Outputs: Console report including per-event spread (ms), overall max spread (ms)
 - Android (Robolectric): android_sensor_node/app/src/test/java/com/yourcompany/sensorspoke/ui/MainActivityTest.kt
   launches MainActivity and asserts presence of Start/Stop buttons; MainActivity conditionally skips starting services
   when running under tests to keep the test fast and isolated.
+
+---
+
+## 9. Hardware Testing Workflow
+
+This section covers testing with real hardware devices connected, including the two-terminal setup for controlled testing.
+
+### Prerequisites
+- Windows 10/11 with PowerShell  
+- Python 3.11+ and Android SDK
+- Local Wi-Fi network (isolated from internet preferred)
+- Hardware: Android phones, Shimmer3 GSR+, Topdon TC001 thermal camera
+
+### Two-Terminal Testing Setup
+
+**Terminal 1 (PC Controller)**:
+```bash
+# Activate Python environment
+pc_controller\.venv\Scripts\activate
+
+# Start PC Controller with debug logging
+python pc_controller\src\main.py --debug
+
+# Verify GUI starts correctly:
+# - Dashboard tab shows "No devices connected" initially
+# - Logs tab shows service discovery messages
+# - System ready for connections
+```
+
+**Terminal 2 (Android/Hardware Control)**:
+```bash
+# Build and deploy Android app
+./gradlew :android_sensor_node:app:installDebug
+
+# Manual steps on Android device:
+# 1. Launch app, verify permissions granted
+# 2. Connect Topdon TC001 via USB-C OTG
+# 3. Power on and pair Shimmer3 GSR+ via BLE
+# 4. Tap "Connect to Hub" - should discover PC Controller
+# 5. Verify all sensor status indicators show "Ready"
+```
+
+### Hardware Validation Sequence
+
+1. **Device Discovery Test**
+   - PC Controller shows connected Android nodes in Dashboard
+   - Each node shows correct sensor status (RGB: Ready, Thermal: Connected, GSR: Paired)
+
+2. **Recording Session Test**
+   - Start 30-second session from PC Controller
+   - Verify real-time preview streams active
+   - Stop session, confirm file transfer completion
+   
+3. **Data Integrity Validation**
+   - Use validation script: `python scripts\validate_sync.py --session-id <SESSION_ID>`
+   - Verify CSV files contain expected data ranges
+   - Check MP4 files playable with standard codecs
+
+4. **Chaos Testing** (Optional but recommended)
+   - During active recording, simulate:
+     - Network disconnection (WiFi toggle for 30s)
+     - App backgrounding/foregrounding  
+     - USB cable disconnect/reconnect
+   - Verify system recovery and data continuity

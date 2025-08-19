@@ -56,7 +56,7 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 - PC Controller writes session_metadata.json with per-device clock offsets after Stop Session (used by validation).
 - Android FileTransferManager now includes flash_sync_events.csv in the transferred ZIP archive.
 - Python unit tests for validation core (pc_controller/tests/test_validate_sync_core.py).
-- TEST_PLAN.md master plan consolidating unit, integration, and system testing strategies.
+- docs/TEST_PLAN.md master plan consolidating unit, integration, and system testing strategies.
 - Chapter5_Evaluation_and_Testing.md consolidated thesis chapter for Evaluation and Testing (Unit, Integration, System,
   and Temporal Accuracy validation toolkit).
 - Unit tests: DataAggregator FileReceiverServer (pytest), Android TimeManager and PreviewBus (JUnit).
