@@ -55,13 +55,16 @@ def export_session_to_hdf5(
                 mask = ts_ser.notna()
                 df = df.loc[mask].copy()
                 ts_np = ts_ser.loc[mask].astype("int64").to_numpy()
-                ts_ds = group.create_dataset("timestamp_ns", data=ts_np, compression="gzip", compression_opts=4)
+                ts_ds = group.create_dataset(
+                    "timestamp_ns", data=ts_np, compression="gzip", compression_opts=4
+                )
                 # Attach basic units attribute
                 try:
                     ts_ds.attrs["units"] = "ns"
                 except Exception:
                     pass
-                # Robust sample rate estimation from positive diffs on sorted timestamps with trimming
+                # Robust sample rate estimation from positive diffs on sorted timestamps
+                # with trimming
                 sample_rate_hz = None
                 try:
                     if ts_np.size >= 2:
@@ -91,14 +94,20 @@ def export_session_to_hdf5(
                     num = pd.to_numeric(df[col], errors="coerce")
                     if num.notna().any():
                         data = num.astype("float64").to_numpy()
-                        ds = group.create_dataset(col, data=data, compression="gzip", compression_opts=4)
+                        ds = group.create_dataset(
+                            col, data=data, compression="gzip", compression_opts=4
+                        )
                     else:
                         data = df[col].astype(str).to_numpy(dtype="S")
-                        ds = group.create_dataset(col, data=data, compression="gzip", compression_opts=4)
+                        ds = group.create_dataset(
+                            col, data=data, compression="gzip", compression_opts=4
+                        )
                 except Exception:
                     # Fallback: store as strings preserving length
                     data = df[col].astype(str).to_numpy(dtype="S")
-                    ds = group.create_dataset(col, data=data, compression="gzip", compression_opts=4)
+                    ds = group.create_dataset(
+                        col, data=data, compression="gzip", compression_opts=4
+                    )
                 # Attach units/sample_rate when known by convention
                 try:
                     lname = col.lower()
@@ -139,8 +148,18 @@ def export_session_to_hdf5(
                         str_dtype = h5py.string_dtype(encoding="utf-8")
                         dev_ids = list(offsets.keys())
                         vals = [_np.int64(int(offsets[k])) for k in dev_ids]
-                        sync_grp.create_dataset("device_ids", data=_np.array(dev_ids, dtype=str_dtype), compression="gzip", compression_opts=4)
-                        sync_grp.create_dataset("clock_offsets_ns", data=_np.array(vals, dtype=_np.int64), compression="gzip", compression_opts=4)
+                        sync_grp.create_dataset(
+                            "device_ids",
+                            data=_np.array(dev_ids, dtype=str_dtype),
+                            compression="gzip",
+                            compression_opts=4
+                        )
+                        sync_grp.create_dataset(
+                            "clock_offsets_ns",
+                            data=_np.array(vals, dtype=_np.int64),
+                            compression="gzip",
+                            compression_opts=4
+                        )
                     except Exception:
                         pass
                 # Optional sync stats: store as JSON dataset if available

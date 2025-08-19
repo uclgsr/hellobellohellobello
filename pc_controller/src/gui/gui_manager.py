@@ -112,7 +112,9 @@ class DeviceWidget(QWidget):
             bytes_per_line = ch * w
             qimg = QImage(frame_rgb.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
             self.view.setPixmap(QPixmap.fromImage(qimg).scaled(
-                self.view.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                self.view.size(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
             ))
 
     def update_qimage(self, qimg: QImage) -> None:

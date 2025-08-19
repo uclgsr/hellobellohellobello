@@ -44,6 +44,24 @@ class PytestBridgeTest {
             .directory(repoRoot)
             .redirectErrorStream(true)
 
+        // First check if pytest is available
+        val checkCmd = arrayOf("python3", "-m", "pytest", "--version")
+        val checkPb = ProcessBuilder(*checkCmd)
+            .directory(repoRoot)
+            .redirectErrorStream(true)
+        
+        try {
+            val checkProc = checkPb.start()
+            val checkFinished = checkProc.waitFor(10, TimeUnit.SECONDS)
+            if (!checkFinished || checkProc.exitValue() != 0) {
+                Assume.assumeTrue("pytest module not available", false)
+                return
+            }
+        } catch (e: Exception) {
+            Assume.assumeTrue("python3 not available: ${e.message}", false)
+            return
+        }
+
         val proc = try {
             pb.start()
         } catch (e: Exception) {
