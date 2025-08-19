@@ -8,8 +8,7 @@ This repository contains a hub-and-spoke research platform for synchronous, mult
 - Spoke (Android Sensor Node, Kotlin/Android): Mobile client that interfaces with hardware (RGB, thermal, Shimmer GSR),
   records locally, and communicates with the Hub over a secured TCP/IP socket.
 
-See docs/1_high_level_design.md and docs/2_detail_design.md for design overviews, and docs/3_phase_by_phase.md with the
-phase-specific implementation notes.
+See docs/System_Design.md for architecture overview and docs/Implementation_Phases.md for implementation details.
 
 ## Project Structure
 
@@ -58,10 +57,10 @@ To run from sources (development):
 
 ## Communication and Time Sync
 
-- **Enterprise TLS Security**: TLS 1.2+ TCP/IP socket with mutual authentication and secure message framing. See docs/TLS_API_Documentation.md for comprehensive security configuration.
-- **Fault Tolerance System**: Automatic heartbeat monitoring with device health tracking and exponential backoff reconnection. See docs/Heartbeat_API_Documentation.md for implementation details.
-- **NTP-like Time Sync**: Handshake upon connection to compute per-device clock offsets. All data is timestamped using device-local monotonic clocks; alignment is performed in post-processing.
-- **Flash Sync**: The Hub can broadcast a `flash_sync` command to trigger simultaneous on-screen flashes across devices for temporal validation (docs/Flash_Sync_Validation.md).
+- **Enterprise TLS Security**: TLS 1.2+ TCP/IP socket with mutual authentication and secure message framing. See docs/API_Documentation.md for comprehensive security configuration.
+- **Fault Tolerance System**: Automatic heartbeat monitoring with device health tracking and exponential backoff reconnection. See docs/API_Documentation.md for implementation details.
+- **NTP-like Time Sync**: Hardened handshake with 10-20 trials per device to compute robust per-device clock offsets with median statistics and outlier filtering. All data is timestamped using device-local monotonic clocks; alignment is performed in post-processing.
+- **Flash Sync**: The Hub can broadcast a `flash_sync` command to trigger simultaneous on-screen flashes across devices for temporal validation (docs/markdown/Flash_Sync_Validation.md).
 
 ## Data Handling
 
@@ -88,8 +87,7 @@ To run from sources (development):
 - **[Production Deployment Guide](docs/Production_Deployment_Guide.md)** - Enterprise deployment and security hardening
 
 **API References:**
-- **[TLS API Documentation](docs/TLS_API_Documentation.md)** - Complete TLS security implementation guide
-- **[Heartbeat API Documentation](docs/Heartbeat_API_Documentation.md)** - Fault tolerance system documentation
+- **[API Documentation](docs/API_Documentation.md)** - TLS Security, Heartbeat Monitoring, and protocol APIs
 
 **Technical Specifications:**
 - **[PROTOCOL.md](PROTOCOL.md)** - Complete communication protocol specification
@@ -145,7 +143,7 @@ Quick commands:
 - pytest -q
 - .\gradlew.bat --no-daemon :android_sensor_node:app:testDebugUnitTest
 - python pc_controller\src\main.py
-- python scripts\validate_sync.py --session-id <SESSION_ID>
+- python scripts\validate_sync.py --session-id <SESSION_ID> --base-dir .\pc_controller_data
 
 
 ---
@@ -199,7 +197,7 @@ This section provides a simple, step-by-step path for new users and examiners to
 
 ## Post-Session Sync Validation
 - Validate cross-device timing (FR3/NFR2):
-  - python scripts/validate_sync.py --session <PATH_TO_SESSION_FOLDER>
+  - python scripts/validate_sync.py --session-id <SESSION_ID> --base-dir ./pc_controller_data
   - PASS: |Δt| < 5 ms across compared streams.
 
 

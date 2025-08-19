@@ -44,84 +44,19 @@ plugins {
     base
 }
 
+// Root orchestrator for multi-project build (Android + Python)
 allprojects {
     group = "org.hellobellohellobello"
     version = "1.0-SNAPSHOT"
 }
 
-// Android SDK Detection
-val localPropsFile = rootProject.file("local.properties")
-val hasAndroidSdk = detectAndroidSdk(localPropsFile)
-
-// Conditional Android inclusion
-if (hasAndroidSdk) {
-    logger.info("Android SDK detected - including Android modules")
-} else {
-    logger.warn("Android SDK not found - skipping Android modules")
-}
-
-// Root-level pytest task for unified testing
-val pyTest = tasks.register<Exec>("pyTest") {
-    group = "verification"
-    description = "Run Python pytest suite"
-    workingDir = rootDir
-    commandLine("python3", "-m", "pytest")
-}
-
-// Combined verification task
-tasks.register("checkAll") {
-    group = "verification"
-    description = "Run all tests (Android + Python)"
-    dependsOn(pyTest)
-    
-    if (hasAndroidSdk) {
-        dependsOn(":android_sensor_node:app:testDebugUnitTest")
-        dependsOn(":android_sensor_node:app:connectedDebugAndroidTest")
-    }
-}
-
-// Unified packaging task
-tasks.register("packageAll") {
-    group = "build"
-    description = "Package all components for distribution"
-    dependsOn(":pc_controller:assemblePcController")
-    
-    if (hasAndroidSdk) {
-        dependsOn(":android_sensor_node:app:assembleRelease")
-    }
-}
-```
-
-### Settings Configuration
-
-**`settings.gradle.kts`:**
-```kotlin
-rootProject.name = "hellobellohellobello"
-
-// Conditionally include Android module based on SDK availability
-val hasAndroidSdk = detectAndroidSdkAvailability()
-
-if (hasAndroidSdk) {
-    include(":android_sensor_node")
-    include(":android_sensor_node:app")
-    println("✓ Android modules included")
-} else {
-    println("⚠ Android SDK not found - Android modules excluded")
-    println("  To enable Android builds:")
-    println("  1. Install Android Studio or Android SDK")
-    println("  2. Set ANDROID_SDK_ROOT environment variable")
-    println("  3. Or create local.properties with sdk.dir")
-}
-
-// Always include PC controller (Python)
-include(":pc_controller")
-
-fun detectAndroidSdkAvailability(): Boolean {
+// Detect whether an Android SDK is available on this machine
+fun detectAndroidSdk(): Boolean {
     // Check local.properties
-    val localProps = file("local.properties")
-    if (localProps.exists()) {
+    val localPropsFile = rootProject.file("local.properties")
+    if (localPropsFile.exists()) {
         val props = java.util.Properties()
-        localProps.inputStream().use { props.load(it) }
+        localPropsFile.inputStream().use { props.load(it) }
         val sdkDir = props.getProperty("sdk.dir")
         if (sdkDir != null && file(sdkDir).exists()) {
             return true
@@ -132,6 +67,90 @@ fun detectAndroidSdkAvailability(): Boolean {
     val envSdk = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
     return envSdk != null && file(envSdk).exists()
 }
+
+val hasAndroidSdk = detectAndroidSdk()
+
+// Root-level pytest task
+val pyTest = tasks.register<Exec>("pyTest") {
+    group = "verification"
+    description = "Run Python pytest suite as defined by pytest.ini"
+    workingDir = rootDir
+    commandLine("python3", "-m", "pytest")
+}
+
+// Combined check task
+tasks.register("checkAll") {
+    group = "verification"
+    description = if (hasAndroidSdk) {
+        "Run Android unit tests and Python pytest"
+    } else {
+        "Run Python pytest (Android SDK not found; skipping Android unit tests)"
+    }
+    dependsOn(pyTest)
+    if (hasAndroidSdk) {
+        // Android unit test task (Debug)
+        dependsOn(":android_sensor_node:app:testDebugUnitTest")
+    } else {
+        doFirst {
+            println("[checkAll] Android SDK not found; skipping Android unit tests")
+        }
+    }
+}
+
+// Packaging tasks
+tasks.register("packageAll") {
+    group = "build"
+    description = if (hasAndroidSdk) {
+        "Package PC Controller exe (PyInstaller) and Android APK (release)"
+    } else {
+        "Package PC Controller exe (PyInstaller) only (Android SDK not found)"
+    }
+    dependsOn(":pc_controller:assemblePcController")
+    if (hasAndroidSdk) {
+        dependsOn(":android_sensor_node:app:assembleRelease")
+    }
+}
+}
+```
+
+### Settings Configuration
+
+**`settings.gradle.kts`:**
+```kotlin
+rootProject.name = "hellobellohellobello"
+
+// Centralized Android SDK detection function
+fun detectAndroidSdk(): Boolean {
+    // Check local.properties
+    val localPropsFile = file("local.properties")
+    if (localPropsFile.exists()) {
+        val props = java.util.Properties()
+        localPropsFile.inputStream().use { props.load(it) }
+        val sdkDir = props.getProperty("sdk.dir")
+        if (sdkDir != null && file(sdkDir).exists()) {
+            return true
+        }
+    }
+    
+    // Check environment variables
+    val envSdk = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
+    return envSdk != null && file(envSdk).exists()
+}
+
+// Detect Android SDK presence to conditionally include Android modules
+val hasAndroidSdk = detectAndroidSdk()
+
+if (hasAndroidSdk) {
+    include(":android_sensor_node")
+    project(":android_sensor_node").projectDir = file("android_sensor_node")
+    include(":android_sensor_node:app")
+    project(":android_sensor_node:app").projectDir = file("android_sensor_node/app")
+} else {
+    println("[settings] Android SDK not found; skipping inclusion of :android_sensor_node modules")
+}
+
+include(":pc_controller")
+project(":pc_controller").projectDir = file("pc_controller")
 ```
 
 ---
@@ -217,34 +236,43 @@ android {
 
 dependencies {
     // Core Android
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.activity:activity-ktx:1.8.2")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-service:2.7.0")
-    
-    // Camera and Media
-    implementation("androidx.camera:camera-core:1.3.1")
-    implementation("androidx.camera:camera-camera2:1.3.1")
-    implementation("androidx.camera:camera-lifecycle:1.3.1")
-    implementation("androidx.camera:camera-video:1.3.1")
-    implementation("androidx.camera:camera-view:1.3.1")
-    
-    // Networking and Service Discovery
-    implementation("javax.jmdns:jmdns:3.5.8")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    
-    // Sensor SDKs (provided as AAR/JAR files)
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
-    
-    // Testing
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.activity:activity-ktx:1.9.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // CameraX for RGB recording
+    val cameraxVersion = "1.3.4"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-video:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // TLS networking, background work, and encryption
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // Local SDKs (Topdon TC001 and Shimmer Android API)
+    implementation(files("src/main/libs/topdon_1.3.7.aar"))
+    implementation(files("src/main/libs/libusbdualsdk_1.3.4_2406271906_standard.aar"))
+    implementation(files("src/main/libs/opengl_1.3.2_standard.aar"))
+    implementation(files("src/main/libs/suplib-release.aar"))
+    implementation(files("src/main/libs/shimmerandroidinstrumentdriver-3.2.3_beta.aar"))
+    implementation(files("src/main/libs/shimmerbluetoothmanager-0.11.4_beta.jar"))
+    implementation(files("src/main/libs/shimmerdriver-0.11.4_beta.jar"))
+    implementation(files("src/main/libs/shimmerdriverpc-0.11.4_beta.jar"))
+
+    // Unit testing
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:5.7.0")
     testImplementation("org.robolectric:robolectric:4.11.1")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-    
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    testImplementation("androidx.test:core:1.5.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    testImplementation("com.google.truth:truth:1.4.2")
 }
 ```
 
@@ -442,12 +470,29 @@ fun detectBuildEnvironment(): BuildEnvironment {
 ### Build Optimization
 
 **Gradle Build Cache:**
-```kotlin
-// gradle.properties
+```properties
+# gradle.properties
 org.gradle.caching=true
 org.gradle.parallel=true
 org.gradle.configureondemand=true
-org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m
+org.gradle.daemon=true
+org.gradle.configuration-cache=true
+org.gradle.console=verbose
+org.gradle.warning.mode=all
+# Enable native access to avoid JDK restricted method warnings
+org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8 --enable-native-access=ALL-UNNAMED
+
+# Android-specific optimizations
+android.enableJetifier=true
+android.useAndroidX=true
+android.enableR8.fullMode=true
+android.nonTransitiveRClass=true
+
+# Kotlin optimizations
+kotlin.code.style=official
+ksp.incremental=true
+ksp.incremental.intermodule=true
+ksp.use.worker.api=true
 ```
 
 **Incremental Builds:**

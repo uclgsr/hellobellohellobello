@@ -1,4 +1,4 @@
-# Protocol Specification (Phase 1–5)
+# Protocol Specification
 
 This document defines the comprehensive JSON message protocol, framing rules, and mDNS service specifications required to establish connectivity and control between the PC Hub (PC Controller) and Android Spoke (Sensor Node).
 

@@ -39,6 +39,7 @@ __pycache__/
 .coverage
 coverage.xml
 htmlcov/
+*.egg-info/
 
 # PyInstaller / Python build outputs
 /dist/

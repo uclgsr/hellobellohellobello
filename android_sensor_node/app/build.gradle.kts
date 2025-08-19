@@ -9,10 +9,10 @@ android {
 
     defaultConfig {
         applicationId = "com.yourcompany.sensorspoke"
-        minSdk = 24
+        minSdk = 26  // Android 8.0 (API 26) - matches documentation
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
     }
 
     buildTypes {
@@ -26,6 +26,10 @@ android {
         debug {
             isMinifyEnabled = false
         }
+    }
+
+    buildFeatures {
+        viewBinding = true
     }
 
     testOptions {

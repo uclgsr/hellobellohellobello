@@ -191,9 +191,14 @@ class FileReceiverServer(QThread):
                                     zf.extractall(target_dir)
                                 os.remove(tmp_zip_path)
                                 self.file_received.emit(header.session_id, header.device_id)
-                                self.log.emit(f"Received and unpacked {bytes_written} bytes from {header.device_id}")
+                                self.log.emit(
+                                    f"Received and unpacked {bytes_written} bytes "
+                                    f"from {header.device_id}"
+                                )
                             except Exception as exc:  # noqa: BLE001
-                                self.log.emit(f"Failed to unpack zip from {header.device_id}: {exc}")
+                                self.log.emit(
+                                    f"Failed to unpack zip from {header.device_id}: {exc}"
+                                )
                         except Exception as exc:  # noqa: BLE001
                             self.log.emit(f"Receiver error from {addr}: {exc}")
         except Exception as exc:  # noqa: BLE001

@@ -18,25 +18,28 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "asd"
+rootProject.name = "hellobellohellobello"
+
+// Centralized Android SDK detection function
+fun detectAndroidSdk(): Boolean {
+    // Check local.properties
+    val localPropsFile = file("local.properties")
+    if (localPropsFile.exists()) {
+        val props = java.util.Properties()
+        localPropsFile.inputStream().use { props.load(it) }
+        val sdkDir = props.getProperty("sdk.dir")
+        if (sdkDir != null && file(sdkDir).exists()) {
+            return true
+        }
+    }
+    
+    // Check environment variables
+    val envSdk = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
+    return envSdk != null && file(envSdk).exists()
+}
 
 // Detect Android SDK presence to conditionally include Android modules
-val localPropsFile = file("local.properties")
-val props = java.util.Properties()
-var hasAndroidSdk = false
-if (localPropsFile.exists()) {
-    localPropsFile.inputStream().use { props.load(it) }
-    val sdkDir = props.getProperty("sdk.dir")
-    if (sdkDir != null) {
-        hasAndroidSdk = file(sdkDir).exists()
-    }
-}
-if (!hasAndroidSdk) {
-    val envSdk = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
-    if (envSdk != null) {
-        hasAndroidSdk = file(envSdk).exists()
-    }
-}
+val hasAndroidSdk = detectAndroidSdk()
 
 if (hasAndroidSdk) {
     include(":android_sensor_node")

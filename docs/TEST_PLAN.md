@@ -37,8 +37,9 @@ References (source of truth):
 - docs/latex/3.tex (Requirements and Analysis)
 - docs/latex/4.tex (Design and Implementation Details)
 - CHANGELOG.md (scope of implemented features covered by this plan)
-- docs/guide_unit_testing.md, docs/guide_integration_testing.md, docs/guide_system_testing.md (how-to references)
-- docs/Hardware_Validation_Protocol.md (SOP for hardware-in-the-loop validation)
+- docs/markdown/Testing.md (testing procedures and strategies)
+- docs/Comprehensive_Testing_Guide.md (detailed testing guide)  
+- docs/markdown/Hardware_Validation_Protocol.md (SOP for hardware-in-the-loop validation)
 
 Scope:
 

@@ -4,7 +4,7 @@ plugins {
 
 // Root orchestrator for multi-project build (Android + Python)
 allprojects {
-    group = "org.example"
+    group = "org.hellobellohellobello"
     version = "1.0-SNAPSHOT"
 }
 
@@ -12,22 +12,38 @@ allprojects {
 // Also provide a root-level pyTest task so this repo can run tests without a Gradle subproject in pc_controller.
 
 // Detect whether an Android SDK is available on this machine
-val localPropsFile = rootProject.file("local.properties")
-val props = java.util.Properties()
-var hasAndroidSdk = false
-if (localPropsFile.exists()) {
-    localPropsFile.inputStream().use { props.load(it) }
-    val sdkDir = props.getProperty("sdk.dir")
-    if (sdkDir != null) {
-        hasAndroidSdk = file(sdkDir).exists()
+fun detectAndroidSdk(): Boolean {
+    // Check local.properties
+    val localPropsFile = rootProject.file("local.properties")
+    if (localPropsFile.exists()) {
+        val props = java.util.Properties()
+        localPropsFile.inputStream().use { props.load(it) }
+        val sdkDir = props.getProperty("sdk.dir")
+        if (sdkDir != null && file(sdkDir).exists()) {
+            return true
+        }
     }
-}
-if (!hasAndroidSdk) {
+    
+    // Check environment variables
     val envSdk = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
-    if (envSdk != null) {
-        hasAndroidSdk = file(envSdk).exists()
+    return envSdk != null && file(envSdk).exists()
+}
+
+val hasAndroidSdk = detectAndroidSdk()
+
+// Detect whether pytest is available
+fun isPytestAvailable(): Boolean {
+    return try {
+        val process = ProcessBuilder("python3", "-m", "pytest", "--version")
+            .directory(rootDir)
+            .start()
+        process.waitFor() == 0
+    } catch (e: Exception) {
+        false
     }
 }
+
+val hasPytest = isPytestAvailable()
 
 // Root-level pytest task
 val pyTest = tasks.register<Exec>("pyTest") {
@@ -35,15 +51,25 @@ val pyTest = tasks.register<Exec>("pyTest") {
     description = "Run Python pytest suite as defined by pytest.ini"
     workingDir = rootDir
     commandLine("python3", "-m", "pytest")
+    
+    // Only run if pytest is available
+    onlyIf { hasPytest }
+    
+    doFirst {
+        if (!hasPytest) {
+            println("[pyTest] pytest module not available; install with: python3 -m pip install pytest")
+        }
+    }
 }
 
 // Combined check task
 tasks.register("checkAll") {
     group = "verification"
-    description = if (hasAndroidSdk) {
-        "Run Android unit tests and Python pytest"
-    } else {
-        "Run Python pytest (Android SDK not found; skipping Android unit tests)"
+    description = when {
+        hasAndroidSdk && hasPytest -> "Run Android unit tests and Python pytest"
+        hasAndroidSdk && !hasPytest -> "Run Android unit tests (pytest not available)"
+        !hasAndroidSdk && hasPytest -> "Run Python pytest (Android SDK not found)"
+        else -> "Check tasks (Android SDK and pytest not found)"
     }
     dependsOn(pyTest)
     if (hasAndroidSdk) {
@@ -59,9 +85,15 @@ tasks.register("checkAll") {
 // Packaging tasks
 tasks.register("packageAll") {
     group = "build"
-    description = "Package PC Controller exe (PyInstaller) and Android APK (release)"
+    description = if (hasAndroidSdk) {
+        "Package PC Controller exe (PyInstaller) and Android APK (release)"
+    } else {
+        "Package PC Controller exe (PyInstaller) only (Android SDK not found)"
+    }
     dependsOn(":pc_controller:assemblePcController")
-    dependsOn(":android_sensor_node:app:assembleRelease")
+    if (hasAndroidSdk) {
+        dependsOn(":android_sensor_node:app:assembleRelease")
+    }
 }
 
 // Placeholder classes task to satisfy IDEs/tools that invoke :classes at the root
