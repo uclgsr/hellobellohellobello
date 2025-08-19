@@ -5,10 +5,12 @@ This document provides comprehensive system design details for the multi-modal p
 ## Table of Contents
 
 1. [High-Level Architecture](#high-level-architecture)
-2. [Detailed Component Design](#detailed-component-design)
-3. [Communication Protocol](#communication-protocol)
-4. [Data Flow and Management](#data-flow-and-management)
-5. [Implementation Strategy](#implementation-strategy)
+2. [C4 Architectural Views](#c4-architectural-views)
+3. [Detailed Component Design](#detailed-component-design)
+4. [Communication Protocol](#communication-protocol)
+5. [Data Flow and Management](#data-flow-and-management)
+6. [Deployment Architecture](#deployment-architecture)
+7. [Implementation Strategy](#implementation-strategy)
 
 ---
 
@@ -42,6 +44,74 @@ The system employs a **Hub-and-Spoke architecture** with a central PC acting as 
                             │  (Sensor Node)  │
                             └─────────────────┘
 ```
+
+---
+
+## C4 Architectural Views
+
+The platform architecture follows the C4 model for comprehensive system visualization, from context through code-level details.
+
+### C1 - System Context
+
+The multi-modal physiological sensing platform operates within a research environment where investigators collect synchronized physiological data using multiple sensor modalities.
+
+```mermaid
+graph TB
+    subgraph "Research Environment"
+        R[Researcher/Investigator]
+        S[Study Participants]
+    end
+    
+    subgraph "Core Platform"
+        PC[PC Hub Controller<br/>Session Management & Data Aggregation]
+        A1[Android Sensor Node 1<br/>RGB + Thermal + GSR]
+        A2[Android Sensor Node 2<br/>RGB + Thermal + GSR]
+        AN[Android Sensor Node N<br/>RGB + Thermal + GSR]
+    end
+    
+    subgraph "External Devices"
+        TC[Topdon TC001<br/>Thermal Camera]
+        GS[Shimmer GSR+<br/>Physiological Sensor]
+    end
+    
+    subgraph "Storage & Analysis"
+        LS[Local File System<br/>Session Data Storage]
+        AS[Analysis Software<br/>MATLAB/Python/R]
+    end
+    
+    R -->|controls sessions| PC
+    R -->|monitors participants| S
+    S -->|worn by| GS
+    S -->|observed by| A1
+    S -->|observed by| A2
+    S -->|observed by| AN
+    
+    PC <-->|TCP/IP commands & sync| A1
+    PC <-->|TCP/IP commands & sync| A2  
+    PC <-->|TCP/IP commands & sync| AN
+    
+    A1 <-->|USB-OTG| TC
+    A1 <-->|BLE| GS
+    A2 <-->|USB-OTG| TC
+    A2 <-->|BLE| GS
+    
+    PC -->|aggregated data| LS
+    LS -->|export formats| AS
+```
+
+**Key External Actors:**
+- **Researcher/Investigator**: Controls recording sessions, monitors system status, analyzes collected data
+- **Study Participants**: Subjects being monitored, wear/interact with physiological sensors
+
+**Key External Systems:**
+- **Topdon TC001 Thermal Camera**: USB-connected thermal imaging device providing temperature matrices
+- **Shimmer GSR+ Sensor**: BLE-connected galvanic skin response and photoplethysmography sensor
+- **Local File System**: Persistent storage for session data, metadata, and exports
+- **Analysis Software**: External tools (MATLAB, Python, R) for post-processing and research analysis
+
+### C2 - Container Architecture
+
+The platform consists of two primary application containers running on different deployment nodes, connected via TCP/IP networking.
 
 ---
 
@@ -376,6 +446,64 @@ pc_controller_data/
 - Data completeness assessment
 - Signal quality indicators for each sensor
 - System performance metrics (latency, throughput)
+
+---
+
+## Deployment Architecture
+
+### Physical Deployment Model
+
+The platform deploys across multiple heterogeneous devices within a research environment:
+
+```
+Research Laboratory Environment
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│  ┌─────────────────┐    WiFi/Ethernet    ┌─────────────┐ │
+│  │   PC Controller │◄─────────────────────┤   Router    │ │
+│  │   (Windows)     │                      │             │ │
+│  │                 │                      └─────────────┘ │
+│  │ ┌─────────────┐ │                              │       │
+│  │ │Session Mgmt │ │                              │       │
+│  │ │Data Aggreg │ │                              │       │
+│  │ │GUI Dashboard│ │                      ┌───────▼─────┐ │
+│  │ └─────────────┘ │                      │Android Node1│ │
+│  └─────────────────┘                      │             │ │
+│           │                               │┌───────────┐│ │
+│           │                               ││Sensor Rec ││ │
+│    ┌──────▼──────┐                       ││Network Mgr││ │
+│    │Local Storage│                       │└───────────┘│ │
+│    │Sessions/    │                       └─────────────┘ │
+│    │Exports      │                               │       │
+│    └─────────────┘                       ┌───────▼─────┐ │
+│                                          │Android NodeN│ │
+│                                          │             │ │
+│                                          └─────────────┘ │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Deployment Specifications
+
+**PC Controller Requirements:**
+- **OS**: Windows 10/11 (primary), Linux/macOS (development)
+- **RAM**: 8GB minimum, 16GB recommended for multi-node sessions
+- **Storage**: 500GB SSD for session data buffering
+- **Network**: Gigabit Ethernet or WiFi 6 for optimal throughput
+- **USB**: Multiple ports for Shimmer dock connections
+
+**Android Sensor Node Requirements:**
+- **OS**: Android 8.0+ (API 26+) for CameraX compatibility
+- **RAM**: 4GB minimum for thermal processing and video encoding
+- **Storage**: 64GB minimum for local session buffering
+- **Camera**: Back camera with manual focus control
+- **USB**: USB-C with OTG support for thermal camera
+- **BLE**: Bluetooth 5.0+ for Shimmer GSR connectivity
+
+**Network Infrastructure:**
+- **Bandwidth**: 100 Mbps minimum for real-time streaming
+- **Latency**: <10ms for synchronization accuracy
+- **Topology**: Star configuration with dedicated research network segment
+- **Security**: WPA3 encryption, network segmentation from general internet access
 
 ---
 

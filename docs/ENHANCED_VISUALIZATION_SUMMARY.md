@@ -10,7 +10,7 @@ The enhanced visualization plan has been fully implemented with production-grade
 
 ### ✅ Core Architecture Documentation
 
-**[Architecture.md](markdown/Architecture.md)** - Complete C4 architecture documentation:
+**[System_Design.md](System_Design.md)** - Complete architecture with C4 views and component design:
 - **C1 System Context**: Research environment and external actors
 - **C2 Container Architecture**: PC Controller and Android Sensor Applications  
 - **C3 Component Architecture**: Detailed internal component breakdown
@@ -63,7 +63,7 @@ The enhanced visualization plan has been fully implemented with production-grade
 
 ### ✅ Testing Strategy and Validation
 
-**[Testing.md](markdown/Testing.md)** - Comprehensive testing framework:
+**[TEST_PLAN.md](TEST_PLAN.md)** - Comprehensive testing framework:
 - Test coverage matrix across all components (80-95% targets)
 - Unit testing with Robolectric for Android components
 - Integration testing for multi-device communication
