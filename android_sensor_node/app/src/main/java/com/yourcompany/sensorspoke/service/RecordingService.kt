@@ -11,7 +11,6 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Base64
 import androidx.core.app.NotificationCompat
-import androidx.annotation.VisibleForTesting
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.network.FileTransferManager
 import com.yourcompany.sensorspoke.network.NetworkClient
@@ -19,13 +18,10 @@ import com.yourcompany.sensorspoke.utils.PreviewBus
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
 import java.io.BufferedInputStream
-import java.io.InputStream
+import java.io.BufferedWriter
 import java.io.ByteArrayOutputStream
+import java.io.OutputStreamWriter
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.*
@@ -37,7 +33,6 @@ import java.util.*
  * Phase 1 implements only the query_capabilities handshake.
  */
 class RecordingService : Service() {
-
     companion object {
         const val ACTION_START_RECORDING = "com.yourcompany.sensorspoke.ACTION_START_RECORDING"
         const val ACTION_STOP_RECORDING = "com.yourcompany.sensorspoke.ACTION_STOP_RECORDING"
@@ -67,7 +62,11 @@ class RecordingService : Service() {
         scope.launch { startServerAndAdvertise() }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
         // Keep running until explicitly stopped
         return START_STICKY
     }
@@ -93,20 +92,22 @@ class RecordingService : Service() {
         val channelId = "recording_service_channel"
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                getString(R.string.notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            )
+            val channel =
+                NotificationChannel(
+                    channelId,
+                    getString(R.string.notification_channel_name),
+                    NotificationManager.IMPORTANCE_LOW,
+                )
             channel.description = getString(R.string.notification_channel_desc)
             nm.createNotificationChannel(channel)
         }
-        val notification: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle(getString(R.string.notification_title))
-            .setContentText(getString(R.string.notification_text))
-            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth) // placeholder icon
-            .setOngoing(true)
-            .build()
+        val notification: Notification =
+            NotificationCompat.Builder(this, channelId)
+                .setContentTitle(getString(R.string.notification_title))
+                .setContentText(getString(R.string.notification_text))
+                .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth) // placeholder icon
+                .setOngoing(true)
+                .build()
         startForeground(1001, notification)
     }
 
@@ -144,10 +145,11 @@ class RecordingService : Service() {
                     when (command) {
                         "query_capabilities" -> {
                             val caps = collectCapabilities()
-                            val response = JSONObject()
-                                .put("ack_id", id)
-                                .put("status", "ok")
-                                .put("capabilities", caps)
+                            val response =
+                                JSONObject()
+                                    .put("ack_id", id)
+                                    .put("status", "ok")
+                                    .put("capabilities", caps)
                             if (isV1) {
                                 response.put("v", 1).put("type", "ack")
                                 safeWriteFrame(writer, response)
@@ -160,11 +162,12 @@ class RecordingService : Service() {
                             // PC sent t0; record t1 on arrival and reply immediately with t1 and t2
                             val t1 = System.nanoTime()
                             val t2 = System.nanoTime()
-                            val response = JSONObject()
-                                .put("ack_id", id)
-                                .put("status", "ok")
-                                .put("t1", t1)
-                                .put("t2", t2)
+                            val response =
+                                JSONObject()
+                                    .put("ack_id", id)
+                                    .put("status", "ok")
+                                    .put("t1", t1)
+                                    .put("t2", t2)
                             if (isV1) {
                                 response.put("v", 1).put("type", "ack")
                                 safeWriteFrame(writer, response)
@@ -176,9 +179,10 @@ class RecordingService : Service() {
                         "start_recording" -> {
                             val sessionId = obj.optString("session_id", "")
                             // Forward to UI via broadcast
-                            val intent = Intent(ACTION_START_RECORDING)
-                                .putExtra(EXTRA_SESSION_ID, sessionId)
-                                .setPackage("com.yourcompany.sensorspoke") // Fix lint: UnsafeImplicitIntentLaunch
+                            val intent =
+                                Intent(ACTION_START_RECORDING)
+                                    .putExtra(EXTRA_SESSION_ID, sessionId)
+                                    .setPackage("com.yourcompany.sensorspoke") // Fix lint: UnsafeImplicitIntentLaunch
                             sendBroadcast(intent)
                             // FR8: update local session state for rejoin purposes
                             if (sessionId.isNotEmpty()) currentSessionId = sessionId
@@ -193,8 +197,9 @@ class RecordingService : Service() {
                         }
 
                         "stop_recording" -> {
-                            val intent = Intent(ACTION_STOP_RECORDING)
-                                .setPackage("com.yourcompany.sensorspoke") // Fix lint: UnsafeImplicitIntentLaunch
+                            val intent =
+                                Intent(ACTION_STOP_RECORDING)
+                                    .setPackage("com.yourcompany.sensorspoke") // Fix lint: UnsafeImplicitIntentLaunch
                             sendBroadcast(intent)
                             // FR8: update local session state — session ended but keep id for rejoin-triggered transfer
                             isRecording = false
@@ -209,9 +214,10 @@ class RecordingService : Service() {
 
                         "flash_sync" -> {
                             val ts = System.nanoTime()
-                            val intent = Intent(ACTION_FLASH_SYNC)
-                                .putExtra(EXTRA_FLASH_TS_NS, ts)
-                                .setPackage("com.yourcompany.sensorspoke") // Fix lint: UnsafeImplicitIntentLaunch
+                            val intent =
+                                Intent(ACTION_FLASH_SYNC)
+                                    .putExtra(EXTRA_FLASH_TS_NS, ts)
+                                    .setPackage("com.yourcompany.sensorspoke") // Fix lint: UnsafeImplicitIntentLaunch
                             sendBroadcast(intent)
                             val response = JSONObject().put("ack_id", id).put("status", "ok").put("ts", ts)
                             if (isV1) {
@@ -242,10 +248,11 @@ class RecordingService : Service() {
                                     safeWriteLine(writer, response.toString())
                                 }
                             } else {
-                                val response = JSONObject()
-                                    .put("ack_id", id)
-                                    .put("status", "error")
-                                    .put("message", "invalid parameters")
+                                val response =
+                                    JSONObject()
+                                        .put("ack_id", id)
+                                        .put("status", "error")
+                                        .put("message", "invalid parameters")
                                 if (isV1) {
                                     response.put("v", 1).put("type", "error").put("code", "E_BAD_PARAM")
                                     safeWriteFrame(writer, response)
@@ -257,10 +264,11 @@ class RecordingService : Service() {
 
                         else -> {
                             // Unknown commands acknowledged as error
-                            val response = JSONObject()
-                                .put("ack_id", id)
-                                .put("status", "error")
-                                .put("message", "unknown command")
+                            val response =
+                                JSONObject()
+                                    .put("ack_id", id)
+                                    .put("status", "error")
+                                    .put("message", "unknown command")
                             if (isV1) {
                                 response.put("v", 1).put("type", "error").put("code", "E_UNKNOWN_CMD")
                                 safeWriteFrame(writer, response)
@@ -282,7 +290,10 @@ class RecordingService : Service() {
         }
     }
 
-    private fun safeWriteLine(writer: BufferedWriter, text: String) {
+    private fun safeWriteLine(
+        writer: BufferedWriter,
+        text: String,
+    ) {
         try {
             synchronized(writer) {
                 writer.write(text)
@@ -294,7 +305,10 @@ class RecordingService : Service() {
         }
     }
 
-    private fun safeWriteFrame(writer: BufferedWriter, obj: JSONObject) {
+    private fun safeWriteFrame(
+        writer: BufferedWriter,
+        obj: JSONObject,
+    ) {
         try {
             synchronized(writer) {
                 val json = obj.toString()
@@ -314,13 +328,14 @@ class RecordingService : Service() {
         val sid = currentSessionId
         if (sid.isNullOrEmpty()) return
         try {
-            val obj = JSONObject()
-                .put("v", 1)
-                .put("type", "cmd")
-                .put("command", "rejoin_session")
-                .put("session_id", sid)
-                .put("device_id", Build.MODEL ?: "device")
-                .put("recording", isRecording)
+            val obj =
+                JSONObject()
+                    .put("v", 1)
+                    .put("type", "cmd")
+                    .put("command", "rejoin_session")
+                    .put("session_id", sid)
+                    .put("device_id", Build.MODEL ?: "device")
+                    .put("recording", isRecording)
             safeWriteFrame(writer, obj)
         } catch (_: Exception) {
         }
@@ -332,7 +347,12 @@ class RecordingService : Service() {
         val isDigits = first.isNotEmpty() && first.all { it in '0'..'9' }
         return if (isDigits) {
             // length-prefixed payload follows
-            val length = try { first.toInt() } catch (_: Exception) { return null }
+            val length =
+                try {
+                    first.toInt()
+                } catch (_: Exception) {
+                    return null
+                }
             val buf = ByteArray(length)
             var off = 0
             while (off < length) {
@@ -359,15 +379,19 @@ class RecordingService : Service() {
         return out.toString("US-ASCII")
     }
 
-    private fun broadcastPreviewFrame(bytes: ByteArray, tsNs: Long) {
+    private fun broadcastPreviewFrame(
+        bytes: ByteArray,
+        tsNs: Long,
+    ) {
         val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-        val obj = JSONObject()
-            .put("v", 1)
-            .put("type", "event")
-            .put("name", "preview_frame")
-            .put("device_id", Build.MODEL ?: "device")
-            .put("jpeg_base64", b64)
-            .put("ts", tsNs)
+        val obj =
+            JSONObject()
+                .put("v", 1)
+                .put("type", "event")
+                .put("name", "preview_frame")
+                .put("device_id", Build.MODEL ?: "device")
+                .put("jpeg_base64", b64)
+                .put("ts", tsNs)
         val snapshot: List<BufferedWriter> = synchronized(clientWriters) { clientWriters.toList() }
         for (w in snapshot) {
             safeWriteFrame(w, obj)
@@ -392,12 +416,13 @@ class RecordingService : Service() {
             for (id in cm.cameraIdList) {
                 val chars = cm.getCameraCharacteristics(id)
                 val facingInt = chars.get(CameraCharacteristics.LENS_FACING)
-                val facing = when (facingInt) {
-                    CameraCharacteristics.LENS_FACING_FRONT -> "front"
-                    CameraCharacteristics.LENS_FACING_BACK -> "back"
-                    CameraCharacteristics.LENS_FACING_EXTERNAL -> "external"
-                    else -> "unknown"
-                }
+                val facing =
+                    when (facingInt) {
+                        CameraCharacteristics.LENS_FACING_FRONT -> "front"
+                        CameraCharacteristics.LENS_FACING_BACK -> "back"
+                        CameraCharacteristics.LENS_FACING_EXTERNAL -> "external"
+                        else -> "unknown"
+                    }
                 cameras.put(JSONObject().put("id", id).put("facing", facing))
             }
         } catch (_: Exception) {

@@ -35,7 +35,12 @@ object TimeManager {
      * offset = (T_server + (T2 - T1) / 2) - T2
      */
     @JvmStatic
-    fun sync_with_server(serverIp: String, serverPort: Int, timeoutMillis: Int = 1500, onComplete: ((Boolean) -> Unit)? = null) {
+    fun sync_with_server(
+        serverIp: String,
+        serverPort: Int,
+        timeoutMillis: Int = 1500,
+        onComplete: ((Boolean) -> Unit)? = null,
+    ) {
         Thread {
             var socket: DatagramSocket? = null
             try {
@@ -65,7 +70,10 @@ object TimeManager {
             } catch (_: Exception) {
                 onComplete?.invoke(false)
             } finally {
-                try { socket?.close() } catch (_: Exception) {}
+                try {
+                    socket?.close()
+                } catch (_: Exception) {
+                }
             }
         }.start()
     }

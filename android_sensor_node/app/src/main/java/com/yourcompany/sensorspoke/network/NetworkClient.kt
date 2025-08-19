@@ -26,12 +26,12 @@ class NetworkClient(private val context: Context) {
 
     private var nsdManager: NsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
     private var registrationListener: NsdManager.RegistrationListener? = null
-    
+
     // Connection state
     private val socket = AtomicReference<Socket?>()
     private val isConnected = AtomicBoolean(false)
     private val serverAddress = AtomicReference<InetSocketAddress?>()
-    
+
     // Connection configuration
     var connectionTimeoutMs: Int = DEFAULT_TIMEOUT_MS
     var autoReconnect: Boolean = true
@@ -39,7 +39,11 @@ class NetworkClient(private val context: Context) {
     /**
      * Register this device as an NSD service for PC Hub discovery.
      */
-    fun register(type: String, name: String, port: Int) {
+    fun register(
+        type: String,
+        name: String,
+        port: Int,
+    ) {
         val sanitizedType = if (type.endsWith(".local.")) type else "$type.local."
         val info = NsdServiceInfo()
         // Use explicit Java-style setters to avoid Kotlin property mutability issues
@@ -47,23 +51,30 @@ class NetworkClient(private val context: Context) {
         info.serviceName = name
         info.port = port
 
-        val listener = object : NsdManager.RegistrationListener {
-            override fun onServiceRegistered(nsdServiceInfo: NsdServiceInfo) {
-                Log.i(TAG, "Service registered: ${nsdServiceInfo.serviceName}")
-            }
+        val listener =
+            object : NsdManager.RegistrationListener {
+                override fun onServiceRegistered(nsdServiceInfo: NsdServiceInfo) {
+                    Log.i(TAG, "Service registered: ${nsdServiceInfo.serviceName}")
+                }
 
-            override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                Log.e(TAG, "Service registration failed: $errorCode")
-            }
+                override fun onRegistrationFailed(
+                    serviceInfo: NsdServiceInfo,
+                    errorCode: Int,
+                ) {
+                    Log.e(TAG, "Service registration failed: $errorCode")
+                }
 
-            override fun onServiceUnregistered(serviceInfo: NsdServiceInfo) {
-                Log.i(TAG, "Service unregistered: ${serviceInfo.serviceName}")
+                override fun onServiceUnregistered(serviceInfo: NsdServiceInfo) {
+                    Log.i(TAG, "Service unregistered: ${serviceInfo.serviceName}")
+                }
+
+                override fun onUnregistrationFailed(
+                    serviceInfo: NsdServiceInfo,
+                    errorCode: Int,
+                ) {
+                    Log.e(TAG, "Service unregistration failed: $errorCode")
+                }
             }
-            
-            override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                Log.e(TAG, "Service unregistration failed: $errorCode")
-            }
-        }
         registrationListener = listener
         nsdManager.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener)
     }
@@ -85,20 +96,23 @@ class NetworkClient(private val context: Context) {
     /**
      * Connect to the PC Hub server.
      */
-    fun connect(host: String, port: Int): Boolean {
+    fun connect(
+        host: String,
+        port: Int,
+    ): Boolean {
         return try {
             disconnect() // Close any existing connection
-            
+
             val newSocket = Socket()
             val address = InetSocketAddress(host, port)
-            
+
             Log.i(TAG, "Connecting to $host:$port...")
             newSocket.connect(address, connectionTimeoutMs)
-            
+
             socket.set(newSocket)
             serverAddress.set(address)
             isConnected.set(true)
-            
+
             Log.i(TAG, "Successfully connected to $host:$port")
             true
         } catch (e: Exception) {
@@ -140,12 +154,12 @@ class NetworkClient(private val context: Context) {
         return try {
             val outputStream: OutputStream = currentSocket.getOutputStream()
             val messageBytes = message.toByteArray(StandardCharsets.UTF_8)
-            
+
             // Send message with newline delimiter (line-based protocol)
             outputStream.write(messageBytes)
             outputStream.write('\n'.code)
             outputStream.flush()
-            
+
             Log.d(TAG, "Message sent successfully: ${message.take(100)}...")
             true
         } catch (e: IOException) {
@@ -177,8 +191,8 @@ class NetworkClient(private val context: Context) {
      */
     fun isConnected(): Boolean {
         val currentSocket = socket.get()
-        return isConnected.get() && currentSocket != null && 
-               !currentSocket.isClosed && currentSocket.isConnected
+        return isConnected.get() && currentSocket != null &&
+            !currentSocket.isClosed && currentSocket.isConnected
     }
 
     /**
@@ -207,7 +221,7 @@ class NetworkClient(private val context: Context) {
             "server_address" to (getServerAddress() ?: "none"),
             "socket_closed" to (socket.get()?.isClosed ?: true),
             "auto_reconnect" to autoReconnect,
-            "timeout_ms" to connectionTimeoutMs
+            "timeout_ms" to connectionTimeoutMs,
         )
     }
 }

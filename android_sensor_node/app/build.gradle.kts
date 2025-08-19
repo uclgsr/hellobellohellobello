@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jlleitschuh.gradle.ktlint") version "12.1.0"
 }
 
 android {
@@ -9,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.yourcompany.sensorspoke"
-        minSdk = 26  // Android 8.0 (API 26) - matches documentation
+        minSdk = 26 // Android 8.0 (API 26) - matches documentation
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
@@ -20,7 +21,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
         debug {
@@ -46,18 +47,19 @@ android {
 
     packaging {
         jniLibs {
-            pickFirsts += setOf(
-                "lib/**/libUSBUVCCamera.so",
-                "lib/**/libencrypt.so",
-                "lib/**/libircmd.so",
-                "lib/**/libirparse.so",
-                "lib/**/libirprocess.so",
-                "lib/**/libirtemp.so",
-                "lib/**/libomp.so",
-                "lib/**/libirnet.so",
-                "lib/**/libusb-1.0.so",
-                "lib/**/libusbcamera.so"
-            )
+            pickFirsts +=
+                setOf(
+                    "lib/**/libUSBUVCCamera.so",
+                    "lib/**/libencrypt.so",
+                    "lib/**/libircmd.so",
+                    "lib/**/libirparse.so",
+                    "lib/**/libirprocess.so",
+                    "lib/**/libirtemp.so",
+                    "lib/**/libomp.so",
+                    "lib/**/libirnet.so",
+                    "lib/**/libusb-1.0.so",
+                    "lib/**/libusbcamera.so",
+                )
         }
     }
 }
@@ -103,7 +105,6 @@ dependencies {
     testImplementation("com.google.truth:truth:1.4.2")
 }
 
-
 // Enable detailed per-test logging for JVM unit tests
 // Note: Use fully-qualified names to avoid script-level imports.
 
@@ -119,5 +120,18 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
         )
         showStandardStreams = true
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
+// Ktlint configuration
+ktlint {
+    version.set("1.0.1")
+    android.set(true)
+    outputToConsole.set(true)
+    coloredOutput.set(true)
+    verbose.set(true)
+    filter {
+        exclude("**/generated/**")
+        include("**/kotlin/**")
     }
 }

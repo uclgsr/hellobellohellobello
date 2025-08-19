@@ -17,7 +17,6 @@ import java.io.IOException
  * [convertGsrToMicroSiemens] documents the approach and will be used when real data arrives.
  */
 class ShimmerRecorder : SensorRecorder {
-
     private var csvWriter: BufferedWriter? = null
     private var csvFile: File? = null
 
@@ -61,7 +60,11 @@ class ShimmerRecorder : SensorRecorder {
      * vRef: ADC reference voltage (e.g., 3.0V or 3.3V depending on hardware), default 3.0V.
      * rangeScale: Placeholder mapping from voltage to microSiemens given the selected range.
      */
-    fun convertGsrToMicroSiemens(rawAdc: Int, vRef: Double = 3.0, rangeScale: Double = 1.0): Double {
+    fun convertGsrToMicroSiemens(
+        rawAdc: Int,
+        vRef: Double = 3.0,
+        rangeScale: Double = 1.0,
+    ): Double {
         val clamped = rawAdc.coerceIn(0, 4095)
         val voltage = (clamped / 4095.0) * vRef
         // Placeholder: actual conversion uses I = V/R and G = 1/R (Siemens), then microSiemens.

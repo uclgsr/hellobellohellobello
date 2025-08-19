@@ -13,7 +13,6 @@ import org.robolectric.RobolectricTestRunner
 @Ignore("UI smoke test placeholder; Robolectric availability varies in CI; will be enabled with proper shadows/instrumentation.")
 @RunWith(RobolectricTestRunner::class)
 class MainActivityTest {
-
     @Test
     fun smoke_launch_hasStartAndStopButtons() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()

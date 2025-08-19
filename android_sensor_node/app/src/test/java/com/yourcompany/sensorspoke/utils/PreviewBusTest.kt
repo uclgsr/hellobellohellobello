@@ -5,7 +5,6 @@ import org.junit.Test
 import java.util.concurrent.CopyOnWriteArrayList
 
 class PreviewBusTest {
-
     @Test
     fun subscribe_emit_unsubscribe_works() {
         val received = CopyOnWriteArrayList<Pair<Int, Long>>()

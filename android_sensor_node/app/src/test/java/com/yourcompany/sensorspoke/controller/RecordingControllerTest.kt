@@ -9,10 +9,10 @@ import java.io.File
 import java.nio.file.Files
 
 class RecordingControllerTest {
-
     private class FakeRecorder : SensorRecorder {
         var startedDir: File? = null
         var stopCount: Int = 0
+
         override suspend fun start(sessionDir: File) {
             startedDir = sessionDir
             if (!sessionDir.exists()) sessionDir.mkdirs()
@@ -24,31 +24,32 @@ class RecordingControllerTest {
     }
 
     @Test
-    fun startStopSession_createsDirs_and_transitionsState() = runBlocking {
-        val tmpRoot = Files.createTempDirectory("rc_test_root").toFile()
-        val sessionsRoot = File(tmpRoot, "sessions").apply { mkdirs() }
-        val controller = RecordingController(context = null, sessionsRootOverride = sessionsRoot)
-        val fake = FakeRecorder()
-        controller.register("fake", fake)
+    fun startStopSession_createsDirs_and_transitionsState() =
+        runBlocking {
+            val tmpRoot = Files.createTempDirectory("rc_test_root").toFile()
+            val sessionsRoot = File(tmpRoot, "sessions").apply { mkdirs() }
+            val controller = RecordingController(context = null, sessionsRootOverride = sessionsRoot)
+            val fake = FakeRecorder()
+            controller.register("fake", fake)
 
-        val sessionId = "test_session"
-        controller.startSession(sessionId)
+            val sessionId = "test_session"
+            controller.startSession(sessionId)
 
-        // State and session id set
-        assertEquals(RecordingController.State.RECORDING, controller.state.value)
-        assertEquals(sessionId, controller.currentSessionId.value)
+            // State and session id set
+            assertEquals(RecordingController.State.RECORDING, controller.state.value)
+            assertEquals(sessionId, controller.currentSessionId.value)
 
-        // Verify directories
-        val sessionDir = File(sessionsRoot, sessionId)
-        assertTrue("Session dir should exist", sessionDir.exists())
-        val subDir = File(sessionDir, "fake")
-        assertTrue("Recorder subdir should exist", subDir.exists())
-        assertEquals(subDir.absolutePath, fake.startedDir?.absolutePath)
+            // Verify directories
+            val sessionDir = File(sessionsRoot, sessionId)
+            assertTrue("Session dir should exist", sessionDir.exists())
+            val subDir = File(sessionDir, "fake")
+            assertTrue("Recorder subdir should exist", subDir.exists())
+            assertEquals(subDir.absolutePath, fake.startedDir?.absolutePath)
 
-        // Stop and verify state
-        controller.stopSession()
-        assertEquals(RecordingController.State.IDLE, controller.state.value)
-        assertEquals(null, controller.currentSessionId.value)
-        assertTrue("stop() should be called at least once", fake.stopCount > 0)
-    }
+            // Stop and verify state
+            controller.stopSession()
+            assertEquals(RecordingController.State.IDLE, controller.state.value)
+            assertEquals(null, controller.currentSessionId.value)
+            assertTrue("stop() should be called at least once", fake.stopCount > 0)
+        }
 }

@@ -8,17 +8,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import org.robolectric.shadows.ShadowLooper
-import org.json.JSONObject
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 /**
  * Unit tests for HeartbeatManager functionality.
  */
 @RunWith(RobolectricTestRunner::class)
 class HeartbeatManagerTest {
-
     private lateinit var context: Context
     private lateinit var mockNetworkClient: NetworkClient
     private lateinit var heartbeatManager: HeartbeatManager
@@ -27,14 +22,15 @@ class HeartbeatManagerTest {
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
         mockNetworkClient = NetworkClient(context)
-        heartbeatManager = HeartbeatManager(
-            context = context,
-            deviceId = "test_device",
-            networkClient = mockNetworkClient,
-            heartbeatIntervalMs = 100L, // Fast for testing
-            maxReconnectAttempts = 3,
-            reconnectBackoffMs = 50L
-        )
+        heartbeatManager =
+            HeartbeatManager(
+                context = context,
+                deviceId = "test_device",
+                networkClient = mockNetworkClient,
+                heartbeatIntervalMs = 100L, // Fast for testing
+                maxReconnectAttempts = 3,
+                reconnectBackoffMs = 50L,
+            )
     }
 
     @After

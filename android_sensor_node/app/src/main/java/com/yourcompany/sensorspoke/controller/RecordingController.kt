@@ -14,7 +14,6 @@ import java.util.*
  * the lifecycle of a recording session, including session directory creation.
  */
 class RecordingController(private val context: Context?, private val sessionsRootOverride: File? = null) {
-
     data class RecorderEntry(val name: String, val recorder: SensorRecorder)
 
     enum class State { IDLE, PREPARING, RECORDING, STOPPING }
@@ -31,7 +30,10 @@ class RecordingController(private val context: Context?, private val sessionsRoo
     /**
      * Register a recorder under a unique name; its data will be stored under sessionDir/<name>.
      */
-    fun register(name: String, recorder: SensorRecorder) {
+    fun register(
+        name: String,
+        recorder: SensorRecorder,
+    ) {
         require(recorders.none { it.name == name }) { "Recorder name '$name' already registered" }
         recorders.add(RecorderEntry(name, recorder))
     }
@@ -93,12 +95,13 @@ class RecordingController(private val context: Context?, private val sessionsRoo
             return it
         }
         val ctx = context
-        val root: File = if (ctx != null) {
-            val base: File? = ctx.getExternalFilesDir(null)
-            File(base ?: ctx.filesDir, "sessions")
-        } else {
-            File(System.getProperty("java.io.tmpdir"), "sessions")
-        }
+        val root: File =
+            if (ctx != null) {
+                val base: File? = ctx.getExternalFilesDir(null)
+                File(base ?: ctx.filesDir, "sessions")
+            } else {
+                File(System.getProperty("java.io.tmpdir"), "sessions")
+            }
         if (!root.exists()) root.mkdirs()
         return root
     }
@@ -108,7 +111,7 @@ class RecordingController(private val context: Context?, private val sessionsRoo
         val ts = sdf.format(Date())
         val shortUuid = UUID.randomUUID().toString().substring(0, 8)
         val model = Build.MODEL?.replace(" ", "_") ?: "device"
-        return "${ts}_${model}_${shortUuid}"
+        return "${ts}_${model}_$shortUuid"
     }
 
     private suspend fun safeStopAll() {

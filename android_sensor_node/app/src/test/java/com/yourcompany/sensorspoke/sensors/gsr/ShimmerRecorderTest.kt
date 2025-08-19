@@ -7,22 +7,22 @@ import java.io.File
 import kotlin.io.path.createTempDirectory
 
 class ShimmerRecorderTest {
-
     @Test
-    fun start_createsCsvHeader_and_stop_closes() = runBlocking {
-        val tmp = createTempDirectory("shimmer_test_").toFile()
-        try {
-            val recorder = ShimmerRecorder()
-            recorder.start(tmp)
-            val csv = File(tmp, "gsr.csv")
-            assertThat(csv.exists()).isTrue()
-            val first = csv.bufferedReader().use { it.readLine() }
-            assertThat(first).isEqualTo("timestamp_ns,gsr_microsiemens,ppg_raw")
-            recorder.stop()
-        } finally {
-            tmp.deleteRecursively()
+    fun start_createsCsvHeader_and_stop_closes() =
+        runBlocking {
+            val tmp = createTempDirectory("shimmer_test_").toFile()
+            try {
+                val recorder = ShimmerRecorder()
+                recorder.start(tmp)
+                val csv = File(tmp, "gsr.csv")
+                assertThat(csv.exists()).isTrue()
+                val first = csv.bufferedReader().use { it.readLine() }
+                assertThat(first).isEqualTo("timestamp_ns,gsr_microsiemens,ppg_raw")
+                recorder.stop()
+            } finally {
+                tmp.deleteRecursively()
+            }
         }
-    }
 
     @Test
     fun convertGsrToMicroSiemens_clamps12bit_and_scales() {
