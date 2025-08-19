@@ -45,13 +45,13 @@ Shimmer GSR Streaming:
 
 \subsubsection{H.2.2 Source Code Repository Structure}
 
-Python Controller (`/PythonApp/`):
+Python Controller (`/pc_controller/`):
 - Main desktop application and synchronisation logic \cite{ref17}
 - Master clock synchronisation implementation
 - Device management and session coordination
 - Data processing and export functionality \cite{ref23,ref24}
 
-Android Application (`/AndroidApp/`):
+Android Application (`/android_sensor_node/`):
 - Mobile sensor integration and data collection \cite{ref13}
 - Camera interface and thermal sensor management \cite{ref16,ref20}
 - Network communication and local data storage
@@ -77,8 +77,8 @@ Documentation (`/docs/`):
 - \textbf{Dependencies}: `requirements.txt` and `test-requirements.txt` for Python packages \cite{ref18}
 
 \textbf{Core Components:}
-- \textbf{Python Controller}: `PythonApp/src/controller/MainWindow.py` (487 lines) \cite{ref17}
-- \textbf{Android App}: `AndroidApp/app/src/main/` (Kotlin implementation)
+- \textbf{Python Controller}: `pc_controller/src/gui/gui_manager.py` (487 lines) \cite{ref17}
+- \textbf{Android App}: `android_sensor_node/app/src/main/` (Kotlin implementation)
 - \textbf{Documentation}: `docs/architecture.md`, `docs/api/` (OpenAPI specifications)
 - \textbf{Testing Framework}: `tests/` with comprehensive unit and integration tests
 
@@ -86,7 +86,7 @@ Documentation (`/docs/`):
 
 \textbf{Android Application Build:}
 ```bash
-cd AndroidApp
+cd android_sensor_node
 ./gradlew assembleDebug
 # Requires Android SDK 34, validated on Samsung Galaxy S22+ \cite{ref13}
 ```
@@ -121,7 +121,7 @@ pytest tests/ --coverage
 - \textbf{Requirements}: Camera2 API, USB-C OTG, 6GB+ RAM \cite{ref13,ref16}
 
 \textbf{Sensor Hardware:}
-- \textbf{Thermal Camera}: TopDon TC001 (320×240, 25° FOV, USB-C) \cite{ref16,ref20}
+- \textbf{Thermal Camera}: TopDon TC001 (256×192, 25° FOV, USB-C) \cite{ref16,ref20}
 - \textbf{Gsr Sensor}: Shimmer3 GSR+ v4.1 firmware (Bluetooth 2.1+EDR) \cite{ref8,ref15}
 - \textbf{Calibration Equipment}: Fluke 4180 IR calibrator, precision resistor arrays
 
@@ -158,7 +158,7 @@ pytest tests/ --coverage
 \textbf{Synchronisation Results Replication:}
 ```bash
 # To replicate synchronisation accuracy results:
-python PythonApp/test_sync_accuracy.py
+python pc_controller/test_sync_accuracy.py
 # Expected output: ~2.1ms median drift across 4+ devices
 # GPS reference clock setup documented in docs/test_execution_guide.md
 ```
