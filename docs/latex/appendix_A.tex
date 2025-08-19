@@ -137,13 +137,13 @@ source venv/bin/activate
 
 # Install Python dependencies
 pip install -r requirements.txt
-pip install -r PythonApp/requirements.txt
+pip install -r pc_controller/requirements.txt
 
 # Install optional dependencies for enhanced functionality
 pip install pyshimmer bluetooth psutil matplotlib scipy \cite{ref18}
 
 # Verify installation
-python PythonApp/system_test.py
+python pc_controller/system_test.py
 ```
 
 \subsubsection{A.3.2 Android Application Installation}
@@ -155,7 +155,7 @@ python PythonApp/system_test.py
 # Enable Developer Options and USB Debugging on target device
 
 # Build application
-cd AndroidApp
+cd android_sensor_node
 ./gradlew build
 
 # Install on connected device
