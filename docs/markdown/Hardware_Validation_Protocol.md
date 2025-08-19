@@ -2,7 +2,7 @@
 
 This Standard Operating Procedure (SOP) defines the steps to perform a real, hardware-in-the-loop validation of the
 system’s end-to-end temporal synchronization using Flash Sync events. It adheres to the project requirements and design
-in docs/guidelines.md and docs/latex/3.tex (FR3, FR7; NFR2).
+in docs/markdown/ProjectGuidelines_2024-25.md and docs/latex/3.tex (FR3, FR7; NFR2).
 
 Audience: Human researchers and QA engineers validating a deployed setup.
 
