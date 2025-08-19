@@ -35,7 +35,7 @@ class HeartbeatManager(
     private var heartbeatRunnable: Runnable? = null
     
     private val isRunning = AtomicBoolean(false)
-    private val isConnected = AtomicBoolean(true)
+    private val isConnected = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
     private val lastHeartbeatTime = AtomicLong(0)
     
