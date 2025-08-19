@@ -2,10 +2,8 @@ plugins {
     base
 }
 
-val venvDir = File(project.projectDir, ".venv")
-val venvPython = File(venvDir, "Scripts/python.exe")
-
-fun pythonExe(): String = if (venvPython.exists()) venvPython.absolutePath else "python"
+val venvDir = project.layout.projectDirectory.dir(".venv")
+val venvPython = venvDir.file("Scripts/python.exe")
 
 // Create a Python virtual environment under pc_controller/.venv
 val setupVenv by tasks.registering(Exec::class) {
@@ -14,7 +12,7 @@ val setupVenv by tasks.registering(Exec::class) {
     commandLine("cmd", "/c", "python -m venv .venv")
     workingDir = project.projectDir
     // Only create if missing
-    onlyIf { !venvDir.exists() }
+    onlyIf { !venvDir.asFile.exists() }
 }
 
 // Install Python dependencies into the venv, including pytest and pyinstaller
@@ -22,9 +20,11 @@ val installRequirements by tasks.registering(Exec::class) {
     group = "python"
     description = "Install Python dependencies into the venv (requirements + pytest + pyinstaller)"
     dependsOn(setupVenv)
-    val cmd =
-        "\"${pythonExe()}\" -m pip install -U pip && \"${pythonExe()}\" -m pip install -r requirements.txt && \"${pythonExe()}\" -m pip install pytest pyinstaller"
-    commandLine("cmd", "/c", cmd)
+    doFirst {
+        val pythonExe = if (venvPython.asFile.exists()) venvPython.asFile.absolutePath else "python"
+        val cmd = "\"$pythonExe\" -m pip install -U pip && \"$pythonExe\" -m pip install -r requirements.txt && \"$pythonExe\" -m pip install pytest pyinstaller"
+        commandLine("cmd", "/c", cmd)
+    }
     workingDir = project.projectDir
 }
 
@@ -42,11 +42,13 @@ val pyInstaller by tasks.registering(Exec::class) {
     group = "build"
     description = "Build pc_controller executable using PyInstaller"
     dependsOn(installRequirements)
-    val entry = File(project.projectDir, "src/main.py").absolutePath
-    val distDir = File(project.layout.buildDirectory.get().asFile, "dist").absolutePath
-    val cmd =
-        "\"${pythonExe()}\" -m PyInstaller --noconfirm --clean -F --name pc_controller --distpath \"${distDir}\" \"${entry}\""
-    commandLine("cmd", "/c", cmd)
+    doFirst {
+        val pythonExe = if (venvPython.asFile.exists()) venvPython.asFile.absolutePath else "python"
+        val entry = File(project.projectDir, "src/main.py").absolutePath
+        val distDir = project.layout.buildDirectory.get().asFile.resolve("dist").absolutePath
+        val cmd = "\"$pythonExe\" -m PyInstaller --noconfirm --clean -F --name pc_controller --distpath \"$distDir\" \"$entry\""
+        commandLine("cmd", "/c", cmd)
+    }
     workingDir = project.projectDir
 }
 

@@ -61,9 +61,15 @@ tasks.register("checkAll") {
 // Packaging tasks
 tasks.register("packageAll") {
     group = "build"
-    description = "Package PC Controller exe (PyInstaller) and Android APK (release)"
+    description = if (hasAndroidSdk) {
+        "Package PC Controller exe (PyInstaller) and Android APK (release)"
+    } else {
+        "Package PC Controller exe (PyInstaller) only (Android SDK not found)"
+    }
     dependsOn(":pc_controller:assemblePcController")
-    dependsOn(":android_sensor_node:app:assembleRelease")
+    if (hasAndroidSdk) {
+        dependsOn(":android_sensor_node:app:assembleRelease")
+    }
 }
 
 // Placeholder classes task to satisfy IDEs/tools that invoke :classes at the root

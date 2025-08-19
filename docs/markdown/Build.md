@@ -96,18 +96,20 @@ tasks.register("checkAll") {
         }
     }
 }
-    }
-}
 
-// Unified packaging task
+// Packaging tasks
 tasks.register("packageAll") {
     group = "build"
-    description = "Package all components for distribution"
+    description = if (hasAndroidSdk) {
+        "Package PC Controller exe (PyInstaller) and Android APK (release)"
+    } else {
+        "Package PC Controller exe (PyInstaller) only (Android SDK not found)"
+    }
     dependsOn(":pc_controller:assemblePcController")
-    
     if (hasAndroidSdk) {
         dependsOn(":android_sensor_node:app:assembleRelease")
     }
+}
 }
 ```
 
@@ -468,12 +470,29 @@ fun detectBuildEnvironment(): BuildEnvironment {
 ### Build Optimization
 
 **Gradle Build Cache:**
-```kotlin
-// gradle.properties
+```properties
+# gradle.properties
 org.gradle.caching=true
 org.gradle.parallel=true
 org.gradle.configureondemand=true
-org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m
+org.gradle.daemon=true
+org.gradle.configuration-cache=true
+org.gradle.console=verbose
+org.gradle.warning.mode=all
+# Enable native access to avoid JDK restricted method warnings
+org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8 --enable-native-access=ALL-UNNAMED
+
+# Android-specific optimizations
+android.enableJetifier=true
+android.useAndroidX=true
+android.enableR8.fullMode=true
+android.nonTransitiveRClass=true
+
+# Kotlin optimizations
+kotlin.code.style=official
+ksp.incremental=true
+ksp.incremental.intermodule=true
+ksp.use.worker.api=true
 ```
 
 **Incremental Builds:**
