@@ -31,21 +31,45 @@ fun detectAndroidSdk(): Boolean {
 
 val hasAndroidSdk = detectAndroidSdk()
 
+// Detect whether pytest is available
+fun isPytestAvailable(): Boolean {
+    return try {
+        val process = ProcessBuilder("python3", "-m", "pytest", "--version")
+            .directory(rootDir)
+            .start()
+        process.waitFor() == 0
+    } catch (e: Exception) {
+        false
+    }
+}
+
+val hasPytest = isPytestAvailable()
+
 // Root-level pytest task
 val pyTest = tasks.register<Exec>("pyTest") {
     group = "verification"
     description = "Run Python pytest suite as defined by pytest.ini"
     workingDir = rootDir
     commandLine("python3", "-m", "pytest")
+    
+    // Only run if pytest is available
+    onlyIf { hasPytest }
+    
+    doFirst {
+        if (!hasPytest) {
+            println("[pyTest] pytest module not available; install with: python3 -m pip install pytest")
+        }
+    }
 }
 
 // Combined check task
 tasks.register("checkAll") {
     group = "verification"
-    description = if (hasAndroidSdk) {
-        "Run Android unit tests and Python pytest"
-    } else {
-        "Run Python pytest (Android SDK not found; skipping Android unit tests)"
+    description = when {
+        hasAndroidSdk && hasPytest -> "Run Android unit tests and Python pytest"
+        hasAndroidSdk && !hasPytest -> "Run Android unit tests (pytest not available)"
+        !hasAndroidSdk && hasPytest -> "Run Python pytest (Android SDK not found)"
+        else -> "Check tasks (Android SDK and pytest not found)"
     }
     dependsOn(pyTest)
     if (hasAndroidSdk) {
