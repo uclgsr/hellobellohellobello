@@ -14,6 +14,7 @@ Interfaces:
 Both implementations run background threads and are safe to call from the GUI
 thread. No blocking operations are performed on the GUI thread.
 """
+
 from __future__ import annotations
 
 # Attempt to locate the native extension.
@@ -108,7 +109,9 @@ class ShimmerInterface:
             if not self._buf_ts:
                 return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
             ts = np.fromiter(self._buf_ts, dtype=np.float64, count=len(self._buf_ts))
-            vals = np.fromiter(self._buf_vals, dtype=np.float64, count=len(self._buf_vals))
+            vals = np.fromiter(
+                self._buf_vals, dtype=np.float64, count=len(self._buf_vals)
+            )
             self._buf_ts.clear()
             self._buf_vals.clear()
         if ts.size > 1:
@@ -187,7 +190,9 @@ class WebcamInterface:
                 # Seed immediate placeholder frame to avoid race in tests
                 with self._lock:
                     if self._frame is None:
-                        self._frame = np.zeros((self._height, self._width, 3), dtype=np.uint8)
+                        self._frame = np.zeros(
+                            (self._height, self._width, 3), dtype=np.uint8
+                        )
                 return
             except Exception:
                 self._use_native = False
@@ -207,7 +212,9 @@ class WebcamInterface:
                 # Seed immediate placeholder frame to avoid race in tests
                 with self._lock:
                     if self._frame is None:
-                        self._frame = np.zeros((self._height, self._width, 3), dtype=np.uint8)
+                        self._frame = np.zeros(
+                            (self._height, self._width, 3), dtype=np.uint8
+                        )
                 return
         except Exception:
             self._cap = None
@@ -283,7 +290,15 @@ class WebcamInterface:
             if cv2 is not None:
                 try:
                     ts = time.strftime("%H:%M:%S") + f".{int((dt%1)*1000):03d}"
-                    cv2.putText(frame, ts, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                    cv2.putText(
+                        frame,
+                        ts,
+                        (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        (0, 0, 255),
+                        2,
+                    )
                 except Exception:
                     pass
             with self._lock:

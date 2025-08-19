@@ -3,6 +3,7 @@
 Compiles all CSVs in a session directory into a single HDF5 file
 organized by device and modality.
 """
+
 from __future__ import annotations
 
 import glob
@@ -18,7 +19,7 @@ def export_session_to_hdf5(
     session_dir: str,
     output_path: str,
     metadata: dict | None = None,
-    annotations: dict | None = None
+    annotations: dict | None = None,
 ) -> str:
     """Export a session directory to an HDF5 file.
 
@@ -36,7 +37,9 @@ def export_session_to_hdf5(
         if annotations is not None:
             hf.attrs["annotations_json"] = json.dumps(annotations)
         # Walk CSVs
-        for csv_path in glob.glob(os.path.join(session_dir, "**", "*.csv"), recursive=True):
+        for csv_path in glob.glob(
+            os.path.join(session_dir, "**", "*.csv"), recursive=True
+        ):
             rel = os.path.relpath(csv_path, session_dir)
             parts = rel.replace("\\", "/").split("/")
             device = parts[0] if len(parts) >= 2 else "PC"
@@ -145,6 +148,7 @@ def export_session_to_hdf5(
                     # Device ids as UTF-8 strings
                     try:
                         import numpy as _np  # local import to avoid hard dep in signature
+
                         str_dtype = h5py.string_dtype(encoding="utf-8")
                         dev_ids = list(offsets.keys())
                         vals = [_np.int64(int(offsets[k])) for k in dev_ids]
@@ -152,13 +156,13 @@ def export_session_to_hdf5(
                             "device_ids",
                             data=_np.array(dev_ids, dtype=str_dtype),
                             compression="gzip",
-                            compression_opts=4
+                            compression_opts=4,
                         )
                         sync_grp.create_dataset(
                             "clock_offsets_ns",
                             data=_np.array(vals, dtype=_np.int64),
                             compression="gzip",
-                            compression_opts=4
+                            compression_opts=4,
                         )
                     except Exception:
                         pass

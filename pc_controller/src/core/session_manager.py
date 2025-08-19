@@ -7,6 +7,7 @@ Responsibilities:
 
 This module is independent of the GUI; other components can import and use it.
 """
+
 from __future__ import annotations
 
 import json
@@ -17,11 +18,14 @@ from typing import Any
 
 try:
     # Centralized config loader (NFR8)
-    from pc_controller.src.config import get as cfg_get  # when running as a script
+    from pc_controller.src.config import \
+        get as cfg_get  # when running as a script
 except Exception:  # pragma: no cover
     try:
-        from ..config import get as cfg_get  # when imported via tests (pythonpath set)
+        from ..config import \
+            get as cfg_get  # when imported via tests (pythonpath set)
     except Exception:  # pragma: no cover
+
         def cfg_get(key: str, default=None):  # type: ignore
             return default
 
@@ -83,7 +87,9 @@ class SessionManager:
 
     def create_session(self, name: str) -> str:
         if self.is_active:
-            raise RuntimeError("A session is already active; stop it before creating a new one.")
+            raise RuntimeError(
+                "A session is already active; stop it before creating a new one."
+            )
         self._ensure_base()
         # Use timestamp for uniqueness
         ts = time.strftime("%Y%m%d_%H%M%S")
@@ -134,6 +140,7 @@ class SessionManager:
 
 def _sanitize(name: str) -> str:
     # Remove path separators and trim spaces
-    return "".join(ch for ch in name if ch.isalnum() or ch in ("-", "_", ".")).strip(
-        "._-"
-    ) or "session"
+    return (
+        "".join(ch for ch in name if ch.isalnum() or ch in ("-", "_", ".")).strip("._-")
+        or "session"
+    )

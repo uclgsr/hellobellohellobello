@@ -1,4 +1,5 @@
 """DeviceManager: track connected devices and heartbeat timeouts (FR8)."""
+
 from __future__ import annotations
 
 import time
@@ -8,6 +9,7 @@ from typing import Any
 try:
     from ..config import get as cfg_get
 except Exception:  # pragma: no cover
+
     def cfg_get(key: str, default=None):  # type: ignore
         return default
 

@@ -9,6 +9,7 @@ See also docs/markdown for protocol phases.
 Service Type (mDNS/Zeroconf):
 - _gsr-controller._tcp.local.
 """
+
 from __future__ import annotations
 
 import ast
@@ -48,6 +49,7 @@ def build_query_capabilities() -> str:
 
 
 # ---------- Phase 5: length-prefixed framing utilities ----------
+
 
 def encode_frame(obj: dict[str, Any]) -> bytes:
     """Encode a single JSON message using length-prefix framing.
@@ -106,6 +108,7 @@ def decode_frames(buffer: bytes) -> DecodeResult:
 
 # ---------- Phase 5: v=1 message builders ----------
 
+
 def build_v1_cmd(command: str, msg_id: int, **kwargs: Any) -> dict[str, Any]:
     return {"v": V1, "id": int(msg_id), "type": "cmd", "command": command, **kwargs}
 
@@ -114,7 +117,9 @@ def build_v1_query_capabilities(msg_id: int) -> dict[str, Any]:
     return build_v1_cmd(COMMAND_QUERY_CAPABILITIES, msg_id)
 
 
-def build_v1_time_sync_req(msg_id: int, seq: int, t0_ns: int | None = None) -> dict[str, Any]:
+def build_v1_time_sync_req(
+    msg_id: int, seq: int, t0_ns: int | None = None
+) -> dict[str, Any]:
     t0 = int(t0_ns if t0_ns is not None else time.time_ns())
     return build_v1_cmd(COMMAND_TIME_SYNC, msg_id, seq=int(seq), t0=t0)
 
@@ -123,8 +128,17 @@ def build_v1_start_recording(msg_id: int, session_id: str) -> dict[str, Any]:
     return build_v1_cmd(COMMAND_START_RECORDING, msg_id, session_id=session_id)
 
 
-def build_v1_preview_frame(device_id: str, jpeg_base64: str, ts_ns: int) -> dict[str, Any]:
-    return {"v": V1, "type": "event", "name": "preview_frame", "device_id": device_id, "jpeg_base64": jpeg_base64, "ts": int(ts_ns)}
+def build_v1_preview_frame(
+    device_id: str, jpeg_base64: str, ts_ns: int
+) -> dict[str, Any]:
+    return {
+        "v": V1,
+        "type": "event",
+        "name": "preview_frame",
+        "device_id": device_id,
+        "jpeg_base64": jpeg_base64,
+        "ts": int(ts_ns),
+    }
 
 
 def build_v1_ack(ack_id: int, status: str = "ok", **kwargs: Any) -> dict[str, Any]:
@@ -136,14 +150,25 @@ def build_v1_error(ack_id: int, code: str, message: str) -> dict[str, Any]:
 
     Example: {"v":1, "ack_id":..., "type":"error", "code":"E_BAD_PARAM", "message":"..."}
     """
-    return {"v": V1, "ack_id": int(ack_id), "type": "error", "code": str(code), "message": str(message)}
+    return {
+        "v": V1,
+        "ack_id": int(ack_id),
+        "type": "error",
+        "code": str(code),
+        "message": str(message),
+    }
 
 
 # ---------- Legacy helpers kept for backward compatibility ----------
 
+
 def build_start_recording(session_id: str, msg_id: int) -> str:
     """Build a start_recording command with a session_id (legacy)."""
-    payload = {"id": msg_id, "command": COMMAND_START_RECORDING, "session_id": session_id}
+    payload = {
+        "id": msg_id,
+        "command": COMMAND_START_RECORDING,
+        "session_id": session_id,
+    }
     return json.dumps(payload) + "\n"
 
 
@@ -207,7 +232,9 @@ def compute_time_sync(t0: int, t1: int, t2: int, t3: int) -> tuple[int, int]:
     return int(offset), int(delay)
 
 
-def compute_time_sync_stats(offsets: list[int], delays: list[int], trim_ratio: float = 0.1) -> tuple[int, int, int, int]:
+def compute_time_sync_stats(
+    offsets: list[int], delays: list[int], trim_ratio: float = 0.1
+) -> tuple[int, int, int, int]:
     """Aggregate multi-trial time sync results robustly.
 
     Parameters
@@ -240,7 +267,7 @@ def compute_time_sync_stats(offsets: list[int], delays: list[int], trim_ratio: f
     k = int(round(n * trim_ratio))
     if k * 2 >= n:
         k = max(0, (n - 1) // 2)
-    trimmed = so[k: n - k] if k > 0 else so
+    trimmed = so[k : n - k] if k > 0 else so
     # Median
     m_idx = len(trimmed) // 2
     if len(trimmed) % 2 == 1:
@@ -253,13 +280,15 @@ def compute_time_sync_stats(offsets: list[int], delays: list[int], trim_ratio: f
     else:
         mu = sum(trimmed) / float(len(trimmed))
         var = sum((x - mu) ** 2 for x in trimmed) / float(len(trimmed))
-        std_dev = int(round(var ** 0.5))
+        std_dev = int(round(var**0.5))
     # Min delay from all trials (not trimmed)
     min_delay = int(min(delays[:n]))
     return int(median_offset), int(min_delay), int(std_dev), int(len(trimmed))
 
 
-def compute_backoff_schedule(base_ms: int, attempts: int, factor: float = 2.0) -> list[int]:
+def compute_backoff_schedule(
+    base_ms: int, attempts: int, factor: float = 2.0
+) -> list[int]:
     """Compute an exponential backoff schedule in milliseconds without jitter.
 
     Example: base_ms=100, attempts=3 -> [100, 200, 400]

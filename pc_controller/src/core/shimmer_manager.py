@@ -5,6 +5,7 @@ real Shimmer manager: connect(), start_streaming(callback), stop_streaming(),
 disconnect(). When streaming, generates GSR-like sine+noise samples at
 shimmer_sampling_rate from config.json.
 """
+
 from __future__ import annotations
 
 import math
@@ -15,6 +16,7 @@ from collections.abc import Callable
 try:
     from ..config import get as cfg_get
 except Exception:  # pragma: no cover
+
     def cfg_get(key: str, default=None):  # type: ignore
         return default
 

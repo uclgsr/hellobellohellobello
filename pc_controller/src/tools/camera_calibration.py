@@ -7,6 +7,7 @@ Note: The actual calibration requires a dataset of checkerboard images. The
 unit tests cover parameter I/O and validation paths and do not perform a full
 calibration.
 """
+
 from __future__ import annotations
 
 import json
@@ -19,6 +20,7 @@ import numpy as np
 
 try:
     import cv2  # type: ignore
+
     CV2_AVAILABLE = True
 except Exception:
     cv2 = None  # type: ignore
@@ -37,6 +39,7 @@ class CalibrationResult:
         board_size: (cols, rows) inner-corner count of the checkerboard.
         square_size: Size of a checkerboard square in meters (or any unit).
     """
+
     camera_matrix: np.ndarray
     dist_coeffs: np.ndarray
     rms_error: float
@@ -66,7 +69,9 @@ class CalibrationResult:
         )
 
 
-def _prepare_object_points(board_size: tuple[int, int], square_size: float) -> np.ndarray:
+def _prepare_object_points(
+    board_size: tuple[int, int], square_size: float
+) -> np.ndarray:
     cols, rows = board_size
     objp = np.zeros((rows * cols, 3), np.float32)
     # grid of points (0,0), (1,0), ... scaled by square_size
@@ -137,7 +142,9 @@ def find_checkerboard_corners(
         raise ValueError("No readable images provided for calibration.")
 
     if len(objpoints) == 0:
-        raise ValueError("No checkerboard corners were detected in the provided images.")
+        raise ValueError(
+            "No checkerboard corners were detected in the provided images."
+        )
 
     return objpoints, imgpoints, image_size
 

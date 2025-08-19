@@ -5,6 +5,7 @@
 - On any datagram, responds immediately with time.monotonic_ns() as ASCII bytes.
 - Designed to be started as a concurrent task from main application.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -14,6 +15,7 @@ try:
     # Local config loader (added for NFR8)
     from ..config import get as cfg_get
 except Exception:  # pragma: no cover - optional import safety
+
     def cfg_get(key: str, default=None):  # type: ignore
         return default
 
@@ -25,10 +27,14 @@ class TimeSyncProtocol(asyncio.DatagramProtocol):
         super().__init__()
         self.transport: asyncio.transports.DatagramTransport | None = None
 
-    def connection_made(self, transport: asyncio.transports.DatagramTransport) -> None:  # noqa: D401
+    def connection_made(
+        self, transport: asyncio.transports.DatagramTransport
+    ) -> None:  # noqa: D401
         self.transport = transport
 
-    def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:  # noqa: D401
+    def datagram_received(
+        self, data: bytes, addr: tuple[str, int]
+    ) -> None:  # noqa: D401
         # Capture high-resolution monotonic timestamp immediately
         ts_ns = time.monotonic_ns()
         payload = str(ts_ns).encode("ascii")
