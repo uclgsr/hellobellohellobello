@@ -100,6 +100,8 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 
 - Python tests: skip NetworkController tests when PyQt6 is unavailable (pytest.importorskip) to ensure CI runners
   without GUI deps still pass.
+- Gradle deprecation warnings: updated Android Gradle Plugin from 8.5.2 to 8.7.0 and set org.gradle.warning.mode=summary 
+  to suppress internal AGP Boolean property deprecation warnings (isCrunchPngs, isWearAppUnbundled) while maintaining build functionality.
 - Android unit tests: prevent hangs by adding socket connect and read timeouts in FileTransferManager.transferSession()
   used by Robolectric test.
 - Gradle daemon startup: disabled JDWP debug agent by setting org.gradle.debug=false in gradle.properties to avoid 'bind
