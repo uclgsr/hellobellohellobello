@@ -8,7 +8,6 @@ from and must be consistent with the official project documentation, which serve
 * `docs/latex/1.tex` (Introduction and Objectives)
 * `docs/latex/2.tex` (Background and Literature Review)
 * `docs/latex/3.tex` (Requirements and Analysis)
-* `docs/latex/4.tex` (Design and Implementation Details)
 
 You must adhere to the specifications, architectures, and requirements detailed in these source documents by following
 the specific instructions laid out in the subsequent sections of this guideline file.
