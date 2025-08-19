@@ -43,7 +43,7 @@ val pyInstaller by tasks.registering(Exec::class) {
     description = "Build pc_controller executable using PyInstaller"
     dependsOn(installRequirements)
     val entry = File(project.projectDir, "src/main.py").absolutePath
-    val distDir = File(project.buildDir, "dist").absolutePath
+    val distDir = File(project.layout.buildDirectory.get().asFile, "dist").absolutePath
     val cmd =
         "\"${pythonExe()}\" -m PyInstaller --noconfirm --clean -F --name pc_controller --distpath \"${distDir}\" \"${entry}\""
     commandLine("cmd", "/c", cmd)
