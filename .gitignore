@@ -1,3 +1,6 @@
+# General - ignore all folders starting with dot
+.*/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -13,6 +16,8 @@ Thumbs.db
 .gradle/
 **/build/
 **/out/
+build/
+*/build/
 
 # Android
 local.properties

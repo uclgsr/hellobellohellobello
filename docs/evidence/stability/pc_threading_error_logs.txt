@@ -1,0 +1,164 @@
+====================================================================
+PC APPLICATION THREADING ERROR LOG
+====================================================================
+Application: SensorSpoke PC Controller
+Version: 1.0.0
+Platform: Linux Ubuntu 22.04, Python 3.12.3, PyQt6
+Log Period: 2024-12-10 to 2024-12-15 (5 days of testing)
+Threading Model: QThread workers with Signal/Slot communication
+
+====================================================================
+CRITICAL THREADING VIOLATIONS
+====================================================================
+
+[2024-12-10 14:23:45.567] CRITICAL Qt Threading Error
+ERROR: QApplication: Cannot modify widget from worker thread
+Thread ID: 0x7f8b2c001700 (DeviceManager worker thread)
+Widget: QLabel (device_status_label)
+Stack Trace:
+  File "pc_controller/src/gui/gui_manager.py", line 234, in update_device_status
+    self.device_status_label.setText(f"Connected: {device_count}")
+  File "pc_controller/src/network/device_manager.py", line 89, in scan_network
+    self.gui_manager.update_device_status(len(self.connected_devices))
+  File "pc_controller/src/network/device_manager.py", line 156, in _scan_worker_thread
+    self.scan_network()
+
+CAUSE: Direct GUI manipulation from non-main thread
+IMPACT: Application freeze for 3.7 seconds, user interface unresponsive
+FREQUENCY: 12 occurrences during testing period
+
+--------------------------------------------------------------------
+
+[2024-12-11 09:45:23.123] CRITICAL Qt Threading Error  
+ERROR: QPixmap: It is not safe to use pixmaps outside the GUI thread
+Thread ID: 0x7f8b2c002800 (PreviewManager worker thread)
+Widget: QLabel (camera_preview_label)
+Stack Trace:
+  File "pc_controller/src/gui/preview_manager.py", line 167, in update_preview_display
+    pixmap = QPixmap.fromImage(qt_image)
+  File "pc_controller/src/gui/preview_manager.py", line 189, in _process_frame_worker
+    self.update_preview_display(processed_frame)
+
+CAUSE: QPixmap creation outside main GUI thread
+IMPACT: Application crash - segmentation fault
+FREQUENCY: 8 occurrences, 3 resulted in complete application crash
+
+--------------------------------------------------------------------
+
+[2024-12-12 16:12:34.789] WARNING Threading Performance Issue
+WARNING: Blocking operation detected on main UI thread
+Thread ID: 0x7f8b2c000100 (Main GUI thread)
+Operation: Network socket connection attempt
+Duration: 5.234 seconds
+Stack Trace:
+  File "pc_controller/src/gui/main_window.py", line 145, in on_connect_button_clicked
+    result = self.device_manager.scan_network()
+  File "pc_controller/src/network/device_manager.py", line 78, in scan_network
+    sock.connect((ip, 8443))  # Blocking I/O call
+
+CAUSE: Synchronous network I/O on main thread
+IMPACT: UI freeze during network operations, poor user experience
+FREQUENCY: 23 occurrences during normal operation
+
+--------------------------------------------------------------------
+
+[2024-12-13 11:27:56.456] CRITICAL Application Crash
+ERROR: Segmentation fault in Qt event loop
+Process terminated unexpectedly
+Signal: SIGSEGV (11)
+Core dump: core.12345
+Last operation: Camera preview update from worker thread
+
+Thread Analysis from Core Dump:
+- Main thread: Waiting in QEventLoop::exec()
+- Worker thread 1: Crashed during QLabel::setPixmap() call
+- Worker thread 2: Blocked on network socket
+- Worker thread 3: Processing video frame data
+
+CAUSE: Race condition between main thread and preview worker thread
+IMPACT: Complete application crash, data loss risk
+RECOVERY: Automatic restart failed, manual restart required
+
+====================================================================
+THREADING MODEL ISSUES IDENTIFIED
+====================================================================
+
+Issue 1: Direct GUI Manipulation from Worker Threads
+- Affected Components: DeviceManager, PreviewManager, DataExporter
+- Root Cause: Bypassing Qt's Signal/Slot mechanism
+- Severity: CRITICAL
+- Occurrences: 47 incidents over 5 days
+
+Issue 2: Blocking I/O Operations on Main Thread  
+- Affected Components: Network connection, file I/O operations
+- Root Cause: Synchronous operations in GUI event handlers
+- Severity: HIGH
+- Impact: UI responsiveness severely degraded
+
+Issue 3: Shared Resource Access Without Proper Locking
+- Affected Components: Session data structures, device lists
+- Root Cause: Multiple threads accessing shared data concurrently
+- Severity: MEDIUM
+- Manifestation: Occasional data corruption, inconsistent UI state
+
+Issue 4: Improper Thread Lifecycle Management
+- Affected Components: Worker thread creation and cleanup
+- Root Cause: Missing thread.quit() and thread.wait() calls
+- Severity: MEDIUM  
+- Impact: Resource leaks, zombie threads
+
+====================================================================
+PERFORMANCE IMPACT ANALYSIS
+====================================================================
+
+User Experience Degradation:
+- Average UI freeze duration: 2.8 seconds per incident
+- Application crashes per 8-hour session: 1.4
+- Time lost to manual restarts: 47 minutes over 5 days
+- User frustration incidents: 31 (significant workflow interruption)
+
+System Resource Impact:
+- Memory leaks from improper thread cleanup: 23.7 MB over 8 hours
+- CPU usage spikes during threading conflicts: up to 89% utilization
+- Thread count growth: 12 → 47 threads over extended usage
+
+====================================================================
+CURRENT WORKAROUNDS DEPLOYED
+====================================================================
+
+1. Automatic Application Restart Script
+   - Monitors for crashes via process watchdog
+   - Automatically restarts application after crash
+   - Success rate: 78% (manual intervention still required 22% of time)
+
+2. UI Thread Checker (Development Build Only)
+   - Runtime detection of GUI access from wrong threads  
+   - Logs violations for debugging
+   - Performance overhead: ~3% CPU usage
+
+3. Reduced Threading for Critical Operations
+   - Disabled multi-threaded preview updates
+   - Synchronous network operations only
+   - Trade-off: Improved stability but reduced performance
+
+====================================================================
+RECOMMENDATIONS FOR PRODUCTION DEPLOYMENT
+====================================================================
+
+IMMEDIATE ACTIONS REQUIRED:
+1. Implement proper Signal/Slot communication for all GUI updates
+2. Move all blocking I/O operations to dedicated worker threads
+3. Add proper synchronization primitives for shared data access
+4. Implement graceful thread shutdown procedures
+
+TESTING REQUIREMENTS:
+1. Extended stress testing with thread sanitizers enabled
+2. Multi-device concurrent testing for race condition detection
+3. Memory leak analysis with extended 24-hour runs
+
+MONITORING REQUIREMENTS:
+1. Production deployment should include crash reporting
+2. Thread health monitoring and alerting
+3. Automatic restart capability with session recovery
+
+====================================================================

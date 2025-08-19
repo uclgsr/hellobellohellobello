@@ -178,6 +178,7 @@ class RecordingService : Service() {
                             // Forward to UI via broadcast
                             val intent = Intent(ACTION_START_RECORDING)
                                 .putExtra(EXTRA_SESSION_ID, sessionId)
+                                .setPackage("com.yourcompany.sensorspoke") // Fix lint: UnsafeImplicitIntentLaunch
                             sendBroadcast(intent)
                             // FR8: update local session state for rejoin purposes
                             if (sessionId.isNotEmpty()) currentSessionId = sessionId
@@ -193,6 +194,7 @@ class RecordingService : Service() {
 
                         "stop_recording" -> {
                             val intent = Intent(ACTION_STOP_RECORDING)
+                                .setPackage("com.yourcompany.sensorspoke") // Fix lint: UnsafeImplicitIntentLaunch
                             sendBroadcast(intent)
                             // FR8: update local session state — session ended but keep id for rejoin-triggered transfer
                             isRecording = false
@@ -207,7 +209,9 @@ class RecordingService : Service() {
 
                         "flash_sync" -> {
                             val ts = System.nanoTime()
-                            val intent = Intent(ACTION_FLASH_SYNC).putExtra(EXTRA_FLASH_TS_NS, ts)
+                            val intent = Intent(ACTION_FLASH_SYNC)
+                                .putExtra(EXTRA_FLASH_TS_NS, ts)
+                                .setPackage("com.yourcompany.sensorspoke") // Fix lint: UnsafeImplicitIntentLaunch
                             sendBroadcast(intent)
                             val response = JSONObject().put("ack_id", id).put("status", "ok").put("ts", ts)
                             if (isV1) {

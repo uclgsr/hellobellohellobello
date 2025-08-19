@@ -43,7 +43,16 @@ android {
     packaging {
         jniLibs {
             pickFirsts += setOf(
-                "lib/**/libUSBUVCCamera.so"
+                "lib/**/libUSBUVCCamera.so",
+                "lib/**/libencrypt.so",
+                "lib/**/libircmd.so",
+                "lib/**/libirparse.so",
+                "lib/**/libirprocess.so",
+                "lib/**/libirtemp.so",
+                "lib/**/libomp.so",
+                "lib/**/libirnet.so",
+                "lib/**/libusb-1.0.so",
+                "lib/**/libusbcamera.so"
             )
         }
     }

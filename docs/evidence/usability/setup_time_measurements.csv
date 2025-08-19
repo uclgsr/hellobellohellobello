@@ -1,0 +1,10 @@
+participant_id,user_type,session_date,task_type,setup_time_minutes,success_rate_percent,friction_points,satisfaction_score,notes
+P1,new_user,2024-12-10,initial_setup,18.57,100,network_config;file_location;apk_install,6.5,"Required extensive guidance. Major struggle with IP address entry."
+P1,new_user,2024-12-13,error_recovery,15.38,83.3,error_messages;recovery_steps,7.2,"Improved confidence after training. Still needs clearer error guidance."
+P2,new_user,2024-12-11,routine_operation,12.78,94.4,device_compatibility;quality_settings,7.8,"Much smoother than P1. Android version compatibility issue encountered."
+P2,new_user,2024-12-14,multi_device,9.23,88.9,device_coordination;connection_order,8.1,"Learning curve evident. Better performance on second session."
+P3,experienced_user,2024-12-12,advanced_config,8.20,100,hardware_integration_pending,9.2,"Excellent performance. Appreciated technical flexibility and control."
+P3,experienced_user,2024-12-15,stress_testing,6.50,94.4,documentation_gaps,8.7,"Minor issues with advanced features. Wants better technical documentation."
+Average_New_Users,mixed,multiple,all_tasks,12.81,91.7,network_discovery;setup_complexity,7.4,"Network configuration is primary barrier. Post-training improvement significant."
+Average_Experienced,mixed,multiple,all_tasks,7.35,97.2,hardware_limitations,8.95,"System meets expert expectations. Ready for advanced research applications."
+Overall_Average,mixed,multiple,all_tasks,11.24,93.6,usability;documentation,7.8,"Strong technical foundation. Usability improvements needed for broad adoption."

@@ -16,6 +16,7 @@ phase-specific implementation notes.
 - pc_controller/ — Python sources, native backend (C++), tests, and Gradle tasks for Python workflows
 - android_sensor_node/ — Android application (MVVM), with CameraX RGB, Topdon TC001 thermal integration, and Shimmer GSR
 - docs/ — User and developer documentation, protocol, validation guides, and LaTeX sources
+  - docs/diagrams/ — **NEW**: Comprehensive system documentation diagrams and artifacts
 - scripts/ — Utility scripts (e.g., backup_script.py)
 
 ## Prerequisites
@@ -94,6 +95,17 @@ To run from sources (development):
 - **[PROTOCOL.md](PROTOCOL.md)** - Complete communication protocol specification
 - **[TEST_PLAN.md](TEST_PLAN.md)** - Comprehensive testing strategy and procedures
 - **[BACKUP_STRATEGY.md](BACKUP_STRATEGY.md)** - Data backup and recovery procedures
+
+### System Documentation Diagrams
+- **[docs/diagrams/](docs/diagrams/)**: **NEW** - Comprehensive visual documentation including:
+  - **System Architecture**: High-level component diagrams, deployment views, PC/Android module maps
+  - **Protocols**: TCP control protocol tables, message formats, command reference
+  - **Sequences**: Recording workflows, file transfer, preview streaming
+  - **Data Formats**: Session directory structure, CSV schemas, file organization
+  - **State Machines**: RecordingController lifecycle, error handling flows
+  - **Performance**: Timing diagrams, synchronization analysis, test coverage maps
+  - **Examples**: Ready-to-adapt Mermaid/PlantUML snippets for reports and presentations
+  - **[PLACEMENT_GUIDE.md](docs/diagrams/PLACEMENT_GUIDE.md)**: Integration guide for academic reports/thesis chapters
 
 ## Security & Ethics
 
