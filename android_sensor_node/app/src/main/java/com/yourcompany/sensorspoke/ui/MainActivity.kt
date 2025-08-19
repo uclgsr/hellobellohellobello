@@ -29,7 +29,6 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 class MainActivity : ComponentActivity() {
-
     private val vm: MainViewModel by viewModels()
 
     private var controller: RecordingController? = null
@@ -44,39 +43,44 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-    private val controlReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val action = intent?.action ?: return
-            when (action) {
-                RecordingService.ACTION_START_RECORDING -> {
-                    val sessionId = intent.getStringExtra(RecordingService.EXTRA_SESSION_ID)
-                    lifecycleScope.launch {
-                        try {
-                            ensureController().startSession(sessionId)
-                        } catch (_: Exception) {
+    private val controlReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context?,
+                intent: Intent?,
+            ) {
+                val action = intent?.action ?: return
+                when (action) {
+                    RecordingService.ACTION_START_RECORDING -> {
+                        val sessionId = intent.getStringExtra(RecordingService.EXTRA_SESSION_ID)
+                        lifecycleScope.launch {
+                            try {
+                                ensureController().startSession(sessionId)
+                            } catch (_: Exception) {
+                            }
                         }
                     }
-                }
 
-                RecordingService.ACTION_STOP_RECORDING -> {
-                    lifecycleScope.launch { runCatching { controller?.stopSession() } }
-                }
+                    RecordingService.ACTION_STOP_RECORDING -> {
+                        lifecycleScope.launch { runCatching { controller?.stopSession() } }
+                    }
 
-                RecordingService.ACTION_FLASH_SYNC -> {
-                    val ts = intent.getLongExtra(RecordingService.EXTRA_FLASH_TS_NS, 0L)
-                    showFlashOverlay()
-                    logFlashEvent(ts)
+                    RecordingService.ACTION_FLASH_SYNC -> {
+                        val ts = intent.getLongExtra(RecordingService.EXTRA_FLASH_TS_NS, 0L)
+                        showFlashOverlay()
+                        logFlashEvent(ts)
+                    }
                 }
             }
         }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Simple UI with Start/Stop buttons
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
+        val layout =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+            }
         rootLayout = layout
         val startBtn = Button(this).apply { text = "Start Recording" }
         val stopBtn = Button(this).apply { text = "Stop Recording" }
@@ -109,11 +113,12 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onStart() {
         super.onStart()
-        val filter = IntentFilter().apply {
-            addAction(RecordingService.ACTION_START_RECORDING)
-            addAction(RecordingService.ACTION_STOP_RECORDING)
-            addAction(RecordingService.ACTION_FLASH_SYNC)
-        }
+        val filter =
+            IntentFilter().apply {
+                addAction(RecordingService.ACTION_START_RECORDING)
+                addAction(RecordingService.ACTION_STOP_RECORDING)
+                addAction(RecordingService.ACTION_FLASH_SYNC)
+            }
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(controlReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
@@ -163,12 +168,13 @@ class MainActivity : ComponentActivity() {
 
     private fun showFlashOverlay() {
         val parent = rootLayout ?: return
-        val flash = View(this).apply {
-            setBackgroundColor(Color.WHITE)
-            layoutParams =
-                ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            alpha = 1f
-        }
+        val flash =
+            View(this).apply {
+                setBackgroundColor(Color.WHITE)
+                layoutParams =
+                    ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                alpha = 1f
+            }
         parent.addView(flash)
         flash.postDelayed({ parent.removeView(flash) }, 150)
     }

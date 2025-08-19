@@ -4,7 +4,6 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 class TimeManagerTest {
-
     @Test
     fun nowNanos_isMonotonicAndPositive() {
         val t1 = TimeManager.nowNanos()

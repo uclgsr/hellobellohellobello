@@ -7,23 +7,23 @@ import java.io.File
 import kotlin.io.path.createTempDirectory
 
 class ThermalCameraRecorderTest {
-
     @Test
-    fun start_createsCsvWithHeader_and_stop_closes() = runBlocking {
-        val tmp = createTempDirectory("thermal_test_").toFile()
-        try {
-            val recorder = ThermalCameraRecorder()
-            recorder.start(tmp)
-            val csv = File(tmp, "thermal.csv")
-            assertThat(csv.exists()).isTrue()
-            val firstLine = csv.bufferedReader().use { it.readLine() }
-            assertThat(firstLine).isNotNull()
-            assertThat(firstLine!!.startsWith("timestamp_ns,w,h")).isTrue()
-            assertThat(firstLine.contains(",v0")).isTrue()
-            assertThat(firstLine.contains(",v49151")).isTrue()
-            recorder.stop()
-        } finally {
-            tmp.deleteRecursively()
+    fun start_createsCsvWithHeader_and_stop_closes() =
+        runBlocking {
+            val tmp = createTempDirectory("thermal_test_").toFile()
+            try {
+                val recorder = ThermalCameraRecorder()
+                recorder.start(tmp)
+                val csv = File(tmp, "thermal.csv")
+                assertThat(csv.exists()).isTrue()
+                val firstLine = csv.bufferedReader().use { it.readLine() }
+                assertThat(firstLine).isNotNull()
+                assertThat(firstLine!!.startsWith("timestamp_ns,w,h")).isTrue()
+                assertThat(firstLine.contains(",v0")).isTrue()
+                assertThat(firstLine.contains(",v49151")).isTrue()
+                recorder.stop()
+            } finally {
+                tmp.deleteRecursively()
+            }
         }
-    }
 }

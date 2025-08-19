@@ -6,6 +6,7 @@ webcam (video) and Shimmer GSR (plot). This module uses non-blocking UI
 updates via QTimer and PyQt signals, and delegates device access to the
 core local interfaces that optionally use native C++ backends via PyBind11.
 """
+
 from __future__ import annotations
 
 import json
@@ -18,21 +19,10 @@ from dataclasses import dataclass
 import numpy as np
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QAction, QImage, QPixmap
-from PyQt6.QtWidgets import (
-    QFileDialog,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QListWidget,
-    QMainWindow,
-    QPushButton,
-    QTabWidget,
-    QTextEdit,
-    QToolBar,
-    QVBoxLayout,
-    QWidget,
-)
+from PyQt6.QtWidgets import (QFileDialog, QGridLayout, QHBoxLayout, QLabel,
+                             QLineEdit, QListWidget, QMainWindow, QPushButton,
+                             QTabWidget, QTextEdit, QToolBar, QVBoxLayout,
+                             QWidget)
 
 try:
     import pyqtgraph as pg
@@ -110,21 +100,29 @@ class DeviceWidget(QWidget):
             frame_rgb = frame_bgr[:, :, ::-1].copy()
             h, w, ch = frame_rgb.shape
             bytes_per_line = ch * w
-            qimg = QImage(frame_rgb.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-            self.view.setPixmap(QPixmap.fromImage(qimg).scaled(
-                self.view.size(),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation
-            ))
+            qimg = QImage(
+                frame_rgb.data, w, h, bytes_per_line, QImage.Format.Format_RGB888
+            )
+            self.view.setPixmap(
+                QPixmap.fromImage(qimg).scaled(
+                    self.view.size(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
 
     def update_qimage(self, qimg: QImage) -> None:
         if self.kind != "video":
             return
         if qimg is None:
             return
-        self.view.setPixmap(QPixmap.fromImage(qimg).scaled(
-            self.view.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
-        ))
+        self.view.setPixmap(
+            QPixmap.fromImage(qimg).scaled(
+                self.view.size(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        )
 
     def append_gsr_samples(self, ts: np.ndarray, vals: np.ndarray) -> None:
         if self.kind != "gsr" or pg is None or self.view is None:
@@ -135,7 +133,9 @@ class DeviceWidget(QWidget):
         self._values.extend(vals.tolist())
         # Update plot immediately; X axis as relative seconds
         t0 = self._times[0] if self._times else time.monotonic()
-        x = np.fromiter((t - t0 for t in self._times), dtype=np.float64, count=len(self._times))
+        x = np.fromiter(
+            (t - t0 for t in self._times), dtype=np.float64, count=len(self._times)
+        )
         y = np.fromiter(self._values, dtype=np.float64, count=len(self._values))
         self.curve.setData(x, y)
 
@@ -194,6 +194,7 @@ class GUIManager(QMainWindow):
         self.slider = None
         try:
             from PyQt6.QtWidgets import QSlider
+
             self.slider = QSlider(Qt.Orientation.Horizontal, self.playback)
             self.slider.setRange(0, 0)
             self.playback_layout.addWidget(self.slider)
@@ -204,7 +205,9 @@ class GUIManager(QMainWindow):
             self.plot = pg.PlotWidget(self.playback)
             self.plot.setBackground("w")
             self.playback_layout.addWidget(self.plot)
-            self.cursor = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color=(255, 0, 0), width=1))
+            self.cursor = pg.InfiniteLine(
+                angle=90, movable=False, pen=pg.mkPen(color=(255, 0, 0), width=1)
+            )
             self.plot.addItem(self.cursor)
         else:
             self.plot = None
@@ -246,11 +249,19 @@ class GUIManager(QMainWindow):
             self.slider.valueChanged.connect(self._on_slider_change)
 
         # Data Aggregator for file transfers (Phase 5)
-        self._data_aggregator = DataAggregator(os.path.join(os.getcwd(), "pc_controller_data"))
+        self._data_aggregator = DataAggregator(
+            os.path.join(os.getcwd(), "pc_controller_data")
+        )
         self._data_aggregator.log.connect(self._log)
         try:
-            self._data_aggregator.progress.connect(lambda dev, done, total: self._log(f"Transfer {dev}: {done}/{total}"))
-            self._data_aggregator.file_received.connect(lambda sess, dev: self._log(f"Files received for {dev} into session {sess}"))
+            self._data_aggregator.progress.connect(
+                lambda dev, done, total: self._log(f"Transfer {dev}: {done}/{total}")
+            )
+            self._data_aggregator.file_received.connect(
+                lambda sess, dev: self._log(
+                    f"Files received for {dev} into session {sess}"
+                )
+            )
         except Exception:
             pass
 
@@ -296,7 +307,9 @@ class GUIManager(QMainWindow):
         self._resync_timer = QTimer(self)
         self._resync_timer.setInterval(180000)
         try:
-            self._resync_timer.timeout.connect(lambda: self._network.broadcast_time_sync())
+            self._resync_timer.timeout.connect(
+                lambda: self._network.broadcast_time_sync()
+            )
         except Exception:
             pass
 
@@ -450,11 +463,17 @@ class GUIManager(QMainWindow):
             self._log(f"Session metadata error: {exc}")
         # Start file receiver and broadcast transfer_files per Phase 5 FR10
         try:
-            from data.data_aggregator import get_local_ip  # local import to avoid test-time issues
+            from data.data_aggregator import \
+                get_local_ip  # local import to avoid test-time issues
+
             port = self._data_aggregator.start_server(9001)
             host = get_local_ip()
-            self._network.broadcast_transfer_files(host, port, getattr(self, "_session_id", ""))
-            self._log(f"Initiated file transfer to {host}:{port} for session {getattr(self, '_session_id', '')}")
+            self._network.broadcast_transfer_files(
+                host, port, getattr(self, "_session_id", "")
+            )
+            self._log(
+                f"Initiated file transfer to {host}:{port} for session {getattr(self, '_session_id', '')}"
+            )
         except Exception as exc:  # noqa: BLE001
             self._log(f"Failed to initiate file transfer: {exc}")
 
@@ -482,10 +501,14 @@ class GUIManager(QMainWindow):
         self._log(f"Removed: {name}")
 
     @pyqtSlot(str, object, int)
-    def _on_preview_frame(self, device_name: str, jpeg_bytes: object, ts_ns: int) -> None:
+    def _on_preview_frame(
+        self, device_name: str, jpeg_bytes: object, ts_ns: int
+    ) -> None:
         try:
             try:
-                self._logger.info(f"[DEBUG_LOG] on_preview_frame: {device_name}, ts={ts_ns}")
+                self._logger.info(
+                    f"[DEBUG_LOG] on_preview_frame: {device_name}, ts={ts_ns}"
+                )
             except Exception:
                 pass
             now = time.monotonic()
@@ -495,7 +518,9 @@ class GUIManager(QMainWindow):
                 self._remote_drop_counts[device_name] = drops0
                 self._remote_last_render_s[device_name] = now
                 try:
-                    self._logger.info(f"[DEBUG_LOG] first-drop for {device_name}: {drops0}")
+                    self._logger.info(
+                        f"[DEBUG_LOG] first-drop for {device_name}: {drops0}"
+                    )
                 except Exception:
                     pass
                 return
@@ -511,7 +536,9 @@ class GUIManager(QMainWindow):
                     pass
                 last_log = self._remote_drop_last_log_s.get(device_name, now)
                 if (now - last_log) >= 1.0:
-                    self._log(f"Remote preview drops for {device_name} in last second: {drops}")
+                    self._log(
+                        f"Remote preview drops for {device_name} in last second: {drops}"
+                    )
                     self._remote_drop_counts[device_name] = 0
                     self._remote_drop_last_log_s[device_name] = now
                 return
@@ -548,7 +575,9 @@ class GUIManager(QMainWindow):
                 self._video_drop_count += 1
                 # Log drop stats at most once per second
                 if (now - self._video_drop_last_log_s) >= 1.0:
-                    self._log(f"Local preview drops in last second: {self._video_drop_count}")
+                    self._log(
+                        f"Local preview drops in last second: {self._video_drop_count}"
+                    )
                     self._video_drop_count = 0
                     self._video_drop_last_log_s = now
                 return
@@ -648,7 +677,9 @@ class GUIManager(QMainWindow):
         try:
             # Pick a session directory
             base_dir = os.path.join(os.getcwd(), "pc_controller_data")
-            session_dir = QFileDialog.getExistingDirectory(self, "Select Session Directory", base_dir)
+            session_dir = QFileDialog.getExistingDirectory(
+                self, "Select Session Directory", base_dir
+            )
             if not session_dir:
                 return
             self._loaded_session_dir = session_dir
@@ -661,7 +692,11 @@ class GUIManager(QMainWindow):
                 # Plot CSVs
                 if pg is not None and self.plot is not None:
                     self.plot.clear()
-                    self.cursor = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen(color=(255, 0, 0), width=1))
+                    self.cursor = pg.InfiniteLine(
+                        angle=90,
+                        movable=False,
+                        pen=pg.mkPen(color=(255, 0, 0), width=1),
+                    )
                     self.plot.addItem(self.cursor)
                     self._plot_curves.clear()
                     # Plot known columns
@@ -670,9 +705,12 @@ class GUIManager(QMainWindow):
                         if df.empty:
                             continue
                         # time base (seconds relative)
-                        if isinstance(df.index.dtype, type) or df.index.dtype is not None:
+                        if (
+                            isinstance(df.index.dtype, type)
+                            or df.index.dtype is not None
+                        ):
                             t0 = int(df.index.min())
-                            x = (df.index.astype('int64') - t0) / 1e9
+                            x = (df.index.astype("int64") - t0) / 1e9
                         else:
                             # fallback sequential index
                             x = list(range(len(df)))
@@ -683,7 +721,9 @@ class GUIManager(QMainWindow):
                             except Exception:
                                 continue
                             name = f"{rel_name}::{col}"
-                            curve = self.plot.plot(x=list(x), y=list(y), pen=pg.mkPen(width=1))
+                            curve = self.plot.plot(
+                                x=list(x), y=list(y), pen=pg.mkPen(width=1)
+                            )
                             self._plot_curves[name] = curve
                             break
                 # Open a video if available
@@ -694,12 +734,19 @@ class GUIManager(QMainWindow):
                 if vid_path is not None:
                     try:
                         import cv2
+
                         cap = cv2.VideoCapture(vid_path)
                         if cap is not None and cap.isOpened():
                             self._video_cap = cap
                             self._video_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-                            self._video_total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-                            dur_s = (self._video_total_frames / self._video_fps) if self._video_fps > 0 else 0
+                            self._video_total_frames = int(
+                                cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0
+                            )
+                            dur_s = (
+                                (self._video_total_frames / self._video_fps)
+                                if self._video_fps > 0
+                                else 0
+                            )
                             self._video_duration_ms = int(dur_s * 1000)
                         else:
                             self._video_cap = None
@@ -708,9 +755,16 @@ class GUIManager(QMainWindow):
                         self._log(f"OpenCV VideoCapture failed: {exc}")
                 # Set slider range
                 if self.slider is not None:
-                    total_ms = self._video_duration_ms if self._video_duration_ms > 0 else 0
+                    total_ms = (
+                        self._video_duration_ms if self._video_duration_ms > 0 else 0
+                    )
                     # If no video, estimate from plotted data x range
-                    if total_ms == 0 and pg is not None and self.plot is not None and len(self._plot_curves):
+                    if (
+                        total_ms == 0
+                        and pg is not None
+                        and self.plot is not None
+                        and len(self._plot_curves)
+                    ):
                         # Assume last added curve x values
                         try:
                             items = list(self._plot_curves.values())
@@ -762,6 +816,7 @@ class GUIManager(QMainWindow):
             return
         try:
             import cv2
+
             # Seek to current time
             self._video_cap.set(cv2.CAP_PROP_POS_MSEC, float(self._current_ms))
             ok, frame = self._video_cap.read()
@@ -772,9 +827,13 @@ class GUIManager(QMainWindow):
             h, w, ch = fb.shape
             bytes_per_line = ch * w
             qimg = QImage(fb.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-            self.video_label.setPixmap(QPixmap.fromImage(qimg).scaled(
-                self.video_label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
-            ))
+            self.video_label.setPixmap(
+                QPixmap.fromImage(qimg).scaled(
+                    self.video_label.size(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
         except Exception as exc:
             self._log(f"Video display error: {exc}")
 
@@ -798,6 +857,7 @@ class GUIManager(QMainWindow):
 
     def _load_annotations(self) -> None:
         import json
+
         self._annotations = []
         self.ann_list.clear()
         if not self._loaded_session_dir:
@@ -810,12 +870,15 @@ class GUIManager(QMainWindow):
                     if isinstance(data, list):
                         self._annotations = data
                         for e in data:
-                            self.ann_list.addItem(f"{int(e.get('ts_ms', 0))} ms - {e.get('text', '')}")
+                            self.ann_list.addItem(
+                                f"{int(e.get('ts_ms', 0))} ms - {e.get('text', '')}"
+                            )
             except Exception:
                 pass
 
     def _save_annotations(self) -> None:
         import json
+
         if not self._loaded_session_dir:
             return
         path = os.path.join(self._loaded_session_dir, "annotations.json")
@@ -831,14 +894,21 @@ class GUIManager(QMainWindow):
             return
         try:
             # Choose output file
-            out_path, _ = QFileDialog.getSaveFileName(self, "Save HDF5", os.path.join(self._loaded_session_dir, "export.h5"), "HDF5 Files (*.h5 *.hdf5)")
+            out_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save HDF5",
+                os.path.join(self._loaded_session_dir, "export.h5"),
+                "HDF5 Files (*.h5 *.hdf5)",
+            )
             if not out_path:
                 return
             # Minimal metadata: session dir name
             meta = {"session_dir": self._loaded_session_dir}
             # Read annotations
             ann = {"annotations": self._annotations}
-            export_session_to_hdf5(self._loaded_session_dir, out_path, metadata=meta, annotations=ann)
+            export_session_to_hdf5(
+                self._loaded_session_dir, out_path, metadata=meta, annotations=ann
+            )
             self._log(f"Exported HDF5: {out_path}")
         except Exception as exc:
             self._log(f"Export failed: {exc}")

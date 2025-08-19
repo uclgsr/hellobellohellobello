@@ -13,7 +13,6 @@ import java.io.IOException
  * creates the expected file structure during local testing.
  */
 class ThermalCameraRecorder : SensorRecorder {
-
     private var csvWriter: BufferedWriter? = null
     private var csvFile: File? = null
 
@@ -27,7 +26,7 @@ class ThermalCameraRecorder : SensorRecorder {
                 // Write header per spec: timestamp_ns,w,h, then flattened pixel values v0..v49151
                 csvWriter!!.write("timestamp_ns,w,h")
                 for (i in 0 until 49152) {
-                    csvWriter!!.write(",v${i}")
+                    csvWriter!!.write(",v$i")
                 }
                 csvWriter!!.write("\n")
                 csvWriter!!.flush()
@@ -39,7 +38,8 @@ class ThermalCameraRecorder : SensorRecorder {
         try {
             val meta = File(sessionDir, "metadata.json")
             if (!meta.exists()) {
-                val json = "{" +
+                val json =
+                    "{" +
                         "\"sensor\":\"Topdon TC001\"," +
                         "\"width\":256," +
                         "\"height\":192," +
@@ -49,7 +49,8 @@ class ThermalCameraRecorder : SensorRecorder {
                         "}"
                 meta.writeText(json)
             }
-        } catch (_: Exception) { }
+        } catch (_: Exception) {
+        }
         // TODO(Phase 2+): Initialize Topdon SDK, request USB permission, and stream frames.
         // For now, we do not generate rows without the actual device.
     }

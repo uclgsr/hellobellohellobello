@@ -2,6 +2,7 @@
 
 Loads sensor CSVs via pandas and locates videos for OpenCV playback.
 """
+
 from __future__ import annotations
 
 import glob
@@ -30,12 +31,16 @@ class DataLoader:
         csv_files: dict[str, str] = {}
         video_files: dict[str, str] = {}
         # Find CSVs recursively
-        for path in glob.glob(os.path.join(self.session_dir, "**", "*.csv"), recursive=True):
+        for path in glob.glob(
+            os.path.join(self.session_dir, "**", "*.csv"), recursive=True
+        ):
             name = os.path.relpath(path, self.session_dir)
             csv_files[name.replace("\\", "/")] = path
         # Find videos
         for ext in self.SUPPORTED_VIDEO_EXT:
-            for path in glob.glob(os.path.join(self.session_dir, "**", f"*{ext}"), recursive=True):
+            for path in glob.glob(
+                os.path.join(self.session_dir, "**", f"*{ext}"), recursive=True
+            ):
                 name = os.path.relpath(path, self.session_dir)
                 video_files[name.replace("\\", "/")] = path
         return SessionData(self.session_dir, csv_files, video_files)

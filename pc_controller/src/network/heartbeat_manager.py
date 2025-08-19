@@ -1,4 +1,5 @@
 """HeartbeatManager: Manages device heartbeat monitoring and connection health (FR8)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -11,9 +12,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class HeartbeatStatus:
     """Status information for a device's heartbeat."""
+
     device_id: str
     last_heartbeat_ns: int
     consecutive_misses: int = 0
@@ -38,14 +41,17 @@ class HeartbeatStatus:
         self.reconnection_attempts += 1
         self.last_reconnect_attempt_ns = time.time_ns()
 
+
 class HeartbeatManager:
     """Manages heartbeat monitoring for all connected devices."""
 
-    def __init__(self,
-                 heartbeat_interval_s: float = 3.0,
-                 timeout_multiplier: int = 3,
-                 max_reconnect_attempts: int = 10,
-                 reconnect_backoff_s: float = 5.0):
+    def __init__(
+        self,
+        heartbeat_interval_s: float = 3.0,
+        timeout_multiplier: int = 3,
+        max_reconnect_attempts: int = 10,
+        reconnect_backoff_s: float = 5.0,
+    ):
         """Initialize the heartbeat manager.
 
         Args:
@@ -71,8 +77,7 @@ class HeartbeatManager:
         """Register a device for heartbeat monitoring."""
         if device_id not in self._devices:
             self._devices[device_id] = HeartbeatStatus(
-                device_id=device_id,
-                last_heartbeat_ns=time.time_ns()
+                device_id=device_id, last_heartbeat_ns=time.time_ns()
             )
             logger.info(f"Registered device for heartbeat monitoring: {device_id}")
 
@@ -82,7 +87,9 @@ class HeartbeatManager:
             del self._devices[device_id]
             logger.info(f"Unregistered device from heartbeat monitoring: {device_id}")
 
-    def record_heartbeat(self, device_id: str, metadata: dict[str, Any] | None = None) -> None:
+    def record_heartbeat(
+        self, device_id: str, metadata: dict[str, Any] | None = None
+    ) -> None:
         """Record a heartbeat from a device.
 
         Args:
@@ -101,7 +108,9 @@ class HeartbeatManager:
                 try:
                     self._device_online_callbacks[device_id](device_id)
                 except Exception as e:
-                    logger.error(f"Error in device online callback for {device_id}: {e}")
+                    logger.error(
+                        f"Error in device online callback for {device_id}: {e}"
+                    )
 
         logger.debug(f"Heartbeat received from {device_id}")
 
@@ -111,21 +120,35 @@ class HeartbeatManager:
 
     def get_healthy_devices(self) -> set[str]:
         """Get set of currently healthy device IDs."""
-        return {device_id for device_id, status in self._devices.items() if status.is_healthy}
+        return {
+            device_id
+            for device_id, status in self._devices.items()
+            if status.is_healthy
+        }
 
     def get_unhealthy_devices(self) -> set[str]:
         """Get set of currently unhealthy device IDs."""
-        return {device_id for device_id, status in self._devices.items() if not status.is_healthy}
+        return {
+            device_id
+            for device_id, status in self._devices.items()
+            if not status.is_healthy
+        }
 
-    def set_device_offline_callback(self, device_id: str, callback: Callable[[str], None]) -> None:
+    def set_device_offline_callback(
+        self, device_id: str, callback: Callable[[str], None]
+    ) -> None:
         """Set callback for when a device goes offline."""
         self._device_offline_callbacks[device_id] = callback
 
-    def set_device_online_callback(self, device_id: str, callback: Callable[[str], None]) -> None:
+    def set_device_online_callback(
+        self, device_id: str, callback: Callable[[str], None]
+    ) -> None:
         """Set callback for when a device comes back online."""
         self._device_online_callbacks[device_id] = callback
 
-    def set_reconnect_callback(self, device_id: str, callback: Callable[[str], None]) -> None:
+    def set_reconnect_callback(
+        self, device_id: str, callback: Callable[[str], None]
+    ) -> None:
         """Set callback for when a device needs reconnection."""
         self._reconnect_callbacks[device_id] = callback
 
@@ -176,28 +199,38 @@ class HeartbeatManager:
 
                 # If device just went offline, trigger callback
                 if was_healthy and not status.is_healthy:
-                    logger.warning(f"Device {device_id} went offline (missed {status.consecutive_misses} heartbeats)")
+                    logger.warning(
+                        f"Device {device_id} went offline (missed {status.consecutive_misses} heartbeats)"
+                    )
                     if device_id in self._device_offline_callbacks:
                         try:
                             self._device_offline_callbacks[device_id](device_id)
                         except Exception as e:
-                            logger.error(f"Error in device offline callback for {device_id}: {e}")
+                            logger.error(
+                                f"Error in device offline callback for {device_id}: {e}"
+                            )
 
                 # Trigger reconnection if not at max attempts and enough time has passed
-                if (status.reconnection_attempts < self.max_reconnect_attempts and
-                    (current_time_ns - status.last_reconnect_attempt_ns) >
-                    int(self.reconnect_backoff_s * 1_000_000_000)):
+                if status.reconnection_attempts < self.max_reconnect_attempts and (
+                    current_time_ns - status.last_reconnect_attempt_ns
+                ) > int(self.reconnect_backoff_s * 1_000_000_000):
 
                     status.mark_reconnect_attempt()
-                    logger.info(f"Triggering reconnection for {device_id} (attempt {status.reconnection_attempts})")
+                    logger.info(
+                        f"Triggering reconnection for {device_id} (attempt {status.reconnection_attempts})"
+                    )
 
                     if device_id in self._reconnect_callbacks:
                         try:
                             self._reconnect_callbacks[device_id](device_id)
                         except Exception as e:
-                            logger.error(f"Error in reconnect callback for {device_id}: {e}")
+                            logger.error(
+                                f"Error in reconnect callback for {device_id}: {e}"
+                            )
 
-    def create_heartbeat_message(self, device_id: str, metadata: dict[str, Any] | None = None) -> str:
+    def create_heartbeat_message(
+        self, device_id: str, metadata: dict[str, Any] | None = None
+    ) -> str:
         """Create a standardized heartbeat message.
 
         Args:
@@ -212,7 +245,7 @@ class HeartbeatManager:
             "type": "heartbeat",
             "device_id": device_id,
             "timestamp_ns": time.time_ns(),
-            "metadata": metadata or {}
+            "metadata": metadata or {},
         }
         return json.dumps(message)
 
@@ -245,8 +278,9 @@ class HeartbeatManager:
                     "is_healthy": status.is_healthy,
                     "consecutive_misses": status.consecutive_misses,
                     "reconnection_attempts": status.reconnection_attempts,
-                    "last_heartbeat_age_s": (time.time_ns() - status.last_heartbeat_ns) / 1_000_000_000
+                    "last_heartbeat_age_s": (time.time_ns() - status.last_heartbeat_ns)
+                    / 1_000_000_000,
                 }
                 for device_id, status in self._devices.items()
-            }
+            },
         }

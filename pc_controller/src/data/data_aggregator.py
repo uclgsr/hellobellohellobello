@@ -6,6 +6,7 @@ proper session directory on the PC Hub.
 
 It follows the design in docs/4_5_phase.md Task 5.1.
 """
+
 from __future__ import annotations
 
 import json
@@ -21,6 +22,7 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal
 try:
     from network.tls_utils import create_server_ssl_context  # type: ignore
 except Exception:  # pragma: no cover - optional import guard
+
     def create_server_ssl_context():
         return None
 
@@ -74,10 +76,14 @@ class FileReceiverServer(QThread):
     """
 
     log = pyqtSignal(str)
-    progress = pyqtSignal(str, int, int)  # device_id, bytes_received, total_bytes(-1 if unknown)
+    progress = pyqtSignal(
+        str, int, int
+    )  # device_id, bytes_received, total_bytes(-1 if unknown)
     file_received = pyqtSignal(str, str)  # session_id, device_id
 
-    def __init__(self, base_dir: str, port: int = 9001, parent: QObject | None = None) -> None:
+    def __init__(
+        self, base_dir: str, port: int = 9001, parent: QObject | None = None
+    ) -> None:
         super().__init__(parent)
         self._base_dir = base_dir
         self._port = port
@@ -155,10 +161,14 @@ class FileReceiverServer(QThread):
                                     raise RuntimeError("Header too large")
                             header_text, _, remainder = header_line.partition(b"\n")
                             header = _ClientHeader.parse(
-                        header_text.decode("utf-8", errors="replace")
-                    )
-                            target_dir = self._ensure_dirs(header.session_id, header.device_id)
-                            tmp_zip_path = os.path.join(target_dir, header.filename or "data.zip")
+                                header_text.decode("utf-8", errors="replace")
+                            )
+                            target_dir = self._ensure_dirs(
+                                header.session_id, header.device_id
+                            )
+                            tmp_zip_path = os.path.join(
+                                target_dir, header.filename or "data.zip"
+                            )
                             # Write any remainder + subsequent stream to file
                             bytes_written = 0
                             total = header.size if header.size is not None else -1
@@ -166,7 +176,9 @@ class FileReceiverServer(QThread):
                                 if remainder:
                                     f.write(remainder)
                                     bytes_written += len(remainder)
-                                    self.progress.emit(header.device_id, bytes_written, total)
+                                    self.progress.emit(
+                                        header.device_id, bytes_written, total
+                                    )
                                 if header.size is not None:
                                     to_read = header.size - len(remainder)
                                     while to_read > 0:
@@ -176,7 +188,9 @@ class FileReceiverServer(QThread):
                                         f.write(chunk)
                                         bytes_written += len(chunk)
                                         to_read -= len(chunk)
-                                        self.progress.emit(header.device_id, bytes_written, total)
+                                        self.progress.emit(
+                                            header.device_id, bytes_written, total
+                                        )
                                 else:
                                     while True:
                                         chunk = conn.recv(65536)
@@ -184,13 +198,17 @@ class FileReceiverServer(QThread):
                                             break
                                         f.write(chunk)
                                         bytes_written += len(chunk)
-                                        self.progress.emit(header.device_id, bytes_written, total)
+                                        self.progress.emit(
+                                            header.device_id, bytes_written, total
+                                        )
                             # Unpack
                             try:
-                                with zipfile.ZipFile(tmp_zip_path, 'r') as zf:
+                                with zipfile.ZipFile(tmp_zip_path, "r") as zf:
                                     zf.extractall(target_dir)
                                 os.remove(tmp_zip_path)
-                                self.file_received.emit(header.session_id, header.device_id)
+                                self.file_received.emit(
+                                    header.session_id, header.device_id
+                                )
                                 self.log.emit(
                                     f"Received and unpacked {bytes_written} bytes "
                                     f"from {header.device_id}"

@@ -21,9 +21,8 @@ class FileTransferManager(
     private val context: Context? = null,
     private val sessionsRootOverride: File? = null,
     private val flashEventsFileOverride: File? = null,
-    private val deviceIdOverride: String? = null
+    private val deviceIdOverride: String? = null,
 ) {
-
     private fun sessionRoot(): File {
         sessionsRootOverride?.let { return it }
         val ctx = context ?: throw IllegalStateException("sessionsRootOverride is required when context is null")
@@ -37,7 +36,11 @@ class FileTransferManager(
      * Transfer the given sessionId directory to the host:port receiver.
      * Streams a ZIP over the socket without creating a temp file.
      */
-    suspend fun transferSession(sessionId: String, host: String, port: Int) = withContext(Dispatchers.IO) {
+    suspend fun transferSession(
+        sessionId: String,
+        host: String,
+        port: Int,
+    ) = withContext(Dispatchers.IO) {
         val dir = sessionDir(sessionId)
         if (!dir.exists() || !dir.isDirectory) throw IllegalArgumentException("Session not found: ${dir.absolutePath}")
 
@@ -50,7 +53,8 @@ class FileTransferManager(
         socket.use {
             val out = BufferedOutputStream(it.getOutputStream())
             // Send header JSON line first (avoid org.json for JVM tests)
-            val headerLine = "{" +
+            val headerLine =
+                "{" +
                     "\"session_id\":\"$sessionId\"," +
                     "\"device_id\":\"$deviceId\"," +
                     "\"filename\":\"${deviceId}_data.zip\"" +
@@ -62,13 +66,16 @@ class FileTransferManager(
                 zipDirectoryContents(dir, dir, zos)
                 // Also include flash_sync_events.csv if present (override or derived)
                 try {
-                    val flash: File? = flashEventsFileOverride ?: run {
-                        val ctx = context
-                        if (ctx != null) {
-                            val root = ctx.getExternalFilesDir(null) ?: ctx.filesDir
-                            File(root, "flash_sync_events.csv")
-                        } else null
-                    }
+                    val flash: File? =
+                        flashEventsFileOverride ?: run {
+                            val ctx = context
+                            if (ctx != null) {
+                                val root = ctx.getExternalFilesDir(null) ?: ctx.filesDir
+                                File(root, "flash_sync_events.csv")
+                            } else {
+                                null
+                            }
+                        }
                     if (flash != null && flash.exists() && flash.isFile) {
                         val entry = ZipEntry("flash_sync_events.csv")
                         entry.time = flash.lastModified()
@@ -83,7 +90,8 @@ class FileTransferManager(
                         }
                         zos.closeEntry()
                     }
-                } catch (_: Exception) { /* best-effort inclusion */
+                } catch (_: Exception) {
+                    // best-effort inclusion
                 }
                 zos.finish()
                 zos.flush()
@@ -92,7 +100,11 @@ class FileTransferManager(
         }
     }
 
-    private fun zipDirectoryContents(root: File, src: File, zos: ZipOutputStream) {
+    private fun zipDirectoryContents(
+        root: File,
+        src: File,
+        zos: ZipOutputStream,
+    ) {
         val files = src.listFiles() ?: return
         for (f in files) {
             if (f.isDirectory) {

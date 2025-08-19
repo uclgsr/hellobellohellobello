@@ -9,6 +9,7 @@ Usage:
 This module keeps dependencies minimal and is suitable for tests and simple
 recording pipelines (e.g., SimulatedShimmer callbacks).
 """
+
 from __future__ import annotations
 
 import csv

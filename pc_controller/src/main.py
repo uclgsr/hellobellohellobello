@@ -12,6 +12,7 @@ Additionally, start the async UDP TimeSyncServer (FR3) as a background
 thread so Android clients can synchronize clocks via UDP echo of
 monotonic_ns. The server reads its port/host from config.json (NFR8).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -47,7 +48,9 @@ def main() -> int:
 
     # Start TimeSyncServer in background thread
     _stop_flag = threading.Event()
-    _ts_thread = threading.Thread(target=_time_server_thread, args=(_stop_flag,), daemon=True)
+    _ts_thread = threading.Thread(
+        target=_time_server_thread, args=(_stop_flag,), daemon=True
+    )
     _ts_thread.start()
 
     network = NetworkController()

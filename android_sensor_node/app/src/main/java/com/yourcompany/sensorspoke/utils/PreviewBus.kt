@@ -18,7 +18,10 @@ object PreviewBus {
         listeners.remove(listener)
     }
 
-    fun emit(bytes: ByteArray, timestampNs: Long) {
+    fun emit(
+        bytes: ByteArray,
+        timestampNs: Long,
+    ) {
         for (l in listeners) {
             runCatching { l(bytes, timestampNs) }
         }

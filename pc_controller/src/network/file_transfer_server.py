@@ -20,6 +20,7 @@ The server creates pc_controller_data/<session_id>/ if missing and writes
 file there. After saving, it updates metadata.json in that session folder
 appending the received file details.
 """
+
 from __future__ import annotations
 
 import json
@@ -45,7 +46,9 @@ class _Header:
         size = obj.get("size")
         size_i: int | None = int(size) if size is not None else None
         device_id = str(obj.get("device_id") or "unknown_device")
-        return _Header(session_id=session_id, filename=filename, size=size_i, device_id=device_id)
+        return _Header(
+            session_id=session_id, filename=filename, size=size_i, device_id=device_id
+        )
 
 
 class FileTransferServer:
@@ -62,7 +65,9 @@ class FileTransferServer:
             return
         self._port = int(port)
         self._stop_ev.clear()
-        self._thread = threading.Thread(target=self._serve, name="FileTransferServer", daemon=True)
+        self._thread = threading.Thread(
+            target=self._serve, name="FileTransferServer", daemon=True
+        )
         self._thread.start()
 
     def stop(self) -> None:
@@ -83,7 +88,9 @@ class FileTransferServer:
         os.makedirs(d, exist_ok=True)
         return d
 
-    def _update_metadata(self, session_dir: str, filename: str, size: int, device_id: str) -> None:
+    def _update_metadata(
+        self, session_dir: str, filename: str, size: int, device_id: str
+    ) -> None:
         meta_path = os.path.join(session_dir, "metadata.json")
         data = {}
         try:
@@ -95,12 +102,14 @@ class FileTransferServer:
         files = data.get("received_files")
         if not isinstance(files, list):
             files = []
-        files.append({
-            "filename": filename,
-            "size": int(size),
-            "device_id": device_id,
-            "received_at_ns": int(time.time_ns()),
-        })
+        files.append(
+            {
+                "filename": filename,
+                "size": int(size),
+                "device_id": device_id,
+                "received_at_ns": int(time.time_ns()),
+            }
+        )
         data["received_files"] = files
         try:
             with open(meta_path, "w", encoding="utf-8") as f:
@@ -159,7 +168,12 @@ class FileTransferServer:
                                         bytes_written += len(chunk)
                             # Update session metadata
                             try:
-                                self._update_metadata(session_dir, header.filename, bytes_written, header.device_id)
+                                self._update_metadata(
+                                    session_dir,
+                                    header.filename,
+                                    bytes_written,
+                                    header.device_id,
+                                )
                             except Exception:
                                 pass
                     except Exception:

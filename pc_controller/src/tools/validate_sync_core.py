@@ -8,6 +8,7 @@ This module provides helper functions used by scripts/validate_sync.py to
 
 All functions are pure and unit-testable.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -26,10 +27,14 @@ class StreamDetection:
     def rel_times_ns(self) -> np.ndarray:
         if self.fps <= 0:
             return np.array([], dtype=np.int64)
-        return (np.array(self.frame_indices, dtype=np.float64) / float(self.fps) * 1e9).astype(np.int64)
+        return (
+            np.array(self.frame_indices, dtype=np.float64) / float(self.fps) * 1e9
+        ).astype(np.int64)
 
 
-def detect_flash_indices_from_brightness(brightness: Sequence[float], n_events: int, min_separation: int = 3) -> list[int]:
+def detect_flash_indices_from_brightness(
+    brightness: Sequence[float], n_events: int, min_separation: int = 3
+) -> list[int]:
     """Detect indices of flash events from a per-frame brightness sequence.
 
     Parameters
@@ -84,7 +89,9 @@ def detect_flash_indices_from_brightness(brightness: Sequence[float], n_events: 
     return selected
 
 
-def estimate_T0_ns(aligned_event_ts_ns: Sequence[int], rel_times_ns: Sequence[int]) -> int:
+def estimate_T0_ns(
+    aligned_event_ts_ns: Sequence[int], rel_times_ns: Sequence[int]
+) -> int:
     """Estimate absolute video start time T0 on the master clock.
 
     Uses the relation aligned_ts[k] ~= T0 + rel_times_ns[k]. If multiple events
@@ -101,7 +108,9 @@ def estimate_T0_ns(aligned_event_ts_ns: Sequence[int], rel_times_ns: Sequence[in
     return int(np.round(float(np.mean(a.astype(np.float64) - r.astype(np.float64)))))
 
 
-def choose_offset_direction(ref_ts_ns: Sequence[int], device_ts_ns: Sequence[int], offset_ns: int) -> int:
+def choose_offset_direction(
+    ref_ts_ns: Sequence[int], device_ts_ns: Sequence[int], offset_ns: int
+) -> int:
     """Choose +offset or -offset for alignment by minimizing median absolute diff.
 
     Returns +1 if device_ts + offset matches ref better; -1 if device_ts - offset matches better.
@@ -176,9 +185,9 @@ def compute_validation_report(
             tmax = max(times_ns)
             per_event_ranges_ms.append((tmax - tmin) / 1e6)
         else:
-            per_event_ranges_ms.append(float('inf'))
+            per_event_ranges_ms.append(float("inf"))
 
-    overall = max(per_event_ranges_ms) if per_event_ranges_ms else float('inf')
+    overall = max(per_event_ranges_ms) if per_event_ranges_ms else float("inf")
     return ValidationResult(
         per_event_ranges_ms=per_event_ranges_ms,
         overall_max_ms=overall,

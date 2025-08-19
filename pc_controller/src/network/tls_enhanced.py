@@ -1,4 +1,5 @@
 """Enhanced TLS utilities for secure communication (NFR5)."""
+
 import logging
 import os
 import socket
@@ -11,13 +12,15 @@ logger = logging.getLogger(__name__)
 class TLSConfig:
     """Configuration for TLS connections."""
 
-    def __init__(self,
-                 enabled: bool = False,
-                 cert_file: str | None = None,
-                 key_file: str | None = None,
-                 ca_file: str | None = None,
-                 verify_mode: ssl.VerifyMode = ssl.CERT_REQUIRED,
-                 check_hostname: bool = True):
+    def __init__(
+        self,
+        enabled: bool = False,
+        cert_file: str | None = None,
+        key_file: str | None = None,
+        ca_file: str | None = None,
+        verify_mode: ssl.VerifyMode = ssl.CERT_REQUIRED,
+        check_hostname: bool = True,
+    ):
         """Initialize TLS configuration.
 
         Args:
@@ -36,15 +39,19 @@ class TLSConfig:
         self.check_hostname = check_hostname
 
     @classmethod
-    def from_env(cls) -> 'TLSConfig':
+    def from_env(cls) -> "TLSConfig":
         """Create TLS configuration from environment variables."""
         return cls(
-            enabled=os.getenv('PC_TLS_ENABLED', 'false').lower() == 'true',
-            cert_file=os.getenv('PC_TLS_CERT_FILE'),
-            key_file=os.getenv('PC_TLS_KEY_FILE'),
-            ca_file=os.getenv('PC_TLS_CA_FILE'),
-            verify_mode=ssl.CERT_REQUIRED if os.getenv('PC_TLS_VERIFY_CLIENT', 'false').lower() == 'true' else ssl.CERT_NONE,
-            check_hostname=os.getenv('PC_TLS_CHECK_HOSTNAME', 'true').lower() == 'true'
+            enabled=os.getenv("PC_TLS_ENABLED", "false").lower() == "true",
+            cert_file=os.getenv("PC_TLS_CERT_FILE"),
+            key_file=os.getenv("PC_TLS_KEY_FILE"),
+            ca_file=os.getenv("PC_TLS_CA_FILE"),
+            verify_mode=(
+                ssl.CERT_REQUIRED
+                if os.getenv("PC_TLS_VERIFY_CLIENT", "false").lower() == "true"
+                else ssl.CERT_NONE
+            ),
+            check_hostname=os.getenv("PC_TLS_CHECK_HOSTNAME", "true").lower() == "true",
         )
 
     def validate(self) -> tuple[bool, str]:
@@ -105,7 +112,9 @@ class SecureConnectionManager:
 
         return self._client_context
 
-    def wrap_server_socket(self, sock: socket.socket, server_hostname: str | None = None) -> socket.socket | ssl.SSLSocket:
+    def wrap_server_socket(
+        self, sock: socket.socket, server_hostname: str | None = None
+    ) -> socket.socket | ssl.SSLSocket:
         """Wrap a server socket with TLS if enabled.
 
         Args:
@@ -127,7 +136,9 @@ class SecureConnectionManager:
             logger.error(f"Failed to wrap server socket with TLS: {e}")
             raise
 
-    def wrap_client_socket(self, sock: socket.socket, server_hostname: str | None = None) -> socket.socket | ssl.SSLSocket:
+    def wrap_client_socket(
+        self, sock: socket.socket, server_hostname: str | None = None
+    ) -> socket.socket | ssl.SSLSocket:
         """Wrap a client socket with TLS if enabled.
 
         Args:
@@ -145,7 +156,7 @@ class SecureConnectionManager:
             wrapped = context.wrap_socket(
                 sock,
                 server_side=False,
-                server_hostname=server_hostname if self.config.check_hostname else None
+                server_hostname=server_hostname if self.config.check_hostname else None,
             )
             logger.info(f"Client socket wrapped with TLS (hostname: {server_hostname})")
             return wrapped
@@ -153,7 +164,9 @@ class SecureConnectionManager:
             logger.error(f"Failed to wrap client socket with TLS: {e}")
             raise
 
-    def connect_secure(self, host: str, port: int, timeout: float = 10.0) -> socket.socket | ssl.SSLSocket:
+    def connect_secure(
+        self, host: str, port: int, timeout: float = 10.0
+    ) -> socket.socket | ssl.SSLSocket:
         """Create a secure connection to a server.
 
         Args:
@@ -195,7 +208,9 @@ class SecureConnectionManager:
         context.minimum_version = ssl.TLSVersion.TLSv1_2
 
         # Prefer secure cipher suites
-        context.set_ciphers('ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS')
+        context.set_ciphers(
+            "ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS"
+        )
 
         logger.info("Server SSL context created successfully")
         return context
@@ -224,7 +239,9 @@ class SecureConnectionManager:
         return context
 
 
-def generate_self_signed_cert(cert_file: str, key_file: str, hostname: str = 'localhost', days: int = 365) -> None:
+def generate_self_signed_cert(
+    cert_file: str, key_file: str, hostname: str = "localhost", days: int = 365
+) -> None:
     """Generate a self-signed certificate for testing/development.
 
     Args:
@@ -241,7 +258,9 @@ def generate_self_signed_cert(cert_file: str, key_file: str, hostname: str = 'lo
         from cryptography.hazmat.primitives.asymmetric import rsa
         from cryptography.x509.oid import NameOID
     except ImportError:
-        logger.error("cryptography library required for certificate generation. Install with: pip install cryptography")
+        logger.error(
+            "cryptography library required for certificate generation. Install with: pip install cryptography"
+        )
         raise
 
     # Generate private key
@@ -251,39 +270,43 @@ def generate_self_signed_cert(cert_file: str, key_file: str, hostname: str = 'lo
     )
 
     # Create certificate
-    subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, hostname),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Multi-Modal Sensor Platform"),
-        x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Development"),
-    ])
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COMMON_NAME, hostname),
+            x509.NameAttribute(
+                NameOID.ORGANIZATION_NAME, "Multi-Modal Sensor Platform"
+            ),
+            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "Development"),
+        ]
+    )
 
-    cert = x509.CertificateBuilder().subject_name(
-        subject
-    ).issuer_name(
-        issuer
-    ).public_key(
-        private_key.public_key()
-    ).serial_number(
-        x509.random_serial_number()
-    ).not_valid_before(
-        datetime.datetime.utcnow()
-    ).not_valid_after(
-        datetime.datetime.utcnow() + datetime.timedelta(days=days)
-    ).add_extension(
-        x509.SubjectAlternativeName([x509.DNSName(hostname)]),
-        critical=False,
-    ).sign(private_key, hashes.SHA256())
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.utcnow())
+        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=days))
+        .add_extension(
+            x509.SubjectAlternativeName([x509.DNSName(hostname)]),
+            critical=False,
+        )
+        .sign(private_key, hashes.SHA256())
+    )
 
     # Write private key
-    with open(key_file, 'wb') as f:
-        f.write(private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
-        ))
+    with open(key_file, "wb") as f:
+        f.write(
+            private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+        )
 
     # Write certificate
-    with open(cert_file, 'wb') as f:
+    with open(cert_file, "wb") as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
     logger.info(f"Self-signed certificate generated: {cert_file}, {key_file}")
@@ -296,7 +319,9 @@ class SecureMessageHandler:
         """Initialize with connection manager."""
         self.connection_manager = connection_manager
 
-    def send_secure_message(self, sock: socket.socket | ssl.SSLSocket, message: bytes) -> bool:
+    def send_secure_message(
+        self, sock: socket.socket | ssl.SSLSocket, message: bytes
+    ) -> bool:
         """Send a message securely over the socket.
 
         Args:
@@ -309,7 +334,7 @@ class SecureMessageHandler:
         try:
             # Send message length first (4 bytes, big-endian)
             length = len(message)
-            length_bytes = length.to_bytes(4, 'big')
+            length_bytes = length.to_bytes(4, "big")
 
             sock.sendall(length_bytes)
             sock.sendall(message)
@@ -326,7 +351,9 @@ class SecureMessageHandler:
             logger.error(f"Failed to send secure message: {e}")
             return False
 
-    def receive_secure_message(self, sock: socket.socket | ssl.SSLSocket, timeout: float = 10.0) -> bytes | None:
+    def receive_secure_message(
+        self, sock: socket.socket | ssl.SSLSocket, timeout: float = 10.0
+    ) -> bytes | None:
         """Receive a message securely from the socket.
 
         Args:
@@ -344,7 +371,7 @@ class SecureMessageHandler:
             if not length_bytes:
                 return None
 
-            length = int.from_bytes(length_bytes, 'big')
+            length = int.from_bytes(length_bytes, "big")
             if length > 10 * 1024 * 1024:  # 10MB limit
                 logger.error(f"Message too large: {length} bytes")
                 return None
@@ -364,9 +391,11 @@ class SecureMessageHandler:
             logger.error(f"Failed to receive secure message: {e}")
             return None
 
-    def _receive_exactly(self, sock: socket.socket | ssl.SSLSocket, num_bytes: int) -> bytes | None:
+    def _receive_exactly(
+        self, sock: socket.socket | ssl.SSLSocket, num_bytes: int
+    ) -> bytes | None:
         """Receive exactly num_bytes from socket."""
-        data = b''
+        data = b""
         while len(data) < num_bytes:
             chunk = sock.recv(num_bytes - len(data))
             if not chunk:

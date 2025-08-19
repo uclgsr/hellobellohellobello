@@ -14,7 +14,6 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
 class FileTransferManagerTest {
-
     @Test
     fun transferSession_streamsHeaderAndZipEntries() {
         runBlocking {
@@ -45,12 +44,13 @@ class FileTransferManagerTest {
             }
 
             // Act: transfer (inject overrides to avoid Android/Robolectric dependencies)
-            val ftm = FileTransferManager(
-                context = null,
-                sessionsRootOverride = sessionsRoot,
-                flashEventsFileOverride = null,
-                deviceIdOverride = "TestDevice"
-            )
+            val ftm =
+                FileTransferManager(
+                    context = null,
+                    sessionsRootOverride = sessionsRoot,
+                    flashEventsFileOverride = null,
+                    deviceIdOverride = "TestDevice",
+                )
             ftm.transferSession(sessionId, "127.0.0.1", port)
 
             // Assert
@@ -74,7 +74,11 @@ class FileTransferManagerTest {
         }
     }
 
-    private fun readSession(`in`: InputStream, headerOut: Array<String?>, entries: MutableList<String>) {
+    private fun readSession(
+        `in`: InputStream,
+        headerOut: Array<String?>,
+        entries: MutableList<String>,
+    ) {
         val bis = BufferedInputStream(`in`)
         val headerSb = StringBuilder()
         while (true) {

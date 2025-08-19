@@ -1,8 +1,8 @@
 package com.yourcompany.sensorspoke
 
-import org.junit.Test
 import org.junit.Assert.*
 import org.junit.Assume
+import org.junit.Test
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -27,29 +27,39 @@ class PytestBridgeTest {
         val userDir = System.getProperty("user.dir")
         val start = File(userDir ?: ".").absoluteFile
 
-        val repoRoot = findRepoRoot(start) ?: run {
-            // Try common Gradle module relative locations as a fallback
-            val candidate1 = start.parentFile?.parentFile // from app module up to repo
-            val try1 = candidate1?.let { findRepoRoot(it) }
-            if (try1 != null) try1 else {
-                Assume.assumeTrue("Repository root not found to run pytest", false)
-                return
+        val repoRoot =
+            findRepoRoot(start) ?: run {
+                // Try common Gradle module relative locations as a fallback
+                val candidate1 = start.parentFile?.parentFile // from app module up to repo
+                val try1 = candidate1?.let { findRepoRoot(it) }
+                if (try1 != null) {
+                    try1
+                } else {
+                    Assume.assumeTrue("Repository root not found to run pytest", false)
+                    return
+                }
             }
-        }
 
-        val cmd = arrayOf(
-            "python3", "-m", "pytest", "-q", "pc_controller/tests"
-        )
-        val pb = ProcessBuilder(*cmd)
-            .directory(repoRoot)
-            .redirectErrorStream(true)
+        val cmd =
+            arrayOf(
+                "python3",
+                "-m",
+                "pytest",
+                "-q",
+                "pc_controller/tests",
+            )
+        val pb =
+            ProcessBuilder(*cmd)
+                .directory(repoRoot)
+                .redirectErrorStream(true)
 
         // First check if pytest is available
         val checkCmd = arrayOf("python3", "-m", "pytest", "--version")
-        val checkPb = ProcessBuilder(*checkCmd)
-            .directory(repoRoot)
-            .redirectErrorStream(true)
-        
+        val checkPb =
+            ProcessBuilder(*checkCmd)
+                .directory(repoRoot)
+                .redirectErrorStream(true)
+
         try {
             val checkProc = checkPb.start()
             val checkFinished = checkProc.waitFor(10, TimeUnit.SECONDS)
@@ -62,12 +72,13 @@ class PytestBridgeTest {
             return
         }
 
-        val proc = try {
-            pb.start()
-        } catch (e: Exception) {
-            Assume.assumeTrue("python3 not available: ${e.message}", false)
-            return
-        }
+        val proc =
+            try {
+                pb.start()
+            } catch (e: Exception) {
+                Assume.assumeTrue("python3 not available: ${e.message}", false)
+                return
+            }
 
         val finished = proc.waitFor(600, TimeUnit.SECONDS)
         val output = proc.inputStream.bufferedReader().readText()

@@ -20,6 +20,7 @@ Notes:
 - Minimum TLS version is enforced to TLS 1.2.
 - If PC_TLS_ENABLE is not set to "1", functions return None indicating TLS is disabled.
 """
+
 from __future__ import annotations
 
 import os
@@ -79,12 +80,16 @@ def create_server_ssl_context() -> ssl.SSLContext | None:
     require_client = os.environ.get("PC_TLS_REQUIRE_CLIENT_CERT", "0") == "1"
     if require_client:
         ctx.verify_mode = ssl.CERT_REQUIRED
-        ca_file = os.environ.get("PC_TLS_SERVER_CA_FILE") or os.environ.get("PC_TLS_CA_FILE")
+        ca_file = os.environ.get("PC_TLS_SERVER_CA_FILE") or os.environ.get(
+            "PC_TLS_CA_FILE"
+        )
         if ca_file:
             ctx.load_verify_locations(cafile=ca_file)
         else:
             # If requested but no CA configured, relax to CERT_NONE to avoid deadlock; log via print.
-            print("[TLS] PC_TLS_REQUIRE_CLIENT_CERT=1 but no CA provided; disabling client verification")
+            print(
+                "[TLS] PC_TLS_REQUIRE_CLIENT_CERT=1 but no CA provided; disabling client verification"
+            )
             ctx.verify_mode = ssl.CERT_NONE
     else:
         ctx.verify_mode = ssl.CERT_NONE

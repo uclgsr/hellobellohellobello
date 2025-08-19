@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * HeartbeatManager: Manages sending heartbeats to PC Hub for fault tolerance (FR8).
- * 
+ *
  * This class handles:
  * - Periodic heartbeat transmission
  * - Connection health monitoring
@@ -24,7 +24,7 @@ class HeartbeatManager(
     private val networkClient: NetworkClient,
     private val heartbeatIntervalMs: Long = 3000L, // 3 seconds
     private val maxReconnectAttempts: Int = 10,
-    private val reconnectBackoffMs: Long = 5000L // 5 seconds
+    private val reconnectBackoffMs: Long = 5000L, // 5 seconds
 ) {
     companion object {
         private const val TAG = "HeartbeatManager"
@@ -33,12 +33,12 @@ class HeartbeatManager(
 
     private val handler = Handler(Looper.getMainLooper())
     private var heartbeatRunnable: Runnable? = null
-    
+
     private val isRunning = AtomicBoolean(false)
     private val isConnected = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
     private val lastHeartbeatTime = AtomicLong(0)
-    
+
     // Callbacks for connection state changes
     var onConnectionLost: (() -> Unit)? = null
     var onConnectionRestored: (() -> Unit)? = null
@@ -52,7 +52,7 @@ class HeartbeatManager(
             Log.w(TAG, "Heartbeats already running")
             return
         }
-        
+
         Log.i(TAG, "Starting heartbeat transmission for device: $deviceId")
         scheduleNextHeartbeat()
     }
@@ -64,7 +64,7 @@ class HeartbeatManager(
         if (!isRunning.getAndSet(false)) {
             return
         }
-        
+
         Log.i(TAG, "Stopping heartbeat transmission")
         heartbeatRunnable?.let { handler.removeCallbacks(it) }
         heartbeatRunnable = null
@@ -78,7 +78,7 @@ class HeartbeatManager(
             Log.w(TAG, "Cannot send heartbeat - manager not running")
             return
         }
-        
+
         sendHeartbeat(metadata)
     }
 
@@ -89,7 +89,7 @@ class HeartbeatManager(
         if (isConnected.getAndSet(false)) {
             Log.w(TAG, "Connection lost for device: $deviceId")
             onConnectionLost?.invoke()
-            
+
             // Start reconnection attempts
             scheduleReconnectAttempt()
         }
@@ -103,7 +103,7 @@ class HeartbeatManager(
             Log.i(TAG, "Connection restored for device: $deviceId")
             reconnectAttempts.set(0)
             onConnectionRestored?.invoke()
-            
+
             // Resume normal heartbeats
             if (isRunning.get()) {
                 scheduleNextHeartbeat()
@@ -131,35 +131,37 @@ class HeartbeatManager(
 
     private fun scheduleNextHeartbeat() {
         if (!isRunning.get()) return
-        
+
         heartbeatRunnable?.let { handler.removeCallbacks(it) }
-        
-        heartbeatRunnable = Runnable {
-            if (isRunning.get() && isConnected.get()) {
-                sendHeartbeat()
-                scheduleNextHeartbeat() // Schedule next heartbeat
+
+        heartbeatRunnable =
+            Runnable {
+                if (isRunning.get() && isConnected.get()) {
+                    sendHeartbeat()
+                    scheduleNextHeartbeat() // Schedule next heartbeat
+                }
             }
-        }
-        
+
         handler.postDelayed(heartbeatRunnable!!, heartbeatIntervalMs)
     }
 
     private fun sendHeartbeat(additionalMetadata: Map<String, Any>? = null) {
         try {
-            val metadata = mutableMapOf<String, Any>().apply {
-                // Add device status information
-                put("battery_level", getBatteryLevel())
-                put("recording_active", isRecordingActive())
-                put("storage_available_mb", getAvailableStorageMB())
-                put("uptime_ms", getUptimeMs())
-                
-                // Add any additional metadata
-                additionalMetadata?.let { putAll(it) }
-            }
-            
+            val metadata =
+                mutableMapOf<String, Any>().apply {
+                    // Add device status information
+                    put("battery_level", getBatteryLevel())
+                    put("recording_active", isRecordingActive())
+                    put("storage_available_mb", getAvailableStorageMB())
+                    put("uptime_ms", getUptimeMs())
+
+                    // Add any additional metadata
+                    additionalMetadata?.let { putAll(it) }
+                }
+
             val heartbeatMessage = createHeartbeatMessage(metadata)
             val success = networkClient.sendMessage(heartbeatMessage)
-            
+
             if (success) {
                 lastHeartbeatTime.set(System.currentTimeMillis())
                 Log.d(TAG, "Heartbeat sent successfully")
@@ -167,7 +169,6 @@ class HeartbeatManager(
                 Log.w(TAG, "Failed to send heartbeat - connection may be lost")
                 markConnectionLost()
             }
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error sending heartbeat", e)
             markConnectionLost()
@@ -176,15 +177,15 @@ class HeartbeatManager(
 
     private fun scheduleReconnectAttempt() {
         val attempt = reconnectAttempts.incrementAndGet()
-        
+
         if (attempt > maxReconnectAttempts) {
             Log.e(TAG, "Max reconnection attempts reached ($maxReconnectAttempts)")
             onMaxReconnectAttemptsReached?.invoke()
             return
         }
-        
+
         Log.i(TAG, "Scheduling reconnection attempt $attempt in ${reconnectBackoffMs}ms")
-        
+
         handler.postDelayed({
             if (isRunning.get() && !isConnected.get()) {
                 attemptReconnection()
@@ -194,7 +195,7 @@ class HeartbeatManager(
 
     private fun attemptReconnection() {
         Log.i(TAG, "Attempting reconnection (attempt ${reconnectAttempts.get()})")
-        
+
         try {
             if (networkClient.reconnect()) {
                 markConnectionRestored()
@@ -209,19 +210,20 @@ class HeartbeatManager(
     }
 
     private fun createHeartbeatMessage(metadata: Map<String, Any>): String {
-        val message = JSONObject().apply {
-            put("v", 1)
-            put("type", HEARTBEAT_TYPE)
-            put("device_id", deviceId)
-            put("timestamp_ns", System.nanoTime())
-            
-            val metadataObj = JSONObject()
-            metadata.forEach { (key, value) ->
-                metadataObj.put(key, value)
+        val message =
+            JSONObject().apply {
+                put("v", 1)
+                put("type", HEARTBEAT_TYPE)
+                put("device_id", deviceId)
+                put("timestamp_ns", System.nanoTime())
+
+                val metadataObj = JSONObject()
+                metadata.forEach { (key, value) ->
+                    metadataObj.put(key, value)
+                }
+                put("metadata", metadataObj)
             }
-            put("metadata", metadataObj)
-        }
-        
+
         return message.toString()
     }
 
@@ -285,7 +287,7 @@ class HeartbeatManager(
             "is_connected" to isConnected.get(),
             "reconnect_attempts" to reconnectAttempts.get(),
             "time_since_last_heartbeat_ms" to getTimeSinceLastHeartbeat(),
-            "heartbeat_interval_ms" to heartbeatIntervalMs
+            "heartbeat_interval_ms" to heartbeatIntervalMs,
         )
     }
 }

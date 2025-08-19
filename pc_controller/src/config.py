@@ -4,6 +4,7 @@ Reads settings from pc_controller/config.json by default (NFR8).
 Supports overriding the config file path via environment variable PC_CONFIG_PATH.
 Provides cached accessors to avoid repeated disk I/O.
 """
+
 from __future__ import annotations
 
 import json
