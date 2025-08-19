@@ -440,6 +440,8 @@ wheel==0.41.0
 
 **System Dependencies:**
 - **JDK 17+**: Required for Gradle and Android builds
+- **Gradle 8.14**: Currently used with Android Gradle Plugin 8.7.0
+- **Android Gradle Plugin 8.7.0**: Compatible with Gradle 8.14, resolves Boolean property deprecation warnings
 - **Python 3.9+**: Required for PC Controller application
 - **C++ Compiler**: Required for native backend compilation (PyBind11)
 - **Git**: Version control and dependency management
@@ -478,7 +480,7 @@ org.gradle.configureondemand=true
 org.gradle.daemon=true
 org.gradle.configuration-cache=true
 org.gradle.console=verbose
-org.gradle.warning.mode=all
+org.gradle.warning.mode=summary
 # Enable native access to avoid JDK restricted method warnings
 org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8 --enable-native-access=ALL-UNNAMED
 
@@ -507,6 +509,18 @@ tasks.register<Exec>("compileNativeBackend") {
     onlyIf { inputs.hasInputs() && !upToDateWhen { outputs.files.every { it.exists() } } }
 }
 ```
+
+### Build Troubleshooting
+
+**Gradle Deprecation Warnings:**
+- Android Gradle Plugin versions may show Boolean property deprecation warnings (e.g., `isCrunchPngs`, `isWearAppUnbundled`)
+- These are internal to the Android Gradle Plugin, not user code issues
+- Solution: Use `org.gradle.warning.mode=summary` in `gradle.properties` to suppress internal plugin warnings
+- For detailed warnings during debugging, use: `./gradlew --warning-mode all <task>`
+
+**Gradle/AGP Compatibility:**
+- Gradle 8.14 requires Android Gradle Plugin 8.7.0+ for optimal compatibility
+- Kotlin plugin should be updated to 2.0.21+ for better Gradle 8.14 support
 
 ---
 
