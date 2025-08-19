@@ -7,26 +7,26 @@
 ```mermaid
 flowchart TD
     %% Participant and Goal
-    P[👤 Research Participant]
-    GOAL["🎯 Goal: Contactless GSR Prediction<br/>Enable stress monitoring without electrodes"]
+    P[[UNICODE] Research Participant]
+    GOAL["[TARGET] Goal: Contactless GSR Prediction<br/>Enable stress monitoring without electrodes"]
     
     %% Data Collection Phase
-    subgraph DATA["📊 Multi-Modal Synchronized Data Collection"]
+    subgraph DATA["[DATA] Multi-Modal Synchronized Data Collection"]
         direction TB
         
         %% Traditional GSR (Ground Truth)
-        subgraph CONTACT["🔌 Contact-Based (Ground Truth)"]
-            GSR_SENSOR["⚡ Shimmer3 GSR+ Sensor<br/>128Hz, 16-bit resolution<br/>Skin conductance measurement"]
+        subgraph CONTACT["[SENSOR] Contact-Based (Ground Truth)"]
+            GSR_SENSOR["[SIGNAL] Shimmer3 GSR+ Sensor<br/>128Hz, 16-bit resolution<br/>Skin conductance measurement"]
         end
         
         %% Contactless Sensors
-        subgraph CONTACTLESS["📡 Contactless Sensors"]
-            THERMAL["🌡️ Topdon TC001 Thermal Camera<br/>256×192 pixels, 25Hz<br/>Nasal temperature, palm regions"]
-            RGB["📷 RGB Camera<br/>30fps high-resolution<br/>Facial expressions, blood flow"]
+        subgraph CONTACTLESS["[NETWORK] Contactless Sensors"]
+            THERMAL["[THERMAL] Topdon TC001 Thermal Camera<br/>256[UNICODE]192 pixels, 25Hz<br/>Nasal temperature, palm regions"]
+            RGB["[UNICODE] RGB Camera<br/>30fps high-resolution<br/>Facial expressions, blood flow"]
         end
         
         %% Synchronization
-        SYNC["🔄 Hardware Timestamp Synchronization<br/>±3.2ms accuracy using NTP"]
+        SYNC["[INTEGRATION] Hardware Timestamp Synchronization<br/>+/-3.2ms accuracy using NTP"]
         
         GSR_SENSOR --> SYNC
         THERMAL --> SYNC
@@ -34,30 +34,30 @@ flowchart TD
     end
     
     %% Machine Learning Pipeline
-    subgraph ML["🤖 Future Machine Learning Pipeline"]
+    subgraph ML["[UNICODE] Future Machine Learning Pipeline"]
         direction TB
-        DATASET["📈 Synchronized Dataset<br/>GSR signals aligned with<br/>thermal + RGB features"]
+        DATASET["[PERFORMANCE] Synchronized Dataset<br/>GSR signals aligned with<br/>thermal + RGB features"]
         
-        FEATURES["🔍 Feature Extraction<br/>• Thermal ROI temperature changes<br/>• RGB-based physiological signals<br/>• Temporal pattern analysis"]
+        FEATURES["[ANALYSIS] Feature Extraction<br/>[UNICODE] Thermal ROI temperature changes<br/>[UNICODE] RGB-based physiological signals<br/>[UNICODE] Temporal pattern analysis"]
         
-        MODEL["🧠 Prediction Model<br/>Contactless GSR estimation<br/>from thermal + RGB data"]
+        MODEL["[AI] Prediction Model<br/>Contactless GSR estimation<br/>from thermal + RGB data"]
         
         DATASET --> FEATURES
         FEATURES --> MODEL
     end
     
     %% Stress Scenarios
-    subgraph SCENARIOS["🧪 Controlled Stress Induction"]
-        STROOP["🎨 Stroop Color-Word Test<br/>Cognitive interference task"]
-        TSST["🗣️ Trier Social Stress Test<br/>Public speaking protocol"]
-        BASELINE["😌 Baseline Rest Periods<br/>Relaxed state recording"]
+    subgraph SCENARIOS["[TEST] Controlled Stress Induction"]
+        STROOP["[FORMAT] Stroop Color-Word Test<br/>Cognitive interference task"]
+        TSST["[UNICODE] Trier Social Stress Test<br/>Public speaking protocol"]
+        BASELINE["[UNICODE] Baseline Rest Periods<br/>Relaxed state recording"]
     end
     
     %% Future Applications
-    subgraph APPLICATIONS["🚀 Future Applications"]
-        THERAPY["💊 Therapy Sessions<br/>Real-time stress feedback"]
-        UX["💻 UX Research<br/>Unconscious stress detection"]
-        HEALTH["❤️ Health Monitoring<br/>Continuous stress assessment"]
+    subgraph APPLICATIONS["[PERFORMANCE] Future Applications"]
+        THERAPY["[UNICODE] Therapy Sessions<br/>Real-time stress feedback"]
+        UX["[PC] UX Research<br/>Unconscious stress detection"]
+        HEALTH["[UNICODE] Health Monitoring<br/>Continuous stress assessment"]
     end
     
     %% Connections
@@ -70,15 +70,15 @@ flowchart TD
     ML --> APPLICATIONS
     
     %% Advantage Callouts
-    ADVANTAGE1["✅ No electrode artifacts<br/>✅ Comfortable long-term use<br/>✅ Natural user behavior"]
-    ADVANTAGE2["📊 Research-grade accuracy<br/>📊 Multi-modal validation<br/>📊 Synchronized ground truth"]
+    ADVANTAGE1["[OK] No electrode artifacts<br/>[OK] Comfortable long-term use<br/>[OK] Natural user behavior"]
+    ADVANTAGE2["[DATA] Research-grade accuracy<br/>[DATA] Multi-modal validation<br/>[DATA] Synchronized ground truth"]
     
     CONTACTLESS -.-> ADVANTAGE1
     CONTACT -.-> ADVANTAGE2
     
     %% Current vs Future Scope
-    CURRENT["📋 Current Thesis Scope<br/>Data collection platform<br/>Synchronization validation"]
-    FUTURE["🔮 Future Work<br/>ML model development<br/>Real-time prediction"]
+    CURRENT["[LIST] Current Thesis Scope<br/>Data collection platform<br/>Synchronization validation"]
+    FUTURE["[UNICODE] Future Work<br/>ML model development<br/>Real-time prediction"]
     
     DATA --> CURRENT
     ML --> FUTURE
@@ -120,11 +120,11 @@ package "Multi-Modal Data Collection Platform" as PLATFORM {
     }
     
     package "Contactless Sensors" as CONTACTLESS {
-        component [Topdon TC001\nThermal Camera\n256×192, 25Hz] as THERMAL
+        component [Topdon TC001\nThermal Camera\n256[UNICODE]192, 25Hz] as THERMAL
         component [RGB Camera\n30fps HD\nFacial analysis] as RGB
     }
     
-    component [Hardware Timestamp\nSynchronization\n±3.2ms accuracy] as SYNC
+    component [Hardware Timestamp\nSynchronization\n+/-3.2ms accuracy] as SYNC
     
     GSR --> SYNC
     THERMAL --> SYNC
@@ -158,9 +158,9 @@ PLATFORM --> ML
 STRESS --> ML
 ML --> APPS
 
-note right of CONTACTLESS : ✅ No electrode artifacts\n✅ Comfortable long-term use\n✅ Natural user behavior
+note right of CONTACTLESS : [OK] No electrode artifacts\n[OK] Comfortable long-term use\n[OK] Natural user behavior
 
-note right of CONTACT : 📊 Research-grade accuracy\n📊 Multi-modal validation\n📊 Synchronized ground truth
+note right of CONTACT : [DATA] Research-grade accuracy\n[DATA] Multi-modal validation\n[DATA] Synchronized ground truth
 
 note bottom of PLATFORM : **Current Thesis Scope**:\nData collection platform\nSynchronization validation
 

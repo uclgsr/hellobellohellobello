@@ -63,11 +63,11 @@ Coverage: 7.2.7
 ## Test Data and Scenarios
 
 ### Synthetic Test Data
-- **GSR Simulation:** Physiologically plausible conductance ranges (1-50 μS)
-- **Thermal Simulation:** Body temperature variations (32-37°C)
+- **GSR Simulation:** Physiologically plausible conductance ranges (1-50 [UNICODE]S)
+- **Thermal Simulation:** Body temperature variations (32-37degC)
 - **RGB Video:** 1920x1080 @ 30fps H.264 encoded test patterns
 - **Network Latency:** Controlled delays from 1ms to 500ms
-- **Jitter Simulation:** Random timing variations up to ±10ms
+- **Jitter Simulation:** Random timing variations up to +/-10ms
 
 ### Real-World Test Scenarios
 - **Multi-Device:** Up to 8 simultaneous Android connections
@@ -79,7 +79,7 @@ Coverage: 7.2.7
 ## Measurement and Calibration
 
 ### Timing Accuracy
-- **PC Clock Source:** NTP synchronized system clock (±1ms accuracy)
+- **PC Clock Source:** NTP synchronized system clock (+/-1ms accuracy)
 - **Android Clock Source:** System.nanoTime() for high-resolution timestamps
 - **Synchronization Reference:** PC controller as master time source
 - **Drift Measurement:** Statistical analysis over 1000+ sample points
@@ -108,7 +108,7 @@ Coverage: 7.2.7
 - **Memory Leak Detection:** No growth >5MB over 4-hour sessions
 - **CPU Usage:** Average <25%, peak <60% during normal operation  
 - **Response Time:** UI interactions <200ms, network calls <2000ms
-- **Synchronization:** 95% of measurements within ±10ms target
+- **Synchronization:** 95% of measurements within +/-10ms target
 
 ### Security Validation
 - **TLS Implementation:** OpenSSL 3.0.2 with FIPS 140-2 compliance

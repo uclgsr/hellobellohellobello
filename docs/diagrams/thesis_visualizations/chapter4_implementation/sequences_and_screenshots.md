@@ -4,11 +4,11 @@
 
 ```mermaid
 sequenceDiagram
-    participant R as 👨‍🔬 Researcher
-    participant PC as 💻 PC Controller
-    participant A1 as 📱 Android Node 1
-    participant A2 as 📱 Android Node 2
-    participant G as ⚡ Shimmer GSR+
+    participant R as [UNICODE][TEST] Researcher
+    participant PC as [PC] PC Controller
+    participant A1 as [ANDROID] Android Node 1
+    participant A2 as [ANDROID] Android Node 2
+    participant G as [SIGNAL] Shimmer GSR+
     
     %% Session Initiation
     R->>PC: Click "Start Session"
@@ -19,7 +19,7 @@ sequenceDiagram
     PC->>A2: UDP echo request (timestamp)
     A2->>PC: UDP echo response (timestamp)
     
-    Note over PC,A2: Calculate clock offsets<br/>±3.2ms accuracy target
+    Note over PC,A2: Calculate clock offsets<br/>+/-3.2ms accuracy target
     
     %% Device Preparation
     PC->>A1: {"cmd": "prepare_recording", "session_id": "sess_001"}
@@ -119,59 +119,59 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     %% Input Sources
-    subgraph INPUTS["📥 Input Sources"]
-        RGB_CAM["📷 RGB Camera<br/>30fps, 1920×1080<br/>H.264 MP4 encoding"]
-        THERMAL_CAM["🌡️ Thermal Camera<br/>25Hz, 256×192<br/>Radiometric data"]
-        GSR_SENSOR["⚡ GSR Sensor<br/>128Hz sampling<br/>16-bit resolution"]
+    subgraph INPUTS["[UNICODE] Input Sources"]
+        RGB_CAM["[UNICODE] RGB Camera<br/>30fps, 1920[UNICODE]1080<br/>H.264 MP4 encoding"]
+        THERMAL_CAM["[THERMAL] Thermal Camera<br/>25Hz, 256[UNICODE]192<br/>Radiometric data"]
+        GSR_SENSOR["[SIGNAL] GSR Sensor<br/>128Hz sampling<br/>16-bit resolution"]
     end
     
     %% Android Processing
-    subgraph ANDROID_PROC["📱 Android Processing"]
+    subgraph ANDROID_PROC["[ANDROID] Android Processing"]
         
-        subgraph RGB_PIPELINE["📹 RGB Pipeline"]
+        subgraph RGB_PIPELINE["[UNICODE] RGB Pipeline"]
             RGB_CAPTURE["Camera2 API<br/>Dual capture"]
             MP4_WRITER["MP4 Writer<br/>Storage ready"]
             JPEG_PREVIEW["JPEG Preview<br/>Network streaming"]
         end
         
-        subgraph THERMAL_PIPELINE["🌡️ Thermal Pipeline"]  
+        subgraph THERMAL_PIPELINE["[THERMAL] Thermal Pipeline"]  
             THERMAL_SDK["Topdon SDK<br/>Raw sensor data"]
             TEMP_EXTRACT["Temperature Extraction<br/>ROI processing"]
             THERMAL_CSV["CSV Writer<br/>Timestamped data"]
         end
         
-        subgraph GSR_PIPELINE["⚡ GSR Pipeline"]
+        subgraph GSR_PIPELINE["[SIGNAL] GSR Pipeline"]
             BT_STREAM["Bluetooth Stream<br/>Real-time data"]
-            GSR_CONVERT["ADC to μS<br/>Calibration applied"]
+            GSR_CONVERT["ADC to [UNICODE]S<br/>Calibration applied"]
             GSR_CSV["CSV Writer<br/>High-frequency data"]
         end
         
-        SESSION_DIR["📁 Session Directory<br/>Organized file structure<br/>Metadata generation"]
+        SESSION_DIR["[UNICODE] Session Directory<br/>Organized file structure<br/>Metadata generation"]
     end
     
     %% Data Transfer
-    subgraph TRANSFER["🔄 Data Transfer"]
-        ZIP_ARCHIVE["📦 ZIP Archive<br/>Compression + integrity"]
-        TCP_STREAM["🌐 TCP Stream<br/>Progress monitoring"]
-        CHECKSUM["✅ Integrity Check<br/>SHA-256 validation"]
+    subgraph TRANSFER["[INTEGRATION] Data Transfer"]
+        ZIP_ARCHIVE["[UNICODE] ZIP Archive<br/>Compression + integrity"]
+        TCP_STREAM["[PROTOCOL] TCP Stream<br/>Progress monitoring"]
+        CHECKSUM["[OK] Integrity Check<br/>SHA-256 validation"]
     end
     
     %% PC Processing
-    subgraph PC_PROC["💻 PC Processing"]
+    subgraph PC_PROC["[PC] PC Processing"]
         
-        subgraph RECEIVE["📥 Data Reception"]
+        subgraph RECEIVE["[UNICODE] Data Reception"]
             FILE_SERVER["File Transfer Server<br/>Multi-connection handling"]
             EXTRACT["Archive Extraction<br/>Directory organization"]
             VALIDATE["Data Validation<br/>Quality checks"]
         end
         
-        subgraph ANALYSIS["📊 Data Analysis"]
+        subgraph ANALYSIS["[DATA] Data Analysis"]
             ALIGNMENT["Timestamp Alignment<br/>Cross-modal sync"]
             EXPORT["Multi-Format Export<br/>CSV, JSON, Parquet"]
             VISUALIZATION["Real-time Visualization<br/>Quality monitoring"]
         end
         
-        subgraph STORAGE["💾 Long-term Storage"]
+        subgraph STORAGE["[DATA] Long-term Storage"]
             ARCHIVE["Session Archive<br/>Compressed storage"]
             METADATA["Metadata Database<br/>Search & indexing"]
             BACKUP["Backup Integration<br/>Research data protection"]
@@ -179,12 +179,12 @@ flowchart LR
     end
     
     %% Output Formats
-    subgraph OUTPUTS["📤 Output Formats"]
-        RESEARCH_DATA["🔬 Research Dataset<br/>• Synchronized timestamps<br/>• Multi-modal alignment<br/>• Quality metrics<br/>• Analysis-ready format"]
+    subgraph OUTPUTS["[UNICODE] Output Formats"]
+        RESEARCH_DATA["[TEST] Research Dataset<br/>[UNICODE] Synchronized timestamps<br/>[UNICODE] Multi-modal alignment<br/>[UNICODE] Quality metrics<br/>[UNICODE] Analysis-ready format"]
         
-        REPORTS["📋 Session Reports<br/>• Data quality summary<br/>• Synchronization accuracy<br/>• Device performance<br/>• Error logs"]
+        REPORTS["[LIST] Session Reports<br/>[UNICODE] Data quality summary<br/>[UNICODE] Synchronization accuracy<br/>[UNICODE] Device performance<br/>[UNICODE] Error logs"]
         
-        EXPORTS["💾 Export Formats<br/>• MATLAB compatibility<br/>• Python/pandas<br/>• R statistical analysis<br/>• Custom formats"]
+        EXPORTS["[DATA] Export Formats<br/>[UNICODE] MATLAB compatibility<br/>[UNICODE] Python/pandas<br/>[UNICODE] R statistical analysis<br/>[UNICODE] Custom formats"]
     end
     
     %% Data Flow
@@ -228,7 +228,7 @@ flowchart LR
     JPEG_PREVIEW -.->|Real-time| VISUALIZATION
     
     %% Data Quality Metrics
-    METRICS["📊 Quality Metrics<br/>• Frame drop detection<br/>• Sync drift monitoring<br/>• Signal-to-noise ratio<br/>• Missing data analysis"]
+    METRICS["[DATA] Quality Metrics<br/>[UNICODE] Frame drop detection<br/>[UNICODE] Sync drift monitoring<br/>[UNICODE] Signal-to-noise ratio<br/>[UNICODE] Missing data analysis"]
     
     VALIDATE --> METRICS
     METRICS --> REPORTS

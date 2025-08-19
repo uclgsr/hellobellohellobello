@@ -29,13 +29,13 @@ public:
         microsiemens.reserve(raw_adc.size());
         
         for (int adc_val : raw_adc) {
-            // Apply calibration polynomial: μS = c0 + c1*x + c2*x² + c3*x³
+            // Apply calibration polynomial: [UNICODE]S = c0 + c1*x + c2*x[UNICODE] + c3*x[UNICODE]
             double resistance = calibration_coeffs[0] + 
                               calibration_coeffs[1] * adc_val +
                               calibration_coeffs[2] * std::pow(adc_val, 2) +
                               calibration_coeffs[3] * std::pow(adc_val, 3);
             
-            // Convert resistance to conductance (μS)
+            // Convert resistance to conductance ([UNICODE]S)
             double conductance = (resistance > 0) ? 1.0 / resistance * 1e6 : 0.0;
             microsiemens.push_back(conductance);
         }
@@ -260,7 +260,7 @@ class DeviceManagerUI:
     
     def on_device_found(self, ip, device_info):
         """Slot: Handle device discovery (runs on UI thread)"""
-        self.device_list.addItem(f"📱 {ip} - {device_info['status']}")
+        self.device_list.addItem(f"[ANDROID] {ip} - {device_info['status']}")
     
     def on_scan_completed(self, devices):
         """Slot: Handle scan completion (runs on UI thread)"""
@@ -377,7 +377,7 @@ class ShimmerRecorder(
             
             // Convert resistance to conductance (microsiemens)
             val conductance = if (resistance > 0) {
-                (1.0 / resistance) * 1_000_000.0 // Convert to μS
+                (1.0 / resistance) * 1_000_000.0 // Convert to [UNICODE]S
             } else {
                 0.0
             }
@@ -404,7 +404,7 @@ class ShimmerRecorder(
     
     /**
      * Convert raw ADC value to resistance using Shimmer3 calibration
-     * Polynomial: R = c0 + c1*x + c2*x² + c3*x³
+     * Polynomial: R = c0 + c1*x + c2*x[UNICODE] + c3*x[UNICODE]
      */
     private fun calculateResistance(rawADC: Int): Double {
         val x = rawADC.toDouble()

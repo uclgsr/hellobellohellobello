@@ -49,7 +49,7 @@
 **5:45-12:20** - Network Connection Configuration
 - **MAJOR FRICTION POINT:** Manual IP address entry
 - P1 required multiple attempts to determine PC IP address
-- Typed IP incorrectly 3 times: "192.168.1.105" → "192.168.1.15" → "192.168.1.150" → correct
+- Typed IP incorrectly 3 times: "192.168.1.105" -> "192.168.1.15" -> "192.168.1.150" -> correct
 - Quote: "Can't this just find it automatically? Every other app does."
 - Connection successful after IP correction
 

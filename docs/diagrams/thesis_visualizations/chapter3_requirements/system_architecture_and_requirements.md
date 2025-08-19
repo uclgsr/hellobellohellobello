@@ -5,33 +5,33 @@
 ```mermaid
 flowchart TD
     %% Research Context
-    RESEARCHER["👨‍🔬 Researcher<br/>Controls experiments<br/>Reviews synchronized data"]
+    RESEARCHER["[UNICODE][TEST] Researcher<br/>Controls experiments<br/>Reviews synchronized data"]
     
     %% Core System Components
-    subgraph SYSTEM["🔬 Multi-Modal Recording Platform"]
+    subgraph SYSTEM["[TEST] Multi-Modal Recording Platform"]
         
         %% PC Controller (Hub)
-        subgraph PC["💻 PC Controller (Central Hub)"]
-            GUI["🖥️ PyQt6 Desktop GUI<br/>• Session management<br/>• Device discovery<br/>• Real-time monitoring<br/>• Data visualization"]
+        subgraph PC["[PC] PC Controller (Central Hub)"]
+            GUI["[DESKTOP] PyQt6 Desktop GUI<br/>[UNICODE] Session management<br/>[UNICODE] Device discovery<br/>[UNICODE] Real-time monitoring<br/>[UNICODE] Data visualization"]
             
-            CONTROL["⚙️ Control Services<br/>• NetworkClient (TCP/JSON)<br/>• FileTransferServer<br/>• TimeSync (NTP/UDP)<br/>• DeviceManager"]
+            CONTROL["[UNIT] Control Services<br/>[UNICODE] NetworkClient (TCP/JSON)<br/>[UNICODE] FileTransferServer<br/>[UNICODE] TimeSync (NTP/UDP)<br/>[UNICODE] DeviceManager"]
             
-            DATA_MGR["📊 Data Management<br/>• SessionManager<br/>• CSV export/import<br/>• Metadata tracking<br/>• Quality validation"]
+            DATA_MGR["[DATA] Data Management<br/>[UNICODE] SessionManager<br/>[UNICODE] CSV export/import<br/>[UNICODE] Metadata tracking<br/>[UNICODE] Quality validation"]
             
-            STORAGE["💾 Data Storage<br/>• Local session folders<br/>• Synchronized timestamps<br/>• Multi-format export<br/>• Backup integration"]
+            STORAGE["[DATA] Data Storage<br/>[UNICODE] Local session folders<br/>[UNICODE] Synchronized timestamps<br/>[UNICODE] Multi-format export<br/>[UNICODE] Backup integration"]
         end
         
         %% Android Sensor Nodes
-        subgraph ANDROID["📱 Android Sensor Nodes (Distributed)"]
+        subgraph ANDROID["[ANDROID] Android Sensor Nodes (Distributed)"]
             
-            subgraph NODE1["📱 Node 1: RGB + Thermal"]
+            subgraph NODE1["[ANDROID] Node 1: RGB + Thermal"]
                 MAIN1["MainActivity<br/>Connection + UI"]
                 SERVICE1["RecordingService<br/>Background operation"]
                 RGB_REC["RgbCameraRecorder<br/>30fps + preview"]
                 THERMAL_REC["ThermalCameraRecorder<br/>Topdon TC001 integration"]
             end
             
-            subgraph NODE2["📱 Node 2: Additional Angles"]
+            subgraph NODE2["[ANDROID] Node 2: Additional Angles"]
                 MAIN2["MainActivity<br/>Multi-angle setup"]
                 SERVICE2["RecordingService<br/>Coordinated recording"]
                 RGB_REC2["RgbCameraRecorder<br/>Secondary viewpoint"]
@@ -39,33 +39,33 @@ flowchart TD
         end
         
         %% External Sensors
-        subgraph SENSORS["⚡ External Sensors"]
-            GSR["📏 Shimmer3 GSR+<br/>• Bluetooth connection<br/>• 128Hz sampling<br/>• Real-time streaming<br/>• Battery monitoring"]
+        subgraph SENSORS["[SIGNAL] External Sensors"]
+            GSR["[SENSOR] Shimmer3 GSR+<br/>[UNICODE] Bluetooth connection<br/>[UNICODE] 128Hz sampling<br/>[UNICODE] Real-time streaming<br/>[UNICODE] Battery monitoring"]
             
-            ADDITIONAL["🔌 Future Sensors<br/>• Heart rate monitors<br/>• Accelerometers<br/>• Environmental sensors<br/>• Custom devices"]
+            ADDITIONAL["[SENSOR] Future Sensors<br/>[UNICODE] Heart rate monitors<br/>[UNICODE] Accelerometers<br/>[UNICODE] Environmental sensors<br/>[UNICODE] Custom devices"]
         end
     end
     
     %% Network Architecture
-    subgraph NETWORK["🌐 Communication Architecture"]
-        DISCOVERY["📡 Service Discovery<br/>• NSD (Network Service Discovery)<br/>• _gsr-controller._tcp<br/>• Automatic device finding<br/>• Dynamic IP handling"]
+    subgraph NETWORK["[PROTOCOL] Communication Architecture"]
+        DISCOVERY["[NETWORK] Service Discovery<br/>[UNICODE] NSD (Network Service Discovery)<br/>[UNICODE] _gsr-controller._tcp<br/>[UNICODE] Automatic device finding<br/>[UNICODE] Dynamic IP handling"]
         
-        CONTROL_PROTO["🔄 Control Protocol<br/>• TCP JSON messages<br/>• Command/response pairs<br/>• Optional TLS encryption<br/>• Error handling"]
+        CONTROL_PROTO["[INTEGRATION] Control Protocol<br/>[UNICODE] TCP JSON messages<br/>[UNICODE] Command/response pairs<br/>[UNICODE] Optional TLS encryption<br/>[UNICODE] Error handling"]
         
-        SYNC_PROTO["⏱️ Time Synchronization<br/>• UDP echo protocol<br/>• Cross-device alignment<br/>• ±3.2ms accuracy<br/>• Drift compensation"]
+        SYNC_PROTO["[TIME] Time Synchronization<br/>[UNICODE] UDP echo protocol<br/>[UNICODE] Cross-device alignment<br/>[UNICODE] +/-3.2ms accuracy<br/>[UNICODE] Drift compensation"]
         
-        FILE_PROTO["📁 File Transfer<br/>• TCP ZIP streaming<br/>• Session data upload<br/>• Progress monitoring<br/>• Integrity validation"]
+        FILE_PROTO["[UNICODE] File Transfer<br/>[UNICODE] TCP ZIP streaming<br/>[UNICODE] Session data upload<br/>[UNICODE] Progress monitoring<br/>[UNICODE] Integrity validation"]
     end
     
     %% Data Flow
-    subgraph DATAFLOW["📈 Synchronized Data Streams"]
-        TIMELINE["🕐 Master Timeline<br/>Hardware timestamps<br/>Cross-device synchronization"]
+    subgraph DATAFLOW["[PERFORMANCE] Synchronized Data Streams"]
+        TIMELINE["[UNICODE] Master Timeline<br/>Hardware timestamps<br/>Cross-device synchronization"]
         
-        RGB_DATA["📹 RGB Video<br/>• 30fps MP4 recording<br/>• JPEG preview frames<br/>• Facial analysis ready"]
+        RGB_DATA["[UNICODE] RGB Video<br/>[UNICODE] 30fps MP4 recording<br/>[UNICODE] JPEG preview frames<br/>[UNICODE] Facial analysis ready"]
         
-        THERMAL_DATA["🌡️ Thermal Data<br/>• 25Hz radiometric<br/>• ROI temperature tracking<br/>• CSV + thermal video"]
+        THERMAL_DATA["[THERMAL] Thermal Data<br/>[UNICODE] 25Hz radiometric<br/>[UNICODE] ROI temperature tracking<br/>[UNICODE] CSV + thermal video"]
         
-        GSR_DATA["⚡ GSR Signal<br/>• 128Hz skin conductance<br/>• Phasic/tonic components<br/>• Event markers"]
+        GSR_DATA["[SIGNAL] GSR Signal<br/>[UNICODE] 128Hz skin conductance<br/>[UNICODE] Phasic/tonic components<br/>[UNICODE] Event markers"]
         
         TIMELINE --> RGB_DATA
         TIMELINE --> THERMAL_DATA
@@ -97,11 +97,11 @@ flowchart TD
     GSR_DATA --> STORAGE
     
     %% System Requirements Callouts
-    RELIABILITY["🛡️ Reliability Requirements<br/>• 99% uptime during sessions<br/>• Automatic error recovery<br/>• Data integrity validation<br/>• Graceful degradation"]
+    RELIABILITY["[SECURITY] Reliability Requirements<br/>[UNICODE] 99% uptime during sessions<br/>[UNICODE] Automatic error recovery<br/>[UNICODE] Data integrity validation<br/>[UNICODE] Graceful degradation"]
     
-    PERFORMANCE["🚀 Performance Requirements<br/>• <50ms command latency<br/>• Concurrent multi-device<br/>• 8+ hour operation<br/>• Minimal resource usage"]
+    PERFORMANCE["[PERFORMANCE] Performance Requirements<br/>[UNICODE] <50ms command latency<br/>[UNICODE] Concurrent multi-device<br/>[UNICODE] 8+ hour operation<br/>[UNICODE] Minimal resource usage"]
     
-    USABILITY["👥 Usability Requirements<br/>• One-click session start<br/>• Automatic device discovery<br/>• Real-time status feedback<br/>• Intuitive error messages"]
+    USABILITY["[UNICODE] Usability Requirements<br/>[UNICODE] One-click session start<br/>[UNICODE] Automatic device discovery<br/>[UNICODE] Real-time status feedback<br/>[UNICODE] Intuitive error messages"]
     
     SYSTEM --> RELIABILITY
     SYSTEM --> PERFORMANCE
@@ -128,36 +128,36 @@ flowchart TD
 ```mermaid
 graph TD
     %% Actors
-    RESEARCHER["👨‍🔬 Researcher<br/>(Primary User)"]
-    PARTICIPANT["👤 Research Participant<br/>(Data Subject)"]
-    ADMIN["🔧 System Administrator<br/>(Technical Support)"]
+    RESEARCHER["[UNICODE][TEST] Researcher<br/>(Primary User)"]
+    PARTICIPANT["[UNICODE] Research Participant<br/>(Data Subject)"]
+    ADMIN["[CONFIG] System Administrator<br/>(Technical Support)"]
     
     %% System Boundary
-    subgraph PLATFORM["🔬 Multi-Modal Recording Platform"]
+    subgraph PLATFORM["[TEST] Multi-Modal Recording Platform"]
         
         %% Primary Use Cases
-        UC1["📋 Plan Recording Session<br/>• Define session parameters<br/>• Select sensor modalities<br/>• Configure devices<br/>• Set experiment protocols"]
+        UC1["[LIST] Plan Recording Session<br/>[UNICODE] Define session parameters<br/>[UNICODE] Select sensor modalities<br/>[UNICODE] Configure devices<br/>[UNICODE] Set experiment protocols"]
         
-        UC2["🔍 Discover and Connect Devices<br/>• Auto-detect Android nodes<br/>• Pair GSR sensor via Bluetooth<br/>• Verify device capabilities<br/>• Test connections"]
+        UC2["[ANALYSIS] Discover and Connect Devices<br/>[UNICODE] Auto-detect Android nodes<br/>[UNICODE] Pair GSR sensor via Bluetooth<br/>[UNICODE] Verify device capabilities<br/>[UNICODE] Test connections"]
         
-        UC3["⏱️ Synchronize Device Clocks<br/>• Establish master timeline<br/>• Align timestamps<br/>• Compensate for drift<br/>• Validate synchronization"]
+        UC3["[TIME] Synchronize Device Clocks<br/>[UNICODE] Establish master timeline<br/>[UNICODE] Align timestamps<br/>[UNICODE] Compensate for drift<br/>[UNICODE] Validate synchronization"]
         
-        UC4["🎬 Conduct Recording Session<br/>• Start synchronized recording<br/>• Monitor real-time status<br/>• Handle interruptions<br/>• Stop and save data"]
+        UC4["[UNICODE] Conduct Recording Session<br/>[UNICODE] Start synchronized recording<br/>[UNICODE] Monitor real-time status<br/>[UNICODE] Handle interruptions<br/>[UNICODE] Stop and save data"]
         
-        UC5["📊 Monitor Data Quality<br/>• View live sensor streams<br/>• Check signal quality<br/>• Detect anomalies<br/>• Adjust parameters"]
+        UC5["[DATA] Monitor Data Quality<br/>[UNICODE] View live sensor streams<br/>[UNICODE] Check signal quality<br/>[UNICODE] Detect anomalies<br/>[UNICODE] Adjust parameters"]
         
-        UC6["🔄 Transfer and Process Data<br/>• Download session files<br/>• Validate data integrity<br/>• Export to analysis formats<br/>• Generate reports"]
+        UC6["[INTEGRATION] Transfer and Process Data<br/>[UNICODE] Download session files<br/>[UNICODE] Validate data integrity<br/>[UNICODE] Export to analysis formats<br/>[UNICODE] Generate reports"]
         
-        UC7["🔧 Calibrate Sensors<br/>• Thermal camera calibration<br/>• GSR baseline measurement<br/>• RGB camera settings<br/>• Environmental compensation"]
+        UC7["[CONFIG] Calibrate Sensors<br/>[UNICODE] Thermal camera calibration<br/>[UNICODE] GSR baseline measurement<br/>[UNICODE] RGB camera settings<br/>[UNICODE] Environmental compensation"]
         
-        UC8["⚙️ Configure System Settings<br/>• Network parameters<br/>• Security settings<br/>• Data storage paths<br/>• Performance optimization"]
+        UC8["[UNIT] Configure System Settings<br/>[UNICODE] Network parameters<br/>[UNICODE] Security settings<br/>[UNICODE] Data storage paths<br/>[UNICODE] Performance optimization"]
         
         %% Secondary Use Cases
-        UC9["📈 Analyze Session Data<br/>• Load recorded sessions<br/>• Visualize multi-modal data<br/>• Export analysis results<br/>• Generate research reports"]
+        UC9["[PERFORMANCE] Analyze Session Data<br/>[UNICODE] Load recorded sessions<br/>[UNICODE] Visualize multi-modal data<br/>[UNICODE] Export analysis results<br/>[UNICODE] Generate research reports"]
         
-        UC10["🛡️ Manage System Security<br/>• Configure TLS encryption<br/>• Manage certificates<br/>• Set access permissions<br/>• Audit security logs"]
+        UC10["[SECURITY] Manage System Security<br/>[UNICODE] Configure TLS encryption<br/>[UNICODE] Manage certificates<br/>[UNICODE] Set access permissions<br/>[UNICODE] Audit security logs"]
         
-        UC11["📱 Operate Android Interface<br/>• Connect to PC controller<br/>• Start local recording<br/>• Monitor sensor status<br/>• Handle error conditions"]
+        UC11["[ANDROID] Operate Android Interface<br/>[UNICODE] Connect to PC controller<br/>[UNICODE] Start local recording<br/>[UNICODE] Monitor sensor status<br/>[UNICODE] Handle error conditions"]
     end
     
     %% Actor-Use Case Relationships
@@ -184,9 +184,9 @@ graph TD
     UC9 -.->|<<includes>>| UC6
     
     %% Error Handling Extensions
-    ERROR1["⚠️ Handle Connection Failures<br/>• Network timeouts<br/>• Device disconnections<br/>• Recovery procedures<br/>• User notifications"]
+    ERROR1["[WARNING] Handle Connection Failures<br/>[UNICODE] Network timeouts<br/>[UNICODE] Device disconnections<br/>[UNICODE] Recovery procedures<br/>[UNICODE] User notifications"]
     
-    ERROR2["🚨 Manage Recording Errors<br/>• Sensor malfunctions<br/>• Storage failures<br/>• Synchronization loss<br/>• Graceful degradation"]
+    ERROR2["[UNICODE] Manage Recording Errors<br/>[UNICODE] Sensor malfunctions<br/>[UNICODE] Storage failures<br/>[UNICODE] Synchronization loss<br/>[UNICODE] Graceful degradation"]
     
     UC2 -.->|<<extends>>| ERROR1
     UC4 -.->|<<extends>>| ERROR2
@@ -212,7 +212,7 @@ graph TD
 | FR1.2 | Synchronize recording start/stop commands | Critical | High | Time synchronization |
 | FR1.3 | Handle device disconnections gracefully | High | High | Error recovery |
 | **FR2** | **Time Synchronization** | Critical | High | UDP protocol support |
-| FR2.1 | Align timestamps across devices (±5ms) | Critical | High | Network latency compensation |
+| FR2.1 | Align timestamps across devices (+/-5ms) | Critical | High | Network latency compensation |
 | FR2.2 | Detect and compensate clock drift | Medium | Medium | Continuous monitoring |
 | FR2.3 | Validate synchronization accuracy | High | Medium | Statistical analysis |
 | **FR3** | **Sensor Integration** | Critical | High | Hardware compatibility |
@@ -257,10 +257,10 @@ graph TD
 | NFR3.3 | Error message clarity | 90% user comprehension | Usability testing | Medium |
 | NFR3.4 | Interface responsiveness | <200ms UI updates | Performance testing | Medium |
 | **NFR4** | **Accuracy** | | | |
-| NFR4.1 | Time synchronization | ±3.2ms median | Statistical analysis | Critical |
-| NFR4.2 | GSR sampling accuracy | 128Hz ±1% | Signal validation | High |
-| NFR4.3 | Thermal measurement | ±2°C or ±2% | Calibration testing | Medium |
-| NFR4.4 | Video frame timing | ±33ms (30fps) | Frame analysis | Medium |
+| NFR4.1 | Time synchronization | +/-3.2ms median | Statistical analysis | Critical |
+| NFR4.2 | GSR sampling accuracy | 128Hz +/-1% | Signal validation | High |
+| NFR4.3 | Thermal measurement | +/-2degC or +/-2% | Calibration testing | Medium |
+| NFR4.4 | Video frame timing | +/-33ms (30fps) | Frame analysis | Medium |
 | **NFR5** | **Compatibility** | | | |
 | NFR5.1 | Android version support | Android 8.0+ (API 26+) | Device testing | High |
 | NFR5.2 | PC platform support | Windows 10+, Linux, macOS | Cross-platform testing | Medium |

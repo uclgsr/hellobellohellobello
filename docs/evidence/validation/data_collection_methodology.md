@@ -67,12 +67,12 @@ This evaluation employs a **mixed-methods approach** combining quantitative syst
 - **Target Specifications:** System requirements used as statistical hypotheses
 - **Hypothesis Testing:** One-sample t-tests for performance threshold compliance
 - **Confidence Intervals:** 95% CI calculated for all performance metrics
-- **Statistical Significance:** α = 0.05 threshold for all statistical tests
+- **Statistical Significance:** [UNICODE] = 0.05 threshold for all statistical tests
 
 #### **Reliability Engineering Metrics**
 - **Mean Time Between Failures (MTBF):** Calculated from failure event logs
 - **Mean Time to Recovery (MTTR):** Measured from fault detection to full recovery
-- **Availability Calculation:** (Total Time - Downtime) / Total Time × 100%
+- **Availability Calculation:** (Total Time - Downtime) / Total Time [UNICODE] 100%
 - **Failure Rate Analysis:** Exponential distribution fitting for reliability prediction
 
 ## Qualitative Data Collection

@@ -1,31 +1,31 @@
 # Thesis Visualizations Index
 
-## 📋 Complete Visualization Suite for Academic Thesis Integration
+## Complete Visualization Suite for Academic Thesis Integration
 
 This directory contains all visualizations, diagrams, tables, and code listings required for comprehensive thesis documentation. Each visualization includes multiple format options (Mermaid, PlantUML) and detailed placement guidance.
 
-## 📂 Directory Structure
+## Directory Structure
 
 ```
 docs/diagrams/thesis_visualizations/
-├── chapter1_introduction/
-│   └── conceptual_overview.md
-├── chapter2_background/
-│   └── physiology_and_thermal.md
-├── chapter3_requirements/
-│   └── system_architecture_and_requirements.md
-├── chapter4_implementation/
-│   ├── detailed_architecture.md
-│   ├── sequences_and_screenshots.md
-│   └── code_listings.md
-├── chapter5_evaluation/
-│   └── testing_and_performance.md
-├── chapter6_conclusions/
-│   └── evaluation_and_future_work.md
-└── thesis_index.md (this file)
+|-- chapter1_introduction/
+|   `-- conceptual_overview.md
+|-- chapter2_background/
+|   `-- physiology_and_thermal.md
+|-- chapter3_requirements/
+|   `-- system_architecture_and_requirements.md
+|-- chapter4_implementation/
+|   |-- detailed_architecture.md
+|   |-- sequences_and_screenshots.md
+|   `-- code_listings.md
+|-- chapter5_evaluation/
+|   `-- testing_and_performance.md
+|-- chapter6_conclusions/
+|   `-- evaluation_and_future_work.md
+`-- thesis_index.md (this file)
 ```
 
-## 🎯 Chapter-by-Chapter Visualization Guide
+## Chapter-by-Chapter Visualization Guide
 
 ### Chapter 1: Introduction
 **File**: `chapter1_introduction/conceptual_overview.md`
@@ -124,7 +124,7 @@ docs/diagrams/thesis_visualizations/
 
 ---
 
-## 🎨 Visualization Format Options
+## Visualization Format Options
 
 ### Primary Formats
 - **Mermaid**: GitHub-native rendering, easy to edit, good for flowcharts and sequences
@@ -137,7 +137,7 @@ docs/diagrams/thesis_visualizations/
 - **PDF**: Print-ready for thesis documents
 - **LaTeX**: Direct integration with academic documents
 
-## 📊 Usage Guidelines
+## Usage Guidelines
 
 ### For Academic Thesis Writing
 1. **Copy diagrams** directly into thesis documents
@@ -157,7 +157,7 @@ docs/diagrams/thesis_visualizations/
 3. **Provide detailed captions** with methodology references
 4. **Submit source files** if requested by publishers
 
-## ✅ Validation Checklist
+## Validation Checklist
 
 ### Content Completeness
 - [ ] All chapters have required visualizations
@@ -183,19 +183,19 @@ docs/diagrams/thesis_visualizations/
 - [ ] Export procedures documented
 - [ ] Style customization options provided
 
-## 📖 Implementation Evidence Alignment
+## Implementation Evidence Alignment
 
 Each visualization is carefully aligned with actual repository implementation:
 
-- **Architecture diagrams** → Actual class and module structure
-- **Protocol specifications** → Implemented TCP/JSON messaging
-- **Performance metrics** → Real test results and benchmarks
-- **Code examples** → Functional implementation excerpts
-- **Error scenarios** → Actual failure modes and recovery
+- **Architecture diagrams** -> Actual class and module structure
+- **Protocol specifications** -> Implemented TCP/JSON messaging
+- **Performance metrics** -> Real test results and benchmarks
+- **Code examples** -> Functional implementation excerpts
+- **Error scenarios** -> Actual failure modes and recovery
 
 This ensures that the thesis documentation accurately represents the implemented system capabilities and limitations.
 
-## 🔄 Maintenance and Updates
+## Maintenance and Updates
 
 ### Version Control
 - All visualizations tracked in git
@@ -203,10 +203,10 @@ This ensures that the thesis documentation accurately represents the implemented
 - Diagram source code maintained alongside documentation
 
 ### Update Procedures
-1. **Implementation changes** → Update corresponding diagrams
-2. **Test results** → Refresh performance charts
-3. **New features** → Add to architecture diagrams
-4. **Bug fixes** → Update error handling documentation
+1. **Implementation changes** -> Update corresponding diagrams
+2. **Test results** -> Refresh performance charts
+3. **New features** -> Add to architecture diagrams
+4. **Bug fixes** -> Update error handling documentation
 
 ### Quality Assurance
 - Regular validation against implementation

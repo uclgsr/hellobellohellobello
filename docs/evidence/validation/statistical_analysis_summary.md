@@ -14,9 +14,9 @@ This document summarizes the statistical methods and analyses applied to evaluat
 ### Descriptive Statistics
 ```
 Synchronization Drift (ms)
-Mean (μ): 2.73 ms
+Mean ([UNICODE]): 2.73 ms
 Median: 2.30 ms  
-Standard Deviation (σ): 1.84 ms
+Standard Deviation ([UNICODE]): 1.84 ms
 Minimum: 0.3 ms
 Maximum: 94.3 ms
 Interquartile Range: 1.8 ms (Q1: 1.8ms, Q3: 3.6ms)
@@ -26,23 +26,23 @@ Interquartile Range: 1.8 ms (Q1: 1.8ms, Q3: 3.6ms)
 - **Normality Test:** Shapiro-Wilk test, W = 0.876, p < 0.001 (non-normal distribution)
 - **Distribution Type:** Right-skewed with extreme outliers from WiFi roaming events
 - **Outlier Analysis:** 23 measurements (0.96%) exceed 50ms threshold
-- **95th Percentile:** 5.9 ms (within ±10ms specification)
+- **95th Percentile:** 5.9 ms (within +/-10ms specification)
 
 ### Hypothesis Testing
-**H₀:** Mean synchronization drift ≤ 10ms (performance requirement)  
-**H₁:** Mean synchronization drift > 10ms  
+**H[UNICODE]:** Mean synchronization drift <= 10ms (performance requirement)  
+**H[UNICODE]:** Mean synchronization drift > 10ms  
 
 **Statistical Test:** One-sample t-test
 - **Test Statistic:** t = -194.2
 - **Degrees of Freedom:** df = 2,402
 - **P-value:** p < 0.001
-- **Conclusion:** Reject H₀. System **significantly exceeds** synchronization requirements (better than specified).
+- **Conclusion:** Reject H[UNICODE]. System **significantly exceeds** synchronization requirements (better than specified).
 
 ### Performance Threshold Analysis
 ```
 Synchronization Performance Targets
-Target: 95% of measurements within ±10ms
-Achieved: 97.8% within ±10ms
+Target: 95% of measurements within +/-10ms
+Achieved: 97.8% within +/-10ms
 Status: EXCEEDS SPECIFICATION (+2.8 percentage points)
 
 Target: Mean drift <10ms  
@@ -69,7 +69,7 @@ Standard Deviation: 47.2 MB
 #### Trend Analysis
 - **Linear Regression:** Memory ~ Time
   - Slope: +0.89 MB/hour
-  - R² = 0.23 (weak correlation)
+  - R[UNICODE] = 0.23 (weak correlation)
   - P-value: 0.087 (not statistically significant)
 - **Conclusion:** No evidence of systematic memory leaks
 
@@ -108,7 +108,7 @@ Maximum: 8.4 ms
 ```
 
 #### Statistical Process Control
-- **Control Limits:** μ ± 3σ = 2.1 ± 3.9 ms (-1.8 to 6.0 ms)
+- **Control Limits:** [UNICODE] +/- 3[UNICODE] = 2.1 +/- 3.9 ms (-1.8 to 6.0 ms)
 - **Out-of-Control Points:** 12 measurements (1.4%) exceed upper control limit
 - **Special Causes:** WiFi roaming events identified as assignable cause
 
@@ -148,7 +148,7 @@ Availability = (Total Time - Downtime) / Total Time
 ## 5. Usability Metrics Statistical Analysis
 
 ### Setup Time Analysis
-- **Sample Size:** n = 9 setup sessions (3 users × 3 sessions each)
+- **Sample Size:** n = 9 setup sessions (3 users [UNICODE] 3 sessions each)
 - **Distribution:** Right-skewed, non-parametric analysis appropriate
 
 #### Descriptive Statistics by User Experience
@@ -195,17 +195,17 @@ Documentation: Mean = 5.4, SD = 2.1 (lowest score - improvement needed)
 ### Performance Correlations
 ```
 Significant Correlations (p < 0.05):
-- Memory Usage ↔ Session Duration: r = 0.67, p < 0.001
-- CPU Usage ↔ Active Devices: r = 0.84, p < 0.001
-- Sync Accuracy ↔ Network Latency: r = -0.45, p = 0.003
-- User Satisfaction ↔ Setup Time: r = -0.72, p < 0.001
+- Memory Usage <-> Session Duration: r = 0.67, p < 0.001
+- CPU Usage <-> Active Devices: r = 0.84, p < 0.001
+- Sync Accuracy <-> Network Latency: r = -0.45, p = 0.003
+- User Satisfaction <-> Setup Time: r = -0.72, p < 0.001
 ```
 
 ### Predictive Models
 #### Setup Time Prediction Model
 ```
-Setup Time = 15.4 - 7.2 × (Experience Level) + 3.1 × (Task Complexity)
-R² = 0.81, F(2,6) = 12.8, p = 0.007
+Setup Time = 15.4 - 7.2 [UNICODE] (Experience Level) + 3.1 [UNICODE] (Task Complexity)
+R[UNICODE] = 0.81, F(2,6) = 12.8, p = 0.007
 ```
 **Interpretation:** Experience level is the strongest predictor of setup efficiency.
 
@@ -261,7 +261,7 @@ Key Performance Metrics:
 
 ### Recommendations for Future Analysis
 1. **Longitudinal Study:** Extended monitoring for long-term reliability trends
-2. **Larger User Sample:** n≥20 for statistically robust usability conclusions
+2. **Larger User Sample:** n>=20 for statistically robust usability conclusions
 3. **Field Deployment:** Real-world validation of laboratory-based findings
 4. **Comparative Analysis:** Benchmarking against existing research systems
 
