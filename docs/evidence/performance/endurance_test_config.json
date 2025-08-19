@@ -1,0 +1,151 @@
+{
+  "endurance_test_config": {
+    "test_metadata": {
+      "configuration_version": "1.2",
+      "created_date": "2024-12-15T07:45:00Z",
+      "test_operator": "automated_test_runner",
+      "test_purpose": "8-hour system stability validation"
+    },
+    "system_configuration": {
+      "pc_controller": {
+        "max_memory_limit_mb": 2048,
+        "cpu_monitoring_interval_seconds": 5,
+        "log_level": "INFO",
+        "auto_cleanup_enabled": true,
+        "export_compression": true
+      },
+      "device_simulation": {
+        "simulated_devices": 3,
+        "device_types": ["Android_RGB_GSR", "Android_RGB_Thermal", "Android_RGB_Only"],
+        "connection_protocol": "TLS_1.2",
+        "heartbeat_interval_seconds": 5,
+        "reconnection_timeout_seconds": 30
+      }
+    },
+    "test_parameters": {
+      "total_duration_hours": 8,
+      "recording_session_length_minutes": 10,
+      "inter_session_pause_minutes": 2,
+      "data_export_frequency": "after_each_session",
+      "memory_monitoring_interval_seconds": 300,
+      "performance_sampling_rate_hz": 1
+    },
+    "stress_testing": {
+      "fault_injection_enabled": true,
+      "fault_injection_schedule": [
+        {
+          "time_hours": 1.5,
+          "fault_type": "device_disconnect",
+          "target_device": "Android_RGB_GSR",
+          "duration_seconds": 30
+        },
+        {
+          "time_hours": 3.2,
+          "fault_type": "network_latency_spike",
+          "latency_multiplier": 5.0,
+          "duration_seconds": 45
+        },
+        {
+          "time_hours": 5.7,
+          "fault_type": "memory_pressure",
+          "pressure_level": "moderate",
+          "duration_minutes": 10
+        },
+        {
+          "time_hours": 7.1,
+          "fault_type": "wifi_roaming_simulation",
+          "network_switch_delay_ms": 2000,
+          "occurrences": 3
+        }
+      ]
+    },
+    "data_collection": {
+      "sensor_simulation": {
+        "rgb_camera": {
+          "resolution": "1920x1080",
+          "fps": 30,
+          "format": "H264",
+          "quality": "high"
+        },
+        "gsr_sensor": {
+          "sampling_rate_hz": 128,
+          "range_kohms": "10-4700",
+          "noise_simulation": true,
+          "drift_simulation": true
+        },
+        "thermal_camera": {
+          "resolution": "256x192",
+          "fps": 25,
+          "temperature_range_c": "20-45",
+          "noise_level": "realistic"
+        }
+      }
+    },
+    "validation_criteria": {
+      "success_thresholds": {
+        "zero_crashes": true,
+        "zero_data_loss": true,
+        "memory_leak_tolerance_mb": 50,
+        "max_sustained_memory_mb": 500,
+        "sync_accuracy_95_percentile_ms": 10.0,
+        "automatic_recovery_rate_percentage": 90.0
+      },
+      "performance_targets": {
+        "average_cpu_usage_max_percentage": 30,
+        "peak_cpu_usage_max_percentage": 60,
+        "network_latency_95_percentile_ms": 5.0,
+        "disk_io_efficiency_min_percentage": 85
+      }
+    },
+    "monitoring_configuration": {
+      "metrics_collection": [
+        "memory_usage",
+        "cpu_utilization", 
+        "network_latency",
+        "disk_io_operations",
+        "thread_count",
+        "connection_status",
+        "synchronization_drift",
+        "error_rates"
+      ],
+      "alert_conditions": [
+        {
+          "metric": "memory_usage_mb",
+          "operator": "greater_than",
+          "threshold": 400,
+          "action": "log_warning"
+        },
+        {
+          "metric": "cpu_percentage",
+          "operator": "greater_than", 
+          "threshold": 50,
+          "duration_seconds": 300,
+          "action": "investigate"
+        },
+        {
+          "metric": "sync_drift_ms",
+          "operator": "greater_than",
+          "threshold": 8.0,
+          "action": "immediate_alert"
+        }
+      ]
+    },
+    "output_configuration": {
+      "raw_data_export": {
+        "format": "CSV",
+        "compression": "gzip",
+        "retention_days": 30
+      },
+      "summary_reports": {
+        "format": "JSON",
+        "include_graphs": false,
+        "auto_analysis": true
+      },
+      "log_files": {
+        "level": "INFO",
+        "rotation_size_mb": 100,
+        "max_files": 10
+      }
+    }
+  }
+}
