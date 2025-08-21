@@ -254,7 +254,7 @@ line-length = 100
 # Enable specific rule sets
 select = [
     "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings  
+    "W",   # pycodestyle warnings
     "F",   # pyflakes
     "I",   # isort
     "B",   # flake8-bugbear
@@ -282,7 +282,7 @@ ignore = [
 # Exclude specific directories
 exclude = [
     ".bzr",
-    ".direnv", 
+    ".direnv",
     ".eggs",
     ".git",
     ".hg",

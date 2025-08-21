@@ -55,27 +55,42 @@ classDiagram
     }
     
     class ThermalCameraRecorder {
+        -IRCMD? ircmd
+        -UsbManager? usbManager
         -BufferedWriter? csvWriter
         -File? metadataFile
         -CoroutineScope scope
+        -Float emissivity
         
         +start(sessionDir: File)
         +stop()
-        -generateThermalData()
+        -initializeTopdonSDK() IRCMD?
+        -scanForTC001Devices() List~UsbDevice~
+        -isTopdonTC001Device(Int vendorId, Int productId) Boolean
+        -processRealThermalFrame(ByteArray rawData)
+        -generateThermalBitmap(FloatArray tempMatrix, Int width, Int height) Bitmap
+        -logRealTemperatureData(Float center, Float min, Float max)
         -writeMetadata()
     }
     
     class ShimmerRecorder {
+        -ShimmerBluetooth? shimmerDevice
+        -ShimmerConfig sensorConfig
         -BufferedWriter? csvWriter  
         -CoroutineScope scope
-        -BluetoothDevice? shimmerDevice
+        -BluetoothDevice? targetDevice
+        -Boolean isStreaming
         
         +start(sessionDir: File)
         +stop()
-        -connectShimmer()
-        -startStreaming()
+        -scanForShimmerDevices() List~BluetoothDevice~
+        -connectShimmer() Boolean
+        -configureGSRSensor(Double samplingRate)
+        -startStreaming() Boolean
         -parseDataPacket(ByteArray data)
-        -convertGSRValue(Int raw) Float
+        -convertGSRValue(Int raw12bit) Float
+        -convertPPGValue(Int rawADC) Float
+        -logSensorData(Long timestamp, Float gsrMicroSiemens, Float ppgRaw)
     }
     
     %% Service and Network Classes
@@ -211,15 +226,19 @@ classDiagram
 - **File Management**: CSV indexing, timestamp-based naming
 - **Performance**: Background threads for capture, coroutines for coordination
 
-#### ThermalCameraRecorder (Stub)
-- **CSV Generation**: Placeholder thermal matrix data (256×192 pixels)
-- **Metadata**: JSON configuration file with sensor parameters  
-- **Future**: Integration point for Topdon TC001 or FLIR cameras
+#### ThermalCameraRecorder (Production SDK Integration)
+- **True Topdon TC001 SDK Integration**: Real IRCMD, LibIRParse, LibIRProcess classes
+- **Hardware Detection**: TC001-specific VID/PID identification (0x0525/0xa4a2, 0x0525/0xa4a5)
+- **Calibrated Temperature Processing**: ±2°C accuracy with hardware calibration
+- **Professional Thermal Imaging**: Iron, Rainbow, and Grayscale color palettes
+- **Graceful Fallback**: Simulation mode when hardware unavailable
 
-#### ShimmerRecorder (Stub)  
-- **BLE Communication**: Shimmer3 GSR+ device connection via Bluetooth
-- **Data Processing**: Raw ADC conversion to microsiemens
-- **Protocol**: 8-byte packets at 128 Hz, 16-bit GSR + PPG values
+#### ShimmerRecorder (Production SDK Integration)  
+- **Real Shimmer Android API**: ShimmerBluetooth, ShimmerConfig classes
+- **BLE Communication**: Shimmer3 GSR+ device connection with robust pairing
+- **12-bit ADC Precision**: Correct 0-4095 range conversion (not 16-bit)
+- **128 Hz Sampling Rate**: Hardware-validated sampling frequency
+- **Dual-Sensor Data**: Simultaneous GSR (microsiemens) + PPG (raw ADC) recording
 
 ### RecordingService
 - **Foreground Service**: Persistent operation with notification
