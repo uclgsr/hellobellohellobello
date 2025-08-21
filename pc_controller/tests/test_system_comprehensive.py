@@ -25,7 +25,7 @@ from pc_controller.src.core.session_manager import SessionManager
 from pc_controller.src.data.data_aggregator import FileReceiverServer
 from pc_controller.src.data.hdf5_exporter import export_session_to_hdf5
 from pc_controller.src.network.heartbeat_manager import HeartbeatManager
-from pc_controller.src.network.time_server import TimeServer
+from pc_controller.src.network.time_server import TimeSyncServer as TimeServer
 
 
 class SystemTestEnvironment:
