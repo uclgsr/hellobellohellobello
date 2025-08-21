@@ -1,0 +1,394 @@
+"""Session Metadata Manager for standardized session information.
+
+Implements structured metadata.json creation and management for recording sessions,
+ensuring consistent schema across all sensor types and devices.
+
+Features:
+- Session-level metadata with participant ID, timestamps, configuration
+- Device and sensor metadata collection
+- CSV schema standardization
+- Integration with existing session management
+- Privacy-compliant participant ID handling
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import time
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Union
+
+try:
+    from ..config import get as cfg_get
+except Exception:
+    def cfg_get(key: str, default=None):  # type: ignore
+        return default
+
+
+@dataclass
+class DeviceInfo:
+    """Information about a recording device."""
+    device_id: str
+    device_type: str  # "android", "pc"
+    device_name: str
+    model: str
+    os_version: str
+    app_version: str
+    ip_address: str
+    sensors: List[str]
+    time_offset_ns: Optional[int] = None
+    sync_quality: Optional[str] = None  # "excellent", "good", "poor"
+
+
+@dataclass
+class SensorConfig:
+    """Configuration for a specific sensor."""
+    sensor_type: str  # "rgb", "gsr", "thermal"
+    sampling_rate: Optional[float] = None
+    resolution: Optional[str] = None  # e.g., "1080p", "256x192"
+    settings: Optional[Dict[str, Union[str, int, float]]] = None
+
+
+@dataclass
+class SessionMetadata:
+    """Complete session metadata structure."""
+    # Session identification
+    session_id: str
+    participant_id: str
+    created_at: str  # ISO 8601 timestamp
+    duration_seconds: Optional[float] = None
+    
+    # Recording configuration
+    pc_controller_version: str = "1.0.0"
+    protocol_version: str = "1.0"
+    time_sync_enabled: bool = True
+    tls_enabled: bool = False
+    
+    # Devices and sensors
+    devices: List[DeviceInfo] = None
+    sensor_configs: List[SensorConfig] = None
+    
+    # Data files and structure
+    data_files: List[str] = None
+    csv_schema_version: str = "1.0"
+    
+    # Privacy and compliance
+    anonymized: bool = True
+    face_blurring_enabled: bool = False
+    
+    # Additional metadata
+    notes: str = ""
+    tags: List[str] = None
+    
+    def __post_init__(self):
+        if self.devices is None:
+            self.devices = []
+        if self.sensor_configs is None:
+            self.sensor_configs = []
+        if self.data_files is None:
+            self.data_files = []
+        if self.tags is None:
+            self.tags = []
+
+
+class SessionMetadataManager:
+    """Manages session metadata creation and updates."""
+    
+    def __init__(self, base_session_dir: str):
+        """Initialize metadata manager.
+        
+        Args:
+            base_session_dir: Base directory where session folders are stored
+        """
+        self.base_session_dir = Path(base_session_dir)
+        self._sessions: Dict[str, SessionMetadata] = {}
+        
+    def create_session_metadata(self, participant_id: str, session_id: Optional[str] = None) -> SessionMetadata:
+        """Create new session metadata.
+        
+        Args:
+            participant_id: Anonymized participant identifier
+            session_id: Optional session ID (auto-generated if None)
+            
+        Returns:
+            SessionMetadata object
+        """
+        if session_id is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            session_id = f"session_{timestamp}"
+        
+        metadata = SessionMetadata(
+            session_id=session_id,
+            participant_id=self._anonymize_participant_id(participant_id),
+            created_at=datetime.now().isoformat(),
+            pc_controller_version=cfg_get("app_version", "1.0.0"),
+            protocol_version=cfg_get("protocol_version", "1.0"),
+            time_sync_enabled=cfg_get("time_sync_enabled", "true").lower() == "true",
+            tls_enabled=cfg_get("tls_enabled", "false").lower() == "true",
+            anonymized=True,
+            face_blurring_enabled=cfg_get("face_blurring_enabled", "false").lower() == "true"
+        )
+        
+        self._sessions[session_id] = metadata
+        return metadata
+    
+    def add_device(self, session_id: str, device_info: DeviceInfo) -> bool:
+        """Add device information to session metadata.
+        
+        Args:
+            session_id: Session identifier
+            device_info: Device information to add
+            
+        Returns:
+            True if added successfully, False if session not found
+        """
+        if session_id not in self._sessions:
+            return False
+        
+        self._sessions[session_id].devices.append(device_info)
+        return True
+    
+    def add_sensor_config(self, session_id: str, sensor_config: SensorConfig) -> bool:
+        """Add sensor configuration to session metadata.
+        
+        Args:
+            session_id: Session identifier
+            sensor_config: Sensor configuration to add
+            
+        Returns:
+            True if added successfully, False if session not found
+        """
+        if session_id not in self._sessions:
+            return False
+        
+        self._sessions[session_id].sensor_configs.append(sensor_config)
+        return True
+    
+    def update_time_sync_info(self, session_id: str, device_id: str, offset_ns: int, quality: str) -> bool:
+        """Update time synchronization information for a device.
+        
+        Args:
+            session_id: Session identifier
+            device_id: Device identifier
+            offset_ns: Time offset in nanoseconds
+            quality: Sync quality ("excellent", "good", "poor")
+            
+        Returns:
+            True if updated successfully, False otherwise
+        """
+        if session_id not in self._sessions:
+            return False
+        
+        for device in self._sessions[session_id].devices:
+            if device.device_id == device_id:
+                device.time_offset_ns = offset_ns
+                device.sync_quality = quality
+                return True
+        
+        return False
+    
+    def finalize_session(self, session_id: str, duration_seconds: float, data_files: List[str]) -> bool:
+        """Finalize session metadata with duration and file list.
+        
+        Args:
+            session_id: Session identifier
+            duration_seconds: Total recording duration
+            data_files: List of data file paths relative to session directory
+            
+        Returns:
+            True if finalized successfully, False if session not found
+        """
+        if session_id not in self._sessions:
+            return False
+        
+        metadata = self._sessions[session_id]
+        metadata.duration_seconds = duration_seconds
+        metadata.data_files = data_files
+        
+        return True
+    
+    def save_metadata(self, session_id: str, session_dir: Optional[str] = None) -> bool:
+        """Save session metadata to JSON file.
+        
+        Args:
+            session_id: Session identifier
+            session_dir: Optional session directory (defaults to base_session_dir/session_id)
+            
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        if session_id not in self._sessions:
+            return False
+        
+        if session_dir is None:
+            session_dir = self.base_session_dir / session_id
+        else:
+            session_dir = Path(session_dir)
+        
+        try:
+            session_dir.mkdir(parents=True, exist_ok=True)
+            metadata_file = session_dir / "metadata.json"
+            
+            metadata = self._sessions[session_id]
+            
+            # Convert to dict and handle dataclasses
+            metadata_dict = asdict(metadata)
+            
+            # Ensure JSON serializable
+            metadata_dict = self._ensure_json_serializable(metadata_dict)
+            
+            with open(metadata_file, 'w') as f:
+                json.dump(metadata_dict, f, indent=2, sort_keys=True)
+            
+            return True
+            
+        except Exception:
+            return False
+    
+    def load_metadata(self, session_id: str, session_dir: Optional[str] = None) -> Optional[SessionMetadata]:
+        """Load session metadata from JSON file.
+        
+        Args:
+            session_id: Session identifier
+            session_dir: Optional session directory (defaults to base_session_dir/session_id)
+            
+        Returns:
+            SessionMetadata object if loaded successfully, None otherwise
+        """
+        if session_dir is None:
+            session_dir = self.base_session_dir / session_id
+        else:
+            session_dir = Path(session_dir)
+        
+        metadata_file = session_dir / "metadata.json"
+        
+        if not metadata_file.exists():
+            return None
+        
+        try:
+            with open(metadata_file, 'r') as f:
+                data = json.load(f)
+            
+            # Convert back to dataclasses
+            devices = []
+            if 'devices' in data:
+                for device_data in data['devices']:
+                    devices.append(DeviceInfo(**device_data))
+            data['devices'] = devices
+            
+            sensor_configs = []
+            if 'sensor_configs' in data:
+                for config_data in data['sensor_configs']:
+                    sensor_configs.append(SensorConfig(**config_data))
+            data['sensor_configs'] = sensor_configs
+            
+            metadata = SessionMetadata(**data)
+            self._sessions[session_id] = metadata
+            
+            return metadata
+            
+        except Exception:
+            return None
+    
+    def get_csv_schema(self, sensor_type: str) -> Dict[str, str]:
+        """Get standardized CSV schema for sensor type.
+        
+        Args:
+            sensor_type: Type of sensor ("rgb", "gsr", "thermal")
+            
+        Returns:
+            Dictionary with column names and descriptions
+        """
+        schemas = {
+            "gsr": {
+                "timestamp_ns": "Nanosecond timestamp (monotonic clock)",
+                "gsr_microsiemens": "Galvanic Skin Response in microsiemens (µS)",
+                "ppg_raw": "Raw photoplethysmography value (0-4095, 12-bit ADC)"
+            },
+            "rgb": {
+                "timestamp_ns": "Nanosecond timestamp (monotonic clock)", 
+                "frame_index": "Sequential frame number",
+                "filename": "JPEG filename (relative to session directory)",
+                "width": "Frame width in pixels",
+                "height": "Frame height in pixels",
+                "format": "Image format (JPEG)",
+                "camera": "Camera identifier (front/rear)"
+            },
+            "thermal": {
+                "timestamp_ns": "Nanosecond timestamp (monotonic clock)",
+                "w": "Frame width (256)",
+                "h": "Frame height (192)",
+                **{f"v{i}": f"Temperature value at pixel {i} (Celsius)" for i in range(49152)}
+            }
+        }
+        
+        return schemas.get(sensor_type, {})
+    
+    def create_csv_header(self, sensor_type: str) -> str:
+        """Create CSV header string for sensor type.
+        
+        Args:
+            sensor_type: Type of sensor ("rgb", "gsr", "thermal")
+            
+        Returns:
+            CSV header string
+        """
+        schema = self.get_csv_schema(sensor_type)
+        return ",".join(schema.keys())
+    
+    def _anonymize_participant_id(self, participant_id: str) -> str:
+        """Anonymize participant ID for privacy.
+        
+        Args:
+            participant_id: Original participant ID
+            
+        Returns:
+            Anonymized participant ID
+        """
+        # Simple anonymization - in production might use more sophisticated methods
+        import hashlib
+        hash_object = hashlib.sha256(participant_id.encode())
+        hex_dig = hash_object.hexdigest()
+        return f"P_{hex_dig[:8]}"  # Use first 8 characters of hash
+    
+    def _ensure_json_serializable(self, obj):
+        """Ensure object is JSON serializable."""
+        if isinstance(obj, dict):
+            return {k: self._ensure_json_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._ensure_json_serializable(item) for item in obj]
+        elif isinstance(obj, (str, int, float, bool)) or obj is None:
+            return obj
+        else:
+            # Convert other types to string
+            return str(obj)
+    
+    def get_session_summary(self, session_id: str) -> Optional[Dict[str, Union[str, int, float]]]:
+        """Get summary information for a session.
+        
+        Args:
+            session_id: Session identifier
+            
+        Returns:
+            Summary dictionary or None if session not found
+        """
+        if session_id not in self._sessions:
+            return None
+        
+        metadata = self._sessions[session_id]
+        
+        return {
+            "session_id": metadata.session_id,
+            "participant_id": metadata.participant_id,
+            "created_at": metadata.created_at,
+            "duration_seconds": metadata.duration_seconds,
+            "device_count": len(metadata.devices),
+            "sensor_count": len(metadata.sensor_configs),
+            "file_count": len(metadata.data_files),
+            "time_sync_enabled": metadata.time_sync_enabled,
+            "tls_enabled": metadata.tls_enabled,
+            "anonymized": metadata.anonymized
+        }
