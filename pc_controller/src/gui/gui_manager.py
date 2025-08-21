@@ -19,25 +19,45 @@ from dataclasses import dataclass
 import numpy as np
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QAction, QImage, QPixmap
-from PyQt6.QtWidgets import (QFileDialog, QGridLayout, QHBoxLayout, QLabel,
-                             QLineEdit, QListWidget, QMainWindow, QPushButton,
-                             QTabWidget, QTextEdit, QToolBar, QVBoxLayout,
-                             QWidget, QMessageBox, QDialog, QSpinBox, QDoubleSpinBox,
-                             QFormLayout, QDialogButtonBox, QProgressBar, QCheckBox,
-                             QMenuBar, QMenu)
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFormLayout,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QMainWindow,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QTabWidget,
+    QTextEdit,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
+)
 
 try:
     import pyqtgraph as pg
 except Exception:  # pragma: no cover - import guard for environments without Qt backend
     pg = None
 
+from core.quick_start_guide import QuickStartGuide
+from core.user_experience import ErrorMessageTranslator, StatusIndicator, show_file_location
 from data.data_aggregator import DataAggregator
 from data.data_loader import DataLoader
 from data.hdf5_exporter import export_session_to_hdf5
 from network.network_controller import DiscoveredDevice, NetworkController
-from tools.camera_calibration import CalibrationResult, calibrate_camera, load_calibration, save_calibration
-from core.user_experience import ErrorMessageTranslator, StatusIndicator, show_file_location
-from core.quick_start_guide import QuickStartGuide, FirstTimeSetupWizard
+from tools.camera_calibration import (
+    calibrate_camera,
+    save_calibration,
+)
 
 # Local device interfaces (Python shim that optionally uses native backends)
 try:
@@ -374,43 +394,43 @@ class GUIManager(QMainWindow):
     def _setup_menu_bar(self) -> None:
         """Set up the main menu bar with File, Tools, and Help menus."""
         menu_bar = self.menuBar()
-        
+
         # File Menu
         file_menu = menu_bar.addMenu("File")
-        
+
         # Add common file operations
         export_action = QAction("Export Data...", self)
         export_action.triggered.connect(self._on_export_data)
         file_menu.addAction(export_action)
-        
+
         file_menu.addSeparator()
-        
+
         exit_action = QAction("Exit", self)
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
-        
+
         # Tools Menu
         tools_menu = menu_bar.addMenu("Tools")
-        
+
         calibrate_action = QAction("Calibrate Cameras...", self)
         calibrate_action.triggered.connect(self._on_calibrate_cameras)
         tools_menu.addAction(calibrate_action)
-        
+
         tools_menu.addSeparator()
-        
+
         settings_action = QAction("Settings...", self)
         settings_action.triggered.connect(self._show_settings_dialog)
         tools_menu.addAction(settings_action)
-        
+
         # Help Menu
         help_menu = menu_bar.addMenu("Help")
-        
+
         quick_start_action = QAction("Quick Start Guide", self)
         quick_start_action.triggered.connect(self._show_quick_start_guide)
         help_menu.addAction(quick_start_action)
-        
+
         help_menu.addSeparator()
-        
+
         about_action = QAction("About...", self)
         about_action.triggered.connect(self._show_about_dialog)
         help_menu.addAction(about_action)
@@ -523,8 +543,7 @@ class GUIManager(QMainWindow):
             self._log(f"Session metadata error: {exc}")
         # Start file receiver and broadcast transfer_files per Phase 5 FR10
         try:
-            from data.data_aggregator import \
-                get_local_ip  # local import to avoid test-time issues
+            from data.data_aggregator import get_local_ip  # local import to avoid test-time issues
 
             port = self._data_aggregator.start_server(9001)
             host = get_local_ip()
@@ -997,7 +1016,7 @@ class GUIManager(QMainWindow):
             images_dir = params.get("images_dir", "")
             board_size = (params.get("board_width", 9), params.get("board_height", 6))
             square_size = params.get("square_size", 0.025)
-            
+
             if not os.path.isdir(images_dir):
                 QMessageBox.warning(self, "Calibration Error", "Invalid images directory selected.")
                 return
@@ -1010,14 +1029,14 @@ class GUIManager(QMainWindow):
             progress.setWindowTitle("Calibrating Cameras...")
             progress.setRange(0, 0)  # Indeterminate progress
             progress.show()
-            
+
             try:
                 result = calibrate_camera(images_dir, board_size, square_size)
-                
+
                 # Save calibration results
                 calibration_path = os.path.join(os.getcwd(), "calibration_results.json")
                 save_calibration(result, calibration_path)
-                
+
                 # Show results with file location
                 success_message = (f"Calibration completed successfully!\n"
                                  f"RMS Error: {result.rms_error:.4f}\n"
@@ -1025,10 +1044,10 @@ class GUIManager(QMainWindow):
                 QMessageBox.information(self, "Calibration Complete", success_message)
                 self._log(f"Camera calibration completed. RMS Error: {result.rms_error:.4f}")
                 self._log(show_file_location(calibration_path, "Calibration results"))
-                
+
             finally:
                 progress.close()
-                
+
         except Exception as exc:
             # Use user-friendly error messages
             user_message = ErrorMessageTranslator.translate_error(exc, "calibration")
@@ -1041,23 +1060,23 @@ class GUIManager(QMainWindow):
             session_dir = params.get("session_dir", "")
             export_formats = params.get("formats", [])
             output_dir = params.get("output_dir", "")
-            
+
             if not os.path.isdir(session_dir):
                 QMessageBox.warning(self, "Export Error", "Invalid session directory selected.")
                 return
 
             # Show current export directory in status
             self._log(show_file_location(output_dir, "Export destination"))
-            
+
             # Show progress dialog
             progress = QProgressBar()
             progress.setWindowTitle("Exporting Data...")
             progress.setRange(0, len(export_formats))
             progress.show()
-            
+
             try:
                 exported_files = []
-                
+
                 for i, fmt in enumerate(export_formats):
                     if fmt == "HDF5":
                         out_path = os.path.join(output_dir, "export.h5")
@@ -1074,9 +1093,9 @@ class GUIManager(QMainWindow):
                             dest = os.path.join(output_dir, os.path.basename(csv_file))
                             shutil.copy2(csv_file, dest)
                             exported_files.append(dest)
-                    
+
                     progress.setValue(i + 1)
-                
+
                 # Show completion message with clear file location
                 success_message = StatusIndicator.format_export_status(
                     output_dir, len(exported_files), export_formats
@@ -1084,10 +1103,10 @@ class GUIManager(QMainWindow):
                 QMessageBox.information(self, "Export Complete", success_message)
                 self._log(f"Data export completed. {len(exported_files)} files exported")
                 self._log(show_file_location(output_dir, "Exported files"))
-                
+
             finally:
                 progress.close()
-                
+
         except Exception as exc:
             # Use user-friendly error messages
             user_message = ErrorMessageTranslator.translate_error(exc, "recording")
@@ -1108,8 +1127,8 @@ class GUIManager(QMainWindow):
         """Show the settings/preferences dialog."""
         # Placeholder for future settings dialog
         QMessageBox.information(
-            self, 
-            "Settings", 
+            self,
+            "Settings",
             "Settings dialog will be implemented in future updates.\n\n"
             "Current configuration can be modified through:\n"
             "• config.json file in the application directory\n"
@@ -1120,19 +1139,19 @@ class GUIManager(QMainWindow):
     def _show_about_dialog(self) -> None:
         """Show the about dialog with version and system information."""
         try:
-            import sys
             import platform
-            
+            import sys
+
             about_text = f"""
             <h2>Multi-Modal Physiological Sensing Platform</h2>
             <p><b>Version:</b> 1.0.0</p>
             <p><b>Architecture:</b> Hub-and-Spoke (PC Controller + Android Sensor Nodes)</p>
-            
+
             <h3>System Information:</h3>
             <p><b>Python:</b> {sys.version.split()[0]}</p>
             <p><b>Platform:</b> {platform.platform()}</p>
             <p><b>Qt Version:</b> {QWidget().metaObject().className()}</p>
-            
+
             <h3>Features:</h3>
             <ul>
             <li>Multi-device sensor synchronization</li>
@@ -1143,23 +1162,23 @@ class GUIManager(QMainWindow):
             <li>Camera calibration utilities</li>
             <li>Automatic device discovery</li>
             </ul>
-            
+
             <p><b>Documentation:</b> Check the docs/ folder for comprehensive guides</p>
             <p><b>Support:</b> See user testing feedback and troubleshooting guides</p>
             """
-            
+
             QMessageBox.about(self, "About", about_text)
-            
+
         except Exception as exc:
             QMessageBox.warning(self, "About Dialog Error", f"Could not display about information: {exc}")
-        
+
     def _check_and_show_first_time_tutorial(self) -> None:
         """Check if this is first time use and show tutorial if needed."""
         try:
             # Simple check - could be enhanced with proper settings management
             import os
             tutorial_flag_file = os.path.join(os.getcwd(), ".tutorial_completed")
-            
+
             if not os.path.exists(tutorial_flag_file):
                 # Show tutorial for first-time users
                 reply = QMessageBox.question(
@@ -1170,59 +1189,59 @@ class GUIManager(QMainWindow):
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.Yes
                 )
-                
+
                 if reply == QMessageBox.StandardButton.Yes:
                     self._show_quick_start_guide()
-                
+
                 # Create flag file to indicate tutorial was offered
                 try:
                     with open(tutorial_flag_file, 'w') as f:
                         f.write("Tutorial offered on first run")
                 except Exception:
                     pass  # Ignore file creation errors
-                    
+
         except Exception:
             pass  # Ignore errors in tutorial check - should not affect main app
 
 
 class CalibrationDialog(QDialog):
     """Dialog for configuring camera calibration parameters."""
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Camera Calibration Setup")
         self.setFixedSize(400, 300)
-        
+
         layout = QFormLayout(self)
-        
+
         # Images directory selection
         self.images_dir_edit = QLineEdit()
         self.images_browse_btn = QPushButton("Browse...")
         self.images_browse_btn.clicked.connect(self._browse_images_dir)
-        
+
         images_layout = QHBoxLayout()
         images_layout.addWidget(self.images_dir_edit)
         images_layout.addWidget(self.images_browse_btn)
         layout.addRow("Calibration Images:", images_layout)
-        
+
         # Board parameters
         self.board_width_spin = QSpinBox()
         self.board_width_spin.setRange(3, 20)
         self.board_width_spin.setValue(9)
         layout.addRow("Board Width (corners):", self.board_width_spin)
-        
+
         self.board_height_spin = QSpinBox()
-        self.board_height_spin.setRange(3, 20) 
+        self.board_height_spin.setRange(3, 20)
         self.board_height_spin.setValue(6)
         layout.addRow("Board Height (corners):", self.board_height_spin)
-        
+
         self.square_size_spin = QDoubleSpinBox()
         self.square_size_spin.setRange(0.001, 1.0)
         self.square_size_spin.setValue(0.025)
         self.square_size_spin.setDecimals(3)
         self.square_size_spin.setSuffix(" m")
         layout.addRow("Square Size:", self.square_size_spin)
-        
+
         # Instructions
         instructions = QLabel(
             "Instructions:\n"
@@ -1234,20 +1253,20 @@ class CalibrationDialog(QDialog):
         instructions.setWordWrap(True)
         instructions.setStyleSheet("QLabel { color: gray; font-size: 10px; }")
         layout.addRow(instructions)
-        
+
         # Buttons
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
-    
+
     def _browse_images_dir(self):
         directory = QFileDialog.getExistingDirectory(
             self, "Select Calibration Images Directory"
         )
         if directory:
             self.images_dir_edit.setText(directory)
-    
+
     def get_parameters(self) -> dict:
         return {
             "images_dir": self.images_dir_edit.text(),
@@ -1259,48 +1278,48 @@ class CalibrationDialog(QDialog):
 
 class ExportDialog(QDialog):
     """Dialog for configuring data export options."""
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Export Data")
         self.setFixedSize(450, 350)
-        
+
         layout = QFormLayout(self)
-        
+
         # Session directory selection
         self.session_dir_edit = QLineEdit()
         self.session_browse_btn = QPushButton("Browse...")
         self.session_browse_btn.clicked.connect(self._browse_session_dir)
-        
+
         session_layout = QHBoxLayout()
         session_layout.addWidget(self.session_dir_edit)
         session_layout.addWidget(self.session_browse_btn)
         layout.addRow("Session Directory:", session_layout)
-        
-        # Output directory selection  
+
+        # Output directory selection
         self.output_dir_edit = QLineEdit()
         self.output_browse_btn = QPushButton("Browse...")
         self.output_browse_btn.clicked.connect(self._browse_output_dir)
-        
+
         output_layout = QHBoxLayout()
         output_layout.addWidget(self.output_dir_edit)
         output_layout.addWidget(self.output_browse_btn)
         layout.addRow("Export Location:", output_layout)
-        
+
         # Format checkboxes
         self.hdf5_check = QCheckBox("HDF5 (Hierarchical Data Format)")
         self.csv_check = QCheckBox("CSV (Comma Separated Values)")
         self.mp4_check = QCheckBox("MP4 (Video Files)")
-        
+
         self.hdf5_check.setChecked(True)  # Default selection
         self.csv_check.setChecked(True)
-        
+
         format_layout = QVBoxLayout()
         format_layout.addWidget(self.hdf5_check)
-        format_layout.addWidget(self.csv_check)  
+        format_layout.addWidget(self.csv_check)
         format_layout.addWidget(self.mp4_check)
         layout.addRow("Export Formats:", format_layout)
-        
+
         # Instructions
         instructions = QLabel(
             "Export Instructions:\n"
@@ -1312,27 +1331,27 @@ class ExportDialog(QDialog):
         instructions.setWordWrap(True)
         instructions.setStyleSheet("QLabel { color: gray; font-size: 10px; }")
         layout.addRow(instructions)
-        
+
         # Buttons
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
-    
+
     def _browse_session_dir(self):
         directory = QFileDialog.getExistingDirectory(
             self, "Select Session Directory"
         )
         if directory:
             self.session_dir_edit.setText(directory)
-    
+
     def _browse_output_dir(self):
         directory = QFileDialog.getExistingDirectory(
             self, "Select Export Destination"
         )
         if directory:
             self.output_dir_edit.setText(directory)
-    
+
     def get_parameters(self) -> dict:
         formats = []
         if self.hdf5_check.isChecked():
@@ -1341,7 +1360,7 @@ class ExportDialog(QDialog):
             formats.append("CSV")
         if self.mp4_check.isChecked():
             formats.append("MP4")
-            
+
         return {
             "session_dir": self.session_dir_edit.text(),
             "output_dir": self.output_dir_edit.text(),

@@ -12,11 +12,11 @@ that complements the PC Controller improvements.
 
 import sys
 import time
-from typing import Dict, List, Tuple
+
 
 class AndroidUXDemo:
     """Demonstrates Android user experience enhancements."""
-    
+
     def __init__(self):
         self.demos = {
             "error_translation": self.demo_error_translation,
@@ -26,26 +26,26 @@ class AndroidUXDemo:
             "connection_help": self.demo_connection_help,
             "ui_enhancements": self.demo_ui_enhancements,
         }
-    
+
     def print_header(self, title: str) -> None:
         """Print a formatted section header."""
         print(f"\n{'='*60}")
         print(f"  {title}")
         print(f"{'='*60}")
-    
+
     def print_example(self, label: str, content: str, is_before: bool = False) -> None:
         """Print a formatted example."""
-        prefix = "❌ BEFORE:" if is_before else "✅ AFTER:" 
+        prefix = "❌ BEFORE:" if is_before else "✅ AFTER:"
         print(f"\n{prefix} {label}")
         print(f"   {content}")
-    
+
     def demo_error_translation(self) -> None:
         """Demonstrate Android error translation capabilities."""
         self.print_header("Android Error Translation System")
-        
+
         print("The Android app now translates technical errors into user-friendly,")
         print("actionable guidance for researchers.")
-        
+
         # Network errors
         print("\n🔗 Network Connection Errors:")
         self.print_example(
@@ -60,7 +60,7 @@ class AndroidUXDemo:
             "   • Both devices are on the same WiFi network\n" +
             "   • Firewall is not blocking the connection"
         )
-        
+
         # Sensor errors
         print("\n📡 Sensor Connection Errors:")
         self.print_example(
@@ -76,7 +76,7 @@ class AndroidUXDemo:
             "   • Device is within range (2-3 meters)\n" +
             "   • Try power cycling the Shimmer device"
         )
-        
+
         # Camera errors
         print("\n📷 Camera Permission Errors:")
         self.print_example(
@@ -91,14 +91,14 @@ class AndroidUXDemo:
             "   • Restart the app after granting permission\n" +
             "   • Ensure no other apps are using the camera"
         )
-    
+
     def demo_status_formatting(self) -> None:
         """Demonstrate Android status formatting utilities."""
         self.print_header("Android Status Formatting System")
-        
+
         print("The Android app provides clear, consistent status information")
         print("throughout the recording workflow.")
-        
+
         # Connection status
         print("\n🔗 Connection Status Examples:")
         statuses = [
@@ -106,10 +106,10 @@ class AndroidUXDemo:
             ("Disconnected", "Not connected to PC Hub"),
             ("Connecting", "Connecting to PC Hub..."),
         ]
-        
+
         for status_type, formatted_status in statuses:
             self.print_example(status_type, formatted_status)
-        
+
         # Recording status
         print("\n🎬 Recording Status Examples:")
         recording_statuses = [
@@ -117,10 +117,10 @@ class AndroidUXDemo:
             ("Recording", "Recording: session_abc123 (2:15)"),
             ("Stopping", "Stopping recording..."),
         ]
-        
+
         for status_type, formatted_status in recording_statuses:
             self.print_example(status_type, formatted_status)
-        
+
         # Sensor status
         print("\n📡 Sensor Status Examples:")
         sensor_statuses = [
@@ -128,30 +128,32 @@ class AndroidUXDemo:
             ("Shimmer GSR: Connected", "Shimmer GSR: Connected"),
             ("Thermal Camera: Disconnected", "Thermal Camera: Disconnected"),
         ]
-        
+
         for status_type, formatted_status in sensor_statuses:
             self.print_example(status_type, formatted_status)
-    
+
     def demo_quick_start_guide(self) -> None:
         """Demonstrate the Android quick start guide system."""
         self.print_header("Android Quick Start Guide")
-        
+
         print("The Android app includes an interactive 6-step quick start guide")
         print("that appears for first-time users, ensuring 5-minute setup.")
-        
+
         steps = [
-            ("1. Connect to WiFi", "Ensure your device is connected to the same WiFi network as the PC Hub"),
+            ("1. Connect to WiFi", "Ensure your device is connected to the same WiFi network as "
+             "the PC Hub"),
             ("2. Grant Permissions", "Allow camera, microphone, and storage access when prompted"),
-            ("3. Connect Sensors", "Power on Shimmer GSR sensor and connect thermal camera via USB"),
+            ("3. Connect Sensors", "Power on Shimmer GSR sensor and connect thermal camera "
+             "via USB"),
             ("4. Find PC Hub", "App will automatically discover the PC Hub on your network"),
             ("5. Start Recording", "Tap 'Start Recording' when all sensors show as connected"),
             ("6. Monitor Status", "Use the tabs to preview camera feeds and monitor sensor data"),
         ]
-        
+
         print("\n📱 Interactive Tutorial Steps:")
         for step_title, step_description in steps:
             self.print_example(step_title, step_description)
-        
+
         print("\n✨ Features:")
         features = [
             "Visual step indicators with progress dots",
@@ -160,29 +162,33 @@ class AndroidUXDemo:
             "Menu option to re-run tutorial anytime",
             "Automatic display on first app launch",
         ]
-        
+
         for feature in features:
             print(f"   • {feature}")
-    
+
     def demo_permission_explanations(self) -> None:
         """Demonstrate permission explanation system."""
         self.print_header("Android Permission Explanations")
-        
+
         print("The Android app provides clear explanations for why each")
         print("permission is needed for physiological research.")
-        
+
         permissions = [
-            ("Camera", "Camera access is required to record RGB video and capture synchronization frames"),
-            ("Microphone", "Microphone access is needed for audio recording during physiological measurements"),
-            ("Storage", "Storage access is required to save recorded data and transfer files to the PC Hub"),
+            ("Camera", "Camera access is required to record RGB video and capture "
+             "synchronization frames"),
+            ("Microphone", "Microphone access is needed for audio recording during "
+             "physiological measurements"),
+            ("Storage", "Storage access is required to save recorded data and transfer "
+             "files to the PC Hub"),
             ("Bluetooth", "Bluetooth access is needed to connect with the Shimmer GSR sensor"),
-            ("Location", "Location access is required for WiFi network discovery and Bluetooth sensor pairing"),
+            ("Location", "Location access is required for WiFi network discovery and "
+             "Bluetooth sensor pairing"),
         ]
-        
+
         print("\n🔒 Permission Explanations:")
         for permission, explanation in permissions:
             self.print_example(f"{permission} Permission", explanation)
-        
+
         print("\n💡 This helps researchers understand:")
         benefits = [
             "Why each permission is necessary for data collection",
@@ -190,17 +196,17 @@ class AndroidUXDemo:
             "What functionality is affected by permission denial",
             "Clear connection between permissions and research goals",
         ]
-        
+
         for benefit in benefits:
             print(f"   • {benefit}")
-    
+
     def demo_connection_help(self) -> None:
         """Demonstrate connection troubleshooting system."""
         self.print_header("Android Connection Help System")
-        
+
         print("The Android app provides comprehensive connection troubleshooting")
         print("guidance accessible through the menu system.")
-        
+
         troubleshooting_steps = [
             "Check that PC Hub application is running",
             "Verify both devices are on the same WiFi network",
@@ -209,11 +215,11 @@ class AndroidUXDemo:
             "Try restarting both applications",
             "If using enterprise WiFi, contact IT about device-to-device communication",
         ]
-        
+
         print("\n🔧 Connection Troubleshooting Steps:")
         for i, step in enumerate(troubleshooting_steps, 1):
             self.print_example(f"Step {i}", step)
-        
+
         print("\n📋 Accessible via:")
         access_methods = [
             "Menu → Connection Help",
@@ -221,17 +227,17 @@ class AndroidUXDemo:
             "Snackbar notifications with help actions",
             "Context-sensitive error messages",
         ]
-        
+
         for method in access_methods:
             print(f"   • {method}")
-    
+
     def demo_ui_enhancements(self) -> None:
         """Demonstrate Android UI enhancements."""
         self.print_header("Android UI/UX Enhancements")
-        
+
         print("The Android app includes comprehensive UI improvements")
         print("that transform the technical interface into a research-ready tool.")
-        
+
         print("\n📱 Main Activity Enhancements:")
         main_activity_features = [
             "Status bar showing real-time connection/recording status",
@@ -241,10 +247,10 @@ class AndroidUXDemo:
             "Automatic quick start guide on first launch",
             "Toast/Snackbar notifications for user feedback",
         ]
-        
+
         for feature in main_activity_features:
             print(f"   ✅ {feature}")
-        
+
         print("\n🎨 Visual Design Improvements:")
         design_features = [
             "Color-coded status bar (green=connected, gray=disconnected)",
@@ -253,10 +259,10 @@ class AndroidUXDemo:
             "Clear visual hierarchy with consistent spacing",
             "Accessible color contrasts for research environments",
         ]
-        
+
         for feature in design_features:
             print(f"   ✅ {feature}")
-        
+
         print("\n🔄 User Interaction Improvements:")
         interaction_features = [
             "Button states reflect current recording status",
@@ -265,10 +271,10 @@ class AndroidUXDemo:
             "Swipe gestures between sensor preview tabs",
             "Pull-to-refresh for connection status updates",
         ]
-        
+
         for feature in interaction_features:
             print(f"   ✅ {feature}")
-    
+
     def run_demo(self, demo_name: str = None) -> None:
         """Run a specific demo or all demos."""
         if demo_name and demo_name in self.demos:
@@ -278,7 +284,7 @@ class AndroidUXDemo:
             self.show_available_demos()
         else:
             self.run_all_demos()
-    
+
     def run_all_demos(self) -> None:
         """Run all available demos."""
         print("🚀 Android User Experience Enhancements Demonstration")
@@ -286,24 +292,24 @@ class AndroidUXDemo:
         print("This demo showcases the Android-focused improvements that")
         print("complement the PC Controller enhancements, providing a")
         print("consistent, research-ready user experience.")
-        
-        for demo_name, demo_func in self.demos.items():
+
+        for _demo_name, demo_func in self.demos.items():
             demo_func()
             time.sleep(1)  # Brief pause between sections
-        
+
         self.show_summary()
-    
+
     def show_available_demos(self) -> None:
         """Show available demo options."""
         print("\n📋 Available Android UX Demos:")
         for demo_name in self.demos.keys():
             formatted_name = demo_name.replace("_", " ").title()
             print(f"   • {demo_name}: {formatted_name}")
-    
+
     def show_summary(self) -> None:
         """Show demo summary."""
         self.print_header("Android Enhancement Summary")
-        
+
         print("🎯 Key Achievements:")
         achievements = [
             "Eliminated technical error messages with user-friendly translations",
@@ -313,24 +319,24 @@ class AndroidUXDemo:
             "Added context-sensitive help and troubleshooting guidance",
             "Ensured platform consistency with PC Controller enhancements",
         ]
-        
+
         for achievement in achievements:
             print(f"   ✅ {achievement}")
-        
-        print(f"\n📊 User Impact:")
+
+        print("\n📊 User Impact:")
         impact_metrics = [
             "5-minute guided setup (down from 15+ minutes)",
             "Eliminated need for technical support during basic setup",
-            "Consistent messaging between PC and Android platforms", 
+            "Consistent messaging between PC and Android platforms",
             "Research-ready interface suitable for non-technical users",
             "50+ new test cases ensuring reliability",
             "Comprehensive error handling with actionable guidance",
         ]
-        
+
         for metric in impact_metrics:
             print(f"   📈 {metric}")
-        
-        print(f"\n🔗 Integration with PC Controller:")
+
+        print("\n🔗 Integration with PC Controller:")
         integration_points = [
             "Consistent error message styling and tone",
             "Parallel quick start guidance systems",
@@ -338,14 +344,14 @@ class AndroidUXDemo:
             "Complementary user experience design",
             "Cross-platform status synchronization",
         ]
-        
+
         for point in integration_points:
             print(f"   🔄 {point}")
 
 def main():
     """Main demo execution."""
     demo = AndroidUXDemo()
-    
+
     if len(sys.argv) > 1:
         demo_name = sys.argv[1]
         demo.run_demo(demo_name)
