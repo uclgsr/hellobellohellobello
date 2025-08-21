@@ -85,17 +85,17 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        
+
         // Initialize views
         viewPager = findViewById(R.id.viewPager)
         tabLayout = findViewById(R.id.tabLayout)
         btnStartRecording = findViewById(R.id.btnStartRecording)
         btnStopRecording = findViewById(R.id.btnStopRecording)
         rootLayout = findViewById<ViewGroup>(android.R.id.content)
-        
+
         // Setup ViewPager with fragments
         setupViewPager()
-        
+
         // Setup button handlers
         setupButtons()
 
@@ -109,11 +109,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun setupViewPager() {
         val adapter = MainPagerAdapter(this)
         viewPager?.adapter = adapter
-        
+
         // Connect TabLayout with ViewPager2
         tabLayout?.let { tabLayout ->
             viewPager?.let { viewPager ->
@@ -123,7 +123,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun setupButtons() {
         btnStartRecording?.setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -134,9 +134,9 @@ class MainActivity : AppCompatActivity() {
                 startRecording()
             }
         }
-        
-        btnStopRecording?.setOnClickListener { 
-            stopRecording() 
+
+        btnStopRecording?.setOnClickListener {
+            stopRecording()
         }
     }
 

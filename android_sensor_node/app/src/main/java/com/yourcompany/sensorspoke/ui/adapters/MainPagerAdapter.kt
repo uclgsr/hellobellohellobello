@@ -11,18 +11,18 @@ import com.yourcompany.sensorspoke.ui.fragments.ThermalPreviewFragment
  * ViewPager2 adapter for main activity tabs
  */
 class MainPagerAdapter(fragmentActivity: FragmentActivity) : FragmentStateAdapter(fragmentActivity) {
-
     companion object {
         const val TAB_RGB_PREVIEW = 0
         const val TAB_THERMAL_PREVIEW = 1
         const val TAB_FILE_MANAGER = 2
         const val TAB_COUNT = 3
-        
-        val TAB_TITLES = arrayOf(
-            "RGB Camera",
-            "Thermal Camera", 
-            "Files"
-        )
+
+        val TAB_TITLES =
+            arrayOf(
+                "RGB Camera",
+                "Thermal Camera",
+                "Files",
+            )
     }
 
     override fun getItemCount(): Int = TAB_COUNT

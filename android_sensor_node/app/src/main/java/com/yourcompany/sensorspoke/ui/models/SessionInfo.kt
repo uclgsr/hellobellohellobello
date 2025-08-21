@@ -11,5 +11,5 @@ data class SessionInfo(
     val dateTime: Date,
     val sizeBytes: Long,
     val details: String,
-    val directory: File
+    val directory: File,
 )

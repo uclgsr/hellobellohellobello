@@ -8,16 +8,15 @@ import androidx.recyclerview.widget.RecyclerView
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.ui.models.SessionInfo
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
 /**
  * RecyclerView adapter for displaying session information
  */
 class SessionAdapter(
     private val sessions: List<SessionInfo>,
-    private val onSessionClick: (SessionInfo) -> Unit
+    private val onSessionClick: (SessionInfo) -> Unit,
 ) : RecyclerView.Adapter<SessionAdapter.SessionViewHolder>() {
-
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
 
     class SessionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -27,20 +26,27 @@ class SessionAdapter(
         val sessionDetailsText: TextView = itemView.findViewById(R.id.sessionDetailsText)
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SessionViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_session, parent, false)
+    override fun onCreateViewHolder(
+        parent: ViewGroup,
+        viewType: Int,
+    ): SessionViewHolder {
+        val view =
+            LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_session, parent, false)
         return SessionViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: SessionViewHolder, position: Int) {
+    override fun onBindViewHolder(
+        holder: SessionViewHolder,
+        position: Int,
+    ) {
         val session = sessions[position]
-        
+
         holder.sessionNameText.text = session.name
         holder.sessionSizeText.text = formatSize(session.sizeBytes)
         holder.sessionDateText.text = dateFormat.format(session.dateTime)
         holder.sessionDetailsText.text = session.details
-        
+
         holder.itemView.setOnClickListener {
             onSessionClick(session)
         }
@@ -50,7 +56,7 @@ class SessionAdapter(
 
     private fun formatSize(bytes: Long): String {
         return when {
-            bytes < 1024 -> "${bytes} B"
+            bytes < 1024 -> "$bytes B"
             bytes < 1024 * 1024 -> "${bytes / 1024} KB"
             bytes < 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
             else -> "${"%.1f".format(bytes / (1024.0 * 1024.0 * 1024.0))} GB"

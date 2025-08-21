@@ -1,6 +1,5 @@
 package com.yourcompany.sensorspoke.ui.fragments
 
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -16,12 +15,11 @@ import com.yourcompany.sensorspoke.utils.PreviewBus
  * Fragment for displaying RGB camera preview
  */
 class RgbPreviewFragment : Fragment() {
-
     private var previewImageView: ImageView? = null
     private var statusText: TextView? = null
     private var resolutionText: TextView? = null
     private var framerateText: TextView? = null
-    
+
     private var frameCount = 0
     private var lastFrameTime = 0L
 
@@ -34,14 +32,17 @@ class RgbPreviewFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View? {
         return inflater.inflate(R.layout.fragment_rgb_preview, container, false)
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(
+        view: View,
+        savedInstanceState: Bundle?,
+    ) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         previewImageView = view.findViewById(R.id.previewImageView)
         statusText = view.findViewById(R.id.statusText)
         resolutionText = view.findViewById(R.id.resolutionText)
@@ -59,14 +60,17 @@ class RgbPreviewFragment : Fragment() {
         PreviewBus.unsubscribe(previewListener)
     }
 
-    private fun updatePreview(jpegBytes: ByteArray, timestampNs: Long) {
+    private fun updatePreview(
+        jpegBytes: ByteArray,
+        timestampNs: Long,
+    ) {
         try {
             val bitmap = BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size)
             if (bitmap != null) {
                 previewImageView?.setImageBitmap(bitmap)
                 statusText?.text = "Live preview active"
                 resolutionText?.text = "Resolution: ${bitmap.width}x${bitmap.height}"
-                
+
                 // Calculate frame rate
                 frameCount++
                 val currentTime = System.currentTimeMillis()
@@ -74,7 +78,7 @@ class RgbPreviewFragment : Fragment() {
                     val deltaMs = currentTime - lastFrameTime
                     if (deltaMs > 1000) { // Update every second
                         val fps = (frameCount * 1000.0 / deltaMs).toInt()
-                        framerateText?.text = "Frame Rate: ${fps} fps"
+                        framerateText?.text = "Frame Rate: $fps fps"
                         frameCount = 0
                         lastFrameTime = currentTime
                     }
