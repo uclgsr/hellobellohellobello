@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Colors -->
+    <color name="control_bar_background">#F5F5F5</color>
+    <color name="preview_background">#000000</color>
+    <color name="status_text_color">#666666</color>
+</resources>

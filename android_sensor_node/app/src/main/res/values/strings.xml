@@ -4,4 +4,14 @@
     <string name="notification_channel_desc">Foreground service for network communication</string>
     <string name="notification_title">Sensor Spoke Running</string>
     <string name="notification_text">Advertising service and awaiting PC connection</string>
+    
+    <!-- UI Strings -->
+    <string name="start_recording">Start Recording</string>
+    <string name="stop_recording">Stop Recording</string>
+    <string name="tab_rgb_preview">RGB Camera</string>
+    <string name="tab_thermal_preview">Thermal Camera</string>
+    <string name="tab_file_manager">Files</string>
+    <string name="no_preview_available">No preview available</string>
+    <string name="camera_not_available">Camera not available</string>
+    <string name="thermal_not_connected">Thermal camera not connected</string>
 </resources>
