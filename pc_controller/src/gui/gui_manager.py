@@ -23,7 +23,8 @@ from PyQt6.QtWidgets import (QFileDialog, QGridLayout, QHBoxLayout, QLabel,
                              QLineEdit, QListWidget, QMainWindow, QPushButton,
                              QTabWidget, QTextEdit, QToolBar, QVBoxLayout,
                              QWidget, QMessageBox, QDialog, QSpinBox, QDoubleSpinBox,
-                             QFormLayout, QDialogButtonBox, QProgressBar, QCheckBox)
+                             QFormLayout, QDialogButtonBox, QProgressBar, QCheckBox,
+                             QMenuBar, QMenu)
 
 try:
     import pyqtgraph as pg
@@ -36,6 +37,7 @@ from data.hdf5_exporter import export_session_to_hdf5
 from network.network_controller import DiscoveredDevice, NetworkController
 from tools.camera_calibration import CalibrationResult, calibrate_camera, load_calibration, save_calibration
 from core.user_experience import ErrorMessageTranslator, StatusIndicator, show_file_location
+from core.quick_start_guide import QuickStartGuide, FirstTimeSetupWizard
 
 # Local device interfaces (Python shim that optionally uses native backends)
 try:
@@ -268,7 +270,8 @@ class GUIManager(QMainWindow):
         except Exception:
             pass
 
-        # Toolbar
+        # Setup UI components
+        self._setup_menu_bar()
         self._setup_toolbar()
 
         # Local device widgets and interfaces
@@ -363,6 +366,54 @@ class GUIManager(QMainWindow):
         self._video_writer = None
         self._gsr_file = None
         self._gsr_written_header = False
+
+        # Show first-time tutorial if needed (delayed to ensure UI is ready)
+        QTimer.singleShot(1000, self._check_and_show_first_time_tutorial)
+
+    # Menu bar setup
+    def _setup_menu_bar(self) -> None:
+        """Set up the main menu bar with File, Tools, and Help menus."""
+        menu_bar = self.menuBar()
+        
+        # File Menu
+        file_menu = menu_bar.addMenu("File")
+        
+        # Add common file operations
+        export_action = QAction("Export Data...", self)
+        export_action.triggered.connect(self._on_export_data)
+        file_menu.addAction(export_action)
+        
+        file_menu.addSeparator()
+        
+        exit_action = QAction("Exit", self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+        
+        # Tools Menu
+        tools_menu = menu_bar.addMenu("Tools")
+        
+        calibrate_action = QAction("Calibrate Cameras...", self)
+        calibrate_action.triggered.connect(self._on_calibrate_cameras)
+        tools_menu.addAction(calibrate_action)
+        
+        tools_menu.addSeparator()
+        
+        settings_action = QAction("Settings...", self)
+        settings_action.triggered.connect(self._show_settings_dialog)
+        tools_menu.addAction(settings_action)
+        
+        # Help Menu
+        help_menu = menu_bar.addMenu("Help")
+        
+        quick_start_action = QAction("Quick Start Guide", self)
+        quick_start_action.triggered.connect(self._show_quick_start_guide)
+        help_menu.addAction(quick_start_action)
+        
+        help_menu.addSeparator()
+        
+        about_action = QAction("About...", self)
+        about_action.triggered.connect(self._show_about_dialog)
+        help_menu.addAction(about_action)
 
     # Toolbar setup
     def _setup_toolbar(self) -> None:
@@ -1042,6 +1093,96 @@ class GUIManager(QMainWindow):
             user_message = ErrorMessageTranslator.translate_error(exc, "recording")
             QMessageBox.critical(self, "Export Error", user_message)
             self._log(f"Export error: {user_message}")
+
+    def _show_quick_start_guide(self) -> None:
+        """Show the quick start guide dialog."""
+        try:
+            guide = QuickStartGuide(self)
+            guide.exec()
+        except Exception as exc:
+            user_message = ErrorMessageTranslator.translate_error(exc)
+            QMessageBox.warning(self, "Quick Start Guide Error", user_message)
+            self._log(f"Quick start guide error: {user_message}")
+
+    def _show_settings_dialog(self) -> None:
+        """Show the settings/preferences dialog."""
+        # Placeholder for future settings dialog
+        QMessageBox.information(
+            self, 
+            "Settings", 
+            "Settings dialog will be implemented in future updates.\n\n"
+            "Current configuration can be modified through:\n"
+            "• config.json file in the application directory\n"
+            "• Environment variables\n"
+            "• Command line parameters"
+        )
+
+    def _show_about_dialog(self) -> None:
+        """Show the about dialog with version and system information."""
+        try:
+            import sys
+            import platform
+            
+            about_text = f"""
+            <h2>Multi-Modal Physiological Sensing Platform</h2>
+            <p><b>Version:</b> 1.0.0</p>
+            <p><b>Architecture:</b> Hub-and-Spoke (PC Controller + Android Sensor Nodes)</p>
+            
+            <h3>System Information:</h3>
+            <p><b>Python:</b> {sys.version.split()[0]}</p>
+            <p><b>Platform:</b> {platform.platform()}</p>
+            <p><b>Qt Version:</b> {QWidget().metaObject().className()}</p>
+            
+            <h3>Features:</h3>
+            <ul>
+            <li>Multi-device sensor synchronization</li>
+            <li>RGB and thermal camera recording</li>
+            <li>Galvanic Skin Response (GSR) monitoring</li>
+            <li>Real-time data visualization</li>
+            <li>Multi-format data export (HDF5, CSV, MP4)</li>
+            <li>Camera calibration utilities</li>
+            <li>Automatic device discovery</li>
+            </ul>
+            
+            <p><b>Documentation:</b> Check the docs/ folder for comprehensive guides</p>
+            <p><b>Support:</b> See user testing feedback and troubleshooting guides</p>
+            """
+            
+            QMessageBox.about(self, "About", about_text)
+            
+        except Exception as exc:
+            QMessageBox.warning(self, "About Dialog Error", f"Could not display about information: {exc}")
+        
+    def _check_and_show_first_time_tutorial(self) -> None:
+        """Check if this is first time use and show tutorial if needed."""
+        try:
+            # Simple check - could be enhanced with proper settings management
+            import os
+            tutorial_flag_file = os.path.join(os.getcwd(), ".tutorial_completed")
+            
+            if not os.path.exists(tutorial_flag_file):
+                # Show tutorial for first-time users
+                reply = QMessageBox.question(
+                    self,
+                    "Welcome!",
+                    "Welcome to the Multi-Modal Physiological Sensing Platform!\n\n"
+                    "Would you like to see the Quick Start Guide to get started?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.Yes
+                )
+                
+                if reply == QMessageBox.StandardButton.Yes:
+                    self._show_quick_start_guide()
+                
+                # Create flag file to indicate tutorial was offered
+                try:
+                    with open(tutorial_flag_file, 'w') as f:
+                        f.write("Tutorial offered on first run")
+                except Exception:
+                    pass  # Ignore file creation errors
+                    
+        except Exception:
+            pass  # Ignore errors in tutorial check - should not affect main app
 
 
 class CalibrationDialog(QDialog):
