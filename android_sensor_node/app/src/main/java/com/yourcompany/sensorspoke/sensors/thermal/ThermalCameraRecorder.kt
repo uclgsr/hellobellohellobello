@@ -1,5 +1,6 @@
 package com.yourcompany.sensorspoke.sensors.thermal
 
+import android.graphics.Bitmap
 import android.content.Context
 import android.graphics.Bitmap
 import android.hardware.usb.UsbDevice
@@ -23,6 +24,11 @@ import com.energy.iruvc.sdkisp.LibIRProcess
 import com.energy.iruvc.dual.USBDualCamera
 
 /**
+ * ThermalCameraRecorder scaffold for Topdon TC001 thermal camera integration.
+ * Phase 2: create CSV file, thermal image files, and prepare interfaces; full SDK streaming will be added
+ * when the Topdon SDK artifact is available. This keeps the app buildable and
+ * creates the expected file structure during local testing.
+
  * Production ThermalCameraRecorder with TRUE Topdon SDK integration.
  * 
  * This implementation uses the actual Topdon SDK classes to interface with
@@ -39,10 +45,11 @@ import com.energy.iruvc.dual.USBDualCamera
 class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
     private var csvWriter: BufferedWriter? = null
     private var csvFile: File? = null
+    private var thermalImagesDir: File? = null
     private var sessionDir: File? = null
     private var recordingJob: Job? = null
     private val coroutineScope = CoroutineScope(Dispatchers.IO + Job())
-    
+   
     // True Topdon SDK integration using real SDK classes
     private var ircmd: IRCMD? = null
     private var usbDualCamera: USBDualCamera? = null
@@ -56,11 +63,12 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
     private var emissivity = 0.95f
     private var temperatureRange = Pair(-20.0f, 400.0f)
 
+
     override suspend fun start(sessionDir: File) {
         if (!sessionDir.exists()) sessionDir.mkdirs()
-        this.sessionDir = sessionDir
         
-        // Initialize CSV file for thermal data
+        // Create thermal images directory for IR image files
+        thermalImagesDir = File(sessionDir, "thermal_images").apply { mkdirs() }
         csvFile = File(sessionDir, "thermal.csv")
         csvWriter = BufferedWriter(FileWriter(csvFile!!, true))
         
@@ -109,67 +117,11 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
 
     override suspend fun stop() {
         try {
-            stopTopdonStreaming()
-            disconnectTopdonCamera()
-        } finally {
-            // Always ensure file cleanup
-            try {
-                csvWriter?.flush()
-                csvWriter?.close()
-            } catch (_: Exception) {
-                // Ignore cleanup errors
-            }
-            csvWriter = null
-            recordingJob?.cancel()
-        }
-    }
-
-    /**
-     * Initialize the real Topdon SDK and establish hardware connection.
-     * Uses actual IRCMD for device detection and connection.
-     */
-    private suspend fun initializeTopdonSDK() {
-        withContext(Dispatchers.IO) {
-            try {
-                // Initialize real Topdon SDK components
-                // Using reflection and exception handling to adapt to exact SDK API
-                val ircmdClass = Class.forName("com.energy.iruvc.ircmd.IRCMD")
-                val getInstance = ircmdClass.getMethod("getInstance")
-                ircmd = getInstance.invoke(null) as? IRCMD
-                
-                if (ircmd == null) {
-                    throw RuntimeException("Failed to initialize Topdon IRCMD SDK")
-                }
-                
-                // Try to initialize USB dual camera for TC001 detection  
-                try {
-                    val usbCameraClass = Class.forName("com.energy.iruvc.dual.USBDualCamera")
-                    val getInstanceMethod = usbCameraClass.getMethod("getInstance", Context::class.java)
-                    usbDualCamera = getInstanceMethod.invoke(null, context) as? USBDualCamera
-                } catch (e: Exception) {
-                    println("USB dual camera initialization failed: ${e.message}")
-                }
-                
-                // Scan for actual Topdon TC001 devices using real hardware detection
-                val topdonDevice = scanForTopdonTC001()
-                if (topdonDevice == null) {
-                    throw RuntimeException("No Topdon TC001 thermal camera found - using simulation mode")
-                }
-                
-                // Try to establish connection to real hardware
-                // Using reflection to call appropriate connection method
-                val connectSuccess = tryConnectToDevice(topdonDevice)
-                if (!connectSuccess) {
-                    throw RuntimeException("Failed to connect to TC001 hardware")
-                }
-                
-                isConnected = true
-                
-                // Get actual device capabilities from hardware if available
-                tryGetDeviceCapabilities()
-                
-            } catch (e: Exception) {
-                throw RuntimeException("Topdon SDK initialization failed: ${e.message}", e)
+            csvWriter = BufferedWriter(FileWriter(csvFile!!, true))
+            if (csvFile!!.length() == 0L) {
+                // Write header per spec: timestamp_ns,image_filename,w,h,min_temp,max_temp
+                csvWriter!!.write("timestamp_ns,image_filename,w,h,min_temp_celsius,max_temp_celsius\n")
+                csvWriter!!.flush()
             }
         }
     }
@@ -203,24 +155,18 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
      */
     private fun tryGetDeviceCapabilities() {
         try {
-            val ircmdObj = ircmd ?: return
-            
-            // Try to get device info using various possible method names
-            val deviceInfoMethods = listOf("getDeviceInfo", "getDeviceCapabilities", "getResolution")
-            
-            for (methodName in deviceInfoMethods) {
-                try {
-                    val method = ircmdObj.javaClass.getMethod(methodName)
-                    val result = method.invoke(ircmdObj)
-                    
-                    // Try to extract width/height from result
-                    result?.let { info ->
-                        extractDimensionsFromDeviceInfo(info)
-                        break
-                    }
-                } catch (e: Exception) {
-                    // Try next method
-                }
+            val meta = File(sessionDir, "thermal_metadata.json")
+            if (!meta.exists()) {
+                val json =
+                    "{" +
+                        "\"sensor\":\"Topdon TC001\"," +
+                        "\"width\":256," +
+                        "\"height\":192," +
+                        "\"emissivity\":0.95," +
+                        "\"format\":\"thermal_png\"," +
+                        "\"notes\":\"Thermal images saved as PNG files with CSV index\"" +
+                        "}"
+                meta.writeText(json)
             }
         } catch (e: Exception) {
             println("Failed to get device capabilities: ${e.message}")
@@ -1182,15 +1128,86 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         } catch (e: Exception) {
             // Handle image creation error
         }
+        csvWriter = null
+        thermalImagesDir = null
     }
 
-    private fun handleWriteError(e: IOException) {
-        // Handle file write errors
-        // Could implement error recovery or notification
+    /**
+     * Save thermal data as both image file and CSV entry.
+     * This is a placeholder implementation until Topdon SDK is integrated.
+     * 
+     * @param timestamp_ns Nanosecond timestamp
+     * @param thermalData 2D array of temperature values in Celsius
+     * @param width Frame width (typically 256)
+     * @param height Frame height (typically 192)
+     */
+    suspend fun saveThermalFrame(
+        timestamp_ns: Long,
+        thermalData: Array<FloatArray>,
+        width: Int = 256,
+        height: Int = 192
+    ) {
+        val imageFilename = "thermal_$timestamp_ns.png"
+        val imageFile = File(thermalImagesDir, imageFilename)
+        
+        // Save thermal data as PNG image (false color representation)
+        val thermalBitmap = createThermalBitmap(thermalData, width, height)
+        saveImageAsPng(thermalBitmap, imageFile)
+        
+        // Calculate temperature range for CSV
+        var minTemp = Float.MAX_VALUE
+        var maxTemp = Float.MIN_VALUE
+        thermalData.forEach { row ->
+            row.forEach { temp ->
+                if (temp < minTemp) minTemp = temp
+                if (temp > maxTemp) maxTemp = temp
+            }
+        }
+        
+        // Write CSV entry
+        try {
+            csvWriter?.apply {
+                write("$timestamp_ns,$imageFilename,$width,$height,$minTemp,$maxTemp\n")
+                flush()
+            }
+        } catch (_: Exception) {
+        }
     }
 
-    private fun handleDataError(e: Exception) {
-        // Handle data processing errors
-        // Could implement error recovery or logging
+    /**
+     * Create a false color bitmap representation of thermal data
+     */
+    private fun createThermalBitmap(thermalData: Array<FloatArray>, width: Int, height: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        
+        // Simple false color mapping (blue = cold, red = hot)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val temp = thermalData[y][x]
+                // Normalize temperature to 0-255 range (assuming 0-50°C range)
+                val normalized = ((temp / 50.0f) * 255).toInt().coerceIn(0, 255)
+                val red = normalized
+                val green = (normalized * 0.5f).toInt()
+                val blue = 255 - normalized
+                
+                val color = android.graphics.Color.rgb(red, green, blue)
+                bitmap.setPixel(x, y, color)
+            }
+        }
+        
+        return bitmap
+    }
+
+    /**
+     * Save bitmap as PNG file
+     */
+    private fun saveImageAsPng(bitmap: Bitmap, file: File) {
+        try {
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+        } catch (_: Exception) {
+            // Handle error silently for now
+        }
     }
 }

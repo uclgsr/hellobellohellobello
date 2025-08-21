@@ -19,29 +19,12 @@ from dataclasses import dataclass
 import numpy as np
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QAction, QImage, QPixmap
-from PyQt6.QtWidgets import (
-    QCheckBox,
-    QDialog,
-    QDialogButtonBox,
-    QDoubleSpinBox,
-    QFileDialog,
-    QFormLayout,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QListWidget,
-    QMainWindow,
-    QMessageBox,
-    QProgressBar,
-    QPushButton,
-    QSpinBox,
-    QTabWidget,
-    QTextEdit,
-    QToolBar,
-    QVBoxLayout,
-    QWidget,
-)
+from PyQt6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox,
+                             QDoubleSpinBox, QFileDialog, QFormLayout,
+                             QGridLayout, QHBoxLayout, QLabel, QLineEdit,
+                             QListWidget, QMainWindow, QMessageBox,
+                             QProgressBar, QPushButton, QSpinBox, QTabWidget,
+                             QTextEdit, QToolBar, QVBoxLayout, QWidget)
 
 try:
     import pyqtgraph as pg
@@ -49,7 +32,8 @@ except Exception:  # pragma: no cover - import guard for environments without Qt
     pg = None
 
 from core.quick_start_guide import QuickStartGuide
-from core.user_experience import ErrorMessageTranslator, StatusIndicator, show_file_location
+from core.user_experience import (ErrorMessageTranslator, StatusIndicator,
+                                  show_file_location)
 from data.data_aggregator import DataAggregator
 from data.data_loader import DataLoader
 from data.hdf5_exporter import export_session_to_hdf5
@@ -354,10 +338,10 @@ class GUIManager(QMainWindow):
                 if not connected:
                     try:
                         sig.connect(
-                        lambda dev, data, ts: self._on_preview_frame(
-                            str(dev), bytes(data), int(ts)
-                        )
-                    )  # type: ignore[attr-defined]
+                            lambda dev, data, ts: self._on_preview_frame(
+                                str(dev), bytes(data), int(ts)
+                            )
+                        )  # type: ignore[attr-defined]
                         connected = True
                     except Exception as exc:
                         self._log(f"Lambda preview_frame connect failed: {exc}")
@@ -607,8 +591,7 @@ class GUIManager(QMainWindow):
         try:
             try:
                 self._logger.info(
-                    f"[DEBUG_LOG] on_preview_frame: {device_name}, "
-                    f"ts={ts_ns}"
+                    f"[DEBUG_LOG] on_preview_frame: {device_name}, " f"ts={ts_ns}"
                 )
             except Exception:
                 pass
@@ -1147,9 +1130,7 @@ class GUIManager(QMainWindow):
             dialog.exec()
         except Exception as exc:
             QMessageBox.warning(
-                self,
-                "Settings Dialog Error", 
-                f"Could not open settings dialog: {exc}"
+                self, "Settings Dialog Error", f"Could not open settings dialog: {exc}"
             )
 
     def _show_about_dialog(self) -> None:
@@ -1391,72 +1372,74 @@ class ExportDialog(QDialog):
 
 class SettingsDialog(QDialog):
     """Comprehensive settings/preferences dialog."""
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")
         self.setFixedSize(500, 600)
-        
+
         # Main layout
         layout = QVBoxLayout(self)
-        
+
         # Create tabbed interface for different settings categories
         tabs = QTabWidget(self)
         layout.addWidget(tabs)
-        
+
         # General Settings Tab
         self._create_general_tab(tabs)
-        
-        # Network Settings Tab  
+
+        # Network Settings Tab
         self._create_network_tab(tabs)
-        
+
         # Recording Settings Tab
         self._create_recording_tab(tabs)
-        
+
         # Advanced Settings Tab
         self._create_advanced_tab(tabs)
-        
+
         # Buttons
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | 
-            QDialogButtonBox.StandardButton.Cancel |
-            QDialogButtonBox.StandardButton.Apply
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+            | QDialogButtonBox.StandardButton.Apply
         )
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
-        buttons.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self._apply_settings)
+        buttons.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(
+            self._apply_settings
+        )
         layout.addWidget(buttons)
-        
+
         # Load current settings
         self._load_current_settings()
-    
+
     def _create_general_tab(self, tabs: QTabWidget):
         """Create the General settings tab."""
         general_tab = QWidget()
         layout = QFormLayout(general_tab)
-        
+
         # Data directory
         self.data_dir_edit = QLineEdit()
         self.data_dir_browse = QPushButton("Browse...")
         self.data_dir_browse.clicked.connect(self._browse_data_dir)
-        
+
         data_dir_layout = QHBoxLayout()
         data_dir_layout.addWidget(self.data_dir_edit)
         data_dir_layout.addWidget(self.data_dir_browse)
         layout.addRow("Data Directory:", data_dir_layout)
-        
+
         # Auto-start devices
         self.auto_start_webcam = QCheckBox("Auto-start local webcam")
         self.auto_start_shimmer = QCheckBox("Auto-start Shimmer sensor")
         layout.addRow("Device Startup:", self.auto_start_webcam)
         layout.addRow("", self.auto_start_shimmer)
-        
+
         # UI preferences
         self.show_first_time_guide = QCheckBox("Show quick start guide for new users")
         self.enable_tooltips = QCheckBox("Enable detailed tooltips")
         layout.addRow("Interface:", self.show_first_time_guide)
         layout.addRow("", self.enable_tooltips)
-        
+
         # Theme selection
         self.theme_combo = QWidget()
         theme_layout = QHBoxLayout(self.theme_combo)
@@ -1464,161 +1447,163 @@ class SettingsDialog(QDialog):
         theme_layout.addWidget(QLabel("Light"))
         # Note: Could be expanded with actual theme switching
         layout.addRow("Theme:", self.theme_combo)
-        
+
         tabs.addTab(general_tab, "General")
-    
+
     def _create_network_tab(self, tabs: QTabWidget):
         """Create the Network settings tab."""
         network_tab = QWidget()
         layout = QFormLayout(network_tab)
-        
+
         # Discovery settings
         self.discovery_port = QSpinBox()
         self.discovery_port.setRange(1024, 65535)
         self.discovery_port.setValue(8888)
         layout.addRow("Discovery Port:", self.discovery_port)
-        
+
         self.connection_timeout = QSpinBox()
         self.connection_timeout.setRange(1, 60)
         self.connection_timeout.setValue(10)
         self.connection_timeout.setSuffix(" seconds")
         layout.addRow("Connection Timeout:", self.connection_timeout)
-        
+
         # Security settings
         self.use_tls = QCheckBox("Use TLS encryption")
         self.use_tls.setChecked(True)
         layout.addRow("Security:", self.use_tls)
-        
+
         # File transfer settings
         self.transfer_port = QSpinBox()
         self.transfer_port.setRange(1024, 65535)
         self.transfer_port.setValue(9001)
         layout.addRow("File Transfer Port:", self.transfer_port)
-        
+
         # Preview settings
         self.preview_fps_limit = QSpinBox()
         self.preview_fps_limit.setRange(1, 60)
         self.preview_fps_limit.setValue(10)
         self.preview_fps_limit.setSuffix(" fps")
         layout.addRow("Preview FPS Limit:", self.preview_fps_limit)
-        
+
         tabs.addTab(network_tab, "Network")
-    
+
     def _create_recording_tab(self, tabs: QTabWidget):
-        """Create the Recording settings tab.""" 
+        """Create the Recording settings tab."""
         recording_tab = QWidget()
         layout = QFormLayout(recording_tab)
-        
+
         # Shimmer settings
         self.shimmer_sampling_rate = QSpinBox()
         self.shimmer_sampling_rate.setRange(1, 1000)
         self.shimmer_sampling_rate.setValue(128)
         self.shimmer_sampling_rate.setSuffix(" Hz")
         layout.addRow("Shimmer Sampling Rate:", self.shimmer_sampling_rate)
-        
-        self.use_real_shimmer = QCheckBox("Use real Shimmer hardware (requires pyshimmer)")
+
+        self.use_real_shimmer = QCheckBox(
+            "Use real Shimmer hardware (requires pyshimmer)"
+        )
         layout.addRow("Shimmer Mode:", self.use_real_shimmer)
-        
+
         self.shimmer_port = QLineEdit()
         self.shimmer_port.setPlaceholderText("e.g., COM3, /dev/ttyUSB0")
         layout.addRow("Shimmer Port:", self.shimmer_port)
-        
+
         # Video settings
         self.video_fps = QSpinBox()
         self.video_fps.setRange(10, 60)
         self.video_fps.setValue(30)
         self.video_fps.setSuffix(" fps")
         layout.addRow("Video Recording FPS:", self.video_fps)
-        
+
         self.video_quality = QSpinBox()
         self.video_quality.setRange(50, 100)
         self.video_quality.setValue(90)
         self.video_quality.setSuffix("%")
         layout.addRow("Video Quality:", self.video_quality)
-        
+
         # Time sync settings
         self.time_sync_interval = QSpinBox()
         self.time_sync_interval.setRange(30, 600)
         self.time_sync_interval.setValue(180)
         self.time_sync_interval.setSuffix(" seconds")
         layout.addRow("Time Sync Interval:", self.time_sync_interval)
-        
+
         tabs.addTab(recording_tab, "Recording")
-    
+
     def _create_advanced_tab(self, tabs: QTabWidget):
         """Create the Advanced settings tab."""
         advanced_tab = QWidget()
         layout = QFormLayout(advanced_tab)
-        
+
         # Debug settings
         self.debug_logging = QCheckBox("Enable debug logging")
         self.verbose_ui = QCheckBox("Verbose UI updates")
         layout.addRow("Debug:", self.debug_logging)
         layout.addRow("", self.verbose_ui)
-        
+
         # Performance settings
         self.ui_update_interval = QSpinBox()
         self.ui_update_interval.setRange(10, 1000)
         self.ui_update_interval.setValue(50)
         self.ui_update_interval.setSuffix(" ms")
         layout.addRow("UI Update Interval:", self.ui_update_interval)
-        
+
         self.preview_buffer_size = QSpinBox()
         self.preview_buffer_size.setRange(5, 60)
         self.preview_buffer_size.setValue(10)
         self.preview_buffer_size.setSuffix(" seconds")
         layout.addRow("Preview Buffer Size:", self.preview_buffer_size)
-        
+
         # Export settings
         self.default_export_format = QWidget()
         export_layout = QHBoxLayout(self.default_export_format)
         export_layout.setContentsMargins(0, 0, 0, 0)
-        
+
         self.export_hdf5 = QCheckBox("HDF5")
-        self.export_csv = QCheckBox("CSV") 
+        self.export_csv = QCheckBox("CSV")
         self.export_mp4 = QCheckBox("MP4")
         self.export_hdf5.setChecked(True)
         self.export_csv.setChecked(True)
-        
+
         export_layout.addWidget(self.export_hdf5)
         export_layout.addWidget(self.export_csv)
         export_layout.addWidget(self.export_mp4)
         layout.addRow("Default Export Formats:", self.default_export_format)
-        
+
         # Reset button
         reset_btn = QPushButton("Reset to Defaults")
         reset_btn.clicked.connect(self._reset_to_defaults)
         layout.addRow("", reset_btn)
-        
+
         tabs.addTab(advanced_tab, "Advanced")
-    
+
     def _browse_data_dir(self):
         """Browse for data directory."""
-        directory = QFileDialog.getExistingDirectory(
-            self, "Select Data Directory"
-        )
+        directory = QFileDialog.getExistingDirectory(self, "Select Data Directory")
         if directory:
             self.data_dir_edit.setText(directory)
-    
+
     def _load_current_settings(self):
         """Load current settings from config."""
         try:
             # Import config
             from ..config import get as cfg_get
-            
+
             # Load general settings
             self.data_dir_edit.setText(cfg_get("data_directory", "pc_controller_data"))
             self.auto_start_webcam.setChecked(cfg_get("auto_start_webcam", True))
             self.auto_start_shimmer.setChecked(cfg_get("auto_start_shimmer", True))
-            self.show_first_time_guide.setChecked(cfg_get("show_first_time_guide", True))
-            
+            self.show_first_time_guide.setChecked(
+                cfg_get("show_first_time_guide", True)
+            )
+
             # Load network settings
             self.discovery_port.setValue(cfg_get("discovery_port", 8888))
             self.connection_timeout.setValue(cfg_get("connection_timeout", 10))
             self.use_tls.setChecked(cfg_get("use_tls", True))
             self.transfer_port.setValue(cfg_get("transfer_port", 9001))
             self.preview_fps_limit.setValue(cfg_get("preview_fps_limit", 10))
-            
+
             # Load recording settings
             self.shimmer_sampling_rate.setValue(cfg_get("shimmer_sampling_rate", 128))
             self.use_real_shimmer.setChecked(cfg_get("use_real_shimmer", False))
@@ -1626,38 +1611,36 @@ class SettingsDialog(QDialog):
             self.video_fps.setValue(cfg_get("video_fps", 30))
             self.video_quality.setValue(cfg_get("video_quality", 90))
             self.time_sync_interval.setValue(cfg_get("time_sync_interval", 180))
-            
+
             # Load advanced settings
             self.debug_logging.setChecked(cfg_get("debug_logging", False))
             self.verbose_ui.setChecked(cfg_get("verbose_ui", False))
             self.ui_update_interval.setValue(cfg_get("ui_update_interval", 50))
             self.preview_buffer_size.setValue(cfg_get("preview_buffer_size", 10))
-            
-        except Exception as e:
+
+        except Exception:
             # If config loading fails, use defaults
             self._reset_to_defaults()
-    
+
     def _apply_settings(self):
         """Apply settings (without closing dialog)."""
         try:
             # This would save settings to config file
             settings = self._get_settings_dict()
-            
+
             # Show confirmation
             QMessageBox.information(
-                self, 
-                "Settings Applied", 
+                self,
+                "Settings Applied",
                 "Settings have been applied successfully.\n\n"
-                "Some changes may require a restart to take full effect."
+                "Some changes may require a restart to take full effect.",
             )
-            
+
         except Exception as e:
             QMessageBox.warning(
-                self,
-                "Settings Error",
-                f"Failed to apply settings: {e}"
+                self, "Settings Error", f"Failed to apply settings: {e}"
             )
-    
+
     def _get_settings_dict(self) -> dict:
         """Get all settings as a dictionary."""
         return {
@@ -1666,14 +1649,12 @@ class SettingsDialog(QDialog):
             "auto_start_webcam": self.auto_start_webcam.isChecked(),
             "auto_start_shimmer": self.auto_start_shimmer.isChecked(),
             "show_first_time_guide": self.show_first_time_guide.isChecked(),
-            
-            # Network  
+            # Network
             "discovery_port": self.discovery_port.value(),
             "connection_timeout": self.connection_timeout.value(),
             "use_tls": self.use_tls.isChecked(),
             "transfer_port": self.transfer_port.value(),
             "preview_fps_limit": self.preview_fps_limit.value(),
-            
             # Recording
             "shimmer_sampling_rate": self.shimmer_sampling_rate.value(),
             "use_real_shimmer": self.use_real_shimmer.isChecked(),
@@ -1681,14 +1662,13 @@ class SettingsDialog(QDialog):
             "video_fps": self.video_fps.value(),
             "video_quality": self.video_quality.value(),
             "time_sync_interval": self.time_sync_interval.value(),
-            
             # Advanced
             "debug_logging": self.debug_logging.isChecked(),
             "verbose_ui": self.verbose_ui.isChecked(),
             "ui_update_interval": self.ui_update_interval.value(),
             "preview_buffer_size": self.preview_buffer_size.value(),
         }
-    
+
     def _reset_to_defaults(self):
         """Reset all settings to default values."""
         # General defaults
@@ -1696,14 +1676,14 @@ class SettingsDialog(QDialog):
         self.auto_start_webcam.setChecked(True)
         self.auto_start_shimmer.setChecked(True)
         self.show_first_time_guide.setChecked(True)
-        
+
         # Network defaults
         self.discovery_port.setValue(8888)
         self.connection_timeout.setValue(10)
         self.use_tls.setChecked(True)
         self.transfer_port.setValue(9001)
         self.preview_fps_limit.setValue(10)
-        
+
         # Recording defaults
         self.shimmer_sampling_rate.setValue(128)
         self.use_real_shimmer.setChecked(False)
@@ -1711,7 +1691,7 @@ class SettingsDialog(QDialog):
         self.video_fps.setValue(30)
         self.video_quality.setValue(90)
         self.time_sync_interval.setValue(180)
-        
+
         # Advanced defaults
         self.debug_logging.setChecked(False)
         self.verbose_ui.setChecked(False)

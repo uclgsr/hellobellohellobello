@@ -6,18 +6,9 @@ from dataclasses import dataclass
 try:
     from PyQt6.QtCore import QDateTime, Qt, pyqtSignal
     from PyQt6.QtGui import QFont
-    from PyQt6.QtWidgets import (
-        QDialog,
-        QFrame,
-        QHBoxLayout,
-        QLabel,
-        QProgressBar,
-        QPushButton,
-        QScrollArea,
-        QTextEdit,
-        QVBoxLayout,
-        QWidget,
-    )
+    from PyQt6.QtWidgets import (QDialog, QFrame, QHBoxLayout, QLabel,
+                                 QProgressBar, QPushButton, QScrollArea,
+                                 QTextEdit, QVBoxLayout, QWidget)
 
     _QT_AVAILABLE = True
 except ImportError:

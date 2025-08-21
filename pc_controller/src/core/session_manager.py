@@ -18,10 +18,12 @@ from typing import Any
 
 try:
     # Centralized config loader (NFR8)
-    from pc_controller.src.config import get as cfg_get  # when running as a script
+    from pc_controller.src.config import \
+        get as cfg_get  # when running as a script
 except Exception:  # pragma: no cover
     try:
-        from ..config import get as cfg_get  # when imported via tests (pythonpath set)
+        from ..config import \
+            get as cfg_get  # when imported via tests (pythonpath set)
     except Exception:  # pragma: no cover
 
         def cfg_get(key: str, default=None):  # type: ignore

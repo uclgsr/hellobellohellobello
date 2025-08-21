@@ -9,6 +9,8 @@
     <!-- Camera for RGB recording -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera2.full" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.capability.raw" android:required="false"/>
 
     <!-- BLE (future Shimmer integration) -->
     <uses-permission android:name="android.permission.BLUETOOTH"/>

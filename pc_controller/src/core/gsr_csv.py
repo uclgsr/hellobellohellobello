@@ -15,7 +15,7 @@ from __future__ import annotations
 import csv
 import threading
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 
 class GsrCsvWriter:
@@ -23,7 +23,7 @@ class GsrCsvWriter:
         self._path = Path(file_path)
         self._lock = threading.Lock()
         self._fh: TextIO | None = None
-        self._writer: csv.writer | None = None
+        self._writer: Any | None = None
         self._newline = newline
 
     def open(self) -> None:
@@ -61,5 +61,5 @@ class GsrCsvWriter:
         self.open()
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:  # type: ignore[override]
+    def __exit__(self, exc_type, exc, tb) -> None:
         self.close()

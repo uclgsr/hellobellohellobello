@@ -10,6 +10,7 @@ import org.mockito.Mockito.*
 import org.mockito.MockitoAnnotations
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertFailsWith
 
 class SensorRecorderComprehensiveTest {
@@ -295,9 +296,6 @@ class ShimmerRecorderComprehensiveTest {
         }
     }
 }
-
-// Integration test utilities
-import java.util.concurrent.atomic.AtomicInteger
 
 object SensorTestUtils {
     fun createTempSessionDir(): File {

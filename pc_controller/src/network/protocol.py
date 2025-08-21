@@ -214,9 +214,9 @@ def parse_json_line(line: str) -> dict[str, Any]:
     except Exception:
         # Safe evaluation of Python literals as a fallback for tests
         obj = ast.literal_eval(line)
-        if not isinstance(obj, dict):  # type: ignore[unreachable]
+        if not isinstance(obj, dict):
             raise ValueError("Parsed object is not a dict") from None
-        return obj  # type: ignore[return-value]
+        return obj
 
 
 def compute_time_sync(t0: int, t1: int, t2: int, t3: int) -> tuple[int, int]:
