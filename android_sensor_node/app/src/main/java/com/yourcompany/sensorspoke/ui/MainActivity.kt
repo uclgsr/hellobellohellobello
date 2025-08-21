@@ -6,13 +6,17 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -20,6 +24,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yourcompany.sensorspoke.R
@@ -29,6 +34,8 @@ import com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
 import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
 import com.yourcompany.sensorspoke.service.RecordingService
 import com.yourcompany.sensorspoke.ui.adapters.MainPagerAdapter
+import com.yourcompany.sensorspoke.ui.dialogs.QuickStartDialog
+import com.yourcompany.sensorspoke.utils.UserExperience
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -40,14 +47,21 @@ class MainActivity : AppCompatActivity() {
     private var tabLayout: TabLayout? = null
     private var btnStartRecording: Button? = null
     private var btnStopRecording: Button? = null
+    private var statusText: TextView? = null
     private var rootLayout: ViewGroup? = null
+    
+    // User experience enhancements
+    private lateinit var preferences: SharedPreferences
+    private var isFirstLaunch: Boolean = false
 
     private val requestCameraPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) {
+                UserExperience.Messaging.showSuccess(this, "Camera permission granted")
                 startRecording()
             } else {
-                Toast.makeText(this, "Camera permission is required", Toast.LENGTH_SHORT).show()
+                val explanation = UserExperience.QuickStart.getPermissionExplanations()["camera"] ?: ""
+                UserExperience.Messaging.showUserFriendlyError(this, "Permission denied: $explanation", "permission")
             }
         }
 
@@ -61,16 +75,28 @@ class MainActivity : AppCompatActivity() {
                 when (action) {
                     RecordingService.ACTION_START_RECORDING -> {
                         val sessionId = intent.getStringExtra(RecordingService.EXTRA_SESSION_ID)
+                        updateStatusText("Starting recording session: $sessionId")
                         lifecycleScope.launch {
                             try {
                                 ensureController().startSession(sessionId)
-                            } catch (_: Exception) {
+                                UserExperience.Messaging.showSuccess(this@MainActivity, "Recording started", sessionId)
+                            } catch (e: Exception) {
+                                UserExperience.Messaging.showUserFriendlyError(this@MainActivity, e.message ?: "Unknown error", "recording")
                             }
                         }
                     }
 
                     RecordingService.ACTION_STOP_RECORDING -> {
-                        lifecycleScope.launch { runCatching { controller?.stopSession() } }
+                        updateStatusText("Stopping recording...")
+                        lifecycleScope.launch { 
+                            runCatching { 
+                                controller?.stopSession()
+                                UserExperience.Messaging.showSuccess(this@MainActivity, "Recording stopped")
+                                updateStatusText("Ready to record")
+                            }.onFailure { e ->
+                                UserExperience.Messaging.showUserFriendlyError(this@MainActivity, e.message ?: "Unknown error", "recording")
+                            }
+                        }
                     }
 
                     RecordingService.ACTION_FLASH_SYNC -> {
@@ -85,12 +111,17 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        
+        // Initialize preferences and check first launch
+        preferences = getSharedPreferences("sensor_spoke_prefs", Context.MODE_PRIVATE)
+        isFirstLaunch = preferences.getBoolean("first_launch", true)
 
         // Initialize views
         viewPager = findViewById(R.id.viewPager)
         tabLayout = findViewById(R.id.tabLayout)
         btnStartRecording = findViewById(R.id.btnStartRecording)
         btnStopRecording = findViewById(R.id.btnStopRecording)
+        statusText = findViewById(R.id.statusText)
         rootLayout = findViewById<ViewGroup>(android.R.id.content)
 
         // Setup ViewPager with fragments
@@ -98,6 +129,12 @@ class MainActivity : AppCompatActivity() {
 
         // Setup button handlers
         setupButtons()
+        
+        // Setup toolbar with menu
+        setupToolbar()
+        
+        // Initialize status
+        updateStatusText("Initializing...")
 
         // Ensure background service for NSD + TCP server is running (skip during unit tests)
         if (!isRunningUnderTest()) {
@@ -107,6 +144,41 @@ class MainActivity : AppCompatActivity() {
             } else {
                 startService(svcIntent)
             }
+        }
+        
+        // Show quick start guide for first-time users
+        if (isFirstLaunch) {
+            showQuickStartGuide()
+        }
+        
+        updateStatusText("Ready to connect")
+    }
+    
+    private fun setupToolbar() {
+        supportActionBar?.setDisplayShowTitleEnabled(true)
+        supportActionBar?.title = "Sensor Spoke"
+    }
+    
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+    
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_quick_start -> {
+                showQuickStartGuide()
+                true
+            }
+            R.id.action_connection_help -> {
+                showConnectionHelp()
+                true
+            }
+            R.id.action_reset_tutorial -> {
+                resetFirstLaunchFlag()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 
@@ -175,25 +247,80 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startRecording() {
+        updateStatusText("Starting recording...")
         lifecycleScope.launch {
             try {
                 ensureController().startSession()
-                Toast.makeText(this@MainActivity, "Recording started", Toast.LENGTH_SHORT).show()
+                UserExperience.Messaging.showSuccess(this@MainActivity, "Recording started")
+                updateStatusText("Recording in progress")
+                updateButtonStates(isRecording = true)
             } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, "Failed: ${e.message}", Toast.LENGTH_LONG).show()
+                UserExperience.Messaging.showUserFriendlyError(this@MainActivity, e.message ?: "Unknown error", "recording")
+                updateStatusText("Ready to record")
             }
         }
     }
 
     private fun stopRecording() {
+        updateStatusText("Stopping recording...")
         lifecycleScope.launch {
             try {
                 controller?.stopSession()
-                Toast.makeText(this@MainActivity, "Recording stopped", Toast.LENGTH_SHORT).show()
+                UserExperience.Messaging.showSuccess(this@MainActivity, "Recording stopped")
+                updateStatusText("Ready to record")
+                updateButtonStates(isRecording = false)
             } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, "Failed: ${e.message}", Toast.LENGTH_LONG).show()
+                UserExperience.Messaging.showUserFriendlyError(this@MainActivity, e.message ?: "Unknown error", "recording")
             }
         }
+    }
+    
+    private fun updateStatusText(status: String) {
+        runOnUiThread {
+            statusText?.text = status
+        }
+    }
+    
+    private fun updateButtonStates(isRecording: Boolean) {
+        runOnUiThread {
+            btnStartRecording?.isEnabled = !isRecording
+            btnStopRecording?.isEnabled = isRecording
+        }
+    }
+    
+    private fun showQuickStartGuide() {
+        QuickStartDialog.show(this) {
+            // Mark first launch as complete
+            preferences.edit()
+                .putBoolean("first_launch", false)
+                .apply()
+            
+            UserExperience.Messaging.showStatus(this, "Quick start guide completed!")
+        }
+    }
+    
+    private fun showConnectionHelp() {
+        val troubleshootingSteps = UserExperience.QuickStart.getConnectionTroubleshootingSteps()
+        val message = "Connection Troubleshooting:\n\n" + 
+                     troubleshootingSteps.mapIndexed { index, step -> 
+                         "${index + 1}. $step" 
+                     }.joinToString("\n")
+        
+        // Show as a Snackbar with action
+        rootLayout?.let { layout ->
+            val snackbar = Snackbar.make(layout, "Connection help available", Snackbar.LENGTH_LONG)
+                .setAction("Show Help") {
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                }
+            snackbar.show()
+        }
+    }
+    
+    private fun resetFirstLaunchFlag() {
+        preferences.edit()
+            .putBoolean("first_launch", true)
+            .apply()
+        UserExperience.Messaging.showStatus(this, "Tutorial will show on next launch")
     }
 
     private fun showFlashOverlay() {

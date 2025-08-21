@@ -213,7 +213,7 @@ class NetworkClient(private val context: Context) {
     }
 
     /**
-     * Get connection status summary for debugging.
+     * Get connection status summary for debugging and user display.
      */
     fun getConnectionStatus(): Map<String, Any> {
         return mapOf(
@@ -223,6 +223,17 @@ class NetworkClient(private val context: Context) {
             "auto_reconnect" to autoReconnect,
             "timeout_ms" to connectionTimeoutMs,
         )
+    }
+    
+    /**
+     * Get user-friendly connection status for display in UI.
+     */
+    fun getUserFriendlyStatus(): String {
+        return when {
+            isConnected() -> "Connected to PC Hub: ${getServerAddress()}"
+            serverAddress.get() != null -> "Disconnected (attempting to reconnect...)"
+            else -> "Not connected to PC Hub"
+        }
     }
 
     // PC Discovery functionality
