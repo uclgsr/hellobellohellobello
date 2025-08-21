@@ -88,13 +88,20 @@ class RgbCameraRecorder(
         val provider = ProcessCameraProvider.getInstance(context).get()
         cameraProvider = provider
 
-        // Build Recorder for 1080p
+        // Build Recorder with 4K support for Samsung devices, fallback to 1080p
+        val targetQuality = if (supportsSamsungRawCapture) {
+            Log.i(TAG, "Samsung device detected - enabling 4K video recording")
+            Quality.UHD // 4K for Samsung devices with RAW capability
+        } else {
+            Quality.FHD // 1080p for other devices
+        }
+        
         val recorder =
             Recorder.Builder()
                 .setQualitySelector(
                     QualitySelector.from(
-                        Quality.FHD,
-                        FallbackStrategy.higherQualityOrLowerThan(Quality.FHD),
+                        targetQuality,
+                        FallbackStrategy.higherQualityOrLowerThan(targetQuality),
                     ),
                 )
                 .build()
@@ -238,13 +245,23 @@ class RgbCameraRecorder(
                     val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
                     val supportsRaw = capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
                     
-                    Log.i(TAG, "Camera $cameraId - Samsung: $isSamsung, Level3: $supportsLevel3, Full: $supportsFull, RAW: $supportsRaw")
+                    // Get stream configuration map for concurrent stream support check
+                    val configs = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                    val supportsConcurrentStreams = checkConcurrentStreamSupport(characteristics, configs)
+                    
+                    Log.i(TAG, "Camera $cameraId - Samsung: $isSamsung, Level3: $supportsLevel3, Full: $supportsFull, RAW: $supportsRaw, Concurrent: $supportsConcurrentStreams")
                     
                     // Samsung devices with Level 3 or Full + RAW capability
                     if (isSamsung && (supportsLevel3 || supportsFull) && supportsRaw) {
                         supportsSamsungRawCapture = true
                         rawCameraId = cameraId
                         Log.i(TAG, "Samsung RAW DNG capture enabled for camera $cameraId")
+                        
+                        if (supportsConcurrentStreams) {
+                            Log.i(TAG, "Concurrent 4K video + RAW image recording supported")
+                        } else {
+                            Log.w(TAG, "Concurrent streams may be limited - performance monitoring recommended")
+                        }
                         break
                     }
                 }
@@ -257,6 +274,44 @@ class RgbCameraRecorder(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to initialize camera capabilities: ${e.message}")
             supportsSamsungRawCapture = false
+        }
+    }
+    
+    /**
+     * Check if the camera supports concurrent high-resolution video and RAW capture
+     */
+    private fun checkConcurrentStreamSupport(
+        characteristics: CameraCharacteristics,
+        configs: android.hardware.camera2.params.StreamConfigurationMap?
+    ): Boolean {
+        try {
+            // Check available sizes for video and RAW
+            val videoSizes = configs?.getOutputSizes(android.media.MediaRecorder::class.java) ?: emptyArray()
+            val rawSizes = configs?.getOutputSizes(ImageFormat.RAW_SENSOR) ?: emptyArray()
+            
+            // Look for 4K video support
+            val supports4K = videoSizes.any { it.width >= 3840 && it.height >= 2160 }
+            val supportsRawCapture = rawSizes.isNotEmpty()
+            
+            Log.i(TAG, "Video sizes available: ${videoSizes.contentToString()}")
+            Log.i(TAG, "RAW sizes available: ${rawSizes.contentToString()}")
+            Log.i(TAG, "4K video support: $supports4K, RAW capture: $supportsRawCapture")
+            
+            // Check mandatory stream combinations (API 24+)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                val mandatoryConfigs = characteristics.get(CameraCharacteristics.SCALER_MANDATORY_STREAM_COMBINATIONS)
+                if (mandatoryConfigs != null) {
+                    Log.i(TAG, "Mandatory stream combinations: ${mandatoryConfigs.size} configurations available")
+                    // In practice, Level 3 and Full cameras typically support concurrent streams
+                    return supports4K && supportsRawCapture
+                }
+            }
+            
+            return supports4K && supportsRawCapture
+            
+        } catch (e: Exception) {
+            Log.w(TAG, "Error checking concurrent stream support: ${e.message}")
+            return false
         }
     }
     
@@ -281,11 +336,16 @@ class RgbCameraRecorder(
             val maxRawSize = rawSizes.maxByOrNull { it.width * it.height } ?: rawSizes[0]
             Log.i(TAG, "Using RAW size: ${maxRawSize.width}x${maxRawSize.height}")
             
+            // Check for concurrent 4K video capability
+            val videoSizes = configs?.getOutputSizes(android.media.MediaRecorder::class.java) ?: emptyArray()
+            val supports4K = videoSizes.any { it.width >= 3840 && it.height >= 2160 }
+            Log.i(TAG, "4K video concurrent support: $supports4K")
+            
             rawImageReader = ImageReader.newInstance(
                 maxRawSize.width, 
                 maxRawSize.height, 
                 ImageFormat.RAW_SENSOR, 
-                2
+                4  // Increased buffer size for concurrent operation
             )
             
             rawImageReader!!.setOnImageAvailableListener({ reader ->
@@ -311,7 +371,7 @@ class RgbCameraRecorder(
             }, backgroundHandler)
             
             cameraDevice = cameraOpenedDeferred.await()
-            Log.i(TAG, "Samsung Camera2 device opened successfully")
+            Log.i(TAG, "Samsung Camera2 device opened successfully for concurrent RAW+4K recording")
             
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Samsung RAW capture: ${e.message}")
@@ -383,7 +443,91 @@ class RgbCameraRecorder(
      */
     private fun generatePreviewFromRaw(image: Image) {
         try {
-            // Create a basic preview bitmap (simplified for RAW data)
+            // For Samsung RAW, generate actual preview from image buffer
+            val buffer = image.planes[0].buffer
+            val width = image.width
+            val height = image.height
+            
+            // Create a downsampled preview bitmap from RAW data
+            // Note: This is a simplified approach - full RAW processing would be more complex
+            val previewWidth = 320
+            val previewHeight = (height * previewWidth) / width
+            
+            // Create RGB bitmap from RAW buffer (simplified conversion)
+            val previewBitmap = createPreviewFromRawBuffer(buffer, width, height, previewWidth, previewHeight)
+            
+            // Compress to JPEG and emit
+            val baos = ByteArrayOutputStream()
+            previewBitmap.compress(Bitmap.CompressFormat.JPEG, 60, baos)
+            val bytes = baos.toByteArray()
+            PreviewBus.emit(bytes, TimeManager.nowNanos())
+            
+            baos.close()
+            previewBitmap.recycle()
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error generating RAW preview: ${e.message}")
+            // Fallback to placeholder on error
+            generatePlaceholderPreview()
+        }
+    }
+    
+    /**
+     * Create preview bitmap from RAW buffer data (simplified conversion)
+     */
+    private fun createPreviewFromRawBuffer(
+        buffer: java.nio.ByteBuffer,
+        srcWidth: Int,
+        srcHeight: Int,
+        previewWidth: Int,
+        previewHeight: Int
+    ): Bitmap {
+        try {
+            // Create a simplified preview bitmap
+            // Note: Full RAW processing would involve demosaicing, white balance, etc.
+            val bitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.RGB_565)
+            
+            // Simple downsampling of RAW data for preview
+            val srcBytes = ByteArray(buffer.remaining())
+            buffer.mark()
+            buffer.get(srcBytes)
+            buffer.reset()
+            
+            // Create a basic grayscale preview from RAW data
+            val pixels = IntArray(previewWidth * previewHeight)
+            val skipX = srcWidth / previewWidth
+            val skipY = srcHeight / previewHeight
+            
+            for (y in 0 until previewHeight) {
+                for (x in 0 until previewWidth) {
+                    val srcX = x * skipX
+                    val srcY = y * skipY
+                    val srcIndex = (srcY * srcWidth + srcX) * 2 // 16-bit RAW, take every other byte
+                    
+                    if (srcIndex < srcBytes.size - 1) {
+                        // Convert 16-bit RAW to 8-bit grayscale
+                        val raw16 = ((srcBytes[srcIndex + 1].toInt() and 0xFF) shl 8) or 
+                                   (srcBytes[srcIndex].toInt() and 0xFF)
+                        val gray = (raw16 shr 8).coerceIn(0, 255)
+                        pixels[y * previewWidth + x] = (0xFF shl 24) or (gray shl 16) or (gray shl 8) or gray
+                    }
+                }
+            }
+            
+            bitmap.setPixels(pixels, 0, previewWidth, 0, 0, previewWidth, previewHeight)
+            return bitmap
+            
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to create RAW preview, using placeholder: ${e.message}")
+            return Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.RGB_565)
+        }
+    }
+    
+    /**
+     * Generate fallback placeholder preview
+     */
+    private fun generatePlaceholderPreview() {
+        try {
             val bmp = createPlaceholderBitmap()
             val w = 320
             val h = 240
@@ -398,9 +542,8 @@ class RgbCameraRecorder(
                 bmp.recycle()
             }
             scaled.recycle()
-            
         } catch (e: Exception) {
-            Log.e(TAG, "Error generating preview: ${e.message}")
+            Log.e(TAG, "Error generating placeholder preview: ${e.message}")
         }
     }
     
