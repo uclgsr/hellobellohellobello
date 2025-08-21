@@ -94,20 +94,41 @@ def check_chapter_visualizations():
             images_dir / f"chapter{chapter_num}_conclusions" if chapter_num == '6' else None,
         ]
         
+        # Also check for Mermaid diagrams
+        mermaid_dir = base_dir / "docs" / "diagrams" / "mermaid"
+        mermaid_chapter_dirs = [
+            mermaid_dir / f"chapter{chapter_num}_introduction" if chapter_num == '1' else None,
+            mermaid_dir / f"chapter{chapter_num}_requirements" if chapter_num == '3' else None,
+            mermaid_dir / f"chapter{chapter_num}_implementation" if chapter_num == '4' else None,
+        ]
+        
         image_count = 0
+        mermaid_count = 0
+        
         for img_dir in image_chapter_dirs:
             if img_dir and img_dir.exists():
                 image_count += len(list(img_dir.glob("*.png")))
+                
+        for mmd_dir in mermaid_chapter_dirs:
+            if mmd_dir and mmd_dir.exists():
+                mermaid_count += len(list(mmd_dir.glob("*.mmd")))
         
-        if image_count > 0:
-            print(f"  ✅ {image_count} generated visualization(s)")
+        total_viz = image_count + mermaid_count
+        
+        if total_viz > 0:
+            viz_types = []
+            if image_count > 0:
+                viz_types.append(f"{image_count} PNG")
+            if mermaid_count > 0:
+                viz_types.append(f"{mermaid_count} Mermaid")
+            print(f"  ✅ {total_viz} generated visualization(s) ({', '.join(viz_types)})")
         elif chapter_num in ['2', '5', '6']:  # Chapters we specifically generated
             if chapter_num == '2':
                 # Special case: check if chapter 2 images exist anywhere
                 ch2_images = len(list(images_dir.glob("chapter2*/*.png")))
                 if ch2_images > 0:
                     print(f"  ✅ {ch2_images} generated visualization(s) (found in chapter2 subdirs)")
-                    image_count = ch2_images
+                    total_viz = ch2_images
                 else:
                     print(f"  ❌ No generated visualizations found") 
             else:
@@ -231,7 +252,8 @@ def check_visualization_scripts():
     required_scripts = [
         'generate_sample_visualizations.py',
         'generate_chapter5_visualizations.py', 
-        'generate_missing_visualizations.py'
+        'generate_missing_visualizations.py',
+        'generate_mermaid_visualizations.py'
     ]
     
     all_scripts_present = True
