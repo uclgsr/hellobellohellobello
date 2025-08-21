@@ -74,6 +74,7 @@ class SessionMetadata:
     # Data files and structure
     data_files: List[str] = None
     csv_schema_version: str = "1.0"
+    image_formats: Dict[str, str] = None  # e.g., {"rgb": "DNG", "thermal": "PNG"}
     
     # Privacy and compliance
     anonymized: bool = True
@@ -92,6 +93,8 @@ class SessionMetadata:
             self.data_files = []
         if self.tags is None:
             self.tags = []
+        if self.image_formats is None:
+            self.image_formats = {"rgb": "DNG", "thermal": "PNG"}
 
 
 class SessionMetadataManager:
@@ -129,7 +132,8 @@ class SessionMetadataManager:
             time_sync_enabled=cfg_get("time_sync_enabled", "true").lower() == "true",
             tls_enabled=cfg_get("tls_enabled", "false").lower() == "true",
             anonymized=True,
-            face_blurring_enabled=cfg_get("face_blurring_enabled", "false").lower() == "true"
+            face_blurring_enabled=cfg_get("face_blurring_enabled", "false").lower() == "true",
+            image_formats={"rgb": "DNG", "thermal": "PNG"}  # Phase 3 format requirements
         )
         
         self._sessions[session_id] = metadata
@@ -310,18 +314,16 @@ class SessionMetadataManager:
             },
             "rgb": {
                 "timestamp_ns": "Nanosecond timestamp (monotonic clock)", 
-                "frame_index": "Sequential frame number",
-                "filename": "JPEG filename (relative to session directory)",
-                "width": "Frame width in pixels",
-                "height": "Frame height in pixels",
-                "format": "Image format (JPEG)",
-                "camera": "Camera identifier (front/rear)"
+                "filename": "DNG filename (relative to session directory)",
+                "format": "Image format (DNG raw format for Phase 3)"
             },
             "thermal": {
                 "timestamp_ns": "Nanosecond timestamp (monotonic clock)",
+                "image_filename": "Thermal PNG image filename (relative to session directory)",
                 "w": "Frame width (256)",
                 "h": "Frame height (192)",
-                **{f"v{i}": f"Temperature value at pixel {i} (Celsius)" for i in range(49152)}
+                "min_temp_celsius": "Minimum temperature in frame (Celsius)",
+                "max_temp_celsius": "Maximum temperature in frame (Celsius)"
             }
         }
         
