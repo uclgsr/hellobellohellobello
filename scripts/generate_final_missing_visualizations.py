@@ -73,8 +73,8 @@ def generate_chapter2_mermaid_diagrams():
     style H fill:#dda0dd
 """
     
-    with open(output_dir / "physiology_gsr.mmd", "w") as f:
-        f.write(gsr_diagram)
+    with open(output_dir / "physiology_gsr.md", "w") as f:
+        f.write(f"```mermaid\n{gsr_diagram}\n```")
     
     # 2. Thermal Cues of Stress diagram
     thermal_diagram = """graph TD
@@ -115,12 +115,12 @@ def generate_chapter2_mermaid_diagrams():
     style H fill:#dda0dd
 """
     
-    with open(output_dir / "thermal_stress_cues.mmd", "w") as f:
-        f.write(thermal_diagram)
+    with open(output_dir / "thermal_stress_cues.md", "w") as f:
+        f.write(f"```mermaid\n{thermal_diagram}\n```")
     
     print("✓ Generated Chapter 2 Mermaid diagrams:")
-    print(f"  • physiology_gsr.mmd")
-    print(f"  • thermal_stress_cues.mmd")
+    print(f"  • physiology_gsr.md")
+    print(f"  • thermal_stress_cues.md")
 
 def generate_chapter3_requirements_tables():
     """Generate Chapter 3 requirements tables as PNG images."""
@@ -390,8 +390,8 @@ def main():
     print("🎉 All missing visualizations generated successfully!")
     print("\nSummary of new files created:")
     print("Chapter 2 (Mermaid diagrams):")
-    print("  • docs/diagrams/mermaid/chapter2_background/physiology_gsr.mmd")
-    print("  • docs/diagrams/mermaid/chapter2_background/thermal_stress_cues.mmd")
+    print("  • docs/diagrams/mermaid/chapter2_background/physiology_gsr.md")
+    print("  • docs/diagrams/mermaid/chapter2_background/thermal_stress_cues.md")
     print("\nChapter 3 (Requirements tables):")
     print("  • images/chapter3_requirements/table_3_1_functional_requirements.png")
     print("  • images/chapter3_requirements/table_3_2_nonfunctional_requirements.png")

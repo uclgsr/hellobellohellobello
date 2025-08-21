@@ -3,17 +3,17 @@
 This directory contains all Mermaid diagrams for the Multi-Modal Physiological Sensing Platform thesis.
 
 ## Chapter 1: Introduction
-- `conceptual_overview.mmd` - High-level system concept and research context
+- `conceptual_overview.md` - High-level system concept and research context
 
 ## Chapter 3: Requirements  
-- `system_architecture.mmd` - Hub-and-spoke architecture overview
-- `use_case_diagram.mmd` - User interaction and system use cases
+- `system_architecture.md` - Hub-and-spoke architecture overview
+- `use_case_diagram.md` - User interaction and system use cases
 
 ## Chapter 4: Implementation
-- `android_architecture.mmd` - MVVM architecture for Android sensor nodes
-- `protocol_sequence.mmd` - Communication protocol sequence diagram
-- `data_processing_pipeline.mmd` - End-to-end data flow visualization
-- `threading_model.mmd` - PC Controller concurrent processing model
+- `android_architecture.md` - MVVM architecture for Android sensor nodes
+- `protocol_sequence.md` - Communication protocol sequence diagram
+- `data_processing_pipeline.md` - End-to-end data flow visualization
+- `threading_model.md` - PC Controller concurrent processing model
 
 ## Usage
 

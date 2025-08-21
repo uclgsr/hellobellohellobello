@@ -1,3 +1,4 @@
+```mermaid
 graph TD
     subgraph "Thermal Stress Response"
         A[Psychological Stress] --> B[Hypothalamic-Pituitary-Adrenal Axis]
@@ -34,3 +35,5 @@ graph TD
     style Q fill:#90ee90
     style F fill:#87ceeb
     style H fill:#dda0dd
+
+```

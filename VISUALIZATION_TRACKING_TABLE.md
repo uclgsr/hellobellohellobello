@@ -87,23 +87,23 @@ graph TB
 | Chapter | Visualization Element | Script/Test to Create | Created | Location | Status | Format | Notes |
 |---------|---------------------|----------------------|---------|----------|--------|--------|-------|
 | **Chapter 1: Introduction** |
-| 1 | Conceptual Overview Diagram | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter1_introduction/conceptual_overview.mmd` | Complete | Mermaid | System overview with research context |
+| 1 | Conceptual Overview Diagram | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter1_introduction/conceptual_overview.md` | Complete | Mermaid | System overview with research context |
 | **Chapter 2: Background** |
-| 2 | Physiology of Galvanic Skin Response | `scripts/generate_final_missing_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter2_background/physiology_gsr.mmd` | Complete | Mermaid | Physiological flow diagram |
-| 3 | Thermal Cues of Stress | `scripts/generate_final_missing_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter2_background/thermal_stress_cues.mmd` | Complete | Mermaid | Thermal response visualization |
+| 2 | Physiology of Galvanic Skin Response | `scripts/generate_final_missing_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter2_background/physiology_gsr.md` | Complete | Mermaid | Physiological flow diagram |
+| 3 | Thermal Cues of Stress | `scripts/generate_final_missing_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter2_background/thermal_stress_cues.md` | Complete | Mermaid | Thermal response visualization |
 | 4 | Stress Indicators Comparison (Table) | `scripts/generate_missing_visualizations.py` | ✅ Yes | `images/chapter2_background/table_2_1_stress_indicators_comparison.png` | Complete | PNG | Comparison table generated |
 | 5 | Sensor Specifications (Table) | `scripts/generate_missing_visualizations.py` | ✅ Yes | `images/chapter2_background/table_2_2_sensor_specifications.png` | Complete | PNG | Technical specifications table |
 | **Chapter 3: Requirements** |
-| 6 | High-Level System Architecture | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter3_requirements/system_architecture.mmd` | Complete | Mermaid | Hub-and-spoke architecture diagram |
-| 7 | UML Use Case Diagram | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter3_requirements/use_case_diagram.mmd` | Complete | Mermaid | User interaction flows |
+| 6 | High-Level System Architecture | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter3_requirements/system_architecture.md` | Complete | Mermaid | Hub-and-spoke architecture diagram |
+| 7 | UML Use Case Diagram | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter3_requirements/use_case_diagram.md` | Complete | Mermaid | User interaction flows |
 | 8 | Functional Requirements Summary (Table) | `scripts/generate_final_missing_visualizations.py` | ✅ Yes | `images/chapter3_requirements/table_3_1_functional_requirements.png` | Complete | PNG | Requirements traceability |
 | 9 | Non-Functional Requirements Summary (Table) | `scripts/generate_final_missing_visualizations.py` | ✅ Yes | `images/chapter3_requirements/table_3_2_nonfunctional_requirements.png` | Complete | PNG | Performance/quality requirements |
 | **Chapter 4: Implementation** |
-| 10 | Detailed System Architecture | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter4_implementation/android_architecture.mmd` | Complete | Mermaid | MVVM Android architecture |
-| 11 | Android Application Architecture | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter4_implementation/android_architecture.mmd` | Complete | Mermaid | Component-level architecture |
-| 12 | PC Controller Threading Model | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter4_implementation/threading_model.mmd` | Complete | Mermaid | Thread interaction diagram |
-| 13 | Protocol Sequence Diagram | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter4_implementation/protocol_sequence.mmd` | Complete | Mermaid | Communication protocol flow |
-| 14 | Data Processing Pipeline | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter4_implementation/data_processing_pipeline.mmd` | Complete | Mermaid | End-to-end data flow |
+| 10 | Detailed System Architecture | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter4_implementation/android_architecture.md` | Complete | Mermaid | MVVM Android architecture |
+| 11 | Android Application Architecture | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter4_implementation/android_architecture.md` | Complete | Mermaid | Component-level architecture |
+| 12 | PC Controller Threading Model | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter4_implementation/threading_model.md` | Complete | Mermaid | Thread interaction diagram |
+| 13 | Protocol Sequence Diagram | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter4_implementation/protocol_sequence.md` | Complete | Mermaid | Communication protocol flow |
+| 14 | Data Processing Pipeline | `scripts/generate_mermaid_visualizations.py` | ✅ Yes | `docs/diagrams/mermaid/chapter4_implementation/data_processing_pipeline.md` | Complete | Mermaid | End-to-end data flow |
 | 15 | Desktop GUI Screenshots | `scripts/generate_final_missing_visualizations.py` | ✅ Yes | `images/chapter4_implementation/` | Complete | PNG | Application screenshots |
 | **Chapter 5: Evaluation** |
 | 16 | Testing Strategy Overview | `scripts/generate_chapter5_visualizations.py` | ✅ Yes | `images/chapter5_evaluation/fig_5_1_testing_strategy_pyramid.png` | Complete | PNG | Testing pyramid generated |

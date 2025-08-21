@@ -1,3 +1,4 @@
+```mermaid
 graph TD
     subgraph "Sympathetic Nervous System Activation"
         A[Stress Stimulus] --> B[Sympathetic Chain]
@@ -31,3 +32,5 @@ graph TD
     style O fill:#90ee90
     style G fill:#87ceeb
     style H fill:#dda0dd
+
+```

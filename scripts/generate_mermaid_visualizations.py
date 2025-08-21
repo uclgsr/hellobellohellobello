@@ -3,7 +3,7 @@
 Mermaid Visualization Generator
 
 This script generates Mermaid diagrams for architectural and process visualizations
-as requested by the user. It creates .mmd files that can be rendered as diagrams.
+as requested by the user. It creates .md files that can be rendered as diagrams.
 """
 
 import os
@@ -519,17 +519,17 @@ def save_mermaid_files():
     # Create directories
     diagrams = {
         'chapter1_introduction': {
-            'conceptual_overview.mmd': generate_conceptual_overview_mermaid()
+            'conceptual_overview.md': generate_conceptual_overview_mermaid()
         },
         'chapter3_requirements': {
-            'system_architecture.mmd': generate_system_architecture_mermaid(),
-            'use_case_diagram.mmd': generate_use_case_diagram_mermaid()
+            'system_architecture.md': generate_system_architecture_mermaid(),
+            'use_case_diagram.md': generate_use_case_diagram_mermaid()
         },
         'chapter4_implementation': {
-            'android_architecture.mmd': generate_android_architecture_mermaid(),
-            'protocol_sequence.mmd': generate_protocol_sequence_mermaid(),
-            'data_processing_pipeline.mmd': generate_data_processing_pipeline_mermaid(),
-            'threading_model.mmd': generate_threading_model_mermaid()
+            'android_architecture.md': generate_android_architecture_mermaid(),
+            'protocol_sequence.md': generate_protocol_sequence_mermaid(),
+            'data_processing_pipeline.md': generate_data_processing_pipeline_mermaid(),
+            'threading_model.md': generate_threading_model_mermaid()
         }
     }
     
@@ -551,17 +551,17 @@ def generate_mermaid_index():
 This directory contains all Mermaid diagrams for the Multi-Modal Physiological Sensing Platform thesis.
 
 ## Chapter 1: Introduction
-- `conceptual_overview.mmd` - High-level system concept and research context
+- `conceptual_overview.md` - High-level system concept and research context
 
 ## Chapter 3: Requirements  
-- `system_architecture.mmd` - Hub-and-spoke architecture overview
-- `use_case_diagram.mmd` - User interaction and system use cases
+- `system_architecture.md` - Hub-and-spoke architecture overview
+- `use_case_diagram.md` - User interaction and system use cases
 
 ## Chapter 4: Implementation
-- `android_architecture.mmd` - MVVM architecture for Android sensor nodes
-- `protocol_sequence.mmd` - Communication protocol sequence diagram
-- `data_processing_pipeline.mmd` - End-to-end data flow visualization
-- `threading_model.mmd` - PC Controller concurrent processing model
+- `android_architecture.md` - MVVM architecture for Android sensor nodes
+- `protocol_sequence.md` - Communication protocol sequence diagram
+- `data_processing_pipeline.md` - End-to-end data flow visualization
+- `threading_model.md` - PC Controller concurrent processing model
 
 ## Usage
 
