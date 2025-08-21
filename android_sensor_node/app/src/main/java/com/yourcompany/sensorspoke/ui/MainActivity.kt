@@ -240,8 +240,8 @@ class MainActivity : AppCompatActivity() {
         val c = RecordingController(applicationContext)
         // Register recorders
         c.register("rgb", RgbCameraRecorder(applicationContext, this))
-        c.register("thermal", ThermalCameraRecorder())
-        c.register("gsr", ShimmerRecorder())
+        c.register("thermal", ThermalCameraRecorder(applicationContext))
+        c.register("gsr", ShimmerRecorder(applicationContext))
         controller = c
         return c
     }
