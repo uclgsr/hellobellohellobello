@@ -22,7 +22,8 @@ from PyQt6.QtGui import QAction, QImage, QPixmap
 from PyQt6.QtWidgets import (QFileDialog, QGridLayout, QHBoxLayout, QLabel,
                              QLineEdit, QListWidget, QMainWindow, QPushButton,
                              QTabWidget, QTextEdit, QToolBar, QVBoxLayout,
-                             QWidget)
+                             QWidget, QMessageBox, QDialog, QSpinBox, QDoubleSpinBox,
+                             QFormLayout, QDialogButtonBox, QProgressBar, QCheckBox)
 
 try:
     import pyqtgraph as pg
@@ -33,6 +34,8 @@ from data.data_aggregator import DataAggregator
 from data.data_loader import DataLoader
 from data.hdf5_exporter import export_session_to_hdf5
 from network.network_controller import DiscoveredDevice, NetworkController
+from tools.camera_calibration import CalibrationResult, calibrate_camera, load_calibration, save_calibration
+from core.user_experience import ErrorMessageTranslator, StatusIndicator, show_file_location
 
 # Local device interfaces (Python shim that optionally uses native backends)
 try:
@@ -370,17 +373,23 @@ class GUIManager(QMainWindow):
         self.act_stop = QAction("Stop Session", self)
         self.act_flash = QAction("Flash Sync", self)
         self.act_connect = QAction("Connect Device", self)
+        self.act_calibrate = QAction("Calibrate Cameras", self)
+        self.act_export = QAction("Export Data", self)
 
         self.act_start.triggered.connect(self._on_start_session)
         self.act_stop.triggered.connect(self._on_stop_session)
         self.act_flash.triggered.connect(self._on_flash_sync)
         self.act_connect.triggered.connect(self._on_connect_device)
+        self.act_calibrate.triggered.connect(self._on_calibrate_cameras)
+        self.act_export.triggered.connect(self._on_export_data)
 
         toolbar.addAction(self.act_start)
         toolbar.addAction(self.act_stop)
         toolbar.addAction(self.act_flash)
         toolbar.addSeparator()
         toolbar.addAction(self.act_connect)
+        toolbar.addAction(self.act_calibrate)
+        toolbar.addAction(self.act_export)
 
     # Grid management: place next available cell in 2-column layout
     def _add_to_grid(self, widget: QWidget) -> None:
@@ -486,6 +495,24 @@ class GUIManager(QMainWindow):
             self._log("Flash Sync broadcast sent.")
         except Exception as exc:  # noqa: BLE001
             self._log(f"Flash Sync failed: {exc}")
+
+    def _on_calibrate_cameras(self) -> None:
+        """Open calibration dialog and run camera calibration workflow."""
+        try:
+            dialog = CalibrationDialog(self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                self._run_calibration(dialog.get_parameters())
+        except Exception as exc:  # noqa: BLE001
+            self._log(f"Calibration failed: {exc}")
+
+    def _on_export_data(self) -> None:
+        """Show enhanced data export dialog with multiple format options."""
+        try:
+            dialog = ExportDialog(self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                self._run_export(dialog.get_parameters())
+        except Exception as exc:  # noqa: BLE001
+            self._log(f"Export failed: {exc}")
 
     @pyqtSlot(DiscoveredDevice)
     def _on_device_discovered(self, device: DiscoveredDevice) -> None:
@@ -912,3 +939,270 @@ class GUIManager(QMainWindow):
             self._log(f"Exported HDF5: {out_path}")
         except Exception as exc:
             self._log(f"Export failed: {exc}")
+
+    def _run_calibration(self, params: dict) -> None:
+        """Execute camera calibration with given parameters."""
+        try:
+            images_dir = params.get("images_dir", "")
+            board_size = (params.get("board_width", 9), params.get("board_height", 6))
+            square_size = params.get("square_size", 0.025)
+            
+            if not os.path.isdir(images_dir):
+                QMessageBox.warning(self, "Calibration Error", "Invalid images directory selected.")
+                return
+
+            # Show file location to user
+            self._log(show_file_location(images_dir, "Calibration images"))
+
+            # Show progress dialog
+            progress = QProgressBar()
+            progress.setWindowTitle("Calibrating Cameras...")
+            progress.setRange(0, 0)  # Indeterminate progress
+            progress.show()
+            
+            try:
+                result = calibrate_camera(images_dir, board_size, square_size)
+                
+                # Save calibration results
+                calibration_path = os.path.join(os.getcwd(), "calibration_results.json")
+                save_calibration(result, calibration_path)
+                
+                # Show results with file location
+                success_message = (f"Calibration completed successfully!\n"
+                                 f"RMS Error: {result.rms_error:.4f}\n"
+                                 f"Results saved to:\n{calibration_path}")
+                QMessageBox.information(self, "Calibration Complete", success_message)
+                self._log(f"Camera calibration completed. RMS Error: {result.rms_error:.4f}")
+                self._log(show_file_location(calibration_path, "Calibration results"))
+                
+            finally:
+                progress.close()
+                
+        except Exception as exc:
+            # Use user-friendly error messages
+            user_message = ErrorMessageTranslator.translate_error(exc, "calibration")
+            QMessageBox.critical(self, "Calibration Error", user_message)
+            self._log(f"Calibration error: {user_message}")
+
+    def _run_export(self, params: dict) -> None:
+        """Execute data export with given parameters."""
+        try:
+            session_dir = params.get("session_dir", "")
+            export_formats = params.get("formats", [])
+            output_dir = params.get("output_dir", "")
+            
+            if not os.path.isdir(session_dir):
+                QMessageBox.warning(self, "Export Error", "Invalid session directory selected.")
+                return
+
+            # Show current export directory in status
+            self._log(show_file_location(output_dir, "Export destination"))
+            
+            # Show progress dialog
+            progress = QProgressBar()
+            progress.setWindowTitle("Exporting Data...")
+            progress.setRange(0, len(export_formats))
+            progress.show()
+            
+            try:
+                exported_files = []
+                
+                for i, fmt in enumerate(export_formats):
+                    if fmt == "HDF5":
+                        out_path = os.path.join(output_dir, "export.h5")
+                        meta = {"session_dir": session_dir}
+                        ann = {"annotations": getattr(self, '_annotations', [])}
+                        export_session_to_hdf5(session_dir, out_path, metadata=meta, annotations=ann)
+                        exported_files.append(out_path)
+                    elif fmt == "CSV":
+                        # Copy CSV files directly
+                        import glob
+                        import shutil
+                        csv_files = glob.glob(os.path.join(session_dir, "*.csv"))
+                        for csv_file in csv_files:
+                            dest = os.path.join(output_dir, os.path.basename(csv_file))
+                            shutil.copy2(csv_file, dest)
+                            exported_files.append(dest)
+                    
+                    progress.setValue(i + 1)
+                
+                # Show completion message with clear file location
+                success_message = StatusIndicator.format_export_status(
+                    output_dir, len(exported_files), export_formats
+                )
+                QMessageBox.information(self, "Export Complete", success_message)
+                self._log(f"Data export completed. {len(exported_files)} files exported")
+                self._log(show_file_location(output_dir, "Exported files"))
+                
+            finally:
+                progress.close()
+                
+        except Exception as exc:
+            # Use user-friendly error messages
+            user_message = ErrorMessageTranslator.translate_error(exc, "recording")
+            QMessageBox.critical(self, "Export Error", user_message)
+            self._log(f"Export error: {user_message}")
+
+
+class CalibrationDialog(QDialog):
+    """Dialog for configuring camera calibration parameters."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Camera Calibration Setup")
+        self.setFixedSize(400, 300)
+        
+        layout = QFormLayout(self)
+        
+        # Images directory selection
+        self.images_dir_edit = QLineEdit()
+        self.images_browse_btn = QPushButton("Browse...")
+        self.images_browse_btn.clicked.connect(self._browse_images_dir)
+        
+        images_layout = QHBoxLayout()
+        images_layout.addWidget(self.images_dir_edit)
+        images_layout.addWidget(self.images_browse_btn)
+        layout.addRow("Calibration Images:", images_layout)
+        
+        # Board parameters
+        self.board_width_spin = QSpinBox()
+        self.board_width_spin.setRange(3, 20)
+        self.board_width_spin.setValue(9)
+        layout.addRow("Board Width (corners):", self.board_width_spin)
+        
+        self.board_height_spin = QSpinBox()
+        self.board_height_spin.setRange(3, 20) 
+        self.board_height_spin.setValue(6)
+        layout.addRow("Board Height (corners):", self.board_height_spin)
+        
+        self.square_size_spin = QDoubleSpinBox()
+        self.square_size_spin.setRange(0.001, 1.0)
+        self.square_size_spin.setValue(0.025)
+        self.square_size_spin.setDecimals(3)
+        self.square_size_spin.setSuffix(" m")
+        layout.addRow("Square Size:", self.square_size_spin)
+        
+        # Instructions
+        instructions = QLabel(
+            "Instructions:\n"
+            "1. Select folder containing RGB and thermal image pairs\n"
+            "2. Images should show checkerboard from various angles\n"
+            "3. Ensure good lighting and clear checkerboard visibility\n"
+            "4. Minimum 10 image pairs recommended"
+        )
+        instructions.setWordWrap(True)
+        instructions.setStyleSheet("QLabel { color: gray; font-size: 10px; }")
+        layout.addRow(instructions)
+        
+        # Buttons
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addRow(buttons)
+    
+    def _browse_images_dir(self):
+        directory = QFileDialog.getExistingDirectory(
+            self, "Select Calibration Images Directory"
+        )
+        if directory:
+            self.images_dir_edit.setText(directory)
+    
+    def get_parameters(self) -> dict:
+        return {
+            "images_dir": self.images_dir_edit.text(),
+            "board_width": self.board_width_spin.value(),
+            "board_height": self.board_height_spin.value(),
+            "square_size": self.square_size_spin.value()
+        }
+
+
+class ExportDialog(QDialog):
+    """Dialog for configuring data export options."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Export Data")
+        self.setFixedSize(450, 350)
+        
+        layout = QFormLayout(self)
+        
+        # Session directory selection
+        self.session_dir_edit = QLineEdit()
+        self.session_browse_btn = QPushButton("Browse...")
+        self.session_browse_btn.clicked.connect(self._browse_session_dir)
+        
+        session_layout = QHBoxLayout()
+        session_layout.addWidget(self.session_dir_edit)
+        session_layout.addWidget(self.session_browse_btn)
+        layout.addRow("Session Directory:", session_layout)
+        
+        # Output directory selection  
+        self.output_dir_edit = QLineEdit()
+        self.output_browse_btn = QPushButton("Browse...")
+        self.output_browse_btn.clicked.connect(self._browse_output_dir)
+        
+        output_layout = QHBoxLayout()
+        output_layout.addWidget(self.output_dir_edit)
+        output_layout.addWidget(self.output_browse_btn)
+        layout.addRow("Export Location:", output_layout)
+        
+        # Format checkboxes
+        self.hdf5_check = QCheckBox("HDF5 (Hierarchical Data Format)")
+        self.csv_check = QCheckBox("CSV (Comma Separated Values)")
+        self.mp4_check = QCheckBox("MP4 (Video Files)")
+        
+        self.hdf5_check.setChecked(True)  # Default selection
+        self.csv_check.setChecked(True)
+        
+        format_layout = QVBoxLayout()
+        format_layout.addWidget(self.hdf5_check)
+        format_layout.addWidget(self.csv_check)  
+        format_layout.addWidget(self.mp4_check)
+        layout.addRow("Export Formats:", format_layout)
+        
+        # Instructions
+        instructions = QLabel(
+            "Export Instructions:\n"
+            "• HDF5: Structured format for analysis tools (MATLAB, Python)\n"
+            "• CSV: Raw sensor data in spreadsheet format\n"
+            "• MP4: Video files from RGB cameras\n"
+            "• Files will be copied/converted to the selected location"
+        )
+        instructions.setWordWrap(True)
+        instructions.setStyleSheet("QLabel { color: gray; font-size: 10px; }")
+        layout.addRow(instructions)
+        
+        # Buttons
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addRow(buttons)
+    
+    def _browse_session_dir(self):
+        directory = QFileDialog.getExistingDirectory(
+            self, "Select Session Directory"
+        )
+        if directory:
+            self.session_dir_edit.setText(directory)
+    
+    def _browse_output_dir(self):
+        directory = QFileDialog.getExistingDirectory(
+            self, "Select Export Destination"
+        )
+        if directory:
+            self.output_dir_edit.setText(directory)
+    
+    def get_parameters(self) -> dict:
+        formats = []
+        if self.hdf5_check.isChecked():
+            formats.append("HDF5")
+        if self.csv_check.isChecked():
+            formats.append("CSV")
+        if self.mp4_check.isChecked():
+            formats.append("MP4")
+            
+        return {
+            "session_dir": self.session_dir_edit.text(),
+            "output_dir": self.output_dir_edit.text(),
+            "formats": formats
+        }
