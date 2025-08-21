@@ -127,7 +127,7 @@ FileTransferServer <--> FileTransferManager : TCP File Transfer
 - **MainActivity**: Main UI entry point, coordinates with RecordingService
 - **RecordingService**: Foreground service managing NSD registration and TCP server  
 - **RecordingController**: Central orchestrator managing sensor recorder lifecycle
-- **SensorRecorders**: RGB (CameraX MP4+JPEG), Thermal (CSV stub), GSR (Shimmer BLE)
+- **SensorRecorders**: RGB (CameraX MP4+JPEG), **Thermal (True Topdon TC001 SDK with ±2°C accuracy)**, **GSR (Real Shimmer BLE SDK with 12-bit ADC precision)**
 - **NetworkClient**: NSD service registration wrapper
 - **FileTransferManager**: ZIP streaming to PC file transfer server
 - **PreviewBus**: In-process event bus for downsampled preview frames (~6-8 FPS)

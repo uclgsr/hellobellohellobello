@@ -215,7 +215,7 @@ def parse_json_line(line: str) -> dict[str, Any]:
         # Safe evaluation of Python literals as a fallback for tests
         obj = ast.literal_eval(line)
         if not isinstance(obj, dict):  # type: ignore[unreachable]
-            raise ValueError("Parsed object is not a dict")
+            raise ValueError("Parsed object is not a dict") from None
         return obj  # type: ignore[return-value]
 
 

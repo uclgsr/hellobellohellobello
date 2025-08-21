@@ -14,4 +14,36 @@
     <string name="no_preview_available">No preview available</string>
     <string name="camera_not_available">Camera not available</string>
     <string name="thermal_not_connected">Thermal camera not connected</string>
+    
+    <!-- Status Messages -->
+    <string name="status_initializing">Initializing...</string>
+    <string name="status_ready">Ready to connect</string>
+    <string name="status_connecting">Connecting to PC Hub...</string>
+    <string name="status_connected">Connected to PC Hub</string>
+    <string name="status_recording">Recording in progress</string>
+    <string name="status_stopping">Stopping recording...</string>
+    
+    <!-- Menu Items -->
+    <string name="menu_quick_start">Quick Start Guide</string>
+    <string name="menu_connection_help">Connection Help</string>
+    <string name="menu_reset_tutorial">Reset Tutorial</string>
+    
+    <!-- User Experience Messages -->
+    <string name="permission_camera_explanation">Camera access is required to record RGB video and capture synchronization frames</string>
+    <string name="permission_microphone_explanation">Microphone access is needed for audio recording during physiological measurements</string>
+    <string name="permission_storage_explanation">Storage access is required to save recorded data and transfer files to the PC Hub</string>
+    
+    <!-- Quick Start Steps -->
+    <string name="quick_start_step_1">Connect to WiFi</string>
+    <string name="quick_start_step_1_desc">Ensure your device is connected to the same WiFi network as the PC Hub</string>
+    <string name="quick_start_step_2">Grant Permissions</string>
+    <string name="quick_start_step_2_desc">Allow camera, microphone, and storage access when prompted</string>
+    <string name="quick_start_step_3">Connect Sensors</string>
+    <string name="quick_start_step_3_desc">Power on Shimmer GSR sensor and connect thermal camera via USB</string>
+    <string name="quick_start_step_4">Find PC Hub</string>
+    <string name="quick_start_step_4_desc">App will automatically discover the PC Hub on your network</string>
+    <string name="quick_start_step_5">Start Recording</string>
+    <string name="quick_start_step_5_desc">Tap \"Start Recording\" when all sensors show as connected</string>
+    <string name="quick_start_step_6">Monitor Status</string>
+    <string name="quick_start_step_6_desc">Use the tabs to preview camera feeds and monitor sensor data</string>
 </resources>

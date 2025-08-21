@@ -213,7 +213,7 @@ class NetworkClient(private val context: Context) {
     }
 
     /**
-     * Get connection status summary for debugging.
+     * Get connection status summary for debugging and user display.
      */
     fun getConnectionStatus(): Map<String, Any> {
         return mapOf(
@@ -223,5 +223,142 @@ class NetworkClient(private val context: Context) {
             "auto_reconnect" to autoReconnect,
             "timeout_ms" to connectionTimeoutMs,
         )
+    }
+    
+    /**
+     * Get user-friendly connection status for display in UI.
+     */
+    fun getUserFriendlyStatus(): String {
+        return when {
+            isConnected() -> "Connected to PC Hub: ${getServerAddress()}"
+            serverAddress.get() != null -> "Disconnected (attempting to reconnect...)"
+            else -> "Not connected to PC Hub"
+        }
+    }
+
+    // PC Discovery functionality
+    private var discoveryListener: NsdManager.DiscoveryListener? = null
+    private var resolveListener: NsdManager.ResolveListener? = null
+    
+    /**
+     * Discover PC Hub services on the network.
+     * @param serviceType The service type to discover (e.g., "_gsr-controller._tcp.")
+     * @param onDiscovered Callback when a PC Hub is discovered with address and port
+     * @param onLost Callback when a PC Hub service is lost
+     */
+    fun discoverPCHubs(
+        serviceType: String = "_gsr-controller._tcp.",
+        onDiscovered: (String, String, Int) -> Unit,
+        onLost: (String) -> Unit
+    ) {
+        stopDiscovery() // Stop any existing discovery
+        
+        val sanitizedType = if (serviceType.endsWith(".local.")) serviceType else "$serviceType.local."
+        
+        discoveryListener = object : NsdManager.DiscoveryListener {
+            override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
+                Log.e(TAG, "PC Hub discovery start failed: $errorCode")
+            }
+            
+            override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
+                Log.e(TAG, "PC Hub discovery stop failed: $errorCode")
+            }
+            
+            override fun onDiscoveryStarted(serviceType: String) {
+                Log.i(TAG, "PC Hub discovery started for: $serviceType")
+            }
+            
+            override fun onDiscoveryStopped(serviceType: String) {
+                Log.i(TAG, "PC Hub discovery stopped for: $serviceType")
+            }
+            
+            override fun onServiceFound(serviceInfo: NsdServiceInfo) {
+                Log.d(TAG, "PC Hub service found: ${serviceInfo.serviceName}")
+                
+                // Resolve the service to get IP and port
+                resolveListener = object : NsdManager.ResolveListener {
+                    override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+                        Log.w(TAG, "PC Hub resolve failed: $errorCode")
+                    }
+                    
+                    override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+                        Log.i(TAG, "PC Hub resolved: ${serviceInfo.serviceName} @ ${serviceInfo.host}:${serviceInfo.port}")
+                        onDiscovered(
+                            serviceInfo.serviceName,
+                            serviceInfo.host.hostAddress ?: "unknown",
+                            serviceInfo.port
+                        )
+                    }
+                }
+                
+                nsdManager.resolveService(serviceInfo, resolveListener)
+            }
+            
+            override fun onServiceLost(serviceInfo: NsdServiceInfo) {
+                Log.d(TAG, "PC Hub service lost: ${serviceInfo.serviceName}")
+                onLost(serviceInfo.serviceName)
+            }
+        }
+        
+        nsdManager.discoverServices(sanitizedType, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
+    }
+    
+    /**
+     * Stop PC Hub discovery.
+     */
+    fun stopDiscovery() {
+        discoveryListener?.let { listener ->
+            try {
+                nsdManager.stopServiceDiscovery(listener)
+            } catch (e: Exception) {
+                Log.w(TAG, "Error stopping PC Hub discovery", e)
+            }
+        }
+        discoveryListener = null
+        resolveListener = null
+    }
+    
+    /**
+     * Enhanced connection method that automatically discovers and connects to first available PC Hub.
+     * @param serviceType The service type to discover
+     * @param onConnected Callback when connection is established 
+     * @param onFailed Callback when connection fails
+     */
+    fun autoConnectToPCHub(
+        serviceType: String = "_gsr-controller._tcp.",
+        onConnected: (String, String, Int) -> Unit,
+        onFailed: (String) -> Unit
+    ) {
+        Log.i(TAG, "Starting automatic PC Hub connection...")
+        
+        discoverPCHubs(
+            serviceType = serviceType,
+            onDiscovered = { name, host, port ->
+                Log.i(TAG, "Attempting auto-connection to $name at $host:$port")
+                
+                // Stop discovery once we find a service
+                stopDiscovery()
+                
+                // Attempt connection
+                if (connect(host, port)) {
+                    Log.i(TAG, "Auto-connection successful to $name")
+                    onConnected(name, host, port)
+                } else {
+                    Log.w(TAG, "Auto-connection failed to $name")
+                    onFailed("Failed to connect to discovered PC Hub: $name")
+                }
+            },
+            onLost = { name ->
+                Log.d(TAG, "PC Hub service lost during discovery: $name")
+            }
+        )
+        
+        // Set a timeout for discovery
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            if (discoveryListener != null && !isConnected()) {
+                stopDiscovery()
+                onFailed("No PC Hub found on network within timeout")
+            }
+        }, 10000) // 10 second timeout
     }
 }

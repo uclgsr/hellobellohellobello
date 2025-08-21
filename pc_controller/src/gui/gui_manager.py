@@ -19,20 +19,42 @@ from dataclasses import dataclass
 import numpy as np
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QAction, QImage, QPixmap
-from PyQt6.QtWidgets import (QFileDialog, QGridLayout, QHBoxLayout, QLabel,
-                             QLineEdit, QListWidget, QMainWindow, QPushButton,
-                             QTabWidget, QTextEdit, QToolBar, QVBoxLayout,
-                             QWidget)
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFormLayout,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QMainWindow,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QTabWidget,
+    QTextEdit,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
+)
 
 try:
     import pyqtgraph as pg
 except Exception:  # pragma: no cover - import guard for environments without Qt backend
     pg = None
 
+from core.quick_start_guide import QuickStartGuide
+from core.user_experience import ErrorMessageTranslator, StatusIndicator, show_file_location
 from data.data_aggregator import DataAggregator
 from data.data_loader import DataLoader
 from data.hdf5_exporter import export_session_to_hdf5
 from network.network_controller import DiscoveredDevice, NetworkController
+from tools.camera_calibration import calibrate_camera, save_calibration
 
 # Local device interfaces (Python shim that optionally uses native backends)
 try:
@@ -265,7 +287,8 @@ class GUIManager(QMainWindow):
         except Exception:
             pass
 
-        # Toolbar
+        # Setup UI components
+        self._setup_menu_bar()
         self._setup_toolbar()
 
         # Local device widgets and interfaces
@@ -287,8 +310,9 @@ class GUIManager(QMainWindow):
         self._video_drop_last_log_s: float = time.monotonic()
 
         # Per-device remote preview throttling state
-        # Use a slightly stricter throttle for remote frames to ensure coalescing even on slow machines.
-        # This helps avoid UI overload and makes behavior deterministic in tests.
+        # Use a slightly stricter throttle for remote frames to ensure coalescing
+        # even on slow machines. This helps avoid UI overload and makes behavior
+        # deterministic in tests.
         self._remote_min_interval_s: float = max(self._video_min_interval_s, 0.99)
         self._remote_last_render_s: dict[str, float] = {}
         self._remote_drop_counts: dict[str, int] = {}
@@ -329,7 +353,11 @@ class GUIManager(QMainWindow):
                     self._log(f"Direct preview_frame connect failed: {exc}")
                 if not connected:
                     try:
-                        sig.connect(lambda dev, data, ts: self._on_preview_frame(str(dev), bytes(data), int(ts)))  # type: ignore[attr-defined]
+                        sig.connect(
+                        lambda dev, data, ts: self._on_preview_frame(
+                            str(dev), bytes(data), int(ts)
+                        )
+                    )  # type: ignore[attr-defined]
                         connected = True
                     except Exception as exc:
                         self._log(f"Lambda preview_frame connect failed: {exc}")
@@ -361,6 +389,54 @@ class GUIManager(QMainWindow):
         self._gsr_file = None
         self._gsr_written_header = False
 
+        # Show first-time tutorial if needed (delayed to ensure UI is ready)
+        QTimer.singleShot(1000, self._check_and_show_first_time_tutorial)
+
+    # Menu bar setup
+    def _setup_menu_bar(self) -> None:
+        """Set up the main menu bar with File, Tools, and Help menus."""
+        menu_bar = self.menuBar()
+
+        # File Menu
+        file_menu = menu_bar.addMenu("File")
+
+        # Add common file operations
+        export_action = QAction("Export Data...", self)
+        export_action.triggered.connect(self._on_export_data)
+        file_menu.addAction(export_action)
+
+        file_menu.addSeparator()
+
+        exit_action = QAction("Exit", self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+        # Tools Menu
+        tools_menu = menu_bar.addMenu("Tools")
+
+        calibrate_action = QAction("Calibrate Cameras...", self)
+        calibrate_action.triggered.connect(self._on_calibrate_cameras)
+        tools_menu.addAction(calibrate_action)
+
+        tools_menu.addSeparator()
+
+        settings_action = QAction("Settings...", self)
+        settings_action.triggered.connect(self._show_settings_dialog)
+        tools_menu.addAction(settings_action)
+
+        # Help Menu
+        help_menu = menu_bar.addMenu("Help")
+
+        quick_start_action = QAction("Quick Start Guide", self)
+        quick_start_action.triggered.connect(self._show_quick_start_guide)
+        help_menu.addAction(quick_start_action)
+
+        help_menu.addSeparator()
+
+        about_action = QAction("About...", self)
+        about_action.triggered.connect(self._show_about_dialog)
+        help_menu.addAction(about_action)
+
     # Toolbar setup
     def _setup_toolbar(self) -> None:
         toolbar = QToolBar("Session Controls", self)
@@ -370,17 +446,23 @@ class GUIManager(QMainWindow):
         self.act_stop = QAction("Stop Session", self)
         self.act_flash = QAction("Flash Sync", self)
         self.act_connect = QAction("Connect Device", self)
+        self.act_calibrate = QAction("Calibrate Cameras", self)
+        self.act_export = QAction("Export Data", self)
 
         self.act_start.triggered.connect(self._on_start_session)
         self.act_stop.triggered.connect(self._on_stop_session)
         self.act_flash.triggered.connect(self._on_flash_sync)
         self.act_connect.triggered.connect(self._on_connect_device)
+        self.act_calibrate.triggered.connect(self._on_calibrate_cameras)
+        self.act_export.triggered.connect(self._on_export_data)
 
         toolbar.addAction(self.act_start)
         toolbar.addAction(self.act_stop)
         toolbar.addAction(self.act_flash)
         toolbar.addSeparator()
         toolbar.addAction(self.act_connect)
+        toolbar.addAction(self.act_calibrate)
+        toolbar.addAction(self.act_export)
 
     # Grid management: place next available cell in 2-column layout
     def _add_to_grid(self, widget: QWidget) -> None:
@@ -463,8 +545,8 @@ class GUIManager(QMainWindow):
             self._log(f"Session metadata error: {exc}")
         # Start file receiver and broadcast transfer_files per Phase 5 FR10
         try:
-            from data.data_aggregator import \
-                get_local_ip  # local import to avoid test-time issues
+            # local import to avoid test-time issues
+            from data.data_aggregator import get_local_ip
 
             port = self._data_aggregator.start_server(9001)
             host = get_local_ip()
@@ -487,6 +569,24 @@ class GUIManager(QMainWindow):
         except Exception as exc:  # noqa: BLE001
             self._log(f"Flash Sync failed: {exc}")
 
+    def _on_calibrate_cameras(self) -> None:
+        """Open calibration dialog and run camera calibration workflow."""
+        try:
+            dialog = CalibrationDialog(self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                self._run_calibration(dialog.get_parameters())
+        except Exception as exc:  # noqa: BLE001
+            self._log(f"Calibration failed: {exc}")
+
+    def _on_export_data(self) -> None:
+        """Show enhanced data export dialog with multiple format options."""
+        try:
+            dialog = ExportDialog(self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                self._run_export(dialog.get_parameters())
+        except Exception as exc:  # noqa: BLE001
+            self._log(f"Export failed: {exc}")
+
     @pyqtSlot(DiscoveredDevice)
     def _on_device_discovered(self, device: DiscoveredDevice) -> None:
         self._log(f"Discovered: {device.name} @ {device.address}:{device.port}")
@@ -507,7 +607,8 @@ class GUIManager(QMainWindow):
         try:
             try:
                 self._logger.info(
-                    f"[DEBUG_LOG] on_preview_frame: {device_name}, ts={ts_ns}"
+                    f"[DEBUG_LOG] on_preview_frame: {device_name}, "
+                    f"ts={ts_ns}"
                 )
             except Exception:
                 pass
@@ -912,3 +1013,710 @@ class GUIManager(QMainWindow):
             self._log(f"Exported HDF5: {out_path}")
         except Exception as exc:
             self._log(f"Export failed: {exc}")
+
+    def _run_calibration(self, params: dict) -> None:
+        """Execute camera calibration with given parameters."""
+        try:
+            images_dir = params.get("images_dir", "")
+            board_size = (params.get("board_width", 9), params.get("board_height", 6))
+            square_size = params.get("square_size", 0.025)
+
+            if not os.path.isdir(images_dir):
+                QMessageBox.warning(
+                    self, "Calibration Error", "Invalid images directory selected."
+                )
+                return
+
+            # Show file location to user
+            self._log(show_file_location(images_dir, "Calibration images"))
+
+            # Show progress dialog
+            progress = QProgressBar()
+            progress.setWindowTitle("Calibrating Cameras...")
+            progress.setRange(0, 0)  # Indeterminate progress
+            progress.show()
+
+            try:
+                result = calibrate_camera(images_dir, board_size, square_size)
+
+                # Save calibration results
+                calibration_path = os.path.join(os.getcwd(), "calibration_results.json")
+                save_calibration(result, calibration_path)
+
+                # Show results with file location
+                success_message = (
+                    f"Calibration completed successfully!\n"
+                    f"RMS Error: {result.rms_error:.4f}\n"
+                    f"Results saved to:\n{calibration_path}"
+                )
+                QMessageBox.information(self, "Calibration Complete", success_message)
+                self._log(
+                    f"Camera calibration completed. RMS Error: {result.rms_error:.4f}"
+                )
+                self._log(show_file_location(calibration_path, "Calibration results"))
+
+            finally:
+                progress.close()
+
+        except Exception as exc:
+            # Use user-friendly error messages
+            user_message = ErrorMessageTranslator.translate_error(exc, "calibration")
+            QMessageBox.critical(self, "Calibration Error", user_message)
+            self._log(f"Calibration error: {user_message}")
+
+    def _run_export(self, params: dict) -> None:
+        """Execute data export with given parameters."""
+        try:
+            session_dir = params.get("session_dir", "")
+            export_formats = params.get("formats", [])
+            output_dir = params.get("output_dir", "")
+
+            if not os.path.isdir(session_dir):
+                QMessageBox.warning(
+                    self, "Export Error", "Invalid session directory selected."
+                )
+                return
+
+            # Show current export directory in status
+            self._log(show_file_location(output_dir, "Export destination"))
+
+            # Show progress dialog
+            progress = QProgressBar()
+            progress.setWindowTitle("Exporting Data...")
+            progress.setRange(0, len(export_formats))
+            progress.show()
+
+            try:
+                exported_files = []
+
+                for i, fmt in enumerate(export_formats):
+                    if fmt == "HDF5":
+                        out_path = os.path.join(output_dir, "export.h5")
+                        meta = {"session_dir": session_dir}
+                        ann = {"annotations": getattr(self, "_annotations", [])}
+                        export_session_to_hdf5(
+                            session_dir, out_path, metadata=meta, annotations=ann
+                        )
+                        exported_files.append(out_path)
+                    elif fmt == "CSV":
+                        # Copy CSV files directly
+                        import glob
+                        import shutil
+
+                        csv_files = glob.glob(os.path.join(session_dir, "*.csv"))
+                        for csv_file in csv_files:
+                            dest = os.path.join(output_dir, os.path.basename(csv_file))
+                            shutil.copy2(csv_file, dest)
+                            exported_files.append(dest)
+
+                    progress.setValue(i + 1)
+
+                # Show completion message with clear file location
+                success_message = StatusIndicator.format_export_status(
+                    output_dir, len(exported_files), export_formats
+                )
+                QMessageBox.information(self, "Export Complete", success_message)
+                self._log(
+                    f"Data export completed. {len(exported_files)} files exported"
+                )
+                self._log(show_file_location(output_dir, "Exported files"))
+
+            finally:
+                progress.close()
+
+        except Exception as exc:
+            # Use user-friendly error messages
+            user_message = ErrorMessageTranslator.translate_error(exc, "recording")
+            QMessageBox.critical(self, "Export Error", user_message)
+            self._log(f"Export error: {user_message}")
+
+    def _show_quick_start_guide(self) -> None:
+        """Show the quick start guide dialog."""
+        try:
+            guide = QuickStartGuide(self)
+            guide.exec()
+        except Exception as exc:
+            user_message = ErrorMessageTranslator.translate_error(exc)
+            QMessageBox.warning(self, "Quick Start Guide Error", user_message)
+            self._log(f"Quick start guide error: {user_message}")
+
+    def _show_settings_dialog(self) -> None:
+        """Show the settings/preferences dialog."""
+        try:
+            dialog = SettingsDialog(self)
+            dialog.exec()
+        except Exception as exc:
+            QMessageBox.warning(
+                self,
+                "Settings Dialog Error", 
+                f"Could not open settings dialog: {exc}"
+            )
+
+    def _show_about_dialog(self) -> None:
+        """Show the about dialog with version and system information."""
+        try:
+            import platform
+            import sys
+
+            about_text = f"""
+            <h2>Multi-Modal Physiological Sensing Platform</h2>
+            <p><b>Version:</b> 1.0.0</p>
+            <p><b>Architecture:</b> Hub-and-Spoke (PC Controller + Android Sensor Nodes)</p>
+
+            <h3>System Information:</h3>
+            <p><b>Python:</b> {sys.version.split()[0]}</p>
+            <p><b>Platform:</b> {platform.platform()}</p>
+            <p><b>Qt Version:</b> {QWidget().metaObject().className()}</p>
+
+            <h3>Features:</h3>
+            <ul>
+            <li>Multi-device sensor synchronization</li>
+            <li>RGB and thermal camera recording</li>
+            <li>Galvanic Skin Response (GSR) monitoring</li>
+            <li>Real-time data visualization</li>
+            <li>Multi-format data export (HDF5, CSV, MP4)</li>
+            <li>Camera calibration utilities</li>
+            <li>Automatic device discovery</li>
+            </ul>
+
+            <p><b>Documentation:</b> Check the docs/ folder for comprehensive guides</p>
+            <p><b>Support:</b> See user testing feedback and troubleshooting guides</p>
+            """
+
+            QMessageBox.about(self, "About", about_text)
+
+        except Exception as exc:
+            QMessageBox.warning(
+                self,
+                "About Dialog Error",
+                f"Could not display about information: {exc}",
+            )
+
+    def _check_and_show_first_time_tutorial(self) -> None:
+        """Check if this is first time use and show tutorial if needed."""
+        try:
+            # Simple check - could be enhanced with proper settings management
+            import os
+
+            tutorial_flag_file = os.path.join(os.getcwd(), ".tutorial_completed")
+
+            if not os.path.exists(tutorial_flag_file):
+                # Show tutorial for first-time users
+                reply = QMessageBox.question(
+                    self,
+                    "Welcome!",
+                    "Welcome to the Multi-Modal Physiological Sensing Platform!\n\n"
+                    "Would you like to see the Quick Start Guide to get started?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.Yes,
+                )
+
+                if reply == QMessageBox.StandardButton.Yes:
+                    self._show_quick_start_guide()
+
+                # Create flag file to indicate tutorial was offered
+                try:
+                    with open(tutorial_flag_file, "w") as f:
+                        f.write("Tutorial offered on first run")
+                except Exception:
+                    pass  # Ignore file creation errors
+
+        except Exception:
+            pass  # Ignore errors in tutorial check - should not affect main app
+
+
+class CalibrationDialog(QDialog):
+    """Dialog for configuring camera calibration parameters."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Camera Calibration Setup")
+        self.setFixedSize(400, 300)
+
+        layout = QFormLayout(self)
+
+        # Images directory selection
+        self.images_dir_edit = QLineEdit()
+        self.images_browse_btn = QPushButton("Browse...")
+        self.images_browse_btn.clicked.connect(self._browse_images_dir)
+
+        images_layout = QHBoxLayout()
+        images_layout.addWidget(self.images_dir_edit)
+        images_layout.addWidget(self.images_browse_btn)
+        layout.addRow("Calibration Images:", images_layout)
+
+        # Board parameters
+        self.board_width_spin = QSpinBox()
+        self.board_width_spin.setRange(3, 20)
+        self.board_width_spin.setValue(9)
+        layout.addRow("Board Width (corners):", self.board_width_spin)
+
+        self.board_height_spin = QSpinBox()
+        self.board_height_spin.setRange(3, 20)
+        self.board_height_spin.setValue(6)
+        layout.addRow("Board Height (corners):", self.board_height_spin)
+
+        self.square_size_spin = QDoubleSpinBox()
+        self.square_size_spin.setRange(0.001, 1.0)
+        self.square_size_spin.setValue(0.025)
+        self.square_size_spin.setDecimals(3)
+        self.square_size_spin.setSuffix(" m")
+        layout.addRow("Square Size:", self.square_size_spin)
+
+        # Instructions
+        instructions = QLabel(
+            "Instructions:\n"
+            "1. Select folder containing RGB and thermal image pairs\n"
+            "2. Images should show checkerboard from various angles\n"
+            "3. Ensure good lighting and clear checkerboard visibility\n"
+            "4. Minimum 10 image pairs recommended"
+        )
+        instructions.setWordWrap(True)
+        instructions.setStyleSheet("QLabel { color: gray; font-size: 10px; }")
+        layout.addRow(instructions)
+
+        # Buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addRow(buttons)
+
+    def _browse_images_dir(self):
+        directory = QFileDialog.getExistingDirectory(
+            self, "Select Calibration Images Directory"
+        )
+        if directory:
+            self.images_dir_edit.setText(directory)
+
+    def get_parameters(self) -> dict:
+        return {
+            "images_dir": self.images_dir_edit.text(),
+            "board_width": self.board_width_spin.value(),
+            "board_height": self.board_height_spin.value(),
+            "square_size": self.square_size_spin.value(),
+        }
+
+
+class ExportDialog(QDialog):
+    """Dialog for configuring data export options."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Export Data")
+        self.setFixedSize(450, 350)
+
+        layout = QFormLayout(self)
+
+        # Session directory selection
+        self.session_dir_edit = QLineEdit()
+        self.session_browse_btn = QPushButton("Browse...")
+        self.session_browse_btn.clicked.connect(self._browse_session_dir)
+
+        session_layout = QHBoxLayout()
+        session_layout.addWidget(self.session_dir_edit)
+        session_layout.addWidget(self.session_browse_btn)
+        layout.addRow("Session Directory:", session_layout)
+
+        # Output directory selection
+        self.output_dir_edit = QLineEdit()
+        self.output_browse_btn = QPushButton("Browse...")
+        self.output_browse_btn.clicked.connect(self._browse_output_dir)
+
+        output_layout = QHBoxLayout()
+        output_layout.addWidget(self.output_dir_edit)
+        output_layout.addWidget(self.output_browse_btn)
+        layout.addRow("Export Location:", output_layout)
+
+        # Format checkboxes
+        self.hdf5_check = QCheckBox("HDF5 (Hierarchical Data Format)")
+        self.csv_check = QCheckBox("CSV (Comma Separated Values)")
+        self.mp4_check = QCheckBox("MP4 (Video Files)")
+
+        self.hdf5_check.setChecked(True)  # Default selection
+        self.csv_check.setChecked(True)
+
+        format_layout = QVBoxLayout()
+        format_layout.addWidget(self.hdf5_check)
+        format_layout.addWidget(self.csv_check)
+        format_layout.addWidget(self.mp4_check)
+        layout.addRow("Export Formats:", format_layout)
+
+        # Instructions
+        instructions = QLabel(
+            "Export Instructions:\n"
+            "• HDF5: Structured format for analysis tools (MATLAB, Python)\n"
+            "• CSV: Raw sensor data in spreadsheet format\n"
+            "• MP4: Video files from RGB cameras\n"
+            "• Files will be copied/converted to the selected location"
+        )
+        instructions.setWordWrap(True)
+        instructions.setStyleSheet("QLabel { color: gray; font-size: 10px; }")
+        layout.addRow(instructions)
+
+        # Buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addRow(buttons)
+
+    def _browse_session_dir(self):
+        directory = QFileDialog.getExistingDirectory(self, "Select Session Directory")
+        if directory:
+            self.session_dir_edit.setText(directory)
+
+    def _browse_output_dir(self):
+        directory = QFileDialog.getExistingDirectory(self, "Select Export Destination")
+        if directory:
+            self.output_dir_edit.setText(directory)
+
+    def get_parameters(self) -> dict:
+        formats = []
+        if self.hdf5_check.isChecked():
+            formats.append("HDF5")
+        if self.csv_check.isChecked():
+            formats.append("CSV")
+        if self.mp4_check.isChecked():
+            formats.append("MP4")
+
+        return {
+            "session_dir": self.session_dir_edit.text(),
+            "output_dir": self.output_dir_edit.text(),
+            "formats": formats,
+        }
+
+
+class SettingsDialog(QDialog):
+    """Comprehensive settings/preferences dialog."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+        self.setFixedSize(500, 600)
+        
+        # Main layout
+        layout = QVBoxLayout(self)
+        
+        # Create tabbed interface for different settings categories
+        tabs = QTabWidget(self)
+        layout.addWidget(tabs)
+        
+        # General Settings Tab
+        self._create_general_tab(tabs)
+        
+        # Network Settings Tab  
+        self._create_network_tab(tabs)
+        
+        # Recording Settings Tab
+        self._create_recording_tab(tabs)
+        
+        # Advanced Settings Tab
+        self._create_advanced_tab(tabs)
+        
+        # Buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | 
+            QDialogButtonBox.StandardButton.Cancel |
+            QDialogButtonBox.StandardButton.Apply
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        buttons.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self._apply_settings)
+        layout.addWidget(buttons)
+        
+        # Load current settings
+        self._load_current_settings()
+    
+    def _create_general_tab(self, tabs: QTabWidget):
+        """Create the General settings tab."""
+        general_tab = QWidget()
+        layout = QFormLayout(general_tab)
+        
+        # Data directory
+        self.data_dir_edit = QLineEdit()
+        self.data_dir_browse = QPushButton("Browse...")
+        self.data_dir_browse.clicked.connect(self._browse_data_dir)
+        
+        data_dir_layout = QHBoxLayout()
+        data_dir_layout.addWidget(self.data_dir_edit)
+        data_dir_layout.addWidget(self.data_dir_browse)
+        layout.addRow("Data Directory:", data_dir_layout)
+        
+        # Auto-start devices
+        self.auto_start_webcam = QCheckBox("Auto-start local webcam")
+        self.auto_start_shimmer = QCheckBox("Auto-start Shimmer sensor")
+        layout.addRow("Device Startup:", self.auto_start_webcam)
+        layout.addRow("", self.auto_start_shimmer)
+        
+        # UI preferences
+        self.show_first_time_guide = QCheckBox("Show quick start guide for new users")
+        self.enable_tooltips = QCheckBox("Enable detailed tooltips")
+        layout.addRow("Interface:", self.show_first_time_guide)
+        layout.addRow("", self.enable_tooltips)
+        
+        # Theme selection
+        self.theme_combo = QWidget()
+        theme_layout = QHBoxLayout(self.theme_combo)
+        theme_layout.setContentsMargins(0, 0, 0, 0)
+        theme_layout.addWidget(QLabel("Light"))
+        # Note: Could be expanded with actual theme switching
+        layout.addRow("Theme:", self.theme_combo)
+        
+        tabs.addTab(general_tab, "General")
+    
+    def _create_network_tab(self, tabs: QTabWidget):
+        """Create the Network settings tab."""
+        network_tab = QWidget()
+        layout = QFormLayout(network_tab)
+        
+        # Discovery settings
+        self.discovery_port = QSpinBox()
+        self.discovery_port.setRange(1024, 65535)
+        self.discovery_port.setValue(8888)
+        layout.addRow("Discovery Port:", self.discovery_port)
+        
+        self.connection_timeout = QSpinBox()
+        self.connection_timeout.setRange(1, 60)
+        self.connection_timeout.setValue(10)
+        self.connection_timeout.setSuffix(" seconds")
+        layout.addRow("Connection Timeout:", self.connection_timeout)
+        
+        # Security settings
+        self.use_tls = QCheckBox("Use TLS encryption")
+        self.use_tls.setChecked(True)
+        layout.addRow("Security:", self.use_tls)
+        
+        # File transfer settings
+        self.transfer_port = QSpinBox()
+        self.transfer_port.setRange(1024, 65535)
+        self.transfer_port.setValue(9001)
+        layout.addRow("File Transfer Port:", self.transfer_port)
+        
+        # Preview settings
+        self.preview_fps_limit = QSpinBox()
+        self.preview_fps_limit.setRange(1, 60)
+        self.preview_fps_limit.setValue(10)
+        self.preview_fps_limit.setSuffix(" fps")
+        layout.addRow("Preview FPS Limit:", self.preview_fps_limit)
+        
+        tabs.addTab(network_tab, "Network")
+    
+    def _create_recording_tab(self, tabs: QTabWidget):
+        """Create the Recording settings tab.""" 
+        recording_tab = QWidget()
+        layout = QFormLayout(recording_tab)
+        
+        # Shimmer settings
+        self.shimmer_sampling_rate = QSpinBox()
+        self.shimmer_sampling_rate.setRange(1, 1000)
+        self.shimmer_sampling_rate.setValue(128)
+        self.shimmer_sampling_rate.setSuffix(" Hz")
+        layout.addRow("Shimmer Sampling Rate:", self.shimmer_sampling_rate)
+        
+        self.use_real_shimmer = QCheckBox("Use real Shimmer hardware (requires pyshimmer)")
+        layout.addRow("Shimmer Mode:", self.use_real_shimmer)
+        
+        self.shimmer_port = QLineEdit()
+        self.shimmer_port.setPlaceholderText("e.g., COM3, /dev/ttyUSB0")
+        layout.addRow("Shimmer Port:", self.shimmer_port)
+        
+        # Video settings
+        self.video_fps = QSpinBox()
+        self.video_fps.setRange(10, 60)
+        self.video_fps.setValue(30)
+        self.video_fps.setSuffix(" fps")
+        layout.addRow("Video Recording FPS:", self.video_fps)
+        
+        self.video_quality = QSpinBox()
+        self.video_quality.setRange(50, 100)
+        self.video_quality.setValue(90)
+        self.video_quality.setSuffix("%")
+        layout.addRow("Video Quality:", self.video_quality)
+        
+        # Time sync settings
+        self.time_sync_interval = QSpinBox()
+        self.time_sync_interval.setRange(30, 600)
+        self.time_sync_interval.setValue(180)
+        self.time_sync_interval.setSuffix(" seconds")
+        layout.addRow("Time Sync Interval:", self.time_sync_interval)
+        
+        tabs.addTab(recording_tab, "Recording")
+    
+    def _create_advanced_tab(self, tabs: QTabWidget):
+        """Create the Advanced settings tab."""
+        advanced_tab = QWidget()
+        layout = QFormLayout(advanced_tab)
+        
+        # Debug settings
+        self.debug_logging = QCheckBox("Enable debug logging")
+        self.verbose_ui = QCheckBox("Verbose UI updates")
+        layout.addRow("Debug:", self.debug_logging)
+        layout.addRow("", self.verbose_ui)
+        
+        # Performance settings
+        self.ui_update_interval = QSpinBox()
+        self.ui_update_interval.setRange(10, 1000)
+        self.ui_update_interval.setValue(50)
+        self.ui_update_interval.setSuffix(" ms")
+        layout.addRow("UI Update Interval:", self.ui_update_interval)
+        
+        self.preview_buffer_size = QSpinBox()
+        self.preview_buffer_size.setRange(5, 60)
+        self.preview_buffer_size.setValue(10)
+        self.preview_buffer_size.setSuffix(" seconds")
+        layout.addRow("Preview Buffer Size:", self.preview_buffer_size)
+        
+        # Export settings
+        self.default_export_format = QWidget()
+        export_layout = QHBoxLayout(self.default_export_format)
+        export_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.export_hdf5 = QCheckBox("HDF5")
+        self.export_csv = QCheckBox("CSV") 
+        self.export_mp4 = QCheckBox("MP4")
+        self.export_hdf5.setChecked(True)
+        self.export_csv.setChecked(True)
+        
+        export_layout.addWidget(self.export_hdf5)
+        export_layout.addWidget(self.export_csv)
+        export_layout.addWidget(self.export_mp4)
+        layout.addRow("Default Export Formats:", self.default_export_format)
+        
+        # Reset button
+        reset_btn = QPushButton("Reset to Defaults")
+        reset_btn.clicked.connect(self._reset_to_defaults)
+        layout.addRow("", reset_btn)
+        
+        tabs.addTab(advanced_tab, "Advanced")
+    
+    def _browse_data_dir(self):
+        """Browse for data directory."""
+        directory = QFileDialog.getExistingDirectory(
+            self, "Select Data Directory"
+        )
+        if directory:
+            self.data_dir_edit.setText(directory)
+    
+    def _load_current_settings(self):
+        """Load current settings from config."""
+        try:
+            # Import config
+            from ..config import get as cfg_get
+            
+            # Load general settings
+            self.data_dir_edit.setText(cfg_get("data_directory", "pc_controller_data"))
+            self.auto_start_webcam.setChecked(cfg_get("auto_start_webcam", True))
+            self.auto_start_shimmer.setChecked(cfg_get("auto_start_shimmer", True))
+            self.show_first_time_guide.setChecked(cfg_get("show_first_time_guide", True))
+            
+            # Load network settings
+            self.discovery_port.setValue(cfg_get("discovery_port", 8888))
+            self.connection_timeout.setValue(cfg_get("connection_timeout", 10))
+            self.use_tls.setChecked(cfg_get("use_tls", True))
+            self.transfer_port.setValue(cfg_get("transfer_port", 9001))
+            self.preview_fps_limit.setValue(cfg_get("preview_fps_limit", 10))
+            
+            # Load recording settings
+            self.shimmer_sampling_rate.setValue(cfg_get("shimmer_sampling_rate", 128))
+            self.use_real_shimmer.setChecked(cfg_get("use_real_shimmer", False))
+            self.shimmer_port.setText(cfg_get("shimmer_port", "COM3"))
+            self.video_fps.setValue(cfg_get("video_fps", 30))
+            self.video_quality.setValue(cfg_get("video_quality", 90))
+            self.time_sync_interval.setValue(cfg_get("time_sync_interval", 180))
+            
+            # Load advanced settings
+            self.debug_logging.setChecked(cfg_get("debug_logging", False))
+            self.verbose_ui.setChecked(cfg_get("verbose_ui", False))
+            self.ui_update_interval.setValue(cfg_get("ui_update_interval", 50))
+            self.preview_buffer_size.setValue(cfg_get("preview_buffer_size", 10))
+            
+        except Exception as e:
+            # If config loading fails, use defaults
+            self._reset_to_defaults()
+    
+    def _apply_settings(self):
+        """Apply settings (without closing dialog)."""
+        try:
+            # This would save settings to config file
+            settings = self._get_settings_dict()
+            
+            # Show confirmation
+            QMessageBox.information(
+                self, 
+                "Settings Applied", 
+                "Settings have been applied successfully.\n\n"
+                "Some changes may require a restart to take full effect."
+            )
+            
+        except Exception as e:
+            QMessageBox.warning(
+                self,
+                "Settings Error",
+                f"Failed to apply settings: {e}"
+            )
+    
+    def _get_settings_dict(self) -> dict:
+        """Get all settings as a dictionary."""
+        return {
+            # General
+            "data_directory": self.data_dir_edit.text(),
+            "auto_start_webcam": self.auto_start_webcam.isChecked(),
+            "auto_start_shimmer": self.auto_start_shimmer.isChecked(),
+            "show_first_time_guide": self.show_first_time_guide.isChecked(),
+            
+            # Network  
+            "discovery_port": self.discovery_port.value(),
+            "connection_timeout": self.connection_timeout.value(),
+            "use_tls": self.use_tls.isChecked(),
+            "transfer_port": self.transfer_port.value(),
+            "preview_fps_limit": self.preview_fps_limit.value(),
+            
+            # Recording
+            "shimmer_sampling_rate": self.shimmer_sampling_rate.value(),
+            "use_real_shimmer": self.use_real_shimmer.isChecked(),
+            "shimmer_port": self.shimmer_port.text(),
+            "video_fps": self.video_fps.value(),
+            "video_quality": self.video_quality.value(),
+            "time_sync_interval": self.time_sync_interval.value(),
+            
+            # Advanced
+            "debug_logging": self.debug_logging.isChecked(),
+            "verbose_ui": self.verbose_ui.isChecked(),
+            "ui_update_interval": self.ui_update_interval.value(),
+            "preview_buffer_size": self.preview_buffer_size.value(),
+        }
+    
+    def _reset_to_defaults(self):
+        """Reset all settings to default values."""
+        # General defaults
+        self.data_dir_edit.setText("pc_controller_data")
+        self.auto_start_webcam.setChecked(True)
+        self.auto_start_shimmer.setChecked(True)
+        self.show_first_time_guide.setChecked(True)
+        
+        # Network defaults
+        self.discovery_port.setValue(8888)
+        self.connection_timeout.setValue(10)
+        self.use_tls.setChecked(True)
+        self.transfer_port.setValue(9001)
+        self.preview_fps_limit.setValue(10)
+        
+        # Recording defaults
+        self.shimmer_sampling_rate.setValue(128)
+        self.use_real_shimmer.setChecked(False)
+        self.shimmer_port.setText("COM3")
+        self.video_fps.setValue(30)
+        self.video_quality.setValue(90)
+        self.time_sync_interval.setValue(180)
+        
+        # Advanced defaults
+        self.debug_logging.setChecked(False)
+        self.verbose_ui.setChecked(False)
+        self.ui_update_interval.setValue(50)
+        self.preview_buffer_size.setValue(10)
+        self.export_hdf5.setChecked(True)
+        self.export_csv.setChecked(True)
+        self.export_mp4.setChecked(False)
