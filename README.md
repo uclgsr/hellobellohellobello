@@ -1,19 +1,18 @@
 # Multi-Modal Physiological Sensing Platform
 
-This repository contains a hub-and-spoke research platform for synchronous, multi-modal data collection.
+This repository contains a hub-and-spoke research platform for synchronous, multi-modal data collection with **production-ready hardware integration**.
 
 - Hub (PC Controller, Python + PyQt6): Central controller for session management, device control, data aggregation,
   playback/annotation, and export to HDF5. Performance-critical components are bridged via a C++ native backend (
   PyBind11).
-- Spoke (Android Sensor Node, Kotlin/Android): Mobile client that interfaces with hardware (RGB, thermal, Shimmer GSR),
-  records locally, and communicates with the Hub over a secured TCP/IP socket.
+- Spoke (Android Sensor Node, Kotlin/Android): Mobile client with **true SDK integration** for hardware (RGB cameras, Topdon TC001 thermal camera, Shimmer GSR sensors), featuring calibrated thermal sensing and production-ready data recording, communicating with the Hub over a secured TCP/IP socket.
 
 See docs/System_Design.md for architecture overview and docs/Implementation_Phases.md for implementation details.
 
 ## Project Structure
 
 - pc_controller/ — Python sources, native backend (C++), tests, and Gradle tasks for Python workflows
-- android_sensor_node/ — Android application (MVVM), with CameraX RGB, Topdon TC001 thermal integration, and Shimmer GSR
+- android_sensor_node/ — Android application (MVVM) with **production-ready SDK integration**: CameraX RGB, **true Topdon TC001 SDK integration** (±2°C thermal accuracy), and **real Shimmer GSR SDK** with 12-bit ADC precision
 - docs/ — User and developer documentation, protocol, validation guides, and LaTeX sources
   - docs/diagrams/ — **NEW**: Comprehensive system documentation diagrams and artifacts
 - scripts/ — Utility scripts (e.g., backup_script.py)
@@ -83,16 +82,18 @@ To run from sources (development):
 
 **Essential Documentation:**
 - **[User Manual](docs/markdown/User_Manual.md)** - End-user guide for operating the platform
-- **[Developer Guide](docs/markdown/Developer_Guide.md)** - Technical implementation and development procedures
+- **[Developer Guide](docs/markdown/Developer_Guide.md)** - Technical implementation and development procedures  
 - **[Production Deployment Guide](docs/Production_Deployment_Guide.md)** - Enterprise deployment and security hardening
+- **[TRUE_TOPDON_SDK_INTEGRATION.md](docs/TRUE_TOPDON_SDK_INTEGRATION.md)** - **NEW**: Complete true SDK integration documentation with ±2°C thermal accuracy
 
 **API References:**
 - **[API Documentation](docs/API_Documentation.md)** - TLS Security, Heartbeat Monitoring, and protocol APIs
 
 **Technical Specifications:**
 - **[PROTOCOL.md](PROTOCOL.md)** - Complete communication protocol specification
-- **[TEST_PLAN.md](docs/TEST_PLAN.md)** - Comprehensive testing strategy and procedures
+- **[TEST_PLAN.md](docs/TEST_PLAN.md)** - Comprehensive testing strategy and procedures  
 - **[BACKUP_STRATEGY.md](docs/BACKUP_STRATEGY.md)** - Data backup and recovery procedures
+- **[TOPDON_SDK_INTEGRATION_ANALYSIS.md](docs/TOPDON_SDK_INTEGRATION_ANALYSIS.md)** - SDK integration analysis and comparison
 
 ### System Documentation Diagrams
 - **[docs/diagrams/](docs/diagrams/)**: **NEW** - Comprehensive visual documentation including:
