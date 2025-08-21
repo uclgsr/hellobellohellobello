@@ -54,10 +54,7 @@ from data.data_aggregator import DataAggregator
 from data.data_loader import DataLoader
 from data.hdf5_exporter import export_session_to_hdf5
 from network.network_controller import DiscoveredDevice, NetworkController
-from tools.camera_calibration import (
-    calibrate_camera,
-    save_calibration,
-)
+from tools.camera_calibration import calibrate_camera, save_calibration
 
 # Local device interfaces (Python shim that optionally uses native backends)
 try:
@@ -1018,7 +1015,9 @@ class GUIManager(QMainWindow):
             square_size = params.get("square_size", 0.025)
 
             if not os.path.isdir(images_dir):
-                QMessageBox.warning(self, "Calibration Error", "Invalid images directory selected.")
+                QMessageBox.warning(
+                    self, "Calibration Error", "Invalid images directory selected."
+                )
                 return
 
             # Show file location to user
@@ -1038,11 +1037,15 @@ class GUIManager(QMainWindow):
                 save_calibration(result, calibration_path)
 
                 # Show results with file location
-                success_message = (f"Calibration completed successfully!\n"
-                                 f"RMS Error: {result.rms_error:.4f}\n"
-                                 f"Results saved to:\n{calibration_path}")
+                success_message = (
+                    f"Calibration completed successfully!\n"
+                    f"RMS Error: {result.rms_error:.4f}\n"
+                    f"Results saved to:\n{calibration_path}"
+                )
                 QMessageBox.information(self, "Calibration Complete", success_message)
-                self._log(f"Camera calibration completed. RMS Error: {result.rms_error:.4f}")
+                self._log(
+                    f"Camera calibration completed. RMS Error: {result.rms_error:.4f}"
+                )
                 self._log(show_file_location(calibration_path, "Calibration results"))
 
             finally:
@@ -1062,7 +1065,9 @@ class GUIManager(QMainWindow):
             output_dir = params.get("output_dir", "")
 
             if not os.path.isdir(session_dir):
-                QMessageBox.warning(self, "Export Error", "Invalid session directory selected.")
+                QMessageBox.warning(
+                    self, "Export Error", "Invalid session directory selected."
+                )
                 return
 
             # Show current export directory in status
@@ -1081,13 +1086,16 @@ class GUIManager(QMainWindow):
                     if fmt == "HDF5":
                         out_path = os.path.join(output_dir, "export.h5")
                         meta = {"session_dir": session_dir}
-                        ann = {"annotations": getattr(self, '_annotations', [])}
-                        export_session_to_hdf5(session_dir, out_path, metadata=meta, annotations=ann)
+                        ann = {"annotations": getattr(self, "_annotations", [])}
+                        export_session_to_hdf5(
+                            session_dir, out_path, metadata=meta, annotations=ann
+                        )
                         exported_files.append(out_path)
                     elif fmt == "CSV":
                         # Copy CSV files directly
                         import glob
                         import shutil
+
                         csv_files = glob.glob(os.path.join(session_dir, "*.csv"))
                         for csv_file in csv_files:
                             dest = os.path.join(output_dir, os.path.basename(csv_file))
@@ -1101,7 +1109,9 @@ class GUIManager(QMainWindow):
                     output_dir, len(exported_files), export_formats
                 )
                 QMessageBox.information(self, "Export Complete", success_message)
-                self._log(f"Data export completed. {len(exported_files)} files exported")
+                self._log(
+                    f"Data export completed. {len(exported_files)} files exported"
+                )
                 self._log(show_file_location(output_dir, "Exported files"))
 
             finally:
@@ -1133,7 +1143,7 @@ class GUIManager(QMainWindow):
             "Current configuration can be modified through:\n"
             "• config.json file in the application directory\n"
             "• Environment variables\n"
-            "• Command line parameters"
+            "• Command line parameters",
         )
 
     def _show_about_dialog(self) -> None:
@@ -1170,13 +1180,18 @@ class GUIManager(QMainWindow):
             QMessageBox.about(self, "About", about_text)
 
         except Exception as exc:
-            QMessageBox.warning(self, "About Dialog Error", f"Could not display about information: {exc}")
+            QMessageBox.warning(
+                self,
+                "About Dialog Error",
+                f"Could not display about information: {exc}",
+            )
 
     def _check_and_show_first_time_tutorial(self) -> None:
         """Check if this is first time use and show tutorial if needed."""
         try:
             # Simple check - could be enhanced with proper settings management
             import os
+
             tutorial_flag_file = os.path.join(os.getcwd(), ".tutorial_completed")
 
             if not os.path.exists(tutorial_flag_file):
@@ -1187,7 +1202,7 @@ class GUIManager(QMainWindow):
                     "Welcome to the Multi-Modal Physiological Sensing Platform!\n\n"
                     "Would you like to see the Quick Start Guide to get started?",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.Yes
+                    QMessageBox.StandardButton.Yes,
                 )
 
                 if reply == QMessageBox.StandardButton.Yes:
@@ -1195,7 +1210,7 @@ class GUIManager(QMainWindow):
 
                 # Create flag file to indicate tutorial was offered
                 try:
-                    with open(tutorial_flag_file, 'w') as f:
+                    with open(tutorial_flag_file, "w") as f:
                         f.write("Tutorial offered on first run")
                 except Exception:
                     pass  # Ignore file creation errors
@@ -1255,7 +1270,9 @@ class CalibrationDialog(QDialog):
         layout.addRow(instructions)
 
         # Buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
@@ -1272,7 +1289,7 @@ class CalibrationDialog(QDialog):
             "images_dir": self.images_dir_edit.text(),
             "board_width": self.board_width_spin.value(),
             "board_height": self.board_height_spin.value(),
-            "square_size": self.square_size_spin.value()
+            "square_size": self.square_size_spin.value(),
         }
 
 
@@ -1333,22 +1350,20 @@ class ExportDialog(QDialog):
         layout.addRow(instructions)
 
         # Buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
 
     def _browse_session_dir(self):
-        directory = QFileDialog.getExistingDirectory(
-            self, "Select Session Directory"
-        )
+        directory = QFileDialog.getExistingDirectory(self, "Select Session Directory")
         if directory:
             self.session_dir_edit.setText(directory)
 
     def _browse_output_dir(self):
-        directory = QFileDialog.getExistingDirectory(
-            self, "Select Export Destination"
-        )
+        directory = QFileDialog.getExistingDirectory(self, "Select Export Destination")
         if directory:
             self.output_dir_edit.setText(directory)
 
@@ -1364,5 +1379,5 @@ class ExportDialog(QDialog):
         return {
             "session_dir": self.session_dir_edit.text(),
             "output_dir": self.output_dir_edit.text(),
-            "formats": formats
+            "formats": formats,
         }

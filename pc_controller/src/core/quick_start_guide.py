@@ -18,19 +18,24 @@ try:
         QVBoxLayout,
         QWidget,
     )
+
     _QT_AVAILABLE = True
 except ImportError:
     _QT_AVAILABLE = False
+
     # Create stub classes for testing environment
-    class QDialog:
+    class QDialog:  # type: ignore[no-redef]
         class DialogCode:
             Accepted = 1
             Rejected = 0
-    class pyqtSignal:
+
+    class pyqtSignal:  # type: ignore[no-redef]
         def __call__(self, *args):
             return self
+
         def emit(self, *args):
             pass
+
         def connect(self, slot):
             pass
 
@@ -38,6 +43,7 @@ except ImportError:
 @dataclass
 class TutorialStep:
     """Represents a single step in the tutorial."""
+
     title: str
     content: str
     image_path: str | None = None
@@ -56,7 +62,9 @@ class QuickStartGuide(QDialog):
         if not _QT_AVAILABLE:
             raise ImportError("Qt libraries not available - GUI mode disabled")
         super().__init__(parent)
-        self.setWindowTitle("Quick Start Guide - Multi-Modal Physiological Sensing Platform")
+        self.setWindowTitle(
+            "Quick Start Guide - Multi-Modal Physiological Sensing Platform"
+        )
         self.setFixedSize(800, 600)
         self.setModal(True)
 
@@ -82,9 +90,8 @@ class QuickStartGuide(QDialog):
                 </ul>
                 <p><b>Tip:</b> You can access this guide anytime from the Help menu.</p>
                 """,
-                skip_allowed=True
+                skip_allowed=True,
             ),
-
             TutorialStep(
                 title="Step 1: Network Setup",
                 content="""
@@ -106,9 +113,8 @@ class QuickStartGuide(QDialog):
                 </div>
                 """,
                 action_text="Test Network Discovery",
-                action_callback=self._test_network_discovery
+                action_callback=self._test_network_discovery,
             ),
-
             TutorialStep(
                 title="Step 2: Device Configuration",
                 content="""
@@ -129,9 +135,8 @@ class QuickStartGuide(QDialog):
                 </ol>
                 """,
                 action_text="Open Calibration Dialog",
-                action_callback=self._demo_calibration
+                action_callback=self._demo_calibration,
             ),
-
             TutorialStep(
                 title="Step 3: Recording Session",
                 content="""
@@ -148,14 +153,13 @@ class QuickStartGuide(QDialog):
 
                 <div style='background-color: #f0f8e8; padding: 10px; border-radius: 5px;
                 margin-top: 10px;'>
-                <b>Best Practice:</b> Start with short test sessions (1-2 minutes) to verify 
+                <b>Best Practice:</b> Start with short test sessions (1-2 minutes) to verify
                 everything works before longer recordings.
                 </div>
                 """,
                 action_text="Show Session Controls",
-                action_callback=self._highlight_session_controls
+                action_callback=self._highlight_session_controls,
             ),
-
             TutorialStep(
                 title="Step 4: Data Export and Analysis",
                 content="""
@@ -182,9 +186,8 @@ class QuickStartGuide(QDialog):
                 </div>
                 """,
                 action_text="Demo Export Dialog",
-                action_callback=self._demo_export
+                action_callback=self._demo_export,
             ),
-
             TutorialStep(
                 title="Quick Reference",
                 content="""
@@ -223,8 +226,8 @@ class QuickStartGuide(QDialog):
                 <p style='margin-top: 15px;'><b>Need Help?</b> Check the logs tab for detailed
                 status messages and troubleshooting information.</p>
                 """,
-                skip_allowed=False
-            )
+                skip_allowed=False,
+            ),
         ]
 
     def _setup_ui(self):
@@ -258,7 +261,9 @@ class QuickStartGuide(QDialog):
         # Content area
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
 
         self.content_widget = QWidget()
         self.content_layout = QVBoxLayout(self.content_widget)
@@ -374,18 +379,20 @@ class QuickStartGuide(QDialog):
     def _test_network_discovery(self):
         """Demo network discovery testing."""
         from PyQt6.QtWidgets import QMessageBox
+
         QMessageBox.information(
             self,
             "Network Discovery Test",
             "This would test network discovery.\nIn the real app, this would:\n"
             "• Scan for available Android devices\n"
             "• Show connection status\n"
-            "• Provide troubleshooting tips if no devices found"
+            "• Provide troubleshooting tips if no devices found",
         )
 
     def _demo_calibration(self):
         """Demo calibration dialog."""
         from PyQt6.QtWidgets import QMessageBox
+
         QMessageBox.information(
             self,
             "Calibration Demo",
@@ -393,12 +400,13 @@ class QuickStartGuide(QDialog):
             "The actual implementation includes:\n"
             "• File browser for calibration images\n"
             "• Checkerboard parameter configuration\n"
-            "• Real-time calibration progress tracking"
+            "• Real-time calibration progress tracking",
         )
 
     def _highlight_session_controls(self):
         """Demo highlighting session controls."""
         from PyQt6.QtWidgets import QMessageBox
+
         QMessageBox.information(
             self,
             "Session Controls",
@@ -406,12 +414,13 @@ class QuickStartGuide(QDialog):
             "• Start Session: Begin recording\n"
             "• Stop Session: End recording\n"
             "• Flash Sync: Synchronize device timestamps\n"
-            "• Connect Device: Manual device connection"
+            "• Connect Device: Manual device connection",
         )
 
     def _demo_export(self):
         """Demo export dialog."""
         from PyQt6.QtWidgets import QMessageBox
+
         QMessageBox.information(
             self,
             "Export Demo",
@@ -420,7 +429,7 @@ class QuickStartGuide(QDialog):
             "• Multiple format selection (HDF5, CSV, MP4)\n"
             "• Session and output directory selection\n"
             "• Progress tracking during export\n"
-            "• Clear file location indicators"
+            "• Clear file location indicators",
         )
 
 
@@ -440,7 +449,7 @@ class FirstTimeSetupWizard:
         """Show tutorial if it hasn't been completed yet."""
         if not _QT_AVAILABLE:
             return False  # Skip tutorial in headless mode
-            
+
         if not self.should_show_tutorial() or self._tutorial_shown:
             return False
 
@@ -459,12 +468,15 @@ class FirstTimeSetupWizard:
         """Handle tutorial completion."""
         self.settings.set_boolean("tutorial_completed", True)
         if _QT_AVAILABLE:
-            self.settings.set_string("tutorial_completion_date",
-                                    str(QDateTime.currentDateTime().toString()))
+            self.settings.set_string(
+                "tutorial_completion_date", str(QDateTime.currentDateTime().toString())
+            )
         else:
             import datetime
-            self.settings.set_string("tutorial_completion_date",
-                                    str(datetime.datetime.now()))
+
+            self.settings.set_string(
+                "tutorial_completion_date", str(datetime.datetime.now())
+            )
 
     def _on_tutorial_skipped(self):
         """Handle tutorial being skipped."""
@@ -493,7 +505,7 @@ def integrate_quick_start_guide(gui_manager, settings_manager):
         setup_wizard.show_tutorial_on_demand(gui_manager)
 
     return {
-        'show_tutorial_if_first_time': show_tutorial_if_first_time,
-        'show_tutorial_on_demand': show_tutorial_on_demand,
-        'setup_wizard': setup_wizard
+        "show_tutorial_if_first_time": show_tutorial_if_first_time,
+        "show_tutorial_on_demand": show_tutorial_on_demand,
+        "setup_wizard": setup_wizard,
     }
