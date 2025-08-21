@@ -30,17 +30,10 @@ from zeroconf import IPVersion, ServiceBrowser, Zeroconf
 
 from ..config import get as cfg_get
 from .file_transfer_server import FileTransferServer
-from .protocol import (
-    build_v1_cmd,
-    build_v1_query_capabilities,
-    build_v1_start_recording,
-    build_v1_time_sync_req,
-    compute_backoff_schedule,
-    compute_time_sync,
-    compute_time_sync_stats,
-    decode_frames,
-    encode_frame,
-)
+from .protocol import (build_v1_cmd, build_v1_query_capabilities,
+                       build_v1_start_recording, build_v1_time_sync_req,
+                       compute_backoff_schedule, compute_time_sync,
+                       compute_time_sync_stats, decode_frames, encode_frame)
 
 # TLS (optional)
 try:

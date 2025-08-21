@@ -61,5 +61,5 @@ class DataLoader:
         if ts_col is not None:
             df[ts_col] = pd.to_numeric(df[ts_col], errors="coerce").astype("Int64")
             df = df.dropna(subset=[ts_col])
-            df = df.set_index(ts_col)  # type: ignore[arg-type]
+            df = df.set_index(ts_col)
         return df
