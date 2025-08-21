@@ -294,7 +294,8 @@ class _BroadcastWorker(QThread):
                     except Exception:
                         pass
                 self.log.emit(
-                    f"Time sync {name}: median_offset={median_off}ns min_delay={min_delay}ns std_dev={std_dev}ns trials={used}"
+                    f"Time sync {name}: median_offset={median_off}ns "
+                    f"min_delay={min_delay}ns std_dev={std_dev}ns trials={used}"
                 )
             else:
                 self.log.emit(f"Time sync {name}: no valid samples collected")
@@ -380,7 +381,8 @@ class _BroadcastWorker(QThread):
                                 pass
                     except Exception as exc:
                         self.log.emit(
-                            f"Attempt {attempt_idx}/{len(schedule)} to {name} failed to connect: {exc}"
+                            f"Attempt {attempt_idx}/{len(schedule)} to {name} "
+                            f"failed to connect: {exc}"
                         )
                     # backoff before next attempt if not success
                     if not success and attempt_idx < len(schedule):
@@ -666,7 +668,9 @@ class NetworkController(QObject):
                 self._last_auto_resync_monotonic = now
                 try:
                     self._emit_log(
-                        f"High sync delay for {name}: {delay_ns/1e6:.2f} ms >= threshold {self._resync_delay_threshold_ns/1e6:.2f} ms — triggering broadcast_time_sync()"
+                        f"High sync delay for {name}: {delay_ns/1e6:.2f} ms >= "
+                        f"threshold {self._resync_delay_threshold_ns/1e6:.2f} ms — "
+                        f"triggering broadcast_time_sync()"
                     )
                 except Exception:
                     pass

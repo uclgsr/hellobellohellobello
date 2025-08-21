@@ -310,8 +310,9 @@ class GUIManager(QMainWindow):
         self._video_drop_last_log_s: float = time.monotonic()
 
         # Per-device remote preview throttling state
-        # Use a slightly stricter throttle for remote frames to ensure coalescing even on slow machines.
-        # This helps avoid UI overload and makes behavior deterministic in tests.
+        # Use a slightly stricter throttle for remote frames to ensure coalescing
+        # even on slow machines. This helps avoid UI overload and makes behavior
+        # deterministic in tests.
         self._remote_min_interval_s: float = max(self._video_min_interval_s, 0.99)
         self._remote_last_render_s: dict[str, float] = {}
         self._remote_drop_counts: dict[str, int] = {}
@@ -352,7 +353,11 @@ class GUIManager(QMainWindow):
                     self._log(f"Direct preview_frame connect failed: {exc}")
                 if not connected:
                     try:
-                        sig.connect(lambda dev, data, ts: self._on_preview_frame(str(dev), bytes(data), int(ts)))  # type: ignore[attr-defined]
+                        sig.connect(
+                        lambda dev, data, ts: self._on_preview_frame(
+                            str(dev), bytes(data), int(ts)
+                        )
+                    )  # type: ignore[attr-defined]
                         connected = True
                     except Exception as exc:
                         self._log(f"Lambda preview_frame connect failed: {exc}")
@@ -540,7 +545,8 @@ class GUIManager(QMainWindow):
             self._log(f"Session metadata error: {exc}")
         # Start file receiver and broadcast transfer_files per Phase 5 FR10
         try:
-            from data.data_aggregator import get_local_ip  # local import to avoid test-time issues
+            # local import to avoid test-time issues
+            from data.data_aggregator import get_local_ip
 
             port = self._data_aggregator.start_server(9001)
             host = get_local_ip()
@@ -601,7 +607,8 @@ class GUIManager(QMainWindow):
         try:
             try:
                 self._logger.info(
-                    f"[DEBUG_LOG] on_preview_frame: {device_name}, ts={ts_ns}"
+                    f"[DEBUG_LOG] on_preview_frame: {device_name}, "
+                    f"ts={ts_ns}"
                 )
             except Exception:
                 pass

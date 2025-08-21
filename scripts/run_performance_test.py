@@ -34,6 +34,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TextIO
 
 # Ensure we can import the controller and protocol from the repo checkout
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -322,7 +323,7 @@ def _ensure_logs_dir() -> Path:
     return out_dir
 
 
-def _open_log_file(prefix: str) -> tuple[Path, typing.TextIO]:
+def _open_log_file(prefix: str) -> tuple[Path, TextIO]:
     ts = time.strftime("%Y%m%d_%H%M%S")
     out_dir = _ensure_logs_dir()
     path = out_dir / f"{prefix}_{ts}.csv"
