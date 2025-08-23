@@ -5,8 +5,8 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        id("com.android.application") version "8.7.0"
-        id("org.jetbrains.kotlin.android") version "2.0.21"
+        id("com.android.application") version "8.8.0"
+        id("org.jetbrains.kotlin.android") version "2.1.0"
     }
 }
 
@@ -32,7 +32,7 @@ fun detectAndroidSdk(): Boolean {
             return true
         }
     }
-    
+
     // Check environment variables
     val envSdk = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
     return envSdk != null && file(envSdk).exists()

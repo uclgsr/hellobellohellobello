@@ -108,7 +108,7 @@ class SensorRecorderComprehensiveTest {
         val recorder = TestSensorRecorder()
 
         recorder.start(sessionDir)
-        
+
         // Multiple stop calls
         recorder.stop()
         recorder.stop()
@@ -172,7 +172,7 @@ class SensorRecorderComprehensiveTest {
 
         // Should handle non-existent directory gracefully
         recorder.start(nonExistentDir)
-        
+
         assertTrue(recorder.isStarted)
         assertEquals(nonExistentDir, recorder.sessionDirectory)
     }
@@ -220,14 +220,14 @@ class ShimmerRecorderComprehensiveTest {
 
         try {
             recorder.start(sessionDir)
-            
+
             // Verify session directory exists
             assertTrue("Session directory should exist", sessionDir.exists())
             assertTrue("Session directory should be a directory", sessionDir.isDirectory)
 
             // Note: In a real test environment without actual Shimmer hardware,
             // we would expect graceful handling of missing hardware
-            
+
         } catch (e: Exception) {
             // Expected in test environment without actual Shimmer device
             // The test verifies the interface and basic structure
@@ -260,7 +260,7 @@ class ShimmerRecorderComprehensiveTest {
 
         repeat(3) { cycle ->
             val cycleSessionDir = File(tempDir, "cycle_$cycle").apply { mkdirs() }
-            
+
             try {
                 recorder.start(cycleSessionDir)
                 // Brief "recording" period
@@ -274,7 +274,7 @@ class ShimmerRecorderComprehensiveTest {
     @Test
     fun `shimmer recorder with invalid session directory`() = runTest {
         val recorder = ShimmerRecorder(mockContext)
-        
+
         // Use a file as directory (invalid)
         val invalidDir = File(tempDir, "invalid_file.txt")
         invalidDir.createNewFile()
@@ -284,8 +284,8 @@ class ShimmerRecorderComprehensiveTest {
             // Should handle invalid directory gracefully
         } catch (e: Exception) {
             // Expected - should provide meaningful error
-            assertTrue("Error message should be descriptive", 
-                e.message?.contains("directory") == true || 
+            assertTrue("Error message should be descriptive",
+                e.message?.contains("directory") == true ||
                 e.message?.contains("file") == true)
         } finally {
             try {
@@ -308,10 +308,10 @@ object SensorTestUtils {
 
         val lines = file.readLines()
         assertTrue("CSV should have header", lines.isNotEmpty())
-        
+
         val headers = lines[0].split(",")
         expectedHeaders.forEach { expectedHeader ->
-            assertTrue("CSV should contain header: $expectedHeader", 
+            assertTrue("CSV should contain header: $expectedHeader",
                 headers.any { it.trim() == expectedHeader })
         }
     }

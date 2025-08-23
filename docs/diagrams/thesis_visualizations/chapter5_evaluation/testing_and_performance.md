@@ -5,20 +5,20 @@
 ```mermaid
 pyramid
     title Testing Strategy Pyramid
-    
+
     %% UI/System Tests (Top - Few)
     top "Manual/Usability Tests"
     top "Real hardware validation"
     top "End-to-end workflows"
     top "User acceptance testing"
-    
-    %% Integration Tests (Middle - Some)  
+
+    %% Integration Tests (Middle - Some)
     mid "Integration Tests"
     mid "Multi-device coordination"
     mid "Network protocol validation"
     mid "Data pipeline end-to-end"
     mid "Cross-platform compatibility"
-    
+
     %% Unit Tests (Bottom - Many)
     bottom "Unit Tests"
     bottom "Individual component logic"
@@ -34,68 +34,68 @@ pyramid
 flowchart TD
     %% Testing Levels
     subgraph STRATEGY["Comprehensive Testing Strategy"]
-        
+
         subgraph UNIT["Unit Tests (Foundation)"]
             ANDROID_UNIT["[ANDROID] Android Units<br/>[UNICODE] JUnit + Robolectric<br/>[UNICODE] SensorRecorder logic<br/>[UNICODE] NetworkClient operations<br/>[UNICODE] RecordingController states<br/>[UNICODE] 85% code coverage target"]
-            
+
             PC_UNIT["[PC] PC Units<br/>[UNICODE] pytest framework<br/>[UNICODE] Device management<br/>[UNICODE] Data processing<br/>[UNICODE] Configuration handling<br/>[UNICODE] Memory leak detection"]
-            
+
             ARCH_TEST["[ARCH] Architecture Tests<br/>[UNICODE] Layer dependency validation<br/>[UNICODE] Design pattern compliance<br/>[UNICODE] Security configuration<br/>[UNICODE] Performance constraints"]
         end
-        
+
         subgraph INTEGRATION["[INTEGRATION] Integration Tests"]
             MULTI_DEVICE["[ANDROID][ANDROID] Multi-Device<br/>[UNICODE] Synchronized recording<br/>[UNICODE] Device discovery<br/>[UNICODE] Connection management<br/>[UNICODE] Error recovery<br/>[UNICODE] Load balancing"]
-            
+
             PROTOCOL["[PROTOCOL] Protocol Validation<br/>[UNICODE] TCP/JSON messaging<br/>[UNICODE] Time synchronization<br/>[UNICODE] File transfer integrity<br/>[UNICODE] TLS encryption<br/>[UNICODE] Error handling"]
-            
+
             DATA_PIPELINE["[DATA] Data Pipeline<br/>[UNICODE] End-to-end flow<br/>[UNICODE] Format validation<br/>[UNICODE] Quality metrics<br/>[UNICODE] Export accuracy<br/>[UNICODE] Storage integrity"]
         end
-        
+
         subgraph SYSTEM["[TARGET] System Tests"]
             ENDURANCE["[UNICODE] Endurance (8+ hours)<br/>[UNICODE] Memory stability<br/>[UNICODE] CPU utilization<br/>[UNICODE] Connection reliability<br/>[UNICODE] Data integrity<br/>[UNICODE] Performance degradation"]
-            
+
             PERFORMANCE["[PERFORMANCE] Performance<br/>[UNICODE] Response latency (<50ms)<br/>[UNICODE] Throughput measurement<br/>[UNICODE] Resource utilization<br/>[UNICODE] Scalability (8+ devices)<br/>[UNICODE] Optimization validation"]
-            
+
             SECURITY["[SECURITY] Security<br/>[UNICODE] TLS functionality<br/>[UNICODE] Authentication flow<br/>[UNICODE] Data encryption<br/>[UNICODE] Access control<br/>[UNICODE] Vulnerability scanning"]
         end
-        
+
         subgraph ACCEPTANCE["[UNICODE] User Acceptance"]
             USABILITY["[MANUAL] Usability<br/>[UNICODE] Setup time measurement<br/>[UNICODE] Error comprehension<br/>[UNICODE] Interface responsiveness<br/>[UNICODE] Workflow efficiency<br/>[UNICODE] User satisfaction"]
-            
+
             HARDWARE["[SENSOR] Hardware Validation<br/>[UNICODE] Real Shimmer3 GSR+<br/>[UNICODE] Topdon TC001 camera<br/>[UNICODE] Network conditions<br/>[UNICODE] Device compatibility<br/>[UNICODE] Environmental factors"]
         end
     end
-    
+
     %% Quality Gates
     subgraph GATES["[OK] Quality Gates"]
         ALPHA["[UNICODE] Alpha Release<br/>[UNICODE] All unit tests pass<br/>[UNICODE] Basic integration works<br/>[UNICODE] Core features functional<br/>[UNICODE] Development testing only"]
-        
+
         BETA["[UNICODE] Beta Release<br/>[UNICODE] System tests pass<br/>[UNICODE] Performance meets targets<br/>[UNICODE] Security validated<br/>[UNICODE] Limited user testing"]
-        
+
         PRODUCTION["[UNICODE] Production Ready<br/>[UNICODE] All tests pass<br/>[UNICODE] Hardware validated<br/>[UNICODE] User acceptance achieved<br/>[UNICODE] Documentation complete"]
     end
-    
+
     %% Test Execution Flow
     UNIT --> INTEGRATION
-    INTEGRATION --> SYSTEM  
+    INTEGRATION --> SYSTEM
     SYSTEM --> ACCEPTANCE
-    
+
     UNIT --> ALPHA
     SYSTEM --> BETA
     ACCEPTANCE --> PRODUCTION
-    
+
     %% Feedback Loops
     INTEGRATION -.->|Failures| UNIT
     SYSTEM -.->|Issues| INTEGRATION
     ACCEPTANCE -.->|Problems| SYSTEM
-    
+
     %% Styling
     classDef unitStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef integrationStyle fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
     classDef systemStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     classDef acceptanceStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     classDef gateStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    
+
     class UNIT,ANDROID_UNIT,PC_UNIT,ARCH_TEST unitStyle
     class INTEGRATION,MULTI_DEVICE,PROTOCOL,DATA_PIPELINE integrationStyle
     class SYSTEM,ENDURANCE,PERFORMANCE,SECURITY systemStyle
@@ -140,17 +140,17 @@ xychart-beta
 gitgraph
     commit id: "Session Start"
     commit id: "PC Master: T=0.000"
-    
+
     branch Android_1
     checkout Android_1
     commit id: "Offset: +2.1ms"
     commit id: "Recording Start"
-    
+
     branch Android_2
-    checkout Android_2  
+    checkout Android_2
     commit id: "Offset: -1.8ms"
     commit id: "Recording Start"
-    
+
     checkout main
     merge Android_1
     merge Android_2
@@ -172,7 +172,7 @@ xychart-beta
 
 **Event Annotations:**
 - 0-25s: Normal operation, +/-3ms accuracy
-- 30-35s: WiFi roaming event begins  
+- 30-35s: WiFi roaming event begins
 - 40s: 67.3ms jump - connection switches to new access point
 - 45s: 84.2ms maximum offset - resynchronization in progress
 - 50-80s: Recovery complete, accuracy restored
@@ -239,7 +239,7 @@ xychart-beta
 
 **User Satisfaction Metrics:**
 - Overall satisfaction: 4.2/5.0
-- Ease of use: 3.8/5.0  
+- Ease of use: 3.8/5.0
 - Feature completeness: 4.5/5.0
 - Reliability: 4.6/5.0
 
@@ -269,8 +269,8 @@ xychart-beta
 
 **Figure 5.5**: Test coverage progression throughout development, demonstrating systematic improvement in code quality and validation completeness.
 
-**Thesis Placement**: 
+**Thesis Placement**:
 - Chapter 5, Section 5.1 (Testing Methodology)
-- Chapter 5, Section 5.2 (System Performance Evaluation)  
+- Chapter 5, Section 5.2 (System Performance Evaluation)
 - Chapter 5, Section 5.3 (Synchronization Accuracy Analysis)
 - Chapter 5, Section 5.4 (Usability and Reliability Assessment)

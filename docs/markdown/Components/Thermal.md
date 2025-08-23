@@ -5,7 +5,7 @@ This document details the thermal camera integration using the Topdon TC001 USB 
 ## Table of Contents
 
 1. [Pipeline Overview](#pipeline-overview)
-2. [Topdon TC001 Integration](#topdon-tc001-integration)  
+2. [Topdon TC001 Integration](#topdon-tc001-integration)
 3. [USB-OTG Connection Management](#usb-otg-connection-management)
 4. [Thermal Data Processing](#thermal-data-processing)
 5. [CSV Output Format](#csv-output-format)
@@ -24,26 +24,26 @@ graph TB
         TC001[Topdon TC001<br/>USB Thermal Camera<br/>256×192 Resolution]
         USB[USB-OTG Connection<br/>Android Device]
     end
-    
+
     subgraph "Topdon SDK"
         SDK[Native SDK<br/>C++ Library]
         JNI[JNI Wrapper<br/>Java Interface]
         CB[Frame Callback<br/>Native → Java]
     end
-    
+
     subgraph "ThermalRecorder"
         CONN[Connection Manager<br/>USB Permissions]
         PROC[Data Processor<br/>Matrix Conversion]
         CAL[Calibration Manager<br/>Temperature Scaling]
         TS[Timestamp Manager<br/>Sync Integration]
     end
-    
+
     subgraph "Data Output"
         CSV[CSV Writer<br/>Thermal Matrix Data]
         META[Metadata JSON<br/>Camera Settings]
         STORAGE[Session Storage<br/>thermal/ Directory]
     end
-    
+
     TC001 <--> USB
     USB <--> SDK
     SDK <--> JNI
@@ -107,20 +107,20 @@ class TopdonThermalSDK private constructor() {
             System.loadLibrary("topdon_thermal")
         }
     }
-    
+
     // Native method declarations
     private external fun nativeInitialize(): Boolean
-    private external fun nativeStartStream(): Boolean  
+    private external fun nativeStartStream(): Boolean
     private external fun nativeStopStream(): Boolean
     private external fun nativeSetEmissivity(emissivity: Float): Boolean
     private external fun nativeGetLatestFrame(): ThermalFrameData?
     private external fun nativeRelease()
-    
+
     // Frame callback from native code
     @JvmStatic
     fun onFrameReceived(
         timestampUs: Long,
-        width: Int, 
+        width: Int,
         height: Int,
         temperatureData: FloatArray,
         ambientTemp: Float,
@@ -148,19 +148,19 @@ Android requires explicit USB permissions for external devices:
 
 ```kotlin
 class ThermalCameraRecorder : SensorRecorder {
-    
+
     private fun requestUsbPermission(): Boolean {
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
         val deviceFilter = IntentFilter(ACTION_USB_PERMISSION)
-        
+
         context.registerReceiver(usbReceiver, deviceFilter)
-        
+
         // Find Topdon device
         val topdonDevice = usbManager.deviceList.values.find { device ->
-            device.vendorId == TOPDON_VENDOR_ID && 
+            device.vendorId == TOPDON_VENDOR_ID &&
             device.productId == TC001_PRODUCT_ID
         }
-        
+
         return if (topdonDevice != null && !usbManager.hasPermission(topdonDevice)) {
             val permissionIntent = PendingIntent.getBroadcast(
                 context, 0, Intent(ACTION_USB_PERMISSION), 0
@@ -171,7 +171,7 @@ class ThermalCameraRecorder : SensorRecorder {
             topdonDevice != null // Permission granted or device not found
         }
     }
-    
+
     private val usbReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
@@ -207,10 +207,10 @@ enum class ThermalCameraState {
 class ThermalConnectionManager {
     private val _state = MutableStateFlow(ThermalCameraState.DISCONNECTED)
     val state: StateFlow<ThermalCameraState> = _state
-    
+
     suspend fun connect(): Boolean {
         _state.value = ThermalCameraState.CONNECTING
-        
+
         return try {
             if (TopdonThermalSDK.initialize()) {
                 _state.value = ThermalCameraState.CONNECTED
@@ -225,12 +225,12 @@ class ThermalConnectionManager {
             false
         }
     }
-    
+
     suspend fun startStreaming(): Boolean {
         if (_state.value != ThermalCameraState.CONNECTED) {
             return false
         }
-        
+
         return try {
             if (TopdonThermalSDK.startStream()) {
                 _state.value = ThermalCameraState.STREAMING
@@ -256,33 +256,33 @@ class ThermalConnectionManager {
 
 ```kotlin
 class ThermalRecorder(private val context: Context) : SensorRecorder {
-    
+
     private var csvWriter: BufferedWriter? = null
     private var frameCount = 0L
     private var startTimestamp = 0L
-    
+
     override suspend fun start(sessionDir: File) {
         val thermalDir = sessionDir
         thermalDir.mkdirs()
-        
+
         // Initialize CSV output
         val csvFile = File(thermalDir, "thermal.csv")
         csvWriter = BufferedWriter(FileWriter(csvFile))
         writeCsvHeader()
-        
+
         // Initialize metadata
         startTimestamp = TimeManager.nowNanos()
         initializeMetadata(thermalDir)
-        
+
         // Set up frame callback
         TopdonThermalSDK.setFrameCallback { frame ->
             processFrame(frame)
         }
-        
+
         // Start streaming
         connectionManager.startStreaming()
     }
-    
+
     private fun writeCsvHeader() {
         val header = buildString {
             append("timestamp_ns,w,h")
@@ -295,16 +295,16 @@ class ThermalRecorder(private val context: Context) : SensorRecorder {
         csvWriter?.write(header)
         csvWriter?.flush()
     }
-    
+
     private fun processFrame(frame: ThermalFrameData) {
         val syncedTimestamp = TimeManager.getSyncedTimestamp()
-        
+
         // Validate frame data
         if (frame.temperatures.size != 49152) {
             Log.e(TAG, "Invalid frame size: ${frame.temperatures.size}")
             return
         }
-        
+
         // Write CSV row
         val csvRow = buildString {
             append("$syncedTimestamp,${frame.width},${frame.height}")
@@ -313,16 +313,16 @@ class ThermalRecorder(private val context: Context) : SensorRecorder {
             }
             append("\n")
         }
-        
+
         try {
             csvWriter?.write(csvRow)
-            
+
             // Periodic flush to ensure data persistence
             frameCount++
             if (frameCount % 50 == 0L) { // Flush every 50 frames (~5 seconds at 10 Hz)
                 csvWriter?.flush()
             }
-            
+
         } catch (e: IOException) {
             Log.e(TAG, "Error writing thermal data", e)
         }
@@ -342,7 +342,7 @@ fun getTemperatureAt(row: Int, col: Int, temperatures: FloatArray): Float {
     return if (index < temperatures.size) temperatures[index] else Float.NaN
 }
 
-// Convert 1D array index to 2D coordinates  
+// Convert 1D array index to 2D coordinates
 fun indexToCoordinates(index: Int): Pair<Int, Int> {
     val row = index / 256
     val col = index % 256
@@ -355,7 +355,7 @@ fun indexToCoordinates(index: Int): Pair<Int, Int> {
 private fun validateTemperatureData(temperatures: FloatArray): Boolean {
     var validCount = 0
     var invalidCount = 0
-    
+
     temperatures.forEach { temp ->
         when {
             temp.isNaN() -> invalidCount++
@@ -363,12 +363,12 @@ private fun validateTemperatureData(temperatures: FloatArray): Boolean {
             else -> validCount++
         }
     }
-    
+
     val invalidRatio = invalidCount.toFloat() / temperatures.size
     if (invalidRatio > 0.1f) { // More than 10% invalid pixels
         Log.w(TAG, "High invalid pixel ratio: ${invalidRatio * 100}%")
     }
-    
+
     return invalidRatio < 0.5f // Reject frames with >50% invalid data
 }
 ```
@@ -403,18 +403,18 @@ timestamp_ns,w,h,v0,v1,v2,...,v49151
 // Optional: Compress large thermal CSV files
 private fun compressThermalData(csvFile: File) {
     val gzipFile = File(csvFile.parent, "${csvFile.name}.gz")
-    
+
     FileInputStream(csvFile).use { fis ->
         GZIPOutputStream(FileOutputStream(gzipFile)).use { gzos ->
             fis.copyTo(gzos)
         }
     }
-    
+
     // Verify compression ratio
     val originalSize = csvFile.length()
     val compressedSize = gzipFile.length()
     val ratio = (originalSize.toDouble() / compressedSize.toDouble())
-    
+
     Log.i(TAG, "Thermal CSV compressed: ${originalSize / 1024}KB → ${compressedSize / 1024}KB (${String.format("%.1fx", ratio)})")
 }
 ```
@@ -479,7 +479,7 @@ private fun compressThermalData(csvFile: File) {
 
 ```kotlin
 class ThermalCalibrationManager {
-    
+
     fun updateEmissivity(emissivity: Float): Boolean {
         return if (emissivity in 0.1f..1.0f) {
             TopdonThermalSDK.setEmissivity(emissivity)
@@ -491,17 +491,17 @@ class ThermalCalibrationManager {
             false
         }
     }
-    
+
     fun performUserCalibration(knownTemperature: Float, measuredAverage: Float) {
         val offset = knownTemperature - measuredAverage
         calibrationOffset = offset
-        
+
         Log.i(TAG, "User calibration: offset = ${String.format("%.2f", offset)}°C")
-        
+
         // Apply calibration to future readings
         userCalibrationEnabled = true
     }
-    
+
     private fun applyCalibratedTemperature(rawTemp: Float): Float {
         return if (userCalibrationEnabled) {
             rawTemp + calibrationOffset
@@ -523,11 +523,11 @@ class ThermalCalibrationManager {
 class ThermalFrameBufferPool {
     private val availableBuffers = ConcurrentLinkedQueue<FloatArray>()
     private val maxBuffers = 5
-    
+
     fun acquireBuffer(): FloatArray {
         return availableBuffers.poll() ?: FloatArray(49152)
     }
-    
+
     fun releaseBuffer(buffer: FloatArray) {
         if (availableBuffers.size < maxBuffers) {
             availableBuffers.offer(buffer)
@@ -562,18 +562,18 @@ private fun handleConnectionError() {
     thermalProcessingScope.launch {
         var retryCount = 0
         val maxRetries = 3
-        
+
         while (retryCount < maxRetries) {
             delay(1000 * (retryCount + 1)) // Exponential backoff
-            
+
             if (connectionManager.connect()) {
                 Log.i(TAG, "Thermal camera reconnected after $retryCount retries")
                 return@launch
             }
-            
+
             retryCount++
         }
-        
+
         Log.e(TAG, "Failed to reconnect thermal camera after $maxRetries attempts")
         broadcastError("THERMAL_CAMERA_DISCONNECTED")
     }
@@ -591,7 +591,7 @@ private fun validateAndCorrectFrame(frame: ThermalFrameData): ThermalFrameData {
             else -> temp
         }
     }.toFloatArray()
-    
+
     return frame.copy(temperatures = correctedTemperatures)
 }
 ```

@@ -14,11 +14,11 @@
 @startuml
 actor Operator
 participant PC as "PC Controller"
-participant RS as "RecordingService" 
+participant RS as "RecordingService"
 participant UI as "MainActivity"
 participant RC as "RecordingController"
 participant RGB as "RgbCameraRecorder"
-participant TH as "ThermalCameraRecorder" 
+participant TH as "ThermalCameraRecorder"
 participant GSR as "ShimmerRecorder"
 
 == Start Recording ==
@@ -36,7 +36,7 @@ activate RC
 
 note over RC: State: IDLE → PREPARING
 RC -> RC: Create session directory
-RC -> RGB: start(sessionDir/rgb) 
+RC -> RGB: start(sessionDir/rgb)
 activate RGB
 RGB -> RGB: Initialize CameraX\n(VideoCapture + ImageCapture)
 return
@@ -46,7 +46,7 @@ activate TH
 TH -> TH: Create thermal.csv\nand metadata.json
 return
 
-RC -> GSR: start(sessionDir/gsr)  
+RC -> GSR: start(sessionDir/gsr)
 activate GSR
 GSR -> GSR: Connect Shimmer BLE\nStart GSR streaming
 return
@@ -73,7 +73,7 @@ activate PC
 PC -> RS: {"v":1,"type":"cmd","command":"stop_recording","id":2}
 activate RS
 
-RS -> UI: Broadcast ACTION_STOP_RECORDING  
+RS -> UI: Broadcast ACTION_STOP_RECORDING
 activate UI
 
 UI -> RC: stopSession()
@@ -86,7 +86,7 @@ RGB -> RGB: Finalize MP4\nFlush CSV buffer
 return
 
 RC -> TH: stop()
-activate TH  
+activate TH
 TH -> TH: Close CSV files
 return
 
@@ -114,47 +114,47 @@ sequenceDiagram
     participant O as Operator
     participant PC as PC Controller
     participant RS as RecordingService
-    participant UI as MainActivity  
+    participant UI as MainActivity
     participant RC as RecordingController
     participant RGB as RgbCameraRecorder
     participant TH as ThermalRecorder
     participant GSR as ShimmerRecorder
-    
+
     Note over O,GSR: Start Recording Flow
     O->>PC: Click Start Session
     PC->>RS: start_recording command (v=1, JSON)
     RS->>UI: ACTION_START_RECORDING broadcast
     UI->>RC: startSession(sessionId)
-    
+
     Note over RC: State: IDLE → PREPARING
     RC->>RC: Create session directory
-    
+
     par Parallel Sensor Initialization
         RC->>RGB: start(sessionDir/rgb)
         RGB->>RGB: Initialize CameraX
     and
-        RC->>TH: start(sessionDir/thermal) 
+        RC->>TH: start(sessionDir/thermal)
         TH->>TH: Create CSV + metadata
     and
         RC->>GSR: start(sessionDir/gsr)
         GSR->>GSR: Connect Shimmer BLE
     end
-    
+
     Note over RC: State: PREPARING → RECORDING
     RS-->>PC: ACK (status: ok)
     PC-->>O: Recording Started
-    
+
     Note over O,GSR: Recording Active
     RGB->>RGB: Capture MP4 + JPEGs + CSV
     TH->>TH: Generate thermal CSV
     GSR->>GSR: Stream GSR/PPG data
-    
-    Note over O,GSR: Stop Recording Flow  
+
+    Note over O,GSR: Stop Recording Flow
     O->>PC: Click Stop Session
     PC->>RS: stop_recording command
     RS->>UI: ACTION_STOP_RECORDING broadcast
     UI->>RC: stopSession()
-    
+
     Note over RC: State: RECORDING → STOPPING
     par Parallel Sensor Shutdown
         RC->>RGB: stop()
@@ -162,11 +162,11 @@ sequenceDiagram
     and
         RC->>TH: stop()
         TH->>TH: Close CSV files
-    and  
+    and
         RC->>GSR: stop()
         GSR->>GSR: Disconnect BLE, close CSV
     end
-    
+
     Note over RC: State: STOPPING → IDLE
     RS-->>PC: ACK (status: ok)
     PC-->>O: Recording Stopped
@@ -176,13 +176,13 @@ sequenceDiagram
 
 **Purpose**: Show push model from Android to PC receiver including ZIP streaming.
 
-### PlantUML Diagram  
+### PlantUML Diagram
 
 ```plantuml
 @startuml
 participant PC as "PC Controller"
 participant RS as "RecordingService"
-participant FTM as "FileTransferManager"  
+participant FTM as "FileTransferManager"
 participant FTS as "FileTransferServer"
 participant Storage as "PC Storage"
 
@@ -235,11 +235,11 @@ PC <-- FTS: Transfer completion\n(via file system monitoring)
 
 **ZIP Stream Contents**:
 - `rgb/video_1692374212345678901.mp4` - H.264 video recording
-- `rgb/frames/frame_*.jpg` - High-resolution JPEG stills  
+- `rgb/frames/frame_*.jpg` - High-resolution JPEG stills
 - `rgb/rgb.csv` - Frame timestamp index
 - `thermal/thermal.csv` - Thermal sensor data (CSV)
 - `thermal/metadata.json` - Sensor configuration
-- `gsr/gsr.csv` - GSR and PPG measurements  
+- `gsr/gsr.csv` - GSR and PPG measurements
 - `flash_sync_events.csv` - Flash synchronization timestamps
 
 **Error Handling**:
@@ -263,28 +263,28 @@ PC <-- FTS: Transfer completion\n(via file system monitoring)
 sequenceDiagram
     participant RGB as RgbCameraRecorder
     participant PB as PreviewBus
-    participant RS as RecordingService  
+    participant RS as RecordingService
     participant PC as PC Controller
     participant GUI as PyQt6 GUI
-    
+
     Note over RGB,GUI: Preview Streaming (During Recording)
-    
+
     loop Every ~150ms (6-8 FPS)
         RGB->>RGB: Capture preview frame
         RGB->>RGB: Downsample to 640x480
         RGB->>RGB: Encode as JPEG (quality=70)
         RGB->>PB: emit(jpegBytes, timestampNs)
-        
+
         PB->>RS: Preview frame callback
         RS->>RS: Base64 encode JPEG
         RS->>PC: {"v":1,"type":"event","name":"preview_frame","device_id":"Pixel_7","jpeg_base64":"...","ts":1692374212450}
-        
+
         PC->>PC: Decode base64 JPEG
-        PC->>PC: Convert to QImage  
+        PC->>PC: Convert to QImage
         PC->>GUI: Update device preview (QLabel pixmap)
         GUI->>GUI: Display in dashboard grid
     end
-    
+
     Note over RGB,GUI: Throttling prevents network overload
 ```
 
@@ -296,6 +296,6 @@ sequenceDiagram
 
 **Performance Impact**:
 - Preview generation: ~5-10ms per frame
-- Base64 encoding: ~2-5ms per frame  
+- Base64 encoding: ~2-5ms per frame
 - Network transmission: ~10-20ms per frame
 - Total latency: ~50-100ms end-to-end

@@ -6,11 +6,11 @@ import android.hardware.usb.UsbDevice
 
 /**
  * DEMONSTRATION: True Topdon SDK Integration Classes
- * 
+ *
  * This file contains stub classes that demonstrate exactly how the real
  * Topdon SDK integration would be implemented. In production, these
  * would be replaced with actual imports from com.infisense.iruvc.* packages.
- * 
+ *
  * The current implementation shows the structure and method calls that
  * would be used with the real SDK, highlighting the dramatic difference
  * from generic USB camera approaches.
@@ -26,22 +26,22 @@ import android.hardware.usb.UsbDevice
  */
 object TopdonIRCMD {
     fun getInstance(): TopdonIRCMD = this
-    
+
     fun initialize(context: Context): TopdonResult {
         // Real SDK initialization with hardware drivers
         return TopdonResult.SUCCESS
     }
-    
+
     fun scanForDevices(): List<TopdonDeviceInfo> {
         // Real hardware-specific device scanning
         return emptyList() // Stub - would return actual TC001 devices
     }
-    
+
     fun connectDevice(device: UsbDevice): TopdonResult {
         // Real device connection with Topdon protocols
         return TopdonResult.SUCCESS
     }
-    
+
     fun getDeviceInfo(): TopdonDeviceInfo {
         // Real device capability detection
         return TopdonDeviceInfo(
@@ -54,7 +54,7 @@ object TopdonIRCMD {
             usbDevice = null // Would be real USB device
         )
     }
-    
+
     fun setResolution(width: Int, height: Int): TopdonResult = TopdonResult.SUCCESS
     fun setFrameRate(fps: Int): TopdonResult = TopdonResult.SUCCESS
     fun setTemperatureRange(min: Float, max: Float): TopdonResult = TopdonResult.SUCCESS
@@ -63,9 +63,9 @@ object TopdonIRCMD {
     fun enableDigitalDetailEnhancement(enabled: Boolean): TopdonResult = TopdonResult.SUCCESS
     fun enableTemperatureCompensation(enabled: Boolean): TopdonResult = TopdonResult.SUCCESS
     fun setThermalPalette(palette: TopdonThermalPalette): TopdonResult = TopdonResult.SUCCESS
-    
+
     fun setRealFrameCallback(callback: (ByteArray) -> Unit): TopdonResult = TopdonResult.SUCCESS
-    
+
     fun applyConfiguration(): TopdonResult = TopdonResult.SUCCESS
     fun startThermalStreaming(): TopdonResult = TopdonResult.SUCCESS
     fun stopThermalStreaming(): TopdonResult = TopdonResult.SUCCESS
@@ -101,28 +101,28 @@ object TopdonIRProcess {
         // Real hardware-calibrated temperature conversion
         return FloatArray(width * height) { 25.0f } // Stub values
     }
-    
+
     fun getCenterTemperature(temperatureMatrix: FloatArray, width: Int, height: Int): Float {
         // Real center pixel temperature extraction
         val centerIndex = (height / 2) * width + (width / 2)
         return if (centerIndex < temperatureMatrix.size) temperatureMatrix[centerIndex] else 25.0f
     }
-    
+
     fun getMinTemperature(temperatureMatrix: FloatArray): Float {
         // Real minimum temperature calculation
         return temperatureMatrix.minOrNull() ?: 20.0f
     }
-    
+
     fun getMaxTemperature(temperatureMatrix: FloatArray): Float {
         // Real maximum temperature calculation
         return temperatureMatrix.maxOrNull() ?: 30.0f
     }
-    
+
     fun getAverageTemperature(temperatureMatrix: FloatArray): Float {
         // Real average temperature calculation
         return temperatureMatrix.average().toFloat()
     }
-    
+
     fun generateThermalBitmap(
         temperatureMatrix: FloatArray,
         width: Int,
@@ -131,7 +131,7 @@ object TopdonIRProcess {
     ): Bitmap {
         // Real thermal image generation with professional color mapping
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        
+
         // Apply real thermal color palette (Iron, Rainbow, etc.)
         for (y in 0 until height) {
             for (x in 0 until width) {
@@ -140,14 +140,14 @@ object TopdonIRProcess {
                 bitmap.setPixel(x, y, color)
             }
         }
-        
+
         return bitmap
     }
-    
+
     private fun mapTemperatureToColor(temperature: Float, palette: TopdonThermalPalette): Int {
         // Real thermal color mapping using professional palettes
         val normalized = ((temperature - 20.0f) / 30.0f).coerceIn(0.0f, 1.0f)
-        
+
         return when (palette) {
             TopdonThermalPalette.IRON -> {
                 // Iron palette: black -> red -> yellow -> white

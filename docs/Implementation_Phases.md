@@ -7,7 +7,7 @@ This document consolidates all implementation phases for the systematic developm
 The implementation is organized into phases that build upon each other, ensuring systematic development and validation at each stage:
 
 1. **Phase 1**: Foundation and basic communication
-2. **Phase 2**: Data capture and local storage  
+2. **Phase 2**: Data capture and local storage
 3. **Phase 3**: Advanced networking features
 4. **Phase 4**: PC Hub GUI and session management
 5. **Phase 5**: Integration and deployment preparation
@@ -25,7 +25,7 @@ The implementation is organized into phases that build upon each other, ensuring
 - Technology: Python 3, PyQt6
 - Actions:
   1. Initialize Git repository
-  2. Set up Python virtual environment  
+  2. Set up Python virtual environment
   3. Create `requirements.txt` with dependencies (`PyQt6`, `zeroconf`)
   4. Create directory structure:
      ```
@@ -69,7 +69,7 @@ The implementation is organized into phases that build upon each other, ensuring
   "port": 8080
 }
 
-// Connection Establishment  
+// Connection Establishment
 {
   "type": "CONNECTION_REQUEST",
   "hub_id": "pc_hub_001"
@@ -88,14 +88,14 @@ The implementation is organized into phases that build upon each other, ensuring
 }
 
 {
-  "type": "PONG", 
+  "type": "PONG",
   "timestamp": "2023-12-01T14:30:22.125Z"
 }
 ```
 
 ### Task 1.3: Service Discovery Implementation
 
-**PC Hub**: 
+**PC Hub**:
 - Implement mDNS/Zeroconf browser using `zeroconf` library
 - Listen for Android device announcements
 - Maintain discovered device registry
@@ -108,7 +108,7 @@ The implementation is organized into phases that build upon each other, ensuring
 ### Task 1.4: Basic TCP Communication
 
 **Implementation**:
-- Establish reliable TCP connections between Hub and Spokes  
+- Establish reliable TCP connections between Hub and Spokes
 - Implement JSON message serialization/deserialization
 - Create basic message routing and handling framework
 - Add connection lifecycle management (connect, disconnect, error handling)
@@ -141,7 +141,7 @@ The implementation is organized into phases that build upon each other, ensuring
 - Thread-safe recording operations
 - Proper resource management (camera, file handles)
 
-**Output**: 
+**Output**:
 - `video.mp4`: Continuous video recording
 - `images/`: Directory for timestamped still images
 
@@ -156,7 +156,7 @@ The implementation is organized into phases that build upon each other, ensuring
 - ✅ **Professional Thermal Imaging**: Iron, Rainbow, Grayscale color palettes
 - ✅ **Graceful Hardware/Simulation Fallback**: Development-friendly operation
 
-**✅ PRODUCTION OUTPUTS**: 
+**✅ PRODUCTION OUTPUTS**:
 - `thermal.csv`: Hardware-calibrated timestamped thermal readings with ±2°C accuracy
 - `thermal_images/`: Professional thermal image snapshots with real color palettes
 
@@ -171,7 +171,7 @@ The implementation is organized into phases that build upon each other, ensuring
 - ✅ **Robust BLE Connection**: Device discovery, pairing, reconnection management
 - ✅ **Dual-Sensor Recording**: Simultaneous GSR (microsiemens) + PPG (raw ADC)
 
-**✅ PRODUCTION OUTPUTS**: 
+**✅ PRODUCTION OUTPUTS**:
 - `gsr.csv`: Production-quality timestamped GSR measurements with 12-bit precision
 - Header includes real sensor configuration and hardware metadata
 
@@ -199,7 +199,7 @@ The implementation is organized into phases that build upon each other, ensuring
 - Multiple timestamp samples for accuracy
 
 **Android Spoke Implementation**:
-- UDP client for time synchronization requests  
+- UDP client for time synchronization requests
 - Clock offset calculation and application
 - Continuous sync maintenance during sessions
 
@@ -211,7 +211,7 @@ The implementation is organized into phases that build upon each other, ensuring
 }
 
 {
-  "type": "TIME_SYNC_RESPONSE", 
+  "type": "TIME_SYNC_RESPONSE",
   "server_timestamp": "2023-12-01T14:30:22.124789Z",
   "client_timestamp": "2023-12-01T14:30:22.123456Z"
 }
@@ -244,7 +244,7 @@ The implementation is organized into phases that build upon each other, ensuring
 // Status Updates
 {
   "type": "STATUS_UPDATE",
-  "device_id": "android_spoke_001", 
+  "device_id": "android_spoke_001",
   "battery_level": 85,
   "storage_free_mb": 2048,
   "recording_status": "active"
@@ -382,7 +382,7 @@ The implementation is organized into phases that build upon each other, ensuring
 - Export calibration image sets with hardware-validated thermal data
 
 **PC Calibration Tool**:
-- OpenCV-based calibration computation  
+- OpenCV-based calibration computation
 - Camera parameter estimation
 - ✅ **Enhanced with Real Thermal Data**: True temperature calibration quality assessment
 - Configuration file generation for production thermal accuracy
@@ -489,7 +489,7 @@ The implementation is organized into phases that build upon each other, ensuring
 
 1. **Phase 1 → Phase 2**: Basic communication required before sensor integration
 2. **Phase 2 → Phase 3**: Local recording must work before advanced networking
-3. **Phase 3 → Phase 4**: Synchronization needed for GUI session management  
+3. **Phase 3 → Phase 4**: Synchronization needed for GUI session management
 4. **Phase 4 → Phase 5**: Complete GUI required for integration testing
 5. **Phase 5 → Phase 6**: All features must be integrated before optimization
 
@@ -503,7 +503,7 @@ The implementation is organized into phases that build upon each other, ensuring
 
 Each phase includes validation criteria that must be met before proceeding:
 - **Unit tests** passing for all new components
-- **Integration tests** validating phase objectives  
+- **Integration tests** validating phase objectives
 - **Code review** and documentation completion
 - **Performance benchmarks** meeting requirements
 

@@ -38,7 +38,7 @@ docs/diagrams/thesis_visualizations/
 
 ---
 
-### Chapter 2: Background and Literature Review  
+### Chapter 2: Background and Literature Review
 **File**: `chapter2_background/physiology_and_thermal.md`
 
 | Item | Description | Type | Purpose |
@@ -67,9 +67,9 @@ docs/diagrams/thesis_visualizations/
 ---
 
 ### Chapter 4: Design and Implementation
-**Files**: 
+**Files**:
 - `chapter4_implementation/detailed_architecture.md`
-- `chapter4_implementation/sequences_and_screenshots.md`  
+- `chapter4_implementation/sequences_and_screenshots.md`
 - `chapter4_implementation/code_listings.md`
 
 | Item | Description | Type | Purpose |
@@ -133,7 +133,7 @@ docs/diagrams/thesis_visualizations/
 
 ### Export Options
 - **SVG**: Vector graphics for publications
-- **PNG**: High-resolution for presentations  
+- **PNG**: High-resolution for presentations
 - **PDF**: Print-ready for thesis documents
 - **LaTeX**: Direct integration with academic documents
 
@@ -145,7 +145,7 @@ docs/diagrams/thesis_visualizations/
 3. **Reference placement guide** for chapter organization
 4. **Adapt styling** to match thesis template
 
-### For Presentations  
+### For Presentations
 1. **Export to PNG/SVG** at presentation resolution
 2. **Simplify complex diagrams** for slide visibility
 3. **Use consistent color scheme** across presentation

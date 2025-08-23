@@ -11,10 +11,10 @@
 ```bash
 # Python Unit Testing
 pytest -q                    # Run all tests quietly
-pytest -q -k "not gui"      # Skip GUI tests 
+pytest -q -k "not gui"      # Skip GUI tests
 pytest -v                   # Verbose output
 
-# Android Unit Testing  
+# Android Unit Testing
 ./gradlew :android_sensor_node:app:testDebugUnitTest
 
 # Integration Testing
@@ -38,7 +38,7 @@ References (source of truth):
 - docs/latex/4.tex (Design and Implementation Details)
 - CHANGELOG.md (scope of implemented features covered by this plan)
 - docs/markdown/Testing.md (testing procedures and strategies)
-- docs/Comprehensive_Testing_Guide.md (detailed testing guide)  
+- docs/Comprehensive_Testing_Guide.md (detailed testing guide)
 - docs/markdown/Hardware_Validation_Protocol.md (SOP for hardware-in-the-loop validation)
 
 Scope:
@@ -248,7 +248,7 @@ Outputs: Console report including per-event spread (ms), overall max spread (ms)
 This section covers testing with real hardware devices connected, including the two-terminal setup for controlled testing.
 
 ### Prerequisites
-- Windows 10/11 with PowerShell  
+- Windows 10/11 with PowerShell
 - Python 3.11+ and Android SDK
 - Local Wi-Fi network (isolated from internet preferred)
 - Hardware: Android phones, Shimmer3 GSR+, Topdon TC001 thermal camera
@@ -292,7 +292,7 @@ python pc_controller\src\main.py --debug
    - Start 30-second session from PC Controller
    - Verify real-time preview streams active
    - Stop session, confirm file transfer completion
-   
+
 3. **Data Integrity Validation**
    - Use validation script: `python scripts\validate_sync.py --session-id <SESSION_ID>`
    - Verify CSV files contain expected data ranges
@@ -301,6 +301,6 @@ python pc_controller\src\main.py --debug
 4. **Chaos Testing** (Optional but recommended)
    - During active recording, simulate:
      - Network disconnection (WiFi toggle for 30s)
-     - App backgrounding/foregrounding  
+     - App backgrounding/foregrounding
      - USB cable disconnect/reconnect
    - Verify system recovery and data continuity

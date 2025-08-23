@@ -5,7 +5,7 @@ This directory contains comprehensive documentation diagrams and artifacts for t
 ## Directory Structure
 
 - `system_architecture/` - High-level system diagrams and deployment views **✅ UPDATED with production SDK integration**
-- `protocols/` - Communication protocol tables and message formats  
+- `protocols/` - Communication protocol tables and message formats
 - `sequences/` - Sequence diagrams for key workflows
 - `data_formats/` - Data schemas and session directory structures
 - `state_machines/` - Component state diagrams
@@ -16,7 +16,7 @@ This directory contains comprehensive documentation diagrams and artifacts for t
 
 Each diagram includes:
 - **Purpose**: What the diagram shows and why it's needed
-- **Content**: Key elements and relationships  
+- **Content**: Key elements and relationships
 - **Placement**: Recommended chapter/section in report
 - **Tools**: Mermaid/PlantUML format for easy rendering
 - **Example**: Complete notation ready to adapt

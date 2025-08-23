@@ -219,7 +219,7 @@ class RecordingControllerComprehensiveTest {
         recordingController.register("stop_working_sensor", workingSensor)
 
         recordingController.startSession("stop_failure_test")
-        
+
         assertTrue(failingSensor.isStarted)
         assertTrue(workingSensor.isStarted)
 
@@ -408,7 +408,7 @@ class RecordingControllerComprehensiveTest {
         // Perform rapid start/stop cycles
         repeat(10) { cycle ->
             val sessionId = "rapid_cycle_$cycle"
-            
+
             recordingController.startSession(sessionId)
             assertEquals(RecordingController.State.RECORDING, recordingController.state.value)
             assertTrue(sensor.isStarted)

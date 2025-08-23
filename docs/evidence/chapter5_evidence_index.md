@@ -6,7 +6,7 @@ This directory contains all concrete evidence files required to substantiate the
 
 **Files:**
 - `unit_tests/junit_report_android.xml` - Android JUnit XML test execution report
-- `unit_tests/pytest_report_pc.xml` - PC Python pytest execution report  
+- `unit_tests/pytest_report_pc.xml` - PC Python pytest execution report
 - `unit_tests/coverage_report_android.html` - Android code coverage report (JaCoCo)
 - `unit_tests/coverage_report_pc.html` - PC code coverage report (Coverage.py)
 

@@ -8,6 +8,12 @@ allprojects {
     version = "1.0-SNAPSHOT"
 }
 
+// Performance: Enable build caching and parallel execution
+gradle.startParameter.apply {
+    isBuildCacheEnabled = true
+    maxWorkerCount = Runtime.getRuntime().availableProcessors()
+}
+
 // Aggregate verification: Android unit tests + Python pytest
 // Also provide a root-level pyTest task so this repo can run tests without a Gradle subproject in pc_controller.
 
@@ -23,7 +29,7 @@ fun detectAndroidSdk(): Boolean {
             return true
         }
     }
-    
+
     // Check environment variables
     val envSdk = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
     return envSdk != null && file(envSdk).exists()
@@ -51,10 +57,10 @@ val pyTest = tasks.register<Exec>("pyTest") {
     description = "Run Python pytest suite as defined by pytest.ini"
     workingDir = rootDir
     commandLine("python3", "-m", "pytest")
-    
+
     // Only run if pytest is available
     onlyIf { hasPytest }
-    
+
     doFirst {
         if (!hasPytest) {
             println("[pyTest] pytest module not available; install with: python3 -m pip install pytest")

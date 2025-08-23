@@ -11,7 +11,7 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 - **✅ PRODUCTION-READY True SDK Integration**: Complete transformation from simulation to production hardware
   - True Topdon TC001 SDK integration with IRCMD, LibIRParse, LibIRProcess classes
   - Hardware-calibrated temperature processing with ±2°C accuracy and emissivity correction
-  - Professional thermal imaging with Iron, Rainbow, and Grayscale color palettes  
+  - Professional thermal imaging with Iron, Rainbow, and Grayscale color palettes
   - TC001-specific device detection using VID/PID 0x0525/0xa4a2, 0x0525/0xa4a5
   - Real Shimmer3 GSR+ Android SDK integration with ShimmerBluetooth, ShimmerConfig
   - 12-bit ADC precision with scientifically accurate 0-4095 range conversion
@@ -112,7 +112,7 @@ The format is based on Keep a Changelog and this project adheres to Conventional
 
 - Python tests: skip NetworkController tests when PyQt6 is unavailable (pytest.importorskip) to ensure CI runners
   without GUI deps still pass.
-- Gradle deprecation warnings: updated Android Gradle Plugin from 8.5.2 to 8.7.0 and set org.gradle.warning.mode=summary 
+- Gradle deprecation warnings: updated Android Gradle Plugin from 8.5.2 to 8.7.0 and set org.gradle.warning.mode=summary
   to suppress internal AGP Boolean property deprecation warnings (isCrunchPngs, isWearAppUnbundled) while maintaining build functionality.
 - Android unit tests: prevent hangs by adding socket connect and read timeouts in FileTransferManager.transferSession()
   used by Robolectric test.

@@ -1,6 +1,6 @@
 # HellobelloHellobello Project: Multi-Modal Physiological Data Collection Platform
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]() 
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
 [![Test Coverage](https://img.shields.io/badge/coverage-89%25-green.svg)]()
 [![Documentation Status](https://img.shields.io/badge/docs-complete-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/license-Research-blue.svg)]()
@@ -255,7 +255,7 @@ python scripts/monitor_system_health.py --interval 60
 
 **Expected Results:**
 - Memory growth: <50MB over 8 hours (✅ Achieved: +67MB peak, stable)
-- CPU usage: <30% average (✅ Achieved: 23.4% average) 
+- CPU usage: <30% average (✅ Achieved: 23.4% average)
 - Connection uptime: >99% (✅ Achieved: 99.7%)
 - Data integrity: 0% loss (✅ Achieved: 0% verified loss)
 

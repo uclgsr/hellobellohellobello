@@ -13,42 +13,42 @@
 ```mermaid
 stateDiagram-v2
     [*] --> IDLE : RecordingController created
-    
+
     IDLE --> PREPARING : startSession(sessionId)
     PREPARING --> RECORDING : All sensors started successfully
     RECORDING --> STOPPING : stopSession() called
     STOPPING --> IDLE : All sensors stopped
-    
+
     %% Exception handling paths
     PREPARING --> IDLE : Exception during sensor startup\n(cleanup + reset)
     RECORDING --> IDLE : Exception during recording\n(emergency stop)
     STOPPING --> IDLE : Timeout or error during shutdown\n(force cleanup)
-    
+
     %% Self-transitions for edge cases
     IDLE --> IDLE : startSession() when already recording\n(no-op, log warning)
     RECORDING --> RECORDING : startSession() when active\n(ignore duplicate)
-    
+
     note right of IDLE
         • currentSessionId = null
         • sessionRootDir = null
         • All sensors stopped
         • Ready for new session
     end note
-    
-    note right of PREPARING  
+
+    note right of PREPARING
         • Create session directory
         • Create sensor subdirectories
         • Initialize all SensorRecorders
         • Any failure → cleanup & IDLE
     end note
-    
+
     note right of RECORDING
         • All sensors actively capturing
         • Session data being written
         • Preview frames streaming
         • Flash sync events possible
     end note
-    
+
     note right of STOPPING
         • Graceful sensor shutdown
         • Finalize data files
@@ -75,7 +75,7 @@ state PREPARING {
     PREPARING : Any failure → cleanup
 }
 
-state RECORDING {  
+state RECORDING {
     RECORDING : All sensors active
     RECORDING : Data capture in progress
     RECORDING : Preview streaming
@@ -97,7 +97,7 @@ PREPARING --> IDLE : Exception during startup\n(safeStopAll() + reset)
 RECORDING --> IDLE : Exception during recording\n(emergency cleanup)
 STOPPING --> IDLE : Shutdown timeout\n(force cleanup)
 
-%% Edge cases  
+%% Edge cases
 IDLE --> IDLE : startSession() when\nalready has session\n(log warning)
 RECORDING --> RECORDING : startSession() while\nrecording (ignore)
 STOPPING --> STOPPING : stopSession() while\nstopping (ignore)
@@ -116,7 +116,7 @@ STOPPING --> STOPPING : stopSession() while\nstopping (ignore)
 
 **Actions**:
 1. Generate sessionId if not provided (timestamp-based)
-2. Set state to PREPARING  
+2. Set state to PREPARING
 3. Create session root directory
 4. Create subdirectories for each registered sensor
 5. Call `start(subdir)` on all SensorRecorder instances
@@ -135,11 +135,11 @@ STOPPING --> STOPPING : stopSession() while\nstopping (ignore)
 
 **Parallel Operations**:
 - RGB: CameraX video recording + JPEG capture + CSV indexing
-- Thermal: CSV data generation (stub)  
+- Thermal: CSV data generation (stub)
 - GSR: Shimmer BLE streaming + CSV writing
 - Preview: Frame downsampling and PreviewBus emission
 
-### RECORDING → STOPPING  
+### RECORDING → STOPPING
 
 **Trigger**: `stopSession()`
 
@@ -170,7 +170,7 @@ STOPPING --> STOPPING : stopSession() while\nstopping (ignore)
 
 **Common Causes**:
 - Camera permission denied
-- Storage access denied  
+- Storage access denied
 - Shimmer BLE connection failed
 - Insufficient disk space
 
@@ -195,7 +195,7 @@ try {
 - BLE connection lost
 - App backgrounded/killed
 
-**Recovery**:  
+**Recovery**:
 - Emergency state reset to IDLE
 - Partial session data preserved
 - Error logged for debugging
@@ -210,7 +210,7 @@ try {
 
 **Recovery**:
 - Force state transition to IDLE after timeout
-- Log timeout warning  
+- Log timeout warning
 - May leave partial/corrupted files
 
 ## State Guards and Validations
@@ -222,7 +222,7 @@ try {
 
 ### Storage Checks
 - Available disk space (minimum 1GB)
-- Write permissions to sessions directory  
+- Write permissions to sessions directory
 - External storage mounted and accessible
 
 ### Sensor Availability
@@ -239,7 +239,7 @@ try {
 
 **Thread Safety**: All state changes through StateFlow, sensor operations on background coroutines
 
-**Resource Management**: Each sensor responsible for its own cleanup, controller coordinates but doesn't manage sensor internals  
+**Resource Management**: Each sensor responsible for its own cleanup, controller coordinates but doesn't manage sensor internals
 
 **Error Propagation**: Sensor failures bubble up to UI via exceptions, state machine ensures consistent recovery
 

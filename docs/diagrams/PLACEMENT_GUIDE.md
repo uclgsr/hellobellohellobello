@@ -9,13 +9,13 @@
 - **Purpose**: End-to-end system overview showing Android + PC components
 - **Caption**: "Figure 3.1: Multi-Modal Physiological Sensing Platform Architecture showing Android Sensor Node components (MainActivity, RecordingService, SensorRecorders) communicating with PC Controller via NSD discovery and TCP control protocols."
 
-### 3.2 Deployment View  
+### 3.2 Deployment View
 - **Diagram**: `system_architecture/deployment_view.md`
 - **Purpose**: Runtime environment, network topology, port assignments
 - **Caption**: "Figure 3.2: Deployment diagram showing Android device advertising _gsr-controller._tcp service, PC discovery via Zeroconf, and bidirectional communication over WiFi network."
 
 ### 3.3 PC Controller Components
-- **Diagram**: `system_architecture/pc_controller_modules.md`  
+- **Diagram**: `system_architecture/pc_controller_modules.md`
 - **Purpose**: Python application module breakdown
 - **Caption**: "Figure 3.3: PC Controller module architecture with PyQt6 GUI, network layer, core services, data processing, and optional C++ native backend."
 
@@ -25,7 +25,7 @@
 
 #### 4.1.1 Class Diagram
 - **Diagram**: `system_architecture/android_class_diagram.md`
-- **Purpose**: Component relationships and dependencies  
+- **Purpose**: Component relationships and dependencies
 - **Caption**: "Figure 4.1: Android Sensor Node class diagram showing RecordingController orchestration of SensorRecorder implementations with NetworkClient and utility services."
 
 #### 4.1.2 State Machine
@@ -45,7 +45,7 @@
 - **Purpose**: PC-Android command exchange
 - **Caption**: "Figure 4.4: Start/stop recording sequence showing PC command initiation, Android internal coordination, and sensor orchestration."
 
-#### 4.2.2 Protocol Tables  
+#### 4.2.2 Protocol Tables
 - **Tables**: `protocols/tcp_control_protocol.md`
 - **Purpose**: Complete message specification
 - **Placement**: Table 4.1: "TCP Control Protocol Commands"
@@ -66,7 +66,7 @@
 #### 4.3.2 Data Schemas
 - **Tables**: `data_formats/session_structure.md` (CSV sections)
 - **Placement**: Table 4.3: "RGB CSV Schema (rgb.csv)"
-- **Placement**: Table 4.4: "GSR CSV Schema (gsr.csv)"  
+- **Placement**: Table 4.4: "GSR CSV Schema (gsr.csv)"
 - **Placement**: Table 4.5: "Thermal CSV Schema (thermal.csv)"
 
 ## Chapter 5: Evaluation and Testing
@@ -80,7 +80,7 @@
 
 #### 5.1.2 Preview Performance
 - **Diagram**: `performance/timing_synchronization.md` (Throttling section)
-- **Purpose**: PreviewBus throttling effectiveness  
+- **Purpose**: PreviewBus throttling effectiveness
 - **Caption**: "Figure 5.2: Preview frame throttling timeline demonstrating 6-8 FPS target rate with 150ms minimum interval to prevent network congestion."
 
 #### 5.1.3 Performance Charts
@@ -112,7 +112,7 @@
 - **Purpose**: Comprehensive command reference for implementers
 - **Organization**: Commands, events, error codes, examples
 
-### Appendix B: Data Format Specifications  
+### Appendix B: Data Format Specifications
 - **Content**: Complete `data_formats/session_structure.md`
 - **Purpose**: File format documentation for data analysis
 - **Organization**: Directory structure, CSV schemas, file size estimates
@@ -126,17 +126,17 @@
 
 ### Recommended Numbering Scheme
 - **Chapter 3**: Figures 3.1-3.5, Tables 3.1-3.2
-- **Chapter 4**: Figures 4.1-4.8, Tables 4.1-4.6  
+- **Chapter 4**: Figures 4.1-4.8, Tables 4.1-4.6
 - **Chapter 5**: Figures 5.1-5.6, Tables 5.1-5.3
 - **Appendix**: Figures A.1-A.3, Tables A.1-A.5
 
 ### Caption Format Template
 ```
-Figure X.Y: [Diagram Title] showing [key components/relationships]. 
+Figure X.Y: [Diagram Title] showing [key components/relationships].
 [Brief description of purpose and what the reader should understand.]
 ```
 
-### Table Format Template  
+### Table Format Template
 ```
 Table X.Y: [Table Title]
 [Description of data presented and interpretation guidance.]
@@ -150,7 +150,7 @@ Table X.Y: [Table Title]
 - [ ] PC Controller module map (Python application structure)
 - [ ] Protocol overview (NSD, TCP, UDP protocols)
 
-### Design and Implementation Chapter  
+### Design and Implementation Chapter
 - [ ] Android class diagram (component relationships)
 - [ ] RecordingController state machine (lifecycle management)
 - [ ] Communication sequences (start/stop recording, file transfer)
@@ -159,7 +159,7 @@ Table X.Y: [Table Title]
 
 ### Evaluation and Testing Chapter
 - [ ] Performance charts (CPU, memory, throughput)
-- [ ] Timing diagrams (synchronization accuracy)  
+- [ ] Timing diagrams (synchronization accuracy)
 - [ ] Error handling matrix (failure modes, recovery)
 - [ ] Test coverage map (component testing strategy)
 - [ ] Quality metrics (coverage trends, optimization results)
@@ -175,7 +175,7 @@ Table X.Y: [Table Title]
 1. Render Mermaid/PlantUML to SVG or PNG
 2. Use `\includegraphics{}` with appropriate sizing
 3. Apply consistent styling and fonts
-4. Reference figures with `\ref{fig:label}` 
+4. Reference figures with `\ref{fig:label}`
 
 ### For Word Documents
 1. Export diagrams as high-resolution PNG (300 DPI)
@@ -185,7 +185,7 @@ Table X.Y: [Table Title]
 
 ### For Markdown/HTML
 1. Include Mermaid code blocks directly (GitHub renders natively)
-2. Use PlantUML online rendering for complex diagrams  
+2. Use PlantUML online rendering for complex diagrams
 3. Apply CSS styling for consistent appearance
 4. Link between sections and diagrams
 

@@ -325,7 +325,7 @@ class UserAuthenticationManager:
         self.session_timeout = timedelta(hours=8)
         self.max_failed_attempts = 5
         self.lockout_duration = timedelta(minutes=30)
-    
+
     def authenticate_user(self, username: str, password: str, ip_address: str) -> dict:
         """Authenticate user with rate limiting and lockout"""
         with psycopg2.connect(**self.db_config) as conn:
@@ -333,22 +333,22 @@ class UserAuthenticationManager:
                 # Check user existence and lockout status
                 cur.execute("""
                     SELECT id, username, password_hash, role, failed_login_attempts, locked_until
-                    FROM users 
+                    FROM users
                     WHERE username = %s AND is_active = true
                 """, (username,))
-                
+
                 user = cur.fetchone()
                 if not user:
                     self._log_authentication_attempt(None, username, False, ip_address, "User not found")
                     return {"success": False, "error": "Invalid credentials"}
-                
+
                 user_id, username, password_hash, role, failed_attempts, locked_until = user
-                
+
                 # Check if account is locked
                 if locked_until and datetime.now() < locked_until:
                     self._log_authentication_attempt(user_id, username, False, ip_address, "Account locked")
                     return {"success": False, "error": "Account temporarily locked"}
-                
+
                 # Verify password
                 if not check_password_hash(password_hash, password):
                     # Increment failed attempts
@@ -356,33 +356,33 @@ class UserAuthenticationManager:
                     if failed_attempts >= self.max_failed_attempts:
                         lockout_time = datetime.now() + self.lockout_duration
                         cur.execute("""
-                            UPDATE users 
-                            SET failed_login_attempts = %s, locked_until = %s 
+                            UPDATE users
+                            SET failed_login_attempts = %s, locked_until = %s
                             WHERE id = %s
                         """, (failed_attempts, lockout_time, user_id))
                     else:
                         cur.execute("""
-                            UPDATE users 
-                            SET failed_login_attempts = %s 
+                            UPDATE users
+                            SET failed_login_attempts = %s
                             WHERE id = %s
                         """, (failed_attempts, user_id))
-                    
+
                     self._log_authentication_attempt(user_id, username, False, ip_address, "Invalid password")
                     return {"success": False, "error": "Invalid credentials"}
-                
+
                 # Successful authentication - reset failed attempts
                 cur.execute("""
-                    UPDATE users 
-                    SET failed_login_attempts = 0, locked_until = NULL, last_login = CURRENT_TIMESTAMP 
+                    UPDATE users
+                    SET failed_login_attempts = 0, locked_until = NULL, last_login = CURRENT_TIMESTAMP
                     WHERE id = %s
                 """, (user_id,))
-                
+
                 # Create session token
                 session_token = self._create_session_token(user_id, username, role)
                 self._store_session(user_id, session_token, ip_address, cur)
-                
+
                 self._log_authentication_attempt(user_id, username, True, ip_address, "Successful login")
-                
+
                 return {
                     "success": True,
                     "token": session_token,
@@ -392,7 +392,7 @@ class UserAuthenticationManager:
                         "role": role
                     }
                 }
-    
+
     def _create_session_token(self, user_id: int, username: str, role: str) -> str:
         """Create JWT session token"""
         payload = {
@@ -403,25 +403,25 @@ class UserAuthenticationManager:
             "exp": time.time() + self.session_timeout.total_seconds()
         }
         return jwt.encode(payload, self.jwt_secret, algorithm="HS256")
-    
+
     def validate_session(self, token: str) -> dict:
         """Validate session token"""
         try:
             payload = jwt.decode(token, self.jwt_secret, algorithms=["HS256"])
-            
+
             # Check if session exists in database
             with psycopg2.connect(**self.db_config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        SELECT user_id FROM user_sessions 
+                        SELECT user_id FROM user_sessions
                         WHERE session_id = %s AND is_active = true AND expires_at > CURRENT_TIMESTAMP
                     """, (token,))
-                    
+
                     if not cur.fetchone():
                         return {"valid": False, "error": "Session not found or expired"}
-            
+
             return {"valid": True, "user": payload}
-            
+
         except jwt.ExpiredSignatureError:
             return {"valid": False, "error": "Token expired"}
         except jwt.InvalidTokenError:
@@ -445,7 +445,7 @@ class SecurityValidator:
         self.session_id_pattern = re.compile(r'^[a-zA-Z0-9_-]{1,64}$')
         self.device_id_pattern = re.compile(r'^[a-zA-Z0-9_-]{1,32}$')
         self.filename_pattern = re.compile(r'^[a-zA-Z0-9._-]{1,255}$')
-        
+
         # JSON schemas for API validation
         self.heartbeat_schema = {
             "type": "object",
@@ -467,19 +467,19 @@ class SecurityValidator:
             },
             "additionalProperties": False
         }
-    
+
     def validate_session_id(self, session_id: str) -> bool:
         """Validate session ID format"""
         if not session_id or len(session_id) > 64:
             return False
         return bool(self.session_id_pattern.match(session_id))
-    
+
     def validate_device_id(self, device_id: str) -> bool:
         """Validate device ID format"""
         if not device_id or len(device_id) > 32:
             return False
         return bool(self.device_id_pattern.match(device_id))
-    
+
     def validate_filename(self, filename: str) -> bool:
         """Validate filename for path traversal protection"""
         if not filename or len(filename) > 255:
@@ -487,7 +487,7 @@ class SecurityValidator:
         if '..' in filename or '/' in filename or '\\' in filename:
             return False
         return bool(self.filename_pattern.match(filename))
-    
+
     def validate_heartbeat_message(self, message: Dict[str, Any]) -> tuple[bool, str]:
         """Validate heartbeat message structure"""
         try:
@@ -495,18 +495,18 @@ class SecurityValidator:
             return True, ""
         except jsonschema.ValidationError as e:
             return False, f"Validation error: {e.message}"
-    
+
     def sanitize_user_input(self, input_data: str) -> str:
         """Sanitize user input to prevent XSS"""
         if not input_data:
             return ""
-        
+
         # HTML escape
         sanitized = html.escape(input_data)
-        
+
         # Remove control characters
         sanitized = ''.join(char for char in sanitized if ord(char) >= 32 or char in '\t\n\r')
-        
+
         # Limit length
         return sanitized[:1000]
 ```
@@ -1090,26 +1090,26 @@ defaults
 frontend platform_frontend
     bind *:80
     bind *:443 ssl crt /etc/ssl/certs/platform.pem
-    
+
     # Redirect HTTP to HTTPS
     redirect scheme https code 301 if !{ ssl_fc }
-    
+
     # Security headers
     http-response set-header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
     http-response set-header X-Frame-Options "DENY"
     http-response set-header X-Content-Type-Options "nosniff"
     http-response set-header X-XSS-Protection "1; mode=block"
-    
+
     # Route to backend
     default_backend platform_backend
 
 backend platform_backend
     balance roundrobin
     option httpchk GET /health
-    
+
     # Health check configuration
     http-check expect status 200
-    
+
     # Server definitions
     server hub1 192.168.1.101:8080 check inter 30s fall 3 rise 2
     server hub2 192.168.1.102:8080 check inter 30s fall 3 rise 2 backup

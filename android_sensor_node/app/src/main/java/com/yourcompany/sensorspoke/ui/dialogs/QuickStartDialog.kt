@@ -15,7 +15,7 @@ import com.yourcompany.sensorspoke.utils.UserExperience
 /**
  * QuickStartDialog provides an interactive onboarding experience for new users
  * of the Android Sensor Node, guiding them through setup and connection.
- * 
+ *
  * This complements the PC Controller's tutorial system to ensure consistent
  * user experience across both platforms.
  */
@@ -23,10 +23,10 @@ class QuickStartDialog(
     context: Context,
     private val onComplete: () -> Unit
 ) : Dialog(context) {
-    
+
     private var currentStep = 0
     private val steps = UserExperience.QuickStart.getSetupSteps()
-    
+
     private lateinit var titleText: TextView
     private lateinit var stepText: TextView
     private lateinit var descriptionText: TextView
@@ -34,19 +34,19 @@ class QuickStartDialog(
     private lateinit var nextButton: Button
     private lateinit var finishButton: Button
     private lateinit var stepIndicators: LinearLayout
-    
+
     init {
         setupDialog()
         updateStep()
     }
-    
+
     private fun setupDialog() {
         // Create the dialog layout programmatically
         val layout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 48, 48, 48)
         }
-        
+
         // Title
         titleText = TextView(context).apply {
             text = "Quick Start Guide"
@@ -55,13 +55,13 @@ class QuickStartDialog(
             setPadding(0, 0, 0, 32)
         }
         layout.addView(titleText)
-        
+
         // Step indicator dots
         stepIndicators = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, 0, 0, 24)
         }
-        
+
         // Create step indicator dots
         for (i in steps.indices) {
             val dot = View(context).apply {
@@ -73,7 +73,7 @@ class QuickStartDialog(
             stepIndicators.addView(dot)
         }
         layout.addView(stepIndicators)
-        
+
         // Step title
         stepText = TextView(context).apply {
             textSize = 18f
@@ -81,19 +81,19 @@ class QuickStartDialog(
             setPadding(0, 0, 0, 16)
         }
         layout.addView(stepText)
-        
+
         // Step description
         descriptionText = TextView(context).apply {
             textSize = 16f
             setPadding(0, 0, 0, 32)
         }
         layout.addView(descriptionText)
-        
+
         // Button layout
         val buttonLayout = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
         }
-        
+
         prevButton = Button(context).apply {
             text = "Previous"
             isEnabled = false
@@ -103,7 +103,7 @@ class QuickStartDialog(
             setOnClickListener { previousStep() }
         }
         buttonLayout.addView(prevButton)
-        
+
         nextButton = Button(context).apply {
             text = "Next"
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
@@ -112,7 +112,7 @@ class QuickStartDialog(
             setOnClickListener { nextStep() }
         }
         buttonLayout.addView(nextButton)
-        
+
         finishButton = Button(context).apply {
             text = "Get Started"
             visibility = View.GONE
@@ -125,23 +125,23 @@ class QuickStartDialog(
             }
         }
         buttonLayout.addView(finishButton)
-        
+
         layout.addView(buttonLayout)
-        
+
         setContentView(layout)
-        
+
         // Dialog configuration
         window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         setCancelable(true)
         setCanceledOnTouchOutside(false)
     }
-    
+
     private fun updateStep() {
         if (currentStep < steps.size) {
             val (stepTitle, stepDescription) = steps[currentStep]
             stepText.text = stepTitle
             descriptionText.text = stepDescription
-            
+
             // Update step indicators
             for (i in 0 until stepIndicators.childCount) {
                 val dot = stepIndicators.getChildAt(i)
@@ -149,10 +149,10 @@ class QuickStartDialog(
                     if (i <= currentStep) Color.parseColor("#2196F3") else Color.parseColor("#E0E0E0")
                 )
             }
-            
+
             // Update button states
             prevButton.isEnabled = currentStep > 0
-            
+
             if (currentStep == steps.size - 1) {
                 nextButton.visibility = View.GONE
                 finishButton.visibility = View.VISIBLE
@@ -162,21 +162,21 @@ class QuickStartDialog(
             }
         }
     }
-    
+
     private fun nextStep() {
         if (currentStep < steps.size - 1) {
             currentStep++
             updateStep()
         }
     }
-    
+
     private fun previousStep() {
         if (currentStep > 0) {
             currentStep--
             updateStep()
         }
     }
-    
+
     companion object {
         /**
          * Shows the quick start dialog with a completion callback.

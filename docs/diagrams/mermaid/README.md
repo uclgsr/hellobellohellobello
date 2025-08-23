@@ -5,7 +5,7 @@ This directory contains all Mermaid diagrams for the Multi-Modal Physiological S
 ## Chapter 1: Introduction
 - `conceptual_overview.md` - High-level system concept and research context
 
-## Chapter 3: Requirements  
+## Chapter 3: Requirements
 - `system_architecture.md` - Hub-and-spoke architecture overview
 - `use_case_diagram.md` - User interaction and system use cases
 
@@ -39,8 +39,8 @@ This directory contains all Mermaid diagrams for the Multi-Modal Physiological S
 
 ## Benefits of Mermaid Format
 
-✅ **Version Control Friendly** - Text-based format tracks changes easily  
-✅ **Dynamic Rendering** - Updates automatically when code changes  
-✅ **Cross-Platform** - Renders in GitHub, GitLab, VS Code, etc.  
-✅ **Maintenance** - Easier to update than image-based diagrams  
+✅ **Version Control Friendly** - Text-based format tracks changes easily
+✅ **Dynamic Rendering** - Updates automatically when code changes
+✅ **Cross-Platform** - Renders in GitHub, GitLab, VS Code, etc.
+✅ **Maintenance** - Easier to update than image-based diagrams
 ✅ **Consistency** - Unified styling across all diagrams

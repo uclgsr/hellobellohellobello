@@ -27,7 +27,7 @@ class UserExperienceTest {
         // Test connection refused error
         val connectionRefusedError = "java.net.ConnectException: Connection refused"
         val translatedMessage = UserExperience.ErrorTranslator.translateNetworkError(connectionRefusedError, "network")
-        
+
         assertTrue("Should provide WiFi troubleshooting", translatedMessage.contains("WiFi network"))
         assertTrue("Should mention PC Hub", translatedMessage.contains("PC Hub"))
         assertTrue("Should provide actionable steps", translatedMessage.contains("Please check"))
@@ -38,7 +38,7 @@ class UserExperienceTest {
         // Test Shimmer GSR sensor error
         val gsrError = "Device not found"
         val translatedMessage = UserExperience.ErrorTranslator.translateSensorError("shimmer", gsrError)
-        
+
         assertTrue("Should mention Shimmer device", translatedMessage.contains("Shimmer"))
         assertTrue("Should provide Bluetooth guidance", translatedMessage.contains("Bluetooth"))
         assertTrue("Should suggest power cycling", translatedMessage.contains("power cycling"))
@@ -49,7 +49,7 @@ class UserExperienceTest {
         // Test thermal camera USB error
         val thermalError = "USB device not accessible"
         val translatedMessage = UserExperience.ErrorTranslator.translateSensorError("thermal", thermalError)
-        
+
         assertTrue("Should mention USB connection", translatedMessage.contains("USB"))
         assertTrue("Should suggest cable check", translatedMessage.contains("cable"))
         assertTrue("Should provide USB troubleshooting", translatedMessage.contains("USB port"))
@@ -60,7 +60,7 @@ class UserExperienceTest {
         // Test RGB camera permission error
         val cameraError = "Camera permission denied"
         val translatedMessage = UserExperience.ErrorTranslator.translateSensorError("rgb", cameraError)
-        
+
         assertTrue("Should mention camera permission", translatedMessage.contains("permission"))
         assertTrue("Should suggest Settings access", translatedMessage.contains("Settings"))
         assertTrue("Should mention app restart", translatedMessage.contains("restart"))
@@ -71,7 +71,7 @@ class UserExperienceTest {
         // Test connected status
         val connectedStatus = UserExperience.StatusFormatter.formatConnectionStatus(true, "192.168.1.100:8080")
         assertEquals("Connected to PC Hub: 192.168.1.100:8080", connectedStatus)
-        
+
         // Test disconnected status
         val disconnectedStatus = UserExperience.StatusFormatter.formatConnectionStatus(false)
         assertEquals("Not connected to PC Hub", disconnectedStatus)
@@ -83,7 +83,7 @@ class UserExperienceTest {
         val recordingStatus = UserExperience.StatusFormatter.formatRecordingStatus(true, "session_123", 125)
         assertTrue("Should contain session ID", recordingStatus.contains("session_123"))
         assertTrue("Should show duration", recordingStatus.contains("2:05"))
-        
+
         // Test ready status
         val readyStatus = UserExperience.StatusFormatter.formatRecordingStatus(false)
         assertEquals("Ready to record", readyStatus)
@@ -94,11 +94,11 @@ class UserExperienceTest {
         // Test connected sensor
         val connectedSensor = UserExperience.StatusFormatter.formatSensorStatus("Shimmer GSR", true, false)
         assertEquals("Shimmer GSR: Connected", connectedSensor)
-        
+
         // Test recording sensor
         val recordingSensor = UserExperience.StatusFormatter.formatSensorStatus("RGB Camera", true, true)
         assertEquals("RGB Camera: Recording", recordingSensor)
-        
+
         // Test disconnected sensor
         val disconnectedSensor = UserExperience.StatusFormatter.formatSensorStatus("Thermal Camera", false, false)
         assertEquals("Thermal Camera: Disconnected", disconnectedSensor)
@@ -122,7 +122,7 @@ class UserExperienceTest {
     @Test
     fun testQuickStartSteps() {
         val steps = UserExperience.QuickStart.getSetupSteps()
-        
+
         assertEquals("Should have 6 setup steps", 6, steps.size)
         assertTrue("First step should be about WiFi", steps[0].first.contains("WiFi"))
         assertTrue("Should include permissions step", steps.any { it.first.contains("Permissions") })
@@ -134,7 +134,7 @@ class UserExperienceTest {
     @Test
     fun testConnectionTroubleshootingSteps() {
         val troubleshootingSteps = UserExperience.QuickStart.getConnectionTroubleshootingSteps()
-        
+
         assertTrue("Should have multiple steps", troubleshootingSteps.size >= 5)
         assertTrue("Should mention PC Hub", troubleshootingSteps.any { it.contains("PC Hub") })
         assertTrue("Should mention WiFi network", troubleshootingSteps.any { it.contains("WiFi network") })
@@ -145,11 +145,11 @@ class UserExperienceTest {
     @Test
     fun testPermissionExplanations() {
         val explanations = UserExperience.QuickStart.getPermissionExplanations()
-        
+
         assertTrue("Should explain camera permission", explanations.containsKey("camera"))
         assertTrue("Should explain storage permission", explanations.containsKey("storage"))
         assertTrue("Should explain bluetooth permission", explanations.containsKey("bluetooth"))
-        
+
         val cameraExplanation = explanations["camera"] ?: ""
         assertTrue("Camera explanation should mention video recording", cameraExplanation.contains("video"))
         assertTrue("Camera explanation should mention synchronization", cameraExplanation.contains("synchronization"))
@@ -159,7 +159,7 @@ class UserExperienceTest {
     fun testTimeoutErrorTranslation() {
         val timeoutError = "java.net.SocketTimeoutException: Connection timeout"
         val translatedMessage = UserExperience.ErrorTranslator.translateNetworkError(timeoutError, "network")
-        
+
         assertTrue("Should identify as timeout", translatedMessage.contains("timeout"))
         assertTrue("Should suggest checking PC Hub", translatedMessage.contains("PC Hub"))
         assertTrue("Should suggest checking network", translatedMessage.contains("Network"))
@@ -169,7 +169,7 @@ class UserExperienceTest {
     fun testBluetoothErrorTranslation() {
         val bluetoothError = "Bluetooth adapter not found"
         val translatedMessage = UserExperience.ErrorTranslator.translateNetworkError(bluetoothError, "network")
-        
+
         assertTrue("Should mention Bluetooth", translatedMessage.contains("Bluetooth"))
         assertTrue("Should suggest checking Bluetooth state", translatedMessage.contains("enabled"))
         assertTrue("Should mention Shimmer sensor", translatedMessage.contains("Shimmer"))
@@ -179,7 +179,7 @@ class UserExperienceTest {
     fun testStorageErrorTranslation() {
         val storageError = "java.io.IOException: No space left on device"
         val translatedMessage = UserExperience.ErrorTranslator.translateNetworkError(storageError, "network")
-        
+
         assertTrue("Should mention storage", translatedMessage.contains("Storage"))
         assertTrue("Should suggest checking space", translatedMessage.contains("storage space"))
         assertTrue("Should mention permissions", translatedMessage.contains("permissions"))

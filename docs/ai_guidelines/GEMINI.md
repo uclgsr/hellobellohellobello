@@ -19,7 +19,7 @@ AI agents are responsible for maintaining project health, documentation, and dat
 
 **Requirements**:
 - Maintain `CHANGELOG.md` in repository root using "Keep a Changelog" format
-- Include "Unreleased" section at top for ongoing changes  
+- Include "Unreleased" section at top for ongoing changes
 - Add entries for every `feat`, `fix`, or `BREAKING CHANGE` commit
 - Entries must be user-focused, describing impact rather than technical details
 
@@ -30,7 +30,7 @@ AI agents are responsible for maintaining project health, documentation, and dat
 **Documentation Requirements**:
 - Create `BACKUP_STRATEGY.md` outlining 3-2-1 Backup Rule:
   - 3 copies of data
-  - 2 different media types  
+  - 2 different media types
   - 1 copy off-site
 - Provide clear template for researchers' specific backup implementations
 
@@ -69,7 +69,7 @@ The repository has foundational structure but requires systematic implementation
 **Phase 1: Core Infrastructure**
 - Project scaffolding and version control
 - Basic TCP/IP communication
-- Service discovery implementation  
+- Service discovery implementation
 - Protocol definition and message handling
 
 **Phase 2: Sensor Integration**
@@ -78,7 +78,7 @@ The repository has foundational structure but requires systematic implementation
 - Session management implementation
 - Hardware abstraction layers
 
-**Phase 3: Advanced Features**  
+**Phase 3: Advanced Features**
 - Time synchronization service
 - Fault tolerance and recovery
 - Enhanced protocol features
@@ -112,7 +112,7 @@ Create the project structure for a Python application that will act as the centr
 ```
 pc_controller/
 ├── core/
-├── network/  
+├── network/
 ├── sensors/
 ├── gui/
 └── tests/
@@ -139,7 +139,7 @@ Create Android application structure for sensor data collection.
 ```
 com.example.sensorspoke/
 ├── ui/                 # Activities and Fragments
-├── network/            # Network client and discovery  
+├── network/            # Network client and discovery
 ├── sensors/            # Sensor recording modules
 └── services/           # Background services
 ```
@@ -158,7 +158,7 @@ Implement JSON-based communication protocol for Hub-Spoke architecture.
 
 **Core Message Types**:
 - Device discovery and capability exchange
-- Session control (start, stop, status)  
+- Session control (start, stop, status)
 - Time synchronization requests/responses
 - Heartbeat and health monitoring
 - Error reporting and recovery
@@ -181,7 +181,7 @@ Implement RGB camera recording using CameraX:
 - Synchronized timestamping
 - Hardware-accelerated encoding
 
-#### Prompt 2.3 (Android): Sensor Data Management  
+#### Prompt 2.3 (Android): Sensor Data Management
 
 Implement local storage system:
 - Session-based directory structure
@@ -265,7 +265,7 @@ Implement automatic file transfer:
 
 **Resource Management**:
 - Proper camera and sensor resource cleanup
-- Background thread management for long operations  
+- Background thread management for long operations
 - Memory leak prevention with lifecycle awareness
 - Battery optimization best practices
 

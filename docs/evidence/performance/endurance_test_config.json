@@ -100,7 +100,7 @@
     "monitoring_configuration": {
       "metrics_collection": [
         "memory_usage",
-        "cpu_utilization", 
+        "cpu_utilization",
         "network_latency",
         "disk_io_operations",
         "thread_count",
@@ -117,7 +117,7 @@
         },
         {
           "metric": "cpu_percentage",
-          "operator": "greater_than", 
+          "operator": "greater_than",
           "threshold": 50,
           "duration_seconds": 300,
           "action": "investigate"

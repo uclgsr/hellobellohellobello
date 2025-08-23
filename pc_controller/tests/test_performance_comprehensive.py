@@ -34,165 +34,165 @@ from pc_controller.src.network.protocol import (
 @pytest.mark.integration
 class TestPerformanceAndStress:
     """Performance and stress testing suite."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
         self.temp_dir = Path("/tmp/performance_test")
         self.temp_dir.mkdir(exist_ok=True)
-        
+
         # Force garbage collection before each test
         gc.collect()
         self.initial_objects = len(gc.get_objects())
-    
+
     def teardown_method(self):
         """Clean up after tests."""
         import shutil
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
-        
+
         # Check for memory leaks
         gc.collect()
         final_objects = len(gc.get_objects())
         object_growth = final_objects - self.initial_objects
-        
+
         # Allow some object growth but warn if excessive
         if object_growth > 10000:
             print(f"Warning: Object count grew by {object_growth} objects")
-    
+
     def test_high_device_count_performance(self):
         """Test performance with large number of devices."""
         device_manager = DeviceManager(heartbeat_timeout_seconds=10)
         num_devices = 1000
-        
+
         # Measure device registration performance
         start_time = time.perf_counter()
-        
+
         device_ids = [f"perf-device-{i:04d}" for i in range(num_devices)]
         for device_id in device_ids:
             device_manager.register(device_id)
-        
+
         registration_time = time.perf_counter() - start_time
-        
+
         # Performance assertions
         assert registration_time < 5.0, f"Registering {num_devices} devices took {registration_time:.2f}s"
-        
+
         # Measure heartbeat update performance
         start_time = time.perf_counter()
-        
+
         for device_id in device_ids:
             device_manager.update_heartbeat(device_id)
-        
+
         heartbeat_time = time.perf_counter() - start_time
-        
+
         assert heartbeat_time < 2.0, f"Updating {num_devices} heartbeats took {heartbeat_time:.2f}s"
-        
+
         # Measure timeout checking performance
         start_time = time.perf_counter()
         device_manager.check_timeouts()
         timeout_check_time = time.perf_counter() - start_time
-        
+
         assert timeout_check_time < 0.5, f"Checking {num_devices} timeouts took {timeout_check_time:.2f}s"
-        
+
         # Verify all devices are still online
-        online_count = sum(1 for device_id in device_ids 
+        online_count = sum(1 for device_id in device_ids
                           if device_manager.get_status(device_id) == "Online")
         assert online_count == num_devices
-    
+
     def test_concurrent_device_operations(self):
         """Test concurrent operations on device manager."""
         device_manager = DeviceManager(heartbeat_timeout_seconds=5)
         num_threads = 50
         operations_per_thread = 100
-        
+
         results = []
         exceptions = []
-        
+
         def worker_thread(thread_id: int):
             """Worker thread for concurrent operations."""
             thread_results = []
             try:
                 for i in range(operations_per_thread):
                     device_id = f"thread-{thread_id}-device-{i}"
-                    
+
                     # Register device
                     device_manager.register(device_id)
-                    
+
                     # Update heartbeat
                     device_manager.update_heartbeat(device_id)
-                    
+
                     # Set status
                     device_manager.set_status(device_id, "Recording")
-                    
+
                     # Check status
                     status = device_manager.get_status(device_id)
                     thread_results.append((device_id, status))
-                    
+
                     # Brief pause to simulate real workload
                     time.sleep(0.001)
-                
+
             except Exception as e:
                 exceptions.append((thread_id, e))
-            
+
             return thread_results
-        
+
         # Run concurrent operations
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = [executor.submit(worker_thread, i) for i in range(num_threads)]
-            
+
             for future in as_completed(futures):
                 try:
                     result = future.result()
                     results.extend(result)
                 except Exception as e:
                     exceptions.append(("future", e))
-        
+
         # Verify results
         assert len(exceptions) == 0, f"Concurrent operations had {len(exceptions)} exceptions"
         assert len(results) == num_threads * operations_per_thread
-        
+
         # Verify final state consistency
         total_devices = device_manager.list_devices()
         assert len(total_devices) == num_threads * operations_per_thread
-    
+
     def test_rapid_session_cycling_performance(self):
         """Test performance of rapid session start/stop cycles."""
         session_manager = SessionManager(base_dir=str(self.temp_dir))
         num_cycles = 500
-        
+
         start_time = time.perf_counter()
-        
+
         session_ids = []
         for i in range(num_cycles):
             # Create session
             session_id = session_manager.create_session(f"perf-session-{i}")
             session_ids.append(session_id)
-            
+
             # Start recording
             session_manager.start_recording()
-            
+
             # Brief recording period
             time.sleep(0.001)
-            
+
             # Stop recording
             session_manager.stop_recording()
-        
+
         total_time = time.perf_counter() - start_time
-        
+
         # Performance assertions
         avg_time_per_cycle = total_time / num_cycles
         assert avg_time_per_cycle < 0.1, f"Average cycle time {avg_time_per_cycle:.3f}s too slow"
         assert total_time < 30.0, f"Total time {total_time:.2f}s for {num_cycles} cycles"
-        
+
         # Verify all sessions were created
         assert len(set(session_ids)) == num_cycles, "All sessions should have unique IDs"
-    
+
     def test_memory_usage_stability(self):
         """Test memory usage stability during extended operations."""
         device_manager = DeviceManager(heartbeat_timeout_seconds=10)
-        
+
         initial_memory = self._get_memory_usage()
         memory_samples = [initial_memory]
-        
+
         # Perform many operations
         for cycle in range(100):
             # Create temporary devices
@@ -203,28 +203,28 @@ class TestPerformanceAndStress:
                 device_manager.update_heartbeat(device_id)
                 device_manager.set_status(device_id, "Recording")
                 temp_devices.append(device_id)
-            
+
             # Clean up devices
             for device_id in temp_devices:
                 device_manager.remove(device_id)
-            
+
             # Sample memory usage every 10 cycles
             if cycle % 10 == 0:
                 gc.collect()
                 memory_samples.append(self._get_memory_usage())
-        
+
         # Analyze memory growth
         memory_growth = memory_samples[-1] - memory_samples[0]
         max_memory = max(memory_samples)
-        
+
         # Memory should not grow excessively
         assert memory_growth < 100 * 1024 * 1024, f"Memory grew by {memory_growth / 1024 / 1024:.1f}MB"
         assert max_memory < initial_memory + 200 * 1024 * 1024, "Peak memory usage too high"
-    
+
     def test_protocol_parsing_performance(self):
         """Test performance of protocol message parsing."""
         num_messages = 10000
-        
+
         # Generate test messages
         messages = []
         for i in range(num_messages):
@@ -235,10 +235,10 @@ class TestPerformanceAndStress:
             else:
                 msg = json.dumps({"command": "custom", "id": i, "data": f"test-{i}"}) + '\n'
             messages.append(msg)
-        
+
         # Measure parsing performance
         start_time = time.perf_counter()
-        
+
         parsed_count = 0
         for message in messages:
             try:
@@ -247,56 +247,56 @@ class TestPerformanceAndStress:
                     parsed_count += 1
             except Exception:
                 pass  # Expected for some malformed messages
-        
+
         parsing_time = time.perf_counter() - start_time
-        
+
         # Performance assertions
         messages_per_second = num_messages / parsing_time
         assert messages_per_second > 5000, f"Parsing rate {messages_per_second:.0f} msg/s too slow"
         assert parsed_count >= num_messages * 0.9, "Should successfully parse most messages"
-    
+
     def test_heartbeat_manager_performance(self):
         """Test heartbeat manager performance under load."""
-        
+
         def heartbeat_callback(device_id: str):
             """Mock callback for heartbeat processing."""
             pass
-        
+
         heartbeat_manager = HeartbeatManager(callback=heartbeat_callback)
         num_devices = 1000
         heartbeats_per_device = 100
-        
+
         device_ids = [f"hb-perf-device-{i}" for i in range(num_devices)]
-        
+
         start_time = time.perf_counter()
-        
+
         # Send many heartbeats
         for _ in range(heartbeats_per_device):
             for device_id in device_ids:
                 heartbeat_manager.record_heartbeat(device_id)
-        
+
         heartbeat_time = time.perf_counter() - start_time
-        
+
         total_heartbeats = num_devices * heartbeats_per_device
         heartbeats_per_second = total_heartbeats / heartbeat_time
-        
+
         assert heartbeats_per_second > 10000, \
             f"Heartbeat rate {heartbeats_per_second:.0f} hb/s too slow"
-    
+
     def test_concurrent_session_management(self):
         """Test concurrent session management operations."""
         num_managers = 10
         operations_per_manager = 20
-        
+
         managers = []
         for i in range(num_managers):
             manager_dir = self.temp_dir / f"manager_{i}"
             manager_dir.mkdir(exist_ok=True)
             managers.append(SessionManager(base_dir=str(manager_dir)))
-        
+
         results = []
         exceptions = []
-        
+
         def session_worker(manager: SessionManager, manager_id: int):
             """Worker function for session operations."""
             worker_results = []
@@ -306,45 +306,45 @@ class TestPerformanceAndStress:
                     manager.start_recording()
                     time.sleep(0.001)  # Brief recording
                     manager.stop_recording()
-                    
+
                     worker_results.append(session_id)
-                    
+
             except Exception as e:
                 exceptions.append((manager_id, e))
-            
+
             return worker_results
-        
+
         # Run concurrent session operations
         with ThreadPoolExecutor(max_workers=num_managers) as executor:
             futures = [
-                executor.submit(session_worker, manager, i) 
+                executor.submit(session_worker, manager, i)
                 for i, manager in enumerate(managers)
             ]
-            
+
             for future in as_completed(futures):
                 try:
                     result = future.result()
                     results.extend(result)
                 except Exception as e:
                     exceptions.append(("future", e))
-        
+
         # Verify results
         assert len(exceptions) == 0, f"Concurrent sessions had {len(exceptions)} exceptions"
         assert len(results) == num_managers * operations_per_manager
         assert len(set(results)) == len(results), "All session IDs should be unique"
-    
+
     @pytest.mark.slow
     def test_extended_runtime_stability(self):
         """Test system stability over extended runtime."""
         device_manager = DeviceManager(heartbeat_timeout_seconds=5)
         session_manager = SessionManager(base_dir=str(self.temp_dir))
-        
+
         runtime_seconds = 30  # Run for 30 seconds (would be longer in real stress test)
         start_time = time.time()
-        
+
         cycle_count = 0
         error_count = 0
-        
+
         while time.time() - start_time < runtime_seconds:
             try:
                 # Create some devices
@@ -352,52 +352,52 @@ class TestPerformanceAndStress:
                 for device_id in devices:
                     device_manager.register(device_id)
                     device_manager.update_heartbeat(device_id)
-                
+
                 # Create and run a session
                 session_id = session_manager.create_session(f"stability-session-{cycle_count}")
                 session_manager.start_recording()
-                
+
                 time.sleep(0.1)  # Brief recording
-                
+
                 session_manager.stop_recording()
-                
+
                 # Clean up devices
                 for device_id in devices:
                     device_manager.remove(device_id)
-                
+
                 cycle_count += 1
-                
+
                 # Periodic cleanup
                 if cycle_count % 10 == 0:
                     gc.collect()
-                
+
             except Exception as e:
                 error_count += 1
                 print(f"Error in cycle {cycle_count}: {e}")
-        
+
         actual_runtime = time.time() - start_time
-        
+
         # Verify stability
         assert cycle_count > 0, "Should complete at least one cycle"
         assert error_count < cycle_count * 0.1, f"Error rate too high: {error_count}/{cycle_count}"
         assert actual_runtime >= runtime_seconds * 0.9, "Should run for expected duration"
-        
+
         print(f"Stability test completed {cycle_count} cycles in {actual_runtime:.1f}s")
-    
+
     def test_resource_exhaustion_resilience(self):
         """Test system resilience under resource exhaustion."""
         device_manager = DeviceManager(heartbeat_timeout_seconds=2)
-        
+
         # Test with many devices to stress memory and CPU
         excessive_device_count = 5000
-        
+
         try:
             # Create excessive number of devices
             for i in range(excessive_device_count):
                 device_id = f"exhaust-device-{i:06d}"
                 device_manager.register(device_id)
                 device_manager.update_heartbeat(device_id)
-                
+
                 # Occasionally check system state
                 if i % 1000 == 0:
                     online_count = sum(
@@ -405,125 +405,125 @@ class TestPerformanceAndStress:
                         if device_manager.get_status(did) == "Online"
                     )
                     assert online_count > i * 0.9, f"Too many devices offline at {i}"
-            
+
             # System should still be responsive
             test_device = "responsiveness-test"
             device_manager.register(test_device)
             device_manager.update_heartbeat(test_device)
             assert device_manager.get_status(test_device) == "Online"
-            
+
         except MemoryError:
             # If we hit memory limits, that's expected for this test
             print("Hit memory limit as expected in resource exhaustion test")
-        
+
         # System should still function after resource pressure
         device_manager.check_timeouts()
         cleanup_device = "cleanup-test"
         device_manager.register(cleanup_device)
         assert device_manager.get_status(cleanup_device) == "Online"
-    
+
     def _get_memory_usage(self) -> int:
         """Get current memory usage in bytes."""
         import psutil
         import os
-        
+
         try:
             process = psutil.Process(os.getpid())
             return process.memory_info().rss
         except ImportError:
             # If psutil not available, use gc object count as proxy
             return len(gc.get_objects()) * 64  # Rough estimate
-    
+
     def test_data_throughput_performance(self):
         """Test data processing throughput performance."""
         from pc_controller.src.data.data_aggregator import FileReceiverServer
-        
+
         # Mock data for throughput testing
         test_data_size = 1024 * 1024  # 1MB
         test_data = b"x" * test_data_size
         num_chunks = 100
-        
+
         start_time = time.perf_counter()
-        
+
         # Simulate processing multiple data chunks
         total_bytes_processed = 0
         for i in range(num_chunks):
             # Simulate data processing
             processed_data = test_data  # In real test, would process the data
             total_bytes_processed += len(processed_data)
-        
+
         processing_time = time.perf_counter() - start_time
-        
+
         # Calculate throughput
         throughput_mbps = (total_bytes_processed / (1024 * 1024)) / processing_time
-        
+
         assert throughput_mbps > 50, f"Data throughput {throughput_mbps:.1f} MB/s too low"
         assert total_bytes_processed == test_data_size * num_chunks
-    
+
     def test_thread_safety_under_load(self):
         """Test thread safety of core components under high load."""
         device_manager = DeviceManager(heartbeat_timeout_seconds=10)
-        
+
         # Shared state to verify thread safety
         operation_counts = {"register": 0, "heartbeat": 0, "status": 0, "remove": 0}
         operation_lock = threading.Lock()
-        
+
         def update_count(operation: str):
             with operation_lock:
                 operation_counts[operation] += 1
-        
+
         def thread_worker(thread_id: int, num_operations: int):
             """Worker thread that performs various operations."""
             for i in range(num_operations):
                 device_id = f"thread-{thread_id}-device-{i}"
-                
+
                 # Register device
                 device_manager.register(device_id)
                 update_count("register")
-                
+
                 # Update heartbeat multiple times
                 for _ in range(3):
                     device_manager.update_heartbeat(device_id)
                     update_count("heartbeat")
-                
+
                 # Check and set status
                 status = device_manager.get_status(device_id)
                 if status:
                     device_manager.set_status(device_id, "Recording")
                     update_count("status")
-                
+
                 # Remove device
                 device_manager.remove(device_id)
                 update_count("remove")
-        
+
         # Run multiple threads with high operation count
         num_threads = 20
         operations_per_thread = 100
-        
+
         threads = []
         for i in range(num_threads):
             thread = threading.Thread(
-                target=thread_worker, 
+                target=thread_worker,
                 args=(i, operations_per_thread)
             )
             threads.append(thread)
             thread.start()
-        
+
         # Wait for all threads to complete
         for thread in threads:
             thread.join()
-        
+
         # Verify operation counts
         expected_registers = num_threads * operations_per_thread
         expected_heartbeats = num_threads * operations_per_thread * 3
         expected_status_ops = num_threads * operations_per_thread
         expected_removes = num_threads * operations_per_thread
-        
+
         assert operation_counts["register"] == expected_registers
         assert operation_counts["heartbeat"] == expected_heartbeats
         assert operation_counts["status"] == expected_status_ops
         assert operation_counts["remove"] == expected_removes
-        
+
         # Final state should be consistent (all devices removed)
         remaining_devices = device_manager.list_devices()
         assert len(remaining_devices) == 0, "All devices should be removed"

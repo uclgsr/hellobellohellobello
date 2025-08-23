@@ -12,7 +12,7 @@ The enhanced visualization plan has been fully implemented with production-grade
 
 **[System_Design.md](System_Design.md)** - Complete architecture with C4 views and component design:
 - **C1 System Context**: Research environment and external actors
-- **C2 Container Architecture**: PC Controller and Android Sensor Applications  
+- **C2 Container Architecture**: PC Controller and Android Sensor Applications
 - **C3 Component Architecture**: Detailed internal component breakdown
 - **C4 Code Level Views**: Critical interfaces and classes
 - **Deployment Architecture**: Physical infrastructure and process communication
@@ -126,7 +126,7 @@ The enhanced visualization plan has been fully implemented with production-grade
 | Component | Documentation Pages | Diagrams | Code Examples | Tests Specified |
 |-----------|-------------------|----------|---------------|------------------|
 | Architecture | 1 | 4 Mermaid diagrams | 15+ snippets | N/A |
-| Flows | 1 | 8 sequence diagrams + 2 state machines | 10+ snippets | N/A |  
+| Flows | 1 | 8 sequence diagrams + 2 state machines | 10+ snippets | N/A |
 | Data Schemas | 1 | 1 directory tree | 20+ format examples | 15+ validation rules |
 | Protocol | 1 | 3 sequence diagrams | 25+ message examples | 10+ error scenarios |
 | Performance | 1 | 2 Gantt charts + tables | 10+ monitoring snippets | 20+ metrics |

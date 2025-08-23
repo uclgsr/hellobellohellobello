@@ -37,14 +37,14 @@ sessions/
 
 **Components**:
 - `YYYYMMDD`: Date (ISO 8601 basic format)
-- `HHMMSS`: Time (24-hour format)  
+- `HHMMSS`: Time (24-hour format)
 - `mmm`: Milliseconds (000-999)
 - `DeviceModel`: Android Build.MODEL (spaces replaced with underscores)
 - `DeviceID`: Last 8 characters of device identifier
 
 **Implementation**: Generated in `RecordingController.generateSessionId()`
 
-## CSV Schema Definitions  
+## CSV Schema Definitions
 
 ### rgb/rgb.csv
 
@@ -65,7 +65,7 @@ timestamp_ns,filename
 ```
 
 **Notes**:
-- Header written if file is empty  
+- Header written if file is empty
 - Timestamps from `TimeManager.nowNanos()` (monotonic)
 - MP4 video filename: `video_${sessionStartTs}.mp4` using session start timestamp
 - Frame-to-video alignment possible via timestamp correlation
@@ -104,7 +104,7 @@ timestamp_ns,w,h,v0,v1,v2,...,v49151
 {
   "sensor": "Topdon TC001",
   "width": 256,
-  "height": 192, 
+  "height": 192,
   "emissivity": 0.95,
   "format": "temperature_celsius",
   "notes": "Placeholder metadata for thermal camera integration",
@@ -128,7 +128,7 @@ timestamp_ns,w,h,v0,v1,v2,...,v49151
 ```csv
 timestamp_ns,gsr_microsiemens,ppg_raw
 1692374212450000000,2.345,2048
-1692374212458333333,2.347,2051  
+1692374212458333333,2.347,2051
 1692374212466666667,2.342,2047
 ```
 
@@ -142,7 +142,7 @@ timestamp_ns,gsr_microsiemens,ppg_raw
 
 **Purpose**: Record precise timestamps of flash synchronization events for multi-device alignment.
 
-**Schema**:  
+**Schema**:
 | Column | Type | Description | Source |
 |--------|------|-------------|--------|
 | `timestamp_ns` | int64 | Nanosecond timestamp when flash occurred | TimeManager.nowNanos() |
@@ -166,7 +166,7 @@ timestamp_ns
 | Component | File Size | Description |
 |-----------|-----------|-------------|
 | **RGB Video** | 500-800 MB | H.264 MP4, 1080p@30fps |
-| **RGB Frames** | 200-400 MB | JPEG stills (~2MB each, 30fps) |  
+| **RGB Frames** | 200-400 MB | JPEG stills (~2MB each, 30fps) |
 | **RGB CSV** | 1-2 MB | Frame index (~18,000 entries) |
 | **Thermal CSV** | 50-100 MB | 256×192 pixels, 30fps |
 | **GSR CSV** | 5-10 MB | 128Hz sampling, 2 channels |
@@ -176,7 +176,7 @@ timestamp_ns
 ### Network Transfer
 
 - **ZIP Compression**: ~20-30% size reduction
-- **Transfer Rate**: 10-50 MB/s (local network)  
+- **Transfer Rate**: 10-50 MB/s (local network)
 - **Duration**: 15-60 seconds per session
 - **Bandwidth**: Peak ~400 Mbps during transfer
 
@@ -184,11 +184,11 @@ timestamp_ns
 
 ### Validation Checks
 - CSV header validation on file open
-- Timestamp monotonicity verification  
+- Timestamp monotonicity verification
 - File completeness checks (expected vs. actual record counts)
 - ZIP archive integrity validation
 
-### Recovery Mechanisms  
+### Recovery Mechanisms
 - Partial session recovery (incomplete stops)
 - CSV file repair (missing headers)
 - Timestamp drift detection and correction

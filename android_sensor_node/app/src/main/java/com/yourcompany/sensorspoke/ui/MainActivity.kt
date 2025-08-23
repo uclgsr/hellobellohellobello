@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
     private var btnStopRecording: Button? = null
     private var statusText: TextView? = null
     private var rootLayout: ViewGroup? = null
-    
+
     // User experience enhancements
     private lateinit var preferences: SharedPreferences
     private var isFirstLaunch: Boolean = false
@@ -88,8 +88,8 @@ class MainActivity : AppCompatActivity() {
 
                     RecordingService.ACTION_STOP_RECORDING -> {
                         updateStatusText("Stopping recording...")
-                        lifecycleScope.launch { 
-                            runCatching { 
+                        lifecycleScope.launch {
+                            runCatching {
                                 controller?.stopSession()
                                 UserExperience.Messaging.showSuccess(this@MainActivity, "Recording stopped")
                                 updateStatusText("Ready to record")
@@ -111,7 +111,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        
+
         // Initialize preferences and check first launch
         preferences = getSharedPreferences("sensor_spoke_prefs", Context.MODE_PRIVATE)
         isFirstLaunch = preferences.getBoolean("first_launch", true)
@@ -129,10 +129,10 @@ class MainActivity : AppCompatActivity() {
 
         // Setup button handlers
         setupButtons()
-        
+
         // Setup toolbar with menu
         setupToolbar()
-        
+
         // Initialize status
         updateStatusText("Initializing...")
 
@@ -145,25 +145,25 @@ class MainActivity : AppCompatActivity() {
                 startService(svcIntent)
             }
         }
-        
+
         // Show quick start guide for first-time users
         if (isFirstLaunch) {
             showQuickStartGuide()
         }
-        
+
         updateStatusText("Ready to connect")
     }
-    
+
     private fun setupToolbar() {
         supportActionBar?.setDisplayShowTitleEnabled(true)
         supportActionBar?.title = "Sensor Spoke"
     }
-    
+
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
         return true
     }
-    
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_quick_start -> {
@@ -274,38 +274,38 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun updateStatusText(status: String) {
         runOnUiThread {
             statusText?.text = status
         }
     }
-    
+
     private fun updateButtonStates(isRecording: Boolean) {
         runOnUiThread {
             btnStartRecording?.isEnabled = !isRecording
             btnStopRecording?.isEnabled = isRecording
         }
     }
-    
+
     private fun showQuickStartGuide() {
         QuickStartDialog.show(this) {
             // Mark first launch as complete
             preferences.edit()
                 .putBoolean("first_launch", false)
                 .apply()
-            
+
             UserExperience.Messaging.showStatus(this, "Quick start guide completed!")
         }
     }
-    
+
     private fun showConnectionHelp() {
         val troubleshootingSteps = UserExperience.QuickStart.getConnectionTroubleshootingSteps()
-        val message = "Connection Troubleshooting:\n\n" + 
-                     troubleshootingSteps.mapIndexed { index, step -> 
-                         "${index + 1}. $step" 
+        val message = "Connection Troubleshooting:\n\n" +
+                     troubleshootingSteps.mapIndexed { index, step ->
+                         "${index + 1}. $step"
                      }.joinToString("\n")
-        
+
         // Show as a Snackbar with action
         rootLayout?.let { layout ->
             val snackbar = Snackbar.make(layout, "Connection help available", Snackbar.LENGTH_LONG)
@@ -315,7 +315,7 @@ class MainActivity : AppCompatActivity() {
             snackbar.show()
         }
     }
-    
+
     private fun resetFirstLaunchFlag() {
         preferences.edit()
             .putBoolean("first_launch", true)

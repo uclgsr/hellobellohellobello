@@ -16,7 +16,7 @@ ${length}\n{json_payload}
 - Next `${length}` bytes: UTF-8 JSON document
 - Example: `43\n{"v":1,"type":"cmd","id":1,"command":"ping"}`
 
-### Legacy Newline-Delimited (Fallback)  
+### Legacy Newline-Delimited (Fallback)
 ```
 {json_payload}\n
 ```
@@ -43,7 +43,7 @@ ${length}\n{json_payload}
 ```json
 {
   "v": 1,
-  "type": "cmd", 
+  "type": "cmd",
   "id": 1,
   "command": "query_capabilities"
 }
@@ -54,11 +54,11 @@ ${length}\n{json_payload}
 {
   "v": 1,
   "type": "ack",
-  "ack_id": 1, 
+  "ack_id": 1,
   "status": "ok",
   "capabilities": {
     "device_id": "Pixel_7_ab12cd34",
-    "device_model": "Pixel 7", 
+    "device_model": "Pixel 7",
     "android_sdk": 34,
     "android_release": "14",
     "service_port": 8080,
@@ -67,13 +67,13 @@ ${length}\n{json_payload}
     "has_gsr": true,
     "cameras": [
       {
-        "id": "0", 
+        "id": "0",
         "facing": "BACK",
         "resolutions": ["1920x1080", "1280x720"]
       },
       {
         "id": "1",
-        "facing": "FRONT", 
+        "facing": "FRONT",
         "resolutions": ["1920x1080"]
       }
     ]
@@ -90,7 +90,7 @@ ${length}\n{json_payload}
 {
   "v": 1,
   "type": "cmd",
-  "id": 2, 
+  "id": 2,
   "command": "time_sync"
 }
 ```
@@ -130,7 +130,7 @@ ${length}\n{json_payload}
 ```json
 {
   "v": 1,
-  "type": "ack", 
+  "type": "ack",
   "ack_id": 3,
   "status": "ok"
 }
@@ -142,7 +142,7 @@ ${length}\n{json_payload}
   "v": 1,
   "type": "error",
   "ack_id": 3,
-  "code": "E_RECORDING_ACTIVE", 
+  "code": "E_RECORDING_ACTIVE",
   "message": "Recording already in progress"
 }
 ```
@@ -179,7 +179,7 @@ ${length}\n{json_payload}
 ```json
 {
   "v": 1,
-  "type": "cmd", 
+  "type": "cmd",
   "id": 5,
   "command": "flash_sync"
 }
@@ -231,7 +231,7 @@ ${length}\n{json_payload}
 {
   "v": 1,
   "type": "error",
-  "ack_id": 6, 
+  "ack_id": 6,
   "code": "E_BAD_PARAM",
   "message": "Session directory not found"
 }
@@ -246,7 +246,7 @@ ${length}\n{json_payload}
 {
   "v": 1,
   "type": "cmd",
-  "command": "rejoin_session", 
+  "command": "rejoin_session",
   "session_id": "20250818_173012_123_DeviceX_ab12cd34",
   "device_id": "Pixel_7_ab12cd34",
   "recording": true
@@ -264,7 +264,7 @@ ${length}\n{json_payload}
   "v": 1,
   "type": "event",
   "name": "preview_frame",
-  "device_id": "Pixel_7_ab12cd34", 
+  "device_id": "Pixel_7_ab12cd34",
   "jpeg_base64": "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBD...",
   "ts": 1692374212450000000
 }

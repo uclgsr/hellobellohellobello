@@ -24,13 +24,13 @@ graph TB
         SHIMMER[Shimmer3 GSR+<br/>BLE Sensor Device<br/>GSR + PPG + Accel]
         BLE[Bluetooth LE<br/>Android Device]
     end
-    
+
     subgraph "Shimmer Android API"
         API[ShimmerAndroidAPI<br/>Official SDK]
         BT[Bluetooth Manager<br/>Connection Handling]
         PKT[Packet Parser<br/>Data Decoding]
     end
-    
+
     subgraph "ShimmerRecorder"
         CONN[Connection Manager<br/>BLE State Management]
         SIG[Signal Processor<br/>ADC → Physical Units]
@@ -38,15 +38,15 @@ graph TB
         FILTER[Digital Filter<br/>Noise Reduction]
         TS[Timestamp Sync<br/>BLE → System Time]
     end
-    
+
     subgraph "Data Output"
         CSV[CSV Writer<br/>Physiological Data]
         META[Metadata JSON<br/>Sensor Config]
         STORAGE[Session Storage<br/>gsr/ Directory]
     end
-    
+
     SHIMMER <--> BLE
-    BLE <--> API  
+    BLE <--> API
     API <--> BT
     API <--> PKT
     PKT --> CONN
@@ -80,32 +80,32 @@ graph TB
 **SDK Initialization:**
 ```kotlin
 class ShimmerRecorder(private val context: Context) : SensorRecorder {
-    
+
     private var shimmerDevice: Shimmer? = null
-    private val bluetoothManager by lazy { 
-        context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager 
+    private val bluetoothManager by lazy {
+        context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     }
     private val bluetoothAdapter by lazy { bluetoothManager.adapter }
-    
+
     override suspend fun start(sessionDir: File) {
         // Initialize Shimmer API
         initializeShimmerAPI()
-        
+
         // Configure sensor settings
         configureShimmerSensors()
-        
+
         // Establish BLE connection
         connectToShimmer()
-        
+
         // Start data streaming
         startDataCollection(sessionDir)
     }
-    
+
     private fun initializeShimmerAPI() {
         shimmerDevice = Shimmer(context).apply {
             setShimmerUserAssignedName("GSR_Sensor_001")
             setBluetoothRadio(RADIO_BLUETOOTH)
-            
+
             // Set up data handler
             setDataProcessingHandler(object : Handler() {
                 override fun handleMessage(msg: Message) {
@@ -134,25 +134,25 @@ private fun configureShimmerSensors() {
     shimmerDevice?.apply {
         // Enable GSR sensor
         setEnabledSensors(SENSOR_GSR or SENSOR_INT_ADC_A1)
-        
+
         // Enable PPG sensors (internal ADC channels)
         enableSensor(SENSOR_INT_ADC_A12) // PPG1 (red LED)
         enableSensor(SENSOR_INT_ADC_A13) // PPG2 (infrared LED)
-        
+
         // Set sampling rate
         setSamplingRateHz(128.0) // 128 Hz for physiological signals
-        
+
         // Configure GSR range
         setGSRRange(GSR_RANGE_AUTO) // Automatic range adjustment
-        
+
         // Set internal sampling rate
         setInternalSamplingRate(128.0)
-        
+
         // Enable real-time streaming
         enableLowPowerMag(false) // Disable to maintain sampling rate
         enableLowPowerAccel(false)
         enableLowPowerGyro(false)
-        
+
         Log.i(TAG, "Shimmer sensor configuration completed")
     }
 }
@@ -177,25 +177,25 @@ enum class ShimmerConnectionState {
 class ShimmerConnectionManager {
     private val _connectionState = MutableStateFlow(ShimmerConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ShimmerConnectionState> = _connectionState
-    
+
     private val _signalQuality = MutableStateFlow(0)
     val signalQuality: StateFlow<Int> = _signalQuality
-    
+
     suspend fun scanAndConnect(deviceMac: String?): Boolean {
         if (!bluetoothAdapter.isEnabled) {
             Log.e(TAG, "Bluetooth is disabled")
             return false
         }
-        
+
         _connectionState.value = ShimmerConnectionState.SCANNING
-        
+
         return try {
             val targetDevice = if (deviceMac != null) {
                 bluetoothAdapter.getRemoteDevice(deviceMac)
             } else {
                 scanForShimmerDevices()
             }
-            
+
             if (targetDevice != null) {
                 connectToDevice(targetDevice)
             } else {
@@ -208,12 +208,12 @@ class ShimmerConnectionManager {
             false
         }
     }
-    
+
     private suspend fun scanForShimmerDevices(): BluetoothDevice? {
         return withTimeoutOrNull(10000) { // 10 second timeout
             // Scan for Shimmer devices
             val shimmerDevices = mutableListOf<BluetoothDevice>()
-            
+
             val leScanCallback = object : ScanCallback() {
                 override fun onScanResult(callbackType: Int, result: ScanResult) {
                     val device = result.device
@@ -222,11 +222,11 @@ class ShimmerConnectionManager {
                     }
                 }
             }
-            
+
             bluetoothAdapter.bluetoothLeScanner?.startScan(leScanCallback)
             delay(5000) // Scan for 5 seconds
             bluetoothAdapter.bluetoothLeScanner?.stopScan(leScanCallback)
-            
+
             shimmerDevices.firstOrNull()
         }
     }
@@ -239,23 +239,23 @@ class ShimmerConnectionManager {
 private suspend fun handleConnectionLoss() {
     Log.w(TAG, "Shimmer connection lost, attempting recovery")
     _connectionState.value = ShimmerConnectionState.DISCONNECTED
-    
+
     var retryCount = 0
     val maxRetries = 3
-    
+
     while (retryCount < maxRetries && _connectionState.value != ShimmerConnectionState.CONNECTED) {
         delay(2000 * (retryCount + 1)) // Exponential backoff
-        
+
         Log.i(TAG, "Reconnection attempt ${retryCount + 1}/$maxRetries")
-        
+
         if (scanAndConnect(lastConnectedDeviceMac)) {
             Log.i(TAG, "Shimmer reconnected successfully")
             return
         }
-        
+
         retryCount++
     }
-    
+
     Log.e(TAG, "Failed to reconnect Shimmer after $maxRetries attempts")
     _connectionState.value = ShimmerConnectionState.ERROR
 }
@@ -270,16 +270,16 @@ private suspend fun handleConnectionLoss() {
 ```kotlin
 private fun processShimmerData(objectCluster: ObjectCluster) {
     val timestamp = TimeManager.getSyncedTimestamp()
-    
+
     try {
         // Extract GSR data
         val gsrData = extractGSRData(objectCluster)
         val ppgData = extractPPGData(objectCluster)
-        
+
         // Apply calibration and filtering
         val calibratedGSR = calibrateGSRData(gsrData)
         val filteredPPG = filterPPGData(ppgData)
-        
+
         // Create data point
         val dataPoint = GSRDataPoint(
             timestamp = timestamp,
@@ -289,10 +289,10 @@ private fun processShimmerData(objectCluster: ObjectCluster) {
             ppgFiltered = filteredPPG.filtered,
             signalQuality = calculateSignalQuality(gsrData, ppgData)
         )
-        
+
         // Write to CSV
         writeDataPoint(dataPoint)
-        
+
     } catch (e: Exception) {
         Log.e(TAG, "Error processing Shimmer data", e)
     }
@@ -315,7 +315,7 @@ private fun extractGSRData(cluster: ObjectCluster): GSRRawData {
     // Extract GSR ADC value
     val gsrFormat = cluster.getFormatClusterValue(SENSOR_GSR, "CAL")
     val gsrRaw = cluster.getFormatClusterValue(SENSOR_GSR, "RAW")
-    
+
     return GSRRawData(
         rawValue = gsrRaw?.data?.toInt() ?: 0,
         calibratedValue = gsrFormat?.data ?: 0.0,
@@ -327,7 +327,7 @@ private fun extractPPGData(cluster: ObjectCluster): PPGRawData {
     // Extract PPG ADC values (red and infrared)
     val ppgRed = cluster.getFormatClusterValue(SENSOR_INT_ADC_A12, "RAW")
     val ppgIR = cluster.getFormatClusterValue(SENSOR_INT_ADC_A13, "RAW")
-    
+
     return PPGRawData(
         redRaw = ppgRed?.data?.toInt() ?: 0,
         irRaw = ppgIR?.data?.toInt() ?: 0,
@@ -356,27 +356,27 @@ data class PPGRawData(
 
 ```kotlin
 class GSRCalibrationEngine {
-    
+
     // Shimmer3 GSR calibration parameters
     private val adcResolution = 4095.0 // 12-bit ADC
     private val vRef = 3.0 // Reference voltage
     private val rFeedback = 40200.0 // Feedback resistor (Ω)
     private val rSeries = 24900.0 // Series resistor (Ω)
-    
+
     fun calibrateGSR(rawADC: Int, range: Int = 0): GSRCalibrated {
         // Convert ADC to voltage
         val voltage = (rawADC.toDouble() / adcResolution) * vRef
-        
+
         // Calculate resistance
         val resistance = calculateResistance(voltage, range)
-        
+
         // Convert to conductance (microsiemens)
         val conductance = if (resistance > 0) {
             (1.0 / resistance) * 1_000_000.0 // Convert to µS
         } else {
             0.0
         }
-        
+
         return GSRCalibrated(
             resistance = resistance,
             conductance = conductance,
@@ -384,14 +384,14 @@ class GSRCalibrationEngine {
             quality = assessSignalQuality(rawADC, voltage)
         )
     }
-    
+
     private fun calculateResistance(voltage: Double, range: Int): Double {
         return when (range) {
             0 -> { // GSR Range 0: 10kΩ to 56kΩ
                 val rFb = rFeedback
                 ((vRef / voltage) - 1.0) * rFb
             }
-            1 -> { // GSR Range 1: 56kΩ to 220kΩ  
+            1 -> { // GSR Range 1: 56kΩ to 220kΩ
                 val rFb = rFeedback * 3.0
                 ((vRef / voltage) - 1.0) * rFb
             }
@@ -406,7 +406,7 @@ class GSRCalibrationEngine {
             else -> 0.0
         }
     }
-    
+
     private fun assessSignalQuality(rawADC: Int, voltage: Double): Float {
         return when {
             rawADC < 50 || rawADC > 4000 -> 0.2f // Near ADC limits
@@ -418,7 +418,7 @@ class GSRCalibrationEngine {
 
 data class GSRCalibrated(
     val resistance: Double, // Ohms
-    val conductance: Double, // Microsiemens  
+    val conductance: Double, // Microsiemens
     val voltage: Double, // Volts
     val quality: Float // 0.0 to 1.0
 )
@@ -431,23 +431,23 @@ class PPGProcessor {
     private val filterBuffer = CircularBuffer<Double>(64) // 0.5 second buffer at 128 Hz
     private val dcFilter = HighPassFilter(cutoffHz = 0.5, sampleRate = 128.0)
     private val acFilter = LowPassFilter(cutoffHz = 8.0, sampleRate = 128.0)
-    
+
     fun processPPGSample(redRaw: Int, irRaw: Int): PPGProcessed {
         // Use red channel for PPG (more sensitive to blood volume changes)
         val ppgSignal = redRaw.toDouble()
-        
+
         // Remove DC component (slow drift)
         val dcRemoved = dcFilter.process(ppgSignal)
-        
+
         // Low-pass filter to remove high-frequency noise
         val filtered = acFilter.process(dcRemoved)
-        
+
         filterBuffer.add(filtered)
-        
+
         // Calculate basic metrics
         val snr = calculateSNR(filterBuffer.toArray())
         val amplitude = calculatePeakToPeak(filterBuffer.toArray())
-        
+
         return PPGProcessed(
             raw = redRaw,
             filtered = filtered,
@@ -456,20 +456,20 @@ class PPGProcessor {
             quality = assessPPGQuality(amplitude, snr)
         )
     }
-    
+
     private fun calculateSNR(signal: DoubleArray): Double {
         if (signal.size < 32) return 0.0
-        
+
         val mean = signal.average()
         val variance = signal.map { (it - mean).pow(2) }.average()
         val signalPower = variance
-        
+
         // Estimate noise power from high-frequency content
         val noisePower = estimateNoisePower(signal)
-        
+
         return if (noisePower > 0) 10 * log10(signalPower / noisePower) else 0.0
     }
-    
+
     private fun assessPPGQuality(amplitude: Double, snr: Double): Float {
         return when {
             amplitude < 50.0 || snr < 10.0 -> 0.2f // Poor signal
@@ -519,7 +519,7 @@ timestamp_ns,gsr_microsiemens,gsr_raw,ppg_raw,ppg_filtered,signal_quality
 private fun initializeCSV(sessionDir: File) {
     val csvFile = File(sessionDir, "gsr.csv")
     csvWriter = BufferedWriter(FileWriter(csvFile))
-    
+
     // Write header
     csvWriter?.write("timestamp_ns,gsr_microsiemens,gsr_raw,ppg_raw,ppg_filtered,signal_quality\n")
     csvWriter?.flush()
@@ -535,16 +535,16 @@ private fun writeDataPoint(dataPoint: GSRDataPoint) {
         dataPoint.ppgFiltered,
         dataPoint.signalQuality
     )
-    
+
     try {
         csvWriter?.write(csvRow)
-        
+
         // Periodic flush for data safety
         sampleCount++
         if (sampleCount % 128 == 0L) { // Flush every second at 128 Hz
             csvWriter?.flush()
         }
-        
+
     } catch (e: IOException) {
         Log.e(TAG, "Error writing GSR data", e)
     }
@@ -562,10 +562,10 @@ class GSRBufferManager {
     private val maxBufferSize = 1280 // 10 seconds at 128 Hz
     private val dataBuffer = CircularBuffer<GSRDataPoint>(maxBufferSize)
     private val processingScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    
+
     fun addDataPoint(dataPoint: GSRDataPoint) {
         dataBuffer.add(dataPoint)
-        
+
         // Process in batches to reduce I/O overhead
         if (dataBuffer.size % 64 == 0) { // Every 0.5 seconds
             processingScope.launch {
@@ -573,7 +573,7 @@ class GSRBufferManager {
             }
         }
     }
-    
+
     private suspend fun flushBuffer() {
         val batch = dataBuffer.takeLast(64)
         batch.forEach { dataPoint ->
@@ -589,12 +589,12 @@ class GSRBufferManager {
 ```kotlin
 class GSRQualityMonitor {
     private val qualityWindow = CircularBuffer<Float>(128) // 1-second window
-    
+
     fun updateQuality(quality: Float) {
         qualityWindow.add(quality)
-        
+
         val averageQuality = qualityWindow.average()
-        
+
         when {
             averageQuality < 0.3f -> {
                 Log.w(TAG, "Poor GSR signal quality: ${String.format("%.2f", averageQuality)}")
@@ -608,10 +608,10 @@ class GSRQualityMonitor {
             }
         }
     }
-    
+
     fun getQualityReport(): GSRQualityReport {
         val recentQuality = qualityWindow.takeLast(128)
-        
+
         return GSRQualityReport(
             averageQuality = recentQuality.average().toFloat(),
             minQuality = recentQuality.minOrNull() ?: 0f,

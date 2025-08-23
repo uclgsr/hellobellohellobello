@@ -282,11 +282,11 @@ class NetworkClient {
             reconnectWithBackoff()
         }
     }
-    
+
     private suspend fun reconnectWithBackoff() {
         var attempt = 1
         var delay = 1000L
-        
+
         while (attempt <= MAX_RECONNECT_ATTEMPTS) {
             try {
                 connect()

@@ -15,7 +15,7 @@ import java.io.IOException
 
 /**
  * Real ShimmerRecorder implementation using official ShimmerAndroidAPI.
- * 
+ *
  * Connects to Shimmer3 GSR+ sensor via BLE, configures for GSR and PPG recording,
  * and logs data to CSV with monotonic nanosecond timestamps. Implements the
  * critical 12-bit ADC conversion requirement (0-4095 range) for data accuracy.
@@ -27,18 +27,18 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
     private var recordingJob: Job? = null
     private var isConnected = false
     private var isStreaming = false
-    
+
     // Device discovery and connection
     private val availableDevices = mutableListOf<BluetoothDevice>()
     private val coroutineScope = CoroutineScope(Dispatchers.IO + Job())
 
     override suspend fun start(sessionDir: File) {
         if (!sessionDir.exists()) sessionDir.mkdirs()
-        
+
         // Initialize CSV file
         csvFile = File(sessionDir, "gsr.csv")
         csvWriter = BufferedWriter(FileWriter(csvFile!!, true))
-        
+
         // Write header if file is empty
         if (csvFile!!.length() == 0L) {
             csvWriter!!.write("timestamp_ns,gsr_microsiemens,ppg_raw,gsr_raw_adc\n")
@@ -48,13 +48,13 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
         try {
             // Initialize and connect to Shimmer device
             initializeShimmerConnection()
-            
+
             // Configure sensors
             configureShimmerSensors()
-            
+
             // Start streaming
             startStreaming()
-            
+
         } catch (e: Exception) {
             // If real device connection fails, fall back to simulation mode
             startSimulationMode()
@@ -83,15 +83,15 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
             try {
                 // Scan for available Shimmer devices
                 val shimmerDevices = scanForShimmerDevices()
-                
+
                 if (shimmerDevices.isEmpty()) {
                     throw RuntimeException("No Shimmer devices found")
                 }
-                
+
                 // Connect to first available device
                 val targetDevice = shimmerDevices.first()
                 shimmerDevice = ShimmerBluetooth(targetDevice, context)
-                
+
                 // Set up connection callback
                 shimmerDevice?.setConnectionCallback { device, connected ->
                     isConnected = connected
@@ -100,7 +100,7 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
                         handleDeviceDisconnection()
                     }
                 }
-                
+
                 // Connect with timeout
                 val connected = withTimeoutOrNull(10_000) {
                     suspendCancellableCoroutine<Boolean> { continuation ->
@@ -109,13 +109,13 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
                         }
                     }
                 }
-                
+
                 if (connected != true) {
                     throw RuntimeException("Failed to connect to Shimmer device")
                 }
-                
+
                 isConnected = true
-                
+
             } catch (e: Exception) {
                 throw RuntimeException("Shimmer connection failed: ${e.message}", e)
             }
@@ -128,11 +128,11 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
                 // Use ShimmerAndroidAPI device discovery
                 suspendCancellableCoroutine<List<BluetoothDevice>> { continuation ->
                     val discoveredDevices = mutableListOf<BluetoothDevice>()
-                    
+
                     // Scan for Shimmer devices (implementation depends on API version)
                     // This is a simplified version - actual implementation would use
                     // proper BLE scanning with device filtering
-                    
+
                     // For now, return empty list to trigger simulation fallback
                     continuation.resume(discoveredDevices)
                 }
@@ -148,26 +148,26 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
                 try {
                     // Enable GSR and PPG sensors
                     val sensorConfig = ShimmerConfig()
-                    
+
                     // Enable required sensors
                     sensorConfig.enableSensor(ShimmerConfig.SENSOR_GSR)
                     sensorConfig.enableSensor(ShimmerConfig.SENSOR_INT_A13) // PPG
                     sensorConfig.enableSensor(ShimmerConfig.SENSOR_TIMESTAMP)
-                    
+
                     // Set sampling rate (128 Hz as per requirements)
                     sensorConfig.setSamplingRate(128.0)
-                    
+
                     // Configure GSR range for maximum resolution
                     sensorConfig.setGSRRange(ShimmerConfig.GSR_RANGE_4_7M) // 4.7MΩ range
-                    
+
                     // Apply configuration
                     device.writeConfiguration(sensorConfig)
-                    
+
                     // Set up data callback
                     device.setDataCallback { objectCluster ->
                         handleShimmerData(objectCluster)
                     }
-                    
+
                 } catch (e: Exception) {
                     throw RuntimeException("Failed to configure Shimmer sensors: ${e.message}", e)
                 }
@@ -231,21 +231,21 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
             // Parse the ObjectCluster data from ShimmerAndroidAPI
             if (objectCluster is Map<*, *>) {
                 val timestampNs = System.nanoTime() // High precision timestamp
-                
+
                 // Extract GSR data
                 val gsrData = objectCluster["GSR"] as? ObjectClusterDataPoint
                 val ppgData = objectCluster["PPG"] as? ObjectClusterDataPoint
-                
+
                 if (gsrData != null) {
                     // Get raw ADC value (critical: 12-bit resolution)
                     val rawAdc = gsrData.rawData.toInt()
-                    
+
                     // Convert to microsiemens using 12-bit ADC resolution
                     val gsrMicrosiemens = convertGsrToMicroSiemens(rawAdc, gsrData.calData)
-                    
+
                     // Get PPG raw value if available
                     val ppgRaw = ppgData?.rawData?.toInt() ?: 0
-                    
+
                     // Write to CSV
                     coroutineScope.launch {
                         withContext(Dispatchers.IO) {
@@ -271,25 +271,25 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
         recordingJob = coroutineScope.launch {
             val samplingIntervalMs = 1000L / 128L // 128 Hz
             var sampleCount = 0
-            
+
             try {
                 while (isActive) {
                     val timestampNs = System.nanoTime()
-                    
+
                     // Generate realistic GSR simulation
                     val baseGsr = 10.0 // 10 µS baseline
                     val variation = 2.0 * kotlin.math.sin(sampleCount * 0.01) // Slow variation
                     val noise = (kotlin.math.random() - 0.5) * 0.5 // Small random noise
                     val gsrMicrosiemens = baseGsr + variation + noise
-                    
+
                     // Generate PPG simulation (heartbeat-like)
                     val heartRate = 70 // BPM
                     val heartPhase = (sampleCount * samplingIntervalMs * heartRate) / (60.0 * 1000.0) * 2 * kotlin.math.PI
                     val ppgRaw = (2048 + 500 * kotlin.math.sin(heartPhase)).toInt() // 12-bit range
-                    
+
                     // Calculate equivalent raw ADC for GSR
                     val gsrRawAdc = ((gsrMicrosiemens / baseGsr) * 2048).toInt().coerceIn(0, 4095)
-                    
+
                     withContext(Dispatchers.IO) {
                         try {
                             csvWriter?.write("$timestampNs,$gsrMicrosiemens,$ppgRaw,$gsrRawAdc\n")
@@ -298,7 +298,7 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
                             // Handle write error
                         }
                     }
-                    
+
                     sampleCount++
                     delay(samplingIntervalMs)
                 }
@@ -310,10 +310,10 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
 
     /**
      * Converts raw GSR ADC value to microsiemens using 12-bit resolution.
-     * 
+     *
      * Critical implementation: Uses 12-bit ADC resolution (0-4095 range)
      * as specified in project requirements, not 16-bit.
-     * 
+     *
      * @param rawAdc Raw 12-bit ADC reading (0-4095)
      * @param calData Calibrated data from ShimmerAndroidAPI (if available)
      * @return GSR value in microsiemens
@@ -323,19 +323,19 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
         if (calData != null) {
             return calData // API already provides calibrated microsiemens value
         }
-        
+
         // Manual conversion using 12-bit ADC resolution
         val clampedAdc = rawAdc.coerceIn(0, 4095) // Ensure 12-bit range
         val vRef = 3.0 // Reference voltage (3.0V for Shimmer3)
         val adcResolution = 4095.0 // 12-bit ADC maximum value
-        
+
         // Convert ADC to voltage
         val voltage = (clampedAdc / adcResolution) * vRef
-        
+
         // GSR conversion depends on range setting
         // For 4.7MΩ range (highest sensitivity)
         val rangeResistor = 4_700_000.0 // 4.7 MΩ
-        
+
         // Calculate conductance: G = V / (Vref - V) / R
         return if (voltage < vRef && voltage > 0.01) {
             val resistance = rangeResistor * (vRef - voltage) / voltage

@@ -62,7 +62,7 @@ fun detectAndroidSdk(): Boolean {
             return true
         }
     }
-    
+
     // Check environment variables
     val envSdk = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
     return envSdk != null && file(envSdk).exists()
@@ -131,7 +131,7 @@ fun detectAndroidSdk(): Boolean {
             return true
         }
     }
-    
+
     // Check environment variables
     val envSdk = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
     return envSdk != null && file(envSdk).exists()
@@ -164,40 +164,40 @@ graph TB
     subgraph "Root Project"
         ROOT[hellobellohellobello<br/>Root Build Configuration]
     end
-    
+
     subgraph "Android Module"
         ANDROID_PROJECT[android_sensor_node<br/>Project Configuration]
         ANDROID_APP[android_sensor_node:app<br/>Application Module]
     end
-    
-    subgraph "Python Module" 
+
+    subgraph "Python Module"
         PC_CONTROLLER[pc_controller<br/>Python Package Wrapper]
         PYTHON_SRC[Python Source Code<br/>PyQt6 Application]
         NATIVE_BACKEND[C++ Native Backend<br/>PyBind11 Integration]
     end
-    
+
     subgraph "External Dependencies"
         ANDROID_DEPS[Android Dependencies<br/>CameraX, Shimmer SDK, etc.]
         PYTHON_DEPS[Python Dependencies<br/>PyQt6, numpy, etc.]
         SYSTEM_DEPS[System Dependencies<br/>JDK, Python, C++ Compiler]
     end
-    
+
     ROOT --> ANDROID_PROJECT
     ROOT --> PC_CONTROLLER
-    
+
     ANDROID_PROJECT --> ANDROID_APP
     ANDROID_APP --> ANDROID_DEPS
-    
+
     PC_CONTROLLER --> PYTHON_SRC
     PC_CONTROLLER --> NATIVE_BACKEND
     PYTHON_SRC --> PYTHON_DEPS
     NATIVE_BACKEND --> SYSTEM_DEPS
-    
+
     classDef rootModule fill:#e1f5fe
-    classDef androidModule fill:#c8e6c9  
+    classDef androidModule fill:#c8e6c9
     classDef pythonModule fill:#fff3e0
     classDef dependencies fill:#f3e5f5
-    
+
     class ROOT rootModule
     class ANDROID_PROJECT,ANDROID_APP androidModule
     class PC_CONTROLLER,PYTHON_SRC,NATIVE_BACKEND pythonModule
@@ -215,7 +215,7 @@ plugins {
 
 android {
     compileSdk = 34
-    
+
     defaultConfig {
         applicationId = "com.yourcompany.sensorspoke"
         minSdk = 26  // Android 8.0 (API 26)
@@ -223,11 +223,11 @@ android {
         versionCode = 1
         versionName = "1.0.0"
     }
-    
+
     buildFeatures {
         viewBinding = true
     }
-    
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -292,15 +292,15 @@ val venvDir = file(".venv")
 val createVenv = tasks.register<Exec>("createVenv") {
     group = "python"
     description = "Create Python virtual environment"
-    
+
     commandLine(pythonExecutable, "-m", "venv", venvDir.absolutePath)
-    
+
     doFirst {
         if (venvDir.exists()) {
             logger.info("Virtual environment already exists at ${venvDir.absolutePath}")
         }
     }
-    
+
     onlyIf { !venvDir.exists() }
 }
 
@@ -308,17 +308,17 @@ val createVenv = tasks.register<Exec>("createVenv") {
 val installRequirements = tasks.register<Exec>("installRequirements") {
     group = "python"
     description = "Install Python dependencies from requirements.txt"
-    
+
     dependsOn(createVenv)
-    
+
     val pipExecutable = if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
         file("$venvDir/Scripts/pip.exe")
     } else {
         file("$venvDir/bin/pip")
     }
-    
+
     commandLine(pipExecutable.absolutePath, "install", "-r", "requirements.txt")
-    
+
     inputs.file("requirements.txt")
     outputs.dir("$venvDir/lib")
 }
@@ -327,15 +327,15 @@ val installRequirements = tasks.register<Exec>("installRequirements") {
 val pyTest = tasks.register<Exec>("pyTest") {
     group = "verification"
     description = "Run Python tests with pytest"
-    
+
     dependsOn(installRequirements)
-    
+
     val pythonVenvExecutable = if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
         file("$venvDir/Scripts/python.exe")
     } else {
         file("$venvDir/bin/python")
     }
-    
+
     commandLine(pythonVenvExecutable.absolutePath, "-m", "pytest", "tests/", "-v")
 }
 
@@ -343,15 +343,15 @@ val pyTest = tasks.register<Exec>("pyTest") {
 val pyInstaller = tasks.register<Exec>("pyInstaller") {
     group = "distribution"
     description = "Create executable with PyInstaller"
-    
+
     dependsOn(installRequirements)
-    
+
     val pythonVenvExecutable = if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
         file("$venvDir/Scripts/python.exe")
     } else {
         file("$venvDir/bin/python")
     }
-    
+
     commandLine(
         pythonVenvExecutable.absolutePath, "-m", "PyInstaller",
         "--onefile",
@@ -360,7 +360,7 @@ val pyInstaller = tasks.register<Exec>("pyInstaller") {
         "--distpath", "build/dist",
         "src/main.py"
     )
-    
+
     inputs.dir("src")
     outputs.dir("build/dist")
 }
@@ -458,7 +458,7 @@ fun detectBuildEnvironment(): BuildEnvironment {
     val pythonVersion = getPythonVersion()
     val hasAndroidSdk = detectAndroidSdk()
     val hasCppCompiler = detectCppCompiler()
-    
+
     return BuildEnvironment(
         jdkVersion = jdkVersion,
         pythonVersion = pythonVersion,
@@ -504,7 +504,7 @@ tasks.register<Exec>("compileNativeBackend") {
     inputs.dir("src/native")
     inputs.file("CMakeLists.txt")
     outputs.dir("build/native")
-    
+
     // Only run if inputs have changed
     onlyIf { inputs.hasInputs() && !upToDateWhen { outputs.files.every { it.exists() } } }
 }
@@ -540,7 +540,7 @@ android {
             keyPassword = project.findProperty("KEY_PASSWORD") as String? ?: ""
         }
     }
-    
+
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
@@ -561,7 +561,7 @@ android {
 -keep class com.shimmerresearch.** { *; }
 -keep class com.topdon.thermal.** { *; }
 
-# Optimize resource usage  
+# Optimize resource usage
 -shrinkresources
 ```
 
@@ -584,7 +584,7 @@ a = Analysis(
     ],
     hiddenimports=[
         'PyQt6.QtCore',
-        'PyQt6.QtWidgets', 
+        'PyQt6.QtWidgets',
         'PyQt6.QtNetwork',
         'numpy',
         'h5py',
@@ -639,7 +639,7 @@ MultiModalSensing-v1.0.0/
 │       └── topdon_thermal.jar
 ├── pc_controller/
 │   ├── pc_controller.exe           # Windows executable
-│   ├── pc_controller              # Linux executable  
+│   ├── pc_controller              # Linux executable
 │   ├── install_requirements.txt   # System requirements
 │   └── sample_configs/            # Example configuration files
 ├── documentation/
@@ -791,23 +791,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
     - name: Install dependencies
       run: |
         cd pc_controller
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    
+
     - name: Run Python tests
       run: |
         cd pc_controller
         python -m pytest tests/ -v
-    
+
     - name: Upload test results
       uses: actions/upload-artifact@v3
       if: always()
@@ -819,16 +819,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up JDK 17
       uses: actions/setup-java@v3
       with:
         java-version: '17'
         distribution: 'adopt'
-    
+
     - name: Setup Android SDK
       uses: android-actions/setup-android@v2
-    
+
     - name: Cache Gradle packages
       uses: actions/cache@v3
       with:
@@ -838,10 +838,10 @@ jobs:
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
-    
+
     - name: Run Android unit tests
       run: ./gradlew :android_sensor_node:app:testDebugUnitTest
-    
+
     - name: Upload Android test results
       uses: actions/upload-artifact@v3
       if: always()
@@ -853,18 +853,18 @@ jobs:
     needs: [test-pc-controller, test-android]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up build environment
       run: |
         sudo apt-get update
         sudo apt-get install -y openjdk-17-jdk python3.11 python3.11-venv
-    
+
     - name: Build all packages
       run: ./gradlew packageAll
-    
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:

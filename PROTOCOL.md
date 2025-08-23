@@ -25,11 +25,11 @@ The platform supports two message framing approaches for backward compatibility 
 ${length}\n{json_payload}
 ```
 - First line: ASCII decimal length of JSON payload in bytes
-- Separator: Single newline character (`\n`) 
+- Separator: Single newline character (`\n`)
 - Payload: Exactly `{length}` bytes of UTF-8 encoded JSON
 
 **Legacy Framing (Line-Delimited):**
-```  
+```
 {json_payload}\n
 ```
 - Each message terminated with single newline (`\n`)
@@ -53,7 +53,7 @@ All control and event messages include version metadata for forward/backward com
 - Connection maintained throughout session lifecycle
 - Automatic reconnection on network interruption
 
-**UDP Time Sync:**  
+**UDP Time Sync:**
 - Separate UDP channel for time synchronization
 - PC time server on port 3333
 - Android clients send sync requests as needed
@@ -64,8 +64,8 @@ All control and event messages include version metadata for forward/backward com
 
 ### mDNS Service Registration (Android)
 
-**Service Type:** `_gsr-controller._tcp.local.`  
-**Service Name Format:** `SensorSpoke - {device_model}`  
+**Service Type:** `_gsr-controller._tcp.local.`
+**Service Name Format:** `SensorSpoke - {device_model}`
 **Example:** `SensorSpoke - Pixel_7`
 
 **Service Properties:**
@@ -82,12 +82,12 @@ sequenceDiagram
     participant RS as RecordingService
     participant mDNS as mDNS Service
     participant Network as Local Network
-    
+
     RS->>mDNS: Register service "_gsr-controller._tcp.local."
-    RS->>mDNS: Service name: "SensorSpoke - Pixel_7" 
+    RS->>mDNS: Service name: "SensorSpoke - Pixel_7"
     RS->>mDNS: Port: 8080, TXT records
     mDNS->>Network: Announce service availability
-    
+
     Note over Network: Service discoverable by PC browsers
 ```
 
@@ -126,16 +126,16 @@ All command messages originate from PC Controller and are sent to Android device
 
 ### Query Capabilities Command
 
-**Direction:** PC → Android  
-**Purpose:** Discover device capabilities and current status  
-**Response Required:** Yes  
+**Direction:** PC → Android
+**Purpose:** Discover device capabilities and current status
+**Response Required:** Yes
 
 **v1 Format (Preferred):**
 ```json
 {
   "v": 1,
   "id": 1,
-  "type": "cmd", 
+  "type": "cmd",
   "command": "query_capabilities",
   "timestamp": "2024-12-18T14:30:52.123Z"
 }
@@ -151,16 +151,16 @@ All command messages originate from PC Controller and are sent to Android device
 
 ### Time Sync Command
 
-**Direction:** PC → Android  
-**Purpose:** Request time synchronization handshake  
-**Response Required:** Yes  
+**Direction:** PC → Android
+**Purpose:** Request time synchronization handshake
+**Response Required:** Yes
 
 ```json
 {
   "v": 1,
   "id": 2,
   "type": "cmd",
-  "command": "time_sync", 
+  "command": "time_sync",
   "timestamp": "2024-12-18T14:30:52.123Z",
   "server_ip": "192.168.1.100",
   "server_port": 3333,
@@ -170,9 +170,9 @@ All command messages originate from PC Controller and are sent to Android device
 
 ### Start Recording Command
 
-**Direction:** PC → Android  
-**Purpose:** Begin data collection session  
-**Response Required:** Yes  
+**Direction:** PC → Android
+**Purpose:** Begin data collection session
+**Response Required:** Yes
 
 ```json
 {
@@ -203,15 +203,15 @@ All command messages originate from PC Controller and are sent to Android device
 
 ### Stop Recording Command
 
-**Direction:** PC → Android  
-**Purpose:** End data collection session  
-**Response Required:** Yes  
+**Direction:** PC → Android
+**Purpose:** End data collection session
+**Response Required:** Yes
 
 ```json
 {
   "v": 1,
   "id": 4,
-  "type": "cmd", 
+  "type": "cmd",
   "command": "stop_recording",
   "timestamp": "2024-12-18T14:45:32.456Z",
   "session_id": "20241218_143052_001",
@@ -221,16 +221,16 @@ All command messages originate from PC Controller and are sent to Android device
 
 ### Flash Sync Command
 
-**Direction:** PC → Android  
-**Purpose:** Trigger synchronization flash event  
-**Response Required:** Yes  
+**Direction:** PC → Android
+**Purpose:** Trigger synchronization flash event
+**Response Required:** Yes
 
 ```json
 {
   "v": 1,
   "id": 5,
   "type": "cmd",
-  "command": "flash_sync", 
+  "command": "flash_sync",
   "timestamp": "2024-12-18T14:35:00.000Z",
   "sync_id": "sync_001",
   "method": "manual"
@@ -239,9 +239,9 @@ All command messages originate from PC Controller and are sent to Android device
 
 ### File Transfer Command
 
-**Direction:** PC → Android  
-**Purpose:** Request session data upload  
-**Response Required:** Yes  
+**Direction:** PC → Android
+**Purpose:** Request session data upload
+**Response Required:** Yes
 
 ```json
 {
@@ -249,7 +249,7 @@ All command messages originate from PC Controller and are sent to Android device
   "id": 6,
   "type": "cmd",
   "command": "transfer_files",
-  "timestamp": "2024-12-18T14:46:00.123Z", 
+  "timestamp": "2024-12-18T14:46:00.123Z",
   "session_id": "20241218_143052_001",
   "transfer_config": {
     "pc_ip": "192.168.1.100",
@@ -282,8 +282,8 @@ All acknowledgment messages are sent from Android devices back to PC Controller 
 
 ### Capabilities Response
 
-**Direction:** Android → PC  
-**Responds to:** query_capabilities command  
+**Direction:** Android → PC
+**Responds to:** query_capabilities command
 
 ```json
 {
@@ -296,7 +296,7 @@ All acknowledgment messages are sent from Android devices back to PC Controller 
   "capabilities": {
     "device_model": "Google Pixel 7",
     "device_id": "pixel7_abc123",
-    "android_version": "13", 
+    "android_version": "13",
     "api_level": 33,
     "app_version": "1.0.3",
     "sensors": {
@@ -342,9 +342,9 @@ All acknowledgment messages are sent from Android devices back to PC Controller 
 
 ### Preview Frame Events
 
-**Direction:** Android → PC  
-**Purpose:** Real-time camera preview streaming  
-**Frequency:** ~6.67 Hz (throttled)  
+**Direction:** Android → PC
+**Purpose:** Real-time camera preview streaming
+**Frequency:** ~6.67 Hz (throttled)
 
 ```json
 {
@@ -353,7 +353,7 @@ All acknowledgment messages are sent from Android devices back to PC Controller 
   "event": "preview_frame",
   "timestamp": "2024-12-18T14:32:15.123Z",
   "device_id": "pixel7_abc123",
-  "session_id": "20241218_143052_001",  
+  "session_id": "20241218_143052_001",
   "frame_data": {
     "jpeg_base64": "/9j/4AAQSkZJRgABAQEAYABgAAD...",
     "capture_timestamp_ns": 1703856735123456789,

@@ -30,11 +30,11 @@ import com.energy.iruvc.dual.USBDualCamera
  * creates the expected file structure during local testing.
 
  * Production ThermalCameraRecorder with TRUE Topdon SDK integration.
- * 
+ *
  * This implementation uses the actual Topdon SDK classes to interface with
  * TC001 thermal camera hardware, providing real thermal data processing,
  * hardware-calibrated temperature measurements, and professional thermal imaging.
- * 
+ *
  * Key improvements over generic implementation:
  * - Real hardware detection using Topdon-specific device identification
  * - Hardware-calibrated temperature conversion with ±2°C accuracy
@@ -49,14 +49,14 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
     private var sessionDir: File? = null
     private var recordingJob: Job? = null
     private val coroutineScope = CoroutineScope(Dispatchers.IO + Job())
-   
+
     // True Topdon SDK integration using real SDK classes
     private var ircmd: IRCMD? = null
     private var usbDualCamera: USBDualCamera? = null
     private var isConnected = false
     private var isStreaming = false
     private var frameCount = 0
-    
+
     // Hardware configuration
     private var deviceWidth = 256
     private var deviceHeight = 192
@@ -66,12 +66,12 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
 
     override suspend fun start(sessionDir: File) {
         if (!sessionDir.exists()) sessionDir.mkdirs()
-        
+
         // Create thermal images directory for IR image files
         thermalImagesDir = File(sessionDir, "thermal_images").apply { mkdirs() }
         csvFile = File(sessionDir, "thermal.csv")
         csvWriter = BufferedWriter(FileWriter(csvFile!!, true))
-        
+
         // Write header if file is empty
         if (csvFile!!.length() == 0L) {
             csvWriter!!.write("timestamp_ns,frame_id,center_temp_c,min_temp_c,max_temp_c,avg_temp_c,image_path\n")
@@ -90,7 +90,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             put("accuracy", "±2°C")
             put("frame_rate_hz", 25)
         }
-        
+
         try {
             FileWriter(metadataFile).use { writer ->
                 writer.write(metadata.toString(2))
@@ -102,13 +102,13 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         try {
             // Initialize and connect to real Topdon thermal camera
             initializeTopdonSDK()
-            
+
             // Configure hardware-specific camera settings
             configureTopdonCamera()
-            
+
             // Start real thermal data streaming
             startTopdonStreaming()
-            
+
         } catch (e: Exception) {
             // If real device connection fails, fall back to simulation mode
             startSimulationMode()
@@ -125,7 +125,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             }
         }
     }
-    
+
     /**
      * Try to connect to device using available SDK methods.
      */
@@ -133,11 +133,11 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         return try {
             // Try various connection methods that might be available in the SDK
             val ircmdObj = ircmd ?: return false
-            
+
             // Method 1: Try connect(UsbDevice)
             val connectMethod = ircmdObj.javaClass.getMethod("connect", UsbDevice::class.java)
             val result = connectMethod.invoke(ircmdObj, device)
-            
+
             // Check if result indicates success (different SDKs may return different types)
             when (result) {
                 is Boolean -> result
@@ -149,7 +149,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             false
         }
     }
-    
+
     /**
      * Try to get device capabilities from SDK.
      */
@@ -173,18 +173,18 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             // Keep default values
         }
     }
-    
+
     /**
      * Try to extract dimensions from device info object.
      */
     private fun extractDimensionsFromDeviceInfo(deviceInfo: Any) {
         try {
             val infoClass = deviceInfo.javaClass
-            
+
             // Try to find width/height fields
             val widthFields = listOf("width", "imageWidth", "resolutionWidth")
             val heightFields = listOf("height", "imageHeight", "resolutionHeight")
-            
+
             for (fieldName in widthFields) {
                 try {
                     val field = infoClass.getDeclaredField(fieldName)
@@ -198,7 +198,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     // Try next field
                 }
             }
-            
+
             for (fieldName in heightFields) {
                 try {
                     val field = infoClass.getDeclaredField(fieldName)
@@ -227,13 +227,13 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 // Use real USB manager to get connected devices
                 val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
                 val deviceList = usbManager.deviceList
-                
+
                 // Try SDK-based device detection first
                 val sdkDetectedDevice = trySDKDeviceDetection()
                 if (sdkDetectedDevice != null) {
                     return@withContext sdkDetectedDevice
                 }
-                
+
                 // Fallback to hardware-specific VID/PID detection
                 for (device in deviceList.values) {
                     if (isTopdonTC001Device(device.vendorId, device.productId)) {
@@ -245,7 +245,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                         }
                     }
                 }
-                
+
                 null
             } catch (e: Exception) {
                 println("Error scanning for TC001 devices: ${e.message}")
@@ -253,22 +253,22 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             }
         }
     }
-    
+
     /**
      * Try to use SDK for device detection.
      */
     private fun trySDKDeviceDetection(): UsbDevice? {
         return try {
             val ircmdObj = ircmd ?: return null
-            
+
             // Try various scan methods that might be available
             val scanMethods = listOf("scanForDevices", "getConnectedDevices", "findDevices")
-            
+
             for (methodName in scanMethods) {
                 try {
                     val method = ircmdObj.javaClass.getMethod(methodName)
                     val result = method.invoke(ircmdObj)
-                    
+
                     // Try to extract devices from result
                     val device = extractFirstValidDevice(result)
                     if (device != null) return device
@@ -276,13 +276,13 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     // Try next method
                 }
             }
-            
+
             null
         } catch (e: Exception) {
             null
         }
     }
-    
+
     /**
      * Try to extract the first valid TC001 device from SDK results.
      */
@@ -305,7 +305,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             null
         }
     }
-    
+
     /**
      * Try to extract UsbDevice from device info object.
      */
@@ -313,7 +313,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         return try {
             val infoClass = deviceInfo.javaClass
             val possibleFields = listOf("usbDevice", "device", "usb", "hardwareDevice")
-            
+
             for (fieldName in possibleFields) {
                 try {
                     val field = infoClass.getDeclaredField(fieldName)
@@ -324,28 +324,28 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     // Try next field
                 }
             }
-            
+
             null
         } catch (e: Exception) {
             null
         }
     }
-    
+
     /**
      * Try to validate device using SDK.
      */
     private fun tryValidateDevice(device: UsbDevice): Boolean {
         return try {
             val ircmdObj = ircmd ?: return true // Assume valid if no SDK validation available
-            
+
             // Try various validation methods
             val validationMethods = listOf("isDeviceSupported", "validateDevice", "checkDevice")
-            
+
             for (methodName in validationMethods) {
                 try {
                     val method = ircmdObj.javaClass.getMethod(methodName, UsbDevice::class.java)
                     val result = method.invoke(ircmdObj, device)
-                    
+
                     return when (result) {
                         is Boolean -> result
                         is Int -> result == 0 || result > 0
@@ -355,13 +355,13 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     // Try next method
                 }
             }
-            
+
             true // Assume valid if no validation method found
         } catch (e: Exception) {
             true
         }
     }
-    
+
     /**
      * Check if the device VID/PID combination matches TC001 thermal camera.
      */
@@ -386,32 +386,32 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         withContext(Dispatchers.IO) {
             try {
                 val ircmdObj = ircmd ?: return
-                
+
                 // Try to configure real hardware settings using available SDK methods
                 val configSuccess = tryConfigureHardware(ircmdObj)
                 if (!configSuccess) {
                     println("Warning: Hardware configuration methods not available, using defaults")
                 }
-                
+
                 // Try to set up frame callback for real thermal data
                 val callbackSuccess = trySetupFrameCallback(ircmdObj)
                 if (!callbackSuccess) {
                     println("Warning: Frame callback setup failed, thermal data may not be available")
                 }
-                
+
             } catch (e: Exception) {
                 throw RuntimeException("Failed to configure Topdon camera: ${e.message}", e)
             }
         }
     }
-    
+
     /**
      * Try to configure hardware using available SDK methods.
      */
     private fun tryConfigureHardware(ircmdObj: IRCMD): Boolean {
         return try {
             var configSuccess = false
-            
+
             // Try resolution configuration
             val resolutionMethods = listOf("setResolution", "configureResolution", "setImageSize")
             for (methodName in resolutionMethods) {
@@ -424,7 +424,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     // Try next method
                 }
             }
-            
+
             // Try frame rate configuration
             val frameRateMethods = listOf("setFrameRate", "configureFrameRate", "setFPS")
             for (methodName in frameRateMethods) {
@@ -437,7 +437,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     // Try next method
                 }
             }
-            
+
             // Try temperature range configuration
             val tempRangeMethods = listOf("setTemperatureRange", "configureTemperatureRange", "setTempRange")
             for (methodName in tempRangeMethods) {
@@ -450,7 +450,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     // Try next method
                 }
             }
-            
+
             // Try emissivity configuration
             val emissivityMethods = listOf("setEmissivity", "configureEmissivity", "setEmissionRate")
             for (methodName in emissivityMethods) {
@@ -463,13 +463,13 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     // Try next method
                 }
             }
-            
+
             configSuccess
         } catch (e: Exception) {
             false
         }
     }
-    
+
     /**
      * Try to set up frame callback for real thermal data.
      */
@@ -477,7 +477,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         return try {
             // Try various callback setup methods
             val callbackMethods = listOf("setFrameCallback", "setDataCallback", "setThermalCallback")
-            
+
             for (methodName in callbackMethods) {
                 try {
                     // Try different callback signatures
@@ -486,15 +486,15 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                         listOf(Function1::class.java), // (ByteArray) -> Unit
                         listOf(Object::class.java)     // Generic callback interface
                     )
-                    
+
                     for (signature in possibleSignatures) {
                         try {
                             val method = ircmdObj.javaClass.getMethod(methodName, *signature.toTypedArray())
-                            
+
                             // Create appropriate callback based on signature
                             val callback = createThermalDataCallback()
                             method.invoke(ircmdObj, callback)
-                            
+
                             return true
                         } catch (e: Exception) {
                             // Try next signature
@@ -504,13 +504,13 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     // Try next method
                 }
             }
-            
+
             false
         } catch (e: Exception) {
             false
         }
     }
-    
+
     /**
      * Create callback for thermal data that adapts to different SDK signatures.
      */
@@ -520,11 +520,11 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             fun onThermalData(data: ByteArray) {
                 handleRealThermalFrame(data, deviceWidth, deviceHeight)
             }
-            
+
             fun onThermalData(data: ByteArray, width: Int, height: Int) {
                 handleRealThermalFrame(data, width, height)
             }
-            
+
             fun onFrameReceived(data: ByteArray) {
                 handleRealThermalFrame(data, deviceWidth, deviceHeight)
             }
@@ -539,7 +539,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         withContext(Dispatchers.IO) {
             try {
                 val ircmdObj = ircmd ?: throw RuntimeException("IRCMD not initialized")
-                
+
                 val streamingStarted = tryStartStreaming(ircmdObj)
                 if (streamingStarted) {
                     isStreaming = true
@@ -551,18 +551,18 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             }
         }
     }
-    
+
     /**
      * Try to start streaming using available SDK methods.
      */
     private fun tryStartStreaming(ircmdObj: IRCMD): Boolean {
         val streamingMethods = listOf("startStreaming", "start", "startCapture", "beginStream")
-        
+
         for (methodName in streamingMethods) {
             try {
                 val method = ircmdObj.javaClass.getMethod(methodName)
                 val result = method.invoke(ircmdObj)
-                
+
                 // Check result for success indication
                 val success = when (result) {
                     is Boolean -> result
@@ -570,7 +570,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     null -> true // Void method completed without exception
                     else -> true
                 }
-                
+
                 if (success) {
                     println("Started thermal streaming using: $methodName")
                     return true
@@ -579,7 +579,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 // Try next method
             }
         }
-        
+
         return false
     }
 
@@ -591,36 +591,36 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         try {
             val timestampNs = System.nanoTime()
             frameCount++
-            
+
             // Process real thermal data using Topdon SDK classes
             val temperatureMatrix = processRealThermalData(rawThermalData, frameWidth, frameHeight)
-            
+
             if (temperatureMatrix != null) {
                 // Calculate real temperature statistics from hardware data
                 val centerTemp = getCenterTemperature(temperatureMatrix, frameWidth, frameHeight)
                 val minTemp = getMinTemperature(temperatureMatrix)
                 val maxTemp = getMaxTemperature(temperatureMatrix)
                 val avgTemp = getAverageTemperature(temperatureMatrix)
-                
+
                 // Generate professional thermal image
                 val thermalBitmap = generateThermalBitmap(temperatureMatrix, frameWidth, frameHeight)
-                
+
                 // Save real thermal image and data
                 val imagePath = "thermal_frame_${frameCount.toString().padStart(6, '0')}.png"
                 val imageFile = File(sessionDir, imagePath)
-                
+
                 coroutineScope.launch {
                     withContext(Dispatchers.IO) {
                         try {
                             // Save real thermal frame
                             saveRealThermalImage(thermalBitmap, imageFile)
-                            
+
                             // Write calibrated thermal data to CSV
                             csvWriter?.write(
                                 "$timestampNs,$frameCount,$centerTemp,$minTemp,$maxTemp,$avgTemp,$imagePath\n"
                             )
                             csvWriter?.flush()
-                            
+
                         } catch (e: IOException) {
                             handleWriteError(e)
                         }
@@ -630,12 +630,12 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 // Fallback to simulation processing if SDK processing fails
                 handleSimulationFrame(timestampNs)
             }
-            
+
         } catch (e: Exception) {
             handleDataError(e)
         }
     }
-    
+
     /**
      * Process real thermal data using Topdon SDK classes.
      * Returns temperature matrix or null if processing fails.
@@ -648,7 +648,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 // Try temperature conversion
                 return tryTemperatureConversion(parseResult, width, height)
             }
-            
+
             // If SDK parsing fails, create temperature matrix from raw data
             createTemperatureMatrixFromRawData(rawData, width, height)
         } catch (e: Exception) {
@@ -656,7 +656,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             null
         }
     }
-    
+
     /**
      * Try to parse thermal data using LibIRParse.
      */
@@ -664,25 +664,25 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         return try {
             val parseClass = Class.forName("com.energy.iruvc.sdkisp.LibIRParse")
             val parseMethods = listOf("parseData", "parse", "processThermalData")
-            
+
             for (methodName in parseMethods) {
                 try {
                     val method = parseClass.getMethod(methodName, ByteArray::class.java, Int::class.java)
                     val result = method.invoke(null, rawData, width * height)
-                    
+
                     // Extract parsed data from result
                     return extractParsedData(result) ?: continue
                 } catch (e: Exception) {
                     // Try next method
                 }
             }
-            
+
             null
         } catch (e: Exception) {
             null
         }
     }
-    
+
     /**
      * Extract parsed data from LibIRParse result.
      */
@@ -695,7 +695,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     result?.let { obj ->
                         val resultClass = obj.javaClass
                         val dataFields = listOf("thermalData", "data", "parsedData", "result")
-                        
+
                         for (fieldName in dataFields) {
                             try {
                                 val field = resultClass.getDeclaredField(fieldName)
@@ -714,7 +714,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             null
         }
     }
-    
+
     /**
      * Try temperature conversion using available SDK methods.
      */
@@ -723,54 +723,54 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             // Try LibIRTemp for temperature conversion
             val tempClass = Class.forName("com.energy.iruvc.sdkisp.LibIRProcess")
             val convertMethods = listOf("convertToTemperature", "processTemperature", "calculateTemperature")
-            
+
             for (methodName in convertMethods) {
                 try {
                     val method = tempClass.getMethod(
-                        methodName, 
-                        ByteArray::class.java, 
-                        Int::class.java, 
+                        methodName,
+                        ByteArray::class.java,
+                        Int::class.java,
                         Int::class.java,
                         Float::class.java
                     )
                     val result = method.invoke(null, thermalData, width, height, emissivity)
-                    
+
                     return result as? FloatArray ?: continue
                 } catch (e: Exception) {
                     // Try next method
                 }
             }
-            
+
             null
         } catch (e: Exception) {
             null
         }
     }
-    
+
     /**
      * Create temperature matrix from raw data when SDK methods are not available.
      */
     private fun createTemperatureMatrixFromRawData(rawData: ByteArray, width: Int, height: Int): FloatArray {
         val matrixSize = width * height
         val temperatureMatrix = FloatArray(matrixSize)
-        
+
         // Convert raw bytes to temperature values
         // This is a basic conversion - real SDK would provide calibrated values
         for (i in 0 until minOf(matrixSize, rawData.size / 2)) {
             val rawValue = if (i * 2 + 1 < rawData.size) {
-                ((rawData[i * 2].toInt() and 0xFF) or 
+                ((rawData[i * 2].toInt() and 0xFF) or
                  ((rawData[i * 2 + 1].toInt() and 0xFF) shl 8))
             } else {
                 0
             }
-            
+
             // Basic temperature conversion (would use actual calibration in production)
             temperatureMatrix[i] = 25.0f + (rawValue / 100.0f) // Approximate conversion
         }
-        
+
         return temperatureMatrix
     }
-    
+
     /**
      * Generate thermal bitmap using available SDK methods or fallback.
      */
@@ -783,7 +783,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             createFallbackThermalBitmap(temperatureMatrix, width, height)
         }
     }
-    
+
     /**
      * Try to generate thermal bitmap using SDK methods.
      */
@@ -791,7 +791,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         return try {
             val processClass = Class.forName("com.energy.iruvc.sdkisp.LibIRProcess")
             val bitmapMethods = listOf("generateThermalBitmap", "createBitmap", "renderThermal")
-            
+
             for (methodName in bitmapMethods) {
                 try {
                     val method = processClass.getMethod(
@@ -802,30 +802,30 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                         Int::class.java // Palette parameter
                     )
                     val result = method.invoke(null, temperatureMatrix, width, height, 0) // Iron palette = 0
-                    
+
                     return result as? Bitmap ?: continue
                 } catch (e: Exception) {
                     // Try next method
                 }
             }
-            
+
             null
         } catch (e: Exception) {
             null
         }
     }
-    
+
     /**
      * Create fallback thermal bitmap when SDK methods are not available.
      */
     private fun createFallbackThermalBitmap(temperatureMatrix: FloatArray, width: Int, height: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        
+
         // Find temperature range for color mapping
         val minTemp = temperatureMatrix.minOrNull() ?: 20.0f
         val maxTemp = temperatureMatrix.maxOrNull() ?: 40.0f
         val tempRange = maxTemp - minTemp
-        
+
         // Apply thermal color mapping (Iron palette)
         for (y in 0 until height) {
             for (x in 0 until width) {
@@ -835,24 +835,24 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 bitmap.setPixel(x, y, color)
             }
         }
-        
+
         return bitmap
     }
-    
+
     /**
      * Map temperature to iron color palette.
      */
     private fun mapTemperatureToIronColor(normalized: Float): Int {
         val n = normalized.coerceIn(0.0f, 1.0f)
-        
+
         // Iron palette: black -> red -> yellow -> white
         val red = (n * 255).toInt().coerceIn(0, 255)
         val green = if (n > 0.5f) ((n - 0.5f) * 2 * 255).toInt().coerceIn(0, 255) else 0
         val blue = if (n > 0.75f) ((n - 0.75f) * 4 * 255).toInt().coerceIn(0, 255) else 0
-        
+
         return (0xFF shl 24) or (red shl 16) or (green shl 8) or blue
     }
-    
+
     /**
      * Handle simulation frame when SDK processing fails.
      */
@@ -861,21 +861,21 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             // Generate realistic thermal data simulation as fallback
             val baseTemp = 25.0f + 3.0f * kotlin.math.sin(frameCount * 0.05).toFloat()
             val variation = kotlin.random.Random.nextFloat() * 2.0f - 1.0f
-            
+
             val centerTemp = baseTemp + variation
             val minTemp = centerTemp - 2.0f
             val maxTemp = centerTemp + 5.0f
             val avgTemp = centerTemp + 0.5f
-            
+
             // Create simulated thermal image
             val imagePath = "thermal_frame_${frameCount.toString().padStart(6, '0')}.png"
             val imageFile = File(sessionDir, imagePath)
-            
+
             coroutineScope.launch {
                 withContext(Dispatchers.IO) {
                     try {
                         createPlaceholderThermalImage(imageFile, centerTemp)
-                        
+
                         csvWriter?.write(
                             "$timestampNs,$frameCount,$centerTemp,$minTemp,$maxTemp,$avgTemp,$imagePath\n"
                         )
@@ -897,21 +897,21 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         val centerIndex = (height / 2) * width + (width / 2)
         return if (centerIndex < temperatureMatrix.size) temperatureMatrix[centerIndex] else 25.0f
     }
-    
+
     /**
      * Calculate minimum temperature from temperature matrix.
      */
     private fun getMinTemperature(temperatureMatrix: FloatArray): Float {
         return temperatureMatrix.minOrNull() ?: 20.0f
     }
-    
+
     /**
      * Calculate maximum temperature from temperature matrix.
      */
     private fun getMaxTemperature(temperatureMatrix: FloatArray): Float {
         return temperatureMatrix.maxOrNull() ?: 30.0f
     }
-    
+
     /**
      * Calculate average temperature from temperature matrix.
      */
@@ -926,7 +926,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         withContext(Dispatchers.IO) {
             try {
                 val ircmdObj = ircmd ?: return
-                
+
                 if (isStreaming) {
                     val stopSuccess = tryStopStreaming(ircmdObj)
                     if (stopSuccess) {
@@ -938,13 +938,13 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             }
         }
     }
-    
+
     /**
      * Try to stop streaming using available SDK methods.
      */
     private fun tryStopStreaming(ircmdObj: IRCMD): Boolean {
         val stopMethods = listOf("stopStreaming", "stop", "stopCapture", "endStream")
-        
+
         for (methodName in stopMethods) {
             try {
                 val method = ircmdObj.javaClass.getMethod(methodName)
@@ -955,7 +955,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 // Try next method
             }
         }
-        
+
         return false
     }
 
@@ -970,12 +970,12 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     tryDisconnectDevice(ircmdObj)
                     isConnected = false
                 }
-                
+
                 // Cleanup USB dual camera if used
                 usbDualCamera?.let { camera ->
                     tryReleaseUSBCamera(camera)
                 }
-                
+
             } catch (e: Exception) {
                 println("Error disconnecting from thermal camera: ${e.message}")
             } finally {
@@ -984,13 +984,13 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             }
         }
     }
-    
+
     /**
      * Try to disconnect from device using available SDK methods.
      */
     private fun tryDisconnectDevice(ircmdObj: IRCMD) {
         val disconnectMethods = listOf("disconnect", "release", "close", "cleanup")
-        
+
         for (methodName in disconnectMethods) {
             try {
                 val method = ircmdObj.javaClass.getMethod(methodName)
@@ -1002,13 +1002,13 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             }
         }
     }
-    
+
     /**
      * Try to release USB camera resources.
      */
     private fun tryReleaseUSBCamera(camera: USBDualCamera) {
         val releaseMethods = listOf("release", "cleanup", "close", "disconnect")
-        
+
         for (methodName in releaseMethods) {
             try {
                 val method = camera.javaClass.getMethod(methodName)
@@ -1044,42 +1044,42 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         // Fallback simulation mode when real device is not available
         recordingJob = coroutineScope.launch {
             val frameIntervalMs = 40L // 25 FPS = 40ms per frame
-            
+
             try {
                 while (isActive) {
                     val timestampNs = System.nanoTime()
                     frameCount++
-                    
+
                     // Generate realistic thermal data simulation
                     val baseTemp = 25.0f // Room temperature baseline
                     val variation = 5.0f * kotlin.math.sin(frameCount * 0.1).toFloat() // Slow temperature variation
                     val noise = (Math.random() - 0.5).toFloat() * 2.0f // Temperature noise
-                    
+
                     val centerTemp = baseTemp + variation + noise
                     val minTemp = centerTemp - 3.0f
                     val maxTemp = centerTemp + 8.0f
                     val avgTemp = centerTemp + 1.0f
-                    
+
                     // Create simulated thermal image
                     val imagePath = "thermal_frame_${frameCount.toString().padStart(6, '0')}.png"
                     val imageFile = File(sessionDir, imagePath)
-                    
+
                     withContext(Dispatchers.IO) {
                         try {
                             // Generate placeholder thermal image
                             createPlaceholderThermalImage(imageFile, centerTemp)
-                            
+
                             // Write simulated data to CSV
                             csvWriter?.write(
                                 "$timestampNs,$frameCount,$centerTemp,$minTemp,$maxTemp,$avgTemp,$imagePath\n"
                             )
                             csvWriter?.flush()
-                            
+
                         } catch (e: IOException) {
                             // Handle write error
                         }
                     }
-                    
+
                     delay(frameIntervalMs)
                 }
             } catch (e: Exception) {
@@ -1094,37 +1094,37 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             val width = 256
             val height = 192
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            
+
             // Fill with temperature-based color gradient
             val centerX = width / 2
             val centerY = height / 2
             val maxDistance = kotlin.math.sqrt((centerX * centerX + centerY * centerY).toDouble())
-            
+
             for (y in 0 until height) {
                 for (x in 0 until width) {
                     val distance = kotlin.math.sqrt(
                         ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY)).toDouble()
                     )
                     val normalizedDistance = (distance / maxDistance).toFloat()
-                    
+
                     // Create thermal-like color based on temperature and position
                     val tempFactor = (temperature - 20.0f) / 30.0f // Normalize temperature
                     val colorIntensity = (tempFactor + normalizedDistance * 0.3f).coerceIn(0.0f, 1.0f)
-                    
+
                     val red = (colorIntensity * 255).toInt()
                     val green = ((1.0f - colorIntensity) * colorIntensity * 255).toInt()
                     val blue = ((1.0f - colorIntensity) * 128).toInt()
-                    
+
                     val color = (0xFF shl 24) or (red shl 16) or (green shl 8) or blue
                     bitmap.setPixel(x, y, color)
                 }
             }
-            
+
             // Save bitmap
             FileOutputStream(file).use { output ->
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
             }
-            
+
         } catch (e: Exception) {
             // Handle image creation error
         }
@@ -1135,7 +1135,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
     /**
      * Save thermal data as both image file and CSV entry.
      * This is a placeholder implementation until Topdon SDK is integrated.
-     * 
+     *
      * @param timestamp_ns Nanosecond timestamp
      * @param thermalData 2D array of temperature values in Celsius
      * @param width Frame width (typically 256)
@@ -1149,11 +1149,11 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
     ) {
         val imageFilename = "thermal_$timestamp_ns.png"
         val imageFile = File(thermalImagesDir, imageFilename)
-        
+
         // Save thermal data as PNG image (false color representation)
         val thermalBitmap = createThermalBitmap(thermalData, width, height)
         saveImageAsPng(thermalBitmap, imageFile)
-        
+
         // Calculate temperature range for CSV
         var minTemp = Float.MAX_VALUE
         var maxTemp = Float.MIN_VALUE
@@ -1163,7 +1163,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 if (temp > maxTemp) maxTemp = temp
             }
         }
-        
+
         // Write CSV entry
         try {
             csvWriter?.apply {
@@ -1179,7 +1179,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
      */
     private fun createThermalBitmap(thermalData: Array<FloatArray>, width: Int, height: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        
+
         // Simple false color mapping (blue = cold, red = hot)
         for (y in 0 until height) {
             for (x in 0 until width) {
@@ -1189,12 +1189,12 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 val red = normalized
                 val green = (normalized * 0.5f).toInt()
                 val blue = 255 - normalized
-                
+
                 val color = android.graphics.Color.rgb(red, green, blue)
                 bitmap.setPixel(x, y, color)
             }
         }
-        
+
         return bitmap
     }
 

@@ -9,15 +9,15 @@ This document summarizes the comprehensive documentation diagrams and artifacts 
   - End-to-end Mermaid diagram showing Android + PC components
   - PlantUML alternative provided
   - Maps to concrete modules: MainActivity, RecordingService, NetworkController, etc.
-  
-- ✅ **Deployment View** (`system_architecture/deployment_view.md`)  
+
+- ✅ **Deployment View** (`system_architecture/deployment_view.md`)
   - Runtime placement, ports, discovery, firewall configuration
   - Network topology with specific port assignments
   - Android NSD service advertisement details
 
 - ✅ **PC Controller Module Map** (`system_architecture/pc_controller_modules.md`)
   - Python application architecture with PyQt6 GUI layer
-  - Network, core services, data processing, tools breakdown  
+  - Network, core services, data processing, tools breakdown
   - Planned and implemented modules clearly distinguished
 
 - ✅ **Android Class Diagram** (`system_architecture/android_class_diagram.md`)
@@ -32,7 +32,7 @@ This document summarizes the comprehensive documentation diagrams and artifacts 
   - Error codes and event message specifications
   - Implementation notes for backward/forward compatibility
 
-### Sequence Diagrams  
+### Sequence Diagrams
 - ✅ **Recording Workflows** (`sequences/recording_workflows.md`)
   - Start/stop recording PC↔Android command exchange
   - File transfer with ZIP streaming details
@@ -53,7 +53,7 @@ This document summarizes the comprehensive documentation diagrams and artifacts 
   - State guards, validations, and thread safety
   - Implementation notes and testing strategy
 
-### Performance Analysis  
+### Performance Analysis
 - ✅ **Timing and Synchronization** (`performance/timing_synchronization.md`)
   - UDP time sync timeline with mathematical formulas
   - TCP time_sync command alternative
@@ -88,13 +88,13 @@ docs/diagrams/
 ├── README.md                           # Overview and usage guide
 ├── PLACEMENT_GUIDE.md                  # Report/thesis integration guide
 ├── system_architecture/
-│   ├── high_level_architecture.md      # End-to-end system diagram  
+│   ├── high_level_architecture.md      # End-to-end system diagram
 │   ├── deployment_view.md              # Runtime environment view
 │   ├── pc_controller_modules.md        # Python app module breakdown
 │   └── android_class_diagram.md        # Component relationships
 ├── protocols/
 │   └── tcp_control_protocol.md         # Complete protocol reference
-├── sequences/  
+├── sequences/
 │   └── recording_workflows.md          # Key workflow sequences
 ├── data_formats/
 │   └── session_structure.md            # Directory structure + CSV schemas
@@ -112,14 +112,14 @@ docs/diagrams/
 ### Comprehensive Coverage
 - **System Architecture**: Complete visual mapping of Android + PC components
 - **Communication Protocols**: Definitive TCP control protocol reference
-- **Data Management**: Session structure with exact CSV schema specifications  
+- **Data Management**: Session structure with exact CSV schema specifications
 - **Performance Analysis**: Timing, throughput, and synchronization accuracy
 - **Testing Strategy**: Coverage maps and error handling matrices
 
 ### Multiple Format Support
 - **Mermaid**: Native GitHub rendering, VS Code integration
 - **PlantUML**: Advanced sequence and state diagrams
-- **Markdown Tables**: Protocol specifications and data schemas  
+- **Markdown Tables**: Protocol specifications and data schemas
 - **Tree Structures**: File system organization examples
 
 ### Academic Integration Ready
@@ -128,7 +128,7 @@ docs/diagrams/
 - **Multiple Export Options**: SVG, PNG, PDF for various document formats
 - **Quality Standards**: 300 DPI resolution, colorblind-friendly palettes
 
-### Implementation Mapping  
+### Implementation Mapping
 - **Direct Code Correlation**: All diagrams map to actual repository modules
 - **No Fictional Elements**: Every component shown exists in the codebase
 - **Concrete Examples**: Real file paths, actual class names, specific port numbers
@@ -144,7 +144,7 @@ docs/diagrams/
 
 ### Quality Assurance
 - **Diagram Validation**: All syntax tested with rendering tools
-- **Content Accuracy**: Cross-referenced with actual implementation code  
+- **Content Accuracy**: Cross-referenced with actual implementation code
 - **Style Consistency**: Unified color schemes, fonts, and layouts
 - **Documentation Standards**: Clear purpose, placement, and usage guidance
 
@@ -165,11 +165,11 @@ docs/diagrams/
 
 ### For Implementation Reference
 - [ ] Use protocol tables for API development
-- [ ] Reference state machines for testing scenarios  
+- [ ] Reference state machines for testing scenarios
 - [ ] Apply data format specifications for tooling
 - [ ] Follow architecture diagrams for code organization
 
-### For Presentations and Documentation  
+### For Presentations and Documentation
 - [ ] Adapt examples from quick_reference.md
 - [ ] Use performance charts for evaluation sections
 - [ ] Apply sequence diagrams for workflow explanations
@@ -183,7 +183,7 @@ docs/diagrams/
 - **Maintainable**: Easy to update as system evolves
 - **Accessible**: Multiple formats and detail levels for different audiences
 
-### Development Support  
+### Development Support
 - **Implementation Guide**: Clear architectural guidance for developers
 - **Testing Framework**: Error scenarios and coverage mapping
 - **Protocol Reference**: Definitive specification for integration work

@@ -17,26 +17,26 @@ classDiagram
         -MutableStateFlow~String?~ _currentSessionId
         -List~RecorderEntry~ recorders
         -File? sessionRootDir
-        
+
         +register(name: String, recorder: SensorRecorder)
         +startSession(sessionId: String?)
         +stopSession()
         -generateSessionId() String
         -safeStopAll()
     }
-    
+
     class RecorderEntry {
         +String name
         +SensorRecorder recorder
     }
-    
+
     %% SensorRecorder Interface and Implementations
     class SensorRecorder {
         <<interface>>
         +start(sessionDir: File)
         +stop()
     }
-    
+
     class RgbCameraRecorder {
         -ProcessCameraProvider? cameraProvider
         -ImageCapture? imageCapture
@@ -46,14 +46,14 @@ classDiagram
         -CoroutineScope scope
         -Long lastPreviewNs
         -BufferedWriter? csvWriter
-        
+
         +start(sessionDir: File)
         +stop()
         -startVideoRecording(File videoFile)
         -captureStills()
         -emitPreviewIfThrottled(ByteArray jpegBytes)
     }
-    
+
     class ThermalCameraRecorder {
         -IRCMD? ircmd
         -UsbManager? usbManager
@@ -61,7 +61,7 @@ classDiagram
         -File? metadataFile
         -CoroutineScope scope
         -Float emissivity
-        
+
         +start(sessionDir: File)
         +stop()
         -initializeTopdonSDK() IRCMD?
@@ -72,15 +72,15 @@ classDiagram
         -logRealTemperatureData(Float center, Float min, Float max)
         -writeMetadata()
     }
-    
+
     class ShimmerRecorder {
         -ShimmerBluetooth? shimmerDevice
         -ShimmerConfig sensorConfig
-        -BufferedWriter? csvWriter  
+        -BufferedWriter? csvWriter
         -CoroutineScope scope
         -BluetoothDevice? targetDevice
         -Boolean isStreaming
-        
+
         +start(sessionDir: File)
         +stop()
         -scanForShimmerDevices() List~BluetoothDevice~
@@ -92,7 +92,7 @@ classDiagram
         -convertPPGValue(Int rawADC) Float
         -logSensorData(Long timestamp, Float gsrMicroSiemens, Float ppgRaw)
     }
-    
+
     %% Service and Network Classes
     class RecordingService {
         -CoroutineScope scope
@@ -100,7 +100,7 @@ classDiagram
         -NetworkClient networkClient
         -FileTransferManager fileTransferManager
         -PreviewBusListener previewListener
-        
+
         +onStartCommand() Int
         +onDestroy()
         -startTcpServer()
@@ -108,80 +108,80 @@ classDiagram
         -processCommand(JSONObject cmd) JSONObject
         -collectCapabilities() JSONObject
     }
-    
+
     class NetworkClient {
         -NsdManager nsdManager
         -RegistrationListener? registrationListener
         -Socket? socket
         -AtomicBoolean isConnected
-        
+
         +register(String type, String name, Int port)
         +unregister()
         +connect(String host, Int port)
         +sendMessage(String json) Boolean
     }
-    
+
     class FileTransferManager {
         -Context? context
         -File? sessionsRootOverride
         -String? deviceIdOverride
-        
+
         +transferSession(String sessionId, String host, Int port)
         -sessionRoot() File
         -zipDirectoryContents(ZipOutputStream zos, File dir)
     }
-    
+
     %% Utility Classes
     class PreviewBus {
         <<object>>
         -CopyOnWriteArrayList~Function~ listeners
-        
+
         +subscribe(listener: Function)
         +unsubscribe(listener: Function)
         +emit(ByteArray bytes, Long timestampNs)
     }
-    
+
     class TimeManager {
         <<object>>
         -Long offsetNs
-        
+
         +nowNanos() Long
         +getSyncedTimestamp() Long
         +sync_with_server(String ip, Int port)
     }
-    
-    %% UI Classes  
+
+    %% UI Classes
     class MainActivity {
         -ActivityResultLauncher~Array~String~~ permissionLauncher
         -RecordingController recordingController
         -ServiceConnection serviceConnection
         -Boolean isServiceBound
-        
+
         +onCreate(Bundle? savedInstanceState)
         +onRequestPermissionsResult()
         -bindToRecordingService()
         -updateUI()
     }
-    
+
     %% Relationships
     RecordingController o-- RecorderEntry
     RecorderEntry --> SensorRecorder
     SensorRecorder <|.. RgbCameraRecorder
     SensorRecorder <|.. ThermalCameraRecorder
     SensorRecorder <|.. ShimmerRecorder
-    
+
     RecordingService --> NetworkClient
     RecordingService --> FileTransferManager
     RecordingService --> PreviewBus
-    
+
     RgbCameraRecorder --> PreviewBus
     RgbCameraRecorder --> TimeManager
     ThermalCameraRecorder --> TimeManager
     ShimmerRecorder --> TimeManager
-    
+
     MainActivity --> RecordingController
     MainActivity --> RecordingService : binds to
-    
+
     %% Dependencies
     RecordingService ..> RecordingController : controls
     PreviewBus <.. RecordingService : listens
@@ -191,7 +191,7 @@ classDiagram
 
 #### Composition and Ownership
 - **RecordingController** owns multiple **RecorderEntry** objects
-- **RecorderEntry** aggregates **SensorRecorder** implementations  
+- **RecorderEntry** aggregates **SensorRecorder** implementations
 - **RecordingService** owns **NetworkClient** and **FileTransferManager**
 - Each sensor recorder manages its own resources independently
 
@@ -200,7 +200,7 @@ classDiagram
 - **RgbCameraRecorder**, **ThermalCameraRecorder**, **ShimmerRecorder** implement interface
 - Enables polymorphic handling in **RecordingController**
 
-#### Service Integration  
+#### Service Integration
 - **MainActivity** binds to **RecordingService** via Android service binding
 - **RecordingService** controls **RecordingController** based on network commands
 - Broadcast intents coordinate UI updates with service state
@@ -220,9 +220,9 @@ classDiagram
 
 ### SensorRecorder Implementations
 
-#### RgbCameraRecorder  
+#### RgbCameraRecorder
 - **CameraX Integration**: Dual-pipeline VideoCapture (MP4) + ImageCapture (JPEG)
-- **Preview Pipeline**: Downsampling, throttling, PreviewBus emission  
+- **Preview Pipeline**: Downsampling, throttling, PreviewBus emission
 - **File Management**: CSV indexing, timestamp-based naming
 - **Performance**: Background threads for capture, coroutines for coordination
 
@@ -233,7 +233,7 @@ classDiagram
 - **Professional Thermal Imaging**: Iron, Rainbow, and Grayscale color palettes
 - **Graceful Fallback**: Simulation mode when hardware unavailable
 
-#### ShimmerRecorder (Production SDK Integration)  
+#### ShimmerRecorder (Production SDK Integration)
 - **Real Shimmer Android API**: ShimmerBluetooth, ShimmerConfig classes
 - **BLE Communication**: Shimmer3 GSR+ device connection with robust pairing
 - **12-bit ADC Precision**: Correct 0-4095 range conversion (not 16-bit)
@@ -251,7 +251,7 @@ classDiagram
 - **Connection Handling**: TCP socket management with reconnection logic
 - **Message Protocol**: Support for both v=1 framed and legacy newline JSON
 
-### FileTransferManager  
+### FileTransferManager
 - **ZIP Streaming**: Direct socket streaming without temporary files
 - **Session Packaging**: Recursive directory compression with metadata
 - **Error Handling**: Connection timeouts, partial transfer recovery
@@ -260,13 +260,13 @@ classDiagram
 
 ### Lifecycle Management
 - **Service Binding**: MainActivity connects to RecordingService for UI updates
-- **Foreground Service**: Prevents Android from killing recording process  
+- **Foreground Service**: Prevents Android from killing recording process
 - **Permission Handling**: Camera, storage, location permissions with fallback
 
 ### Threading Model
 - **Main Thread**: UI updates, service binding, permission requests
 - **Service Thread**: TCP server, command processing, network operations
-- **Background Threads**: Camera operations, file I/O, BLE communication  
+- **Background Threads**: Camera operations, file I/O, BLE communication
 - **Coroutines**: Structured concurrency for sensor start/stop coordination
 
 ### Storage Management
@@ -286,7 +286,7 @@ classDiagram
 - **Sensor Recorders**: Mock hardware dependencies, validate file outputs
 - **Utility Classes**: TimeManager sync logic, PreviewBus event delivery
 
-### Integration Testing  
+### Integration Testing
 - **Service Communication**: TCP server with mock PC client
 - **File Transfer**: End-to-end ZIP streaming validation
 - **Multi-Sensor**: Parallel sensor operation under realistic load
