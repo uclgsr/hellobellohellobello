@@ -29,7 +29,7 @@ FREQUENCY: 12 occurrences during testing period
 
 --------------------------------------------------------------------
 
-[2024-12-11 09:45:23.123] CRITICAL Qt Threading Error  
+[2024-12-11 09:45:23.123] CRITICAL Qt Threading Error
 ERROR: QPixmap: It is not safe to use pixmaps outside the GUI thread
 Thread ID: 0x7f8b2c002800 (PreviewManager worker thread)
 Widget: QLabel (camera_preview_label)
@@ -89,7 +89,7 @@ Issue 1: Direct GUI Manipulation from Worker Threads
 - Severity: CRITICAL
 - Occurrences: 47 incidents over 5 days
 
-Issue 2: Blocking I/O Operations on Main Thread  
+Issue 2: Blocking I/O Operations on Main Thread
 - Affected Components: Network connection, file I/O operations
 - Root Cause: Synchronous operations in GUI event handlers
 - Severity: HIGH
@@ -104,7 +104,7 @@ Issue 3: Shared Resource Access Without Proper Locking
 Issue 4: Improper Thread Lifecycle Management
 - Affected Components: Worker thread creation and cleanup
 - Root Cause: Missing thread.quit() and thread.wait() calls
-- Severity: MEDIUM  
+- Severity: MEDIUM
 - Impact: Resource leaks, zombie threads
 
 ====================================================================
@@ -132,7 +132,7 @@ CURRENT WORKAROUNDS DEPLOYED
    - Success rate: 78% (manual intervention still required 22% of time)
 
 2. UI Thread Checker (Development Build Only)
-   - Runtime detection of GUI access from wrong threads  
+   - Runtime detection of GUI access from wrong threads
    - Logs violations for debugging
    - Performance overhead: ~3% CPU usage
 

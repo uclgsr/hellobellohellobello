@@ -113,7 +113,7 @@ if [ -f "/etc/ssl/certs/server.crt" ]; then
     expiry_epoch=$(date -d "$expiry_date" +%s)
     current_epoch=$(date +%s)
     days_until_expiry=$(( (expiry_epoch - current_epoch) / 86400 ))
-    
+
     if [ "$days_until_expiry" -lt 7 ]; then
         echo "❌ TLS certificate expires in $days_until_expiry days"
     elif [ "$days_until_expiry" -lt 30 ]; then
@@ -141,30 +141,30 @@ import sys
 def test_device_connection(device_ip, device_port=8080):
     """Test basic connectivity to Android device"""
     print(f"Testing connection to {device_ip}:{device_port}")
-    
+
     try:
         # Test basic TCP connection
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(5)
         result = sock.connect_ex((device_ip, device_port))
-        
+
         if result == 0:
             print("✅ TCP connection successful")
-            
+
             # Test device query
             query = {
                 "v": 1,
                 "type": "query_capabilities",
                 "timestamp_ns": time.time_ns()
             }
-            
+
             query_json = json.dumps(query) + "\n"
             sock.send(query_json.encode())
-            
+
             # Try to receive response
             sock.settimeout(10)
             response = sock.recv(1024)
-            
+
             if response:
                 print("✅ Device responded to query")
                 try:
@@ -177,7 +177,7 @@ def test_device_connection(device_ip, device_port=8080):
                 print("❌ No response from device")
         else:
             print(f"❌ TCP connection failed: {result}")
-            
+
     except socket.timeout:
         print("❌ Connection timeout")
     except Exception as e:
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python device_connection_test.py <device_ip>")
         sys.exit(1)
-    
+
     device_ip = sys.argv[1]
     test_device_connection(device_ip)
 ```
@@ -286,12 +286,12 @@ class ConnectionMonitor:
             'disconnections': 0,
             'connection_durations': []
         }
-    
+
     def test_connection_stability(self, duration_minutes=10, test_interval=30):
         """Test connection stability over time"""
         print(f"Testing connection stability for {duration_minutes} minutes")
         end_time = time.time() + (duration_minutes * 60)
-        
+
         while time.time() < end_time:
             start_time = time.time()
             try:
@@ -299,21 +299,21 @@ class ConnectionMonitor:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(10)
                 sock.connect((self.hub_ip, self.hub_port))
-                
+
                 self.connection_stats['successful_connections'] += 1
                 print(f"{datetime.now()}: ✅ Connection successful")
-                
+
                 # Keep connection alive and monitor
                 self._monitor_connection(sock, start_time)
-                
+
             except Exception as e:
                 self.connection_stats['failed_connections'] += 1
                 print(f"{datetime.now()}: ❌ Connection failed: {e}")
-            
+
             time.sleep(test_interval)
-        
+
         self._print_stats()
-    
+
     def _monitor_connection(self, sock, start_time):
         """Monitor an active connection"""
         try:
@@ -325,25 +325,25 @@ class ConnectionMonitor:
                     "timestamp_ns": time.time_ns()
                 }
                 sock.send(json.dumps(message).encode() + b'\n')
-                
+
                 # Try to receive response
                 sock.settimeout(5)
                 response = sock.recv(1024)
                 if not response:
                     break
-                
+
                 time.sleep(5)
-            
+
             # Connection survived monitoring period
             duration = time.time() - start_time
             self.connection_stats['connection_durations'].append(duration)
-            
+
         except Exception as e:
             self.connection_stats['disconnections'] += 1
             print(f"{datetime.now()}: ⚠️  Connection dropped: {e}")
         finally:
             sock.close()
-    
+
     def _print_stats(self):
         """Print connection statistics"""
         stats = self.connection_stats
@@ -351,7 +351,7 @@ class ConnectionMonitor:
         print(f"Successful connections: {stats['successful_connections']}")
         print(f"Failed connections: {stats['failed_connections']}")
         print(f"Unexpected disconnections: {stats['disconnections']}")
-        
+
         if stats['connection_durations']:
             avg_duration = sum(stats['connection_durations']) / len(stats['connection_durations'])
             print(f"Average connection duration: {avg_duration:.2f} seconds")
@@ -412,7 +412,7 @@ import socket
 def configure_socket_keepalive(sock):
     """Configure TCP keep-alive for better connection stability"""
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-    
+
     # Platform-specific keep-alive settings
     import platform
     if platform.system() == 'Linux':
@@ -447,101 +447,101 @@ class NetworkPerformanceTest:
     def __init__(self, hub_ip, hub_port=9001):
         self.hub_ip = hub_ip
         self.hub_port = hub_port
-    
+
     def test_throughput(self, data_size_mb=10, chunk_size=8192):
         """Test network throughput"""
         print(f"Testing throughput with {data_size_mb}MB of data")
-        
+
         # Generate test data
         test_data = b'A' * chunk_size
         total_bytes = data_size_mb * 1024 * 1024
         chunks_to_send = total_bytes // chunk_size
-        
+
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((self.hub_ip, self.hub_port))
-            
+
             start_time = time.time()
             bytes_sent = 0
-            
+
             for i in range(chunks_to_send):
                 bytes_sent += sock.send(test_data)
-                
+
                 # Progress reporting
                 if i % 100 == 0:
                     progress = (i / chunks_to_send) * 100
                     elapsed = time.time() - start_time
                     current_speed = (bytes_sent / elapsed) / (1024 * 1024)  # MB/s
                     print(f"Progress: {progress:.1f}% - Speed: {current_speed:.2f} MB/s")
-            
+
             total_time = time.time() - start_time
             throughput = (bytes_sent / total_time) / (1024 * 1024)  # MB/s
-            
+
             print(f"Throughput test completed:")
             print(f"  Total bytes sent: {bytes_sent:,}")
             print(f"  Total time: {total_time:.2f} seconds")
             print(f"  Throughput: {throughput:.2f} MB/s")
-            
+
             sock.close()
             return throughput
-            
+
         except Exception as e:
             print(f"Throughput test failed: {e}")
             return 0
-    
+
     def test_latency(self, num_tests=100):
         """Test network latency"""
         print(f"Testing latency with {num_tests} ping tests")
-        
+
         latencies = []
-        
+
         for i in range(num_tests):
             try:
                 start_time = time.time()
-                
+
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(5)
                 sock.connect((self.hub_ip, self.hub_port))
-                
+
                 # Send small ping message
                 ping_msg = b'PING\n'
                 sock.send(ping_msg)
-                
+
                 # Wait for any response
                 response = sock.recv(4)
-                
+
                 latency = (time.time() - start_time) * 1000  # Convert to ms
                 latencies.append(latency)
-                
+
                 sock.close()
-                
+
                 if i % 10 == 0:
                     print(f"Ping {i+1}/{num_tests}: {latency:.2f} ms")
-                    
+
             except Exception as e:
                 print(f"Ping {i+1} failed: {e}")
-        
+
         if latencies:
             avg_latency = statistics.mean(latencies)
             min_latency = min(latencies)
             max_latency = max(latencies)
             std_dev = statistics.stdev(latencies) if len(latencies) > 1 else 0
-            
+
             print(f"Latency test results:")
             print(f"  Average: {avg_latency:.2f} ms")
             print(f"  Minimum: {min_latency:.2f} ms")
             print(f"  Maximum: {max_latency:.2f} ms")
             print(f"  Std Dev: {std_dev:.2f} ms")
             print(f"  Success rate: {len(latencies)}/{num_tests} ({len(latencies)/num_tests*100:.1f}%)")
-        
+
         return latencies
 
 if __name__ == "__main__":
     tester = NetworkPerformanceTest("192.168.1.100")
-    
+
     # Test latency first
     latencies = tester.test_latency(50)
-    
+
     # Test throughput
     throughput = tester.test_throughput(5)  # 5MB test
 ```
@@ -568,7 +568,7 @@ def optimize_socket_buffers(sock, buffer_size=65536):
     """Optimize socket buffer sizes for better performance"""
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, buffer_size)
-    
+
     # Disable Nagle's algorithm for real-time data
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 ```
@@ -637,27 +637,27 @@ class TLSDiagnostics:
     def __init__(self, hostname, port=8443):
         self.hostname = hostname
         self.port = port
-    
+
     def test_tls_connection(self):
         """Test TLS connection and report details"""
         print(f"Testing TLS connection to {self.hostname}:{self.port}")
-        
+
         try:
             # Create SSL context
             context = ssl.create_default_context()
-            
+
             # Test connection
             with socket.create_connection((self.hostname, self.port), timeout=10) as sock:
                 with context.wrap_socket(sock, server_hostname=self.hostname) as ssock:
                     print("✅ TLS connection successful")
-                    
+
                     # Get certificate information
                     cert = ssock.getpeercert()
                     cert_der = ssock.getpeercert(binary_form=True)
-                    
+
                     self._analyze_certificate(cert, cert_der)
                     self._analyze_connection(ssock)
-                    
+
         except ssl.SSLError as e:
             print(f"❌ SSL Error: {e}")
             self._diagnose_ssl_error(e)
@@ -665,29 +665,29 @@ class TLSDiagnostics:
             print(f"❌ Socket Error: {e}")
         except Exception as e:
             print(f"❌ Unexpected Error: {e}")
-    
+
     def _analyze_certificate(self, cert, cert_der):
         """Analyze certificate details"""
         print("\n--- Certificate Analysis ---")
-        
+
         # Basic certificate info
         print(f"Subject: {cert.get('subject', 'Unknown')}")
         print(f"Issuer: {cert.get('issuer', 'Unknown')}")
         print(f"Version: {cert.get('version', 'Unknown')}")
         print(f"Serial Number: {cert.get('serialNumber', 'Unknown')}")
-        
+
         # Validity dates
         not_before = cert.get('notBefore')
         not_after = cert.get('notAfter')
-        
+
         if not_before and not_after:
             not_before_dt = datetime.datetime.strptime(not_before, '%b %d %H:%M:%S %Y %Z')
             not_after_dt = datetime.datetime.strptime(not_after, '%b %d %H:%M:%S %Y %Z')
             now = datetime.datetime.now()
-            
+
             print(f"Valid from: {not_before_dt}")
             print(f"Valid until: {not_after_dt}")
-            
+
             if now < not_before_dt:
                 print("❌ Certificate not yet valid")
             elif now > not_after_dt:
@@ -695,49 +695,49 @@ class TLSDiagnostics:
             else:
                 days_remaining = (not_after_dt - now).days
                 print(f"✅ Certificate valid ({days_remaining} days remaining)")
-        
+
         # Subject Alternative Names
         san_list = cert.get('subjectAltName', [])
         if san_list:
             print("Subject Alternative Names:")
             for san_type, san_value in san_list:
                 print(f"  {san_type}: {san_value}")
-        
+
         # Advanced certificate analysis using pyOpenSSL
         try:
             x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, cert_der)
-            
+
             # Check key size
             public_key = x509.get_pubkey()
             key_size = public_key.bits()
             print(f"Key size: {key_size} bits")
-            
+
             if key_size < 2048:
                 print("⚠️  Key size below recommended minimum (2048 bits)")
-            
+
             # Check signature algorithm
             sig_alg = x509.get_signature_algorithm().decode()
             print(f"Signature algorithm: {sig_alg}")
-            
+
             if 'sha1' in sig_alg.lower():
                 print("⚠️  SHA-1 signature algorithm is deprecated")
-                
+
         except ImportError:
             print("pyOpenSSL not available for advanced certificate analysis")
         except Exception as e:
             print(f"Certificate analysis error: {e}")
-    
+
     def _analyze_connection(self, ssock):
         """Analyze TLS connection details"""
         print("\n--- Connection Analysis ---")
-        
+
         # TLS version
         version = ssock.version()
         print(f"TLS Version: {version}")
-        
+
         if version in ['TLSv1', 'TLSv1.1']:
             print("⚠️  TLS version is deprecated")
-        
+
         # Cipher suite
         cipher = ssock.cipher()
         if cipher:
@@ -745,23 +745,23 @@ class TLSDiagnostics:
             print(f"Cipher: {cipher_name}")
             print(f"Cipher version: {cipher_version}")
             print(f"Cipher strength: {cipher_bits} bits")
-            
+
             # Check for weak ciphers
             weak_ciphers = ['RC4', 'DES', 'NULL', 'EXPORT']
             if any(weak in cipher_name for weak in weak_ciphers):
                 print("❌ Weak cipher detected")
-        
+
         # Certificate chain
         cert_chain = ssock.getpeercert_chain()
         if cert_chain:
             print(f"Certificate chain length: {len(cert_chain)}")
-    
+
     def _diagnose_ssl_error(self, ssl_error):
         """Provide specific guidance for SSL errors"""
         error_msg = str(ssl_error).lower()
-        
+
         print("\n--- SSL Error Diagnosis ---")
-        
+
         if "certificate verify failed" in error_msg:
             print("Certificate verification failed. Possible causes:")
             print("- Certificate has expired")
@@ -769,19 +769,19 @@ class TLSDiagnostics:
             print("- Hostname doesn't match certificate")
             print("- Certificate chain is incomplete")
             print("- System time is incorrect")
-        
+
         elif "wrong version number" in error_msg:
             print("TLS version mismatch. Possible causes:")
             print("- Server doesn't support TLS (plain HTTP on HTTPS port)")
             print("- Client and server TLS versions incompatible")
             print("- Firewall or proxy interfering with connection")
-        
+
         elif "handshake failure" in error_msg:
             print("TLS handshake failed. Possible causes:")
             print("- No compatible cipher suites")
             print("- Server certificate configuration error")
             print("- Client certificate required but not provided")
-        
+
         elif "connection refused" in error_msg:
             print("Connection refused. Possible causes:")
             print("- Server not running on specified port")
@@ -790,11 +790,11 @@ class TLSDiagnostics:
 
 if __name__ == "__main__":
     import sys
-    
+
     if len(sys.argv) != 2:
         print("Usage: python tls_diagnostics.py <hostname>")
         sys.exit(1)
-    
+
     hostname = sys.argv[1]
     diagnostics = TLSDiagnostics(hostname)
     diagnostics.test_tls_connection()
@@ -845,13 +845,13 @@ private fun installClientCertificate() {
         // Load client certificate from assets
         val certInputStream = assets.open("client.p12")
         val certBytes = certInputStream.readBytes()
-        
+
         // Install certificate
         val intent = KeyChain.createInstallIntent()
         intent.putExtra(KeyChain.EXTRA_PKCS12, certBytes)
         intent.putExtra(KeyChain.EXTRA_NAME, "Sensor Platform Client")
         startActivityForResult(intent, REQUEST_CERT_INSTALL)
-        
+
     } catch (e: Exception) {
         Log.e("TLS", "Failed to install client certificate", e)
     }
@@ -870,17 +870,17 @@ private fun createTrustAllManager(): X509TrustManager {
 private fun createCustomTrustManager(): X509TrustManager {
     val trustStore = KeyStore.getInstance("BKS")
     val caInputStream = assets.open("ca.crt")
-    
+
     // Load CA certificate
     val cf = CertificateFactory.getInstance("X.509")
     val caCert = cf.generateCertificate(caInputStream) as X509Certificate
-    
+
     trustStore.load(null, null)
     trustStore.setCertificateEntry("ca", caCert)
-    
+
     val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
     tmf.init(trustStore)
-    
+
     return tmf.trustManagers[0] as X509TrustManager
 }
 ```
@@ -904,106 +904,106 @@ import pstats
 class TLSPerformanceOptimizer:
     def __init__(self):
         self.optimization_results = {}
-    
+
     def create_optimized_context(self, server_side=True):
         """Create performance-optimized SSL context"""
         if server_side:
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         else:
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        
+
         # Performance optimizations
         context.options |= ssl.OP_NO_COMPRESSION  # Disable compression for speed
         context.options |= ssl.OP_SINGLE_DH_USE   # Security and performance
         context.options |= ssl.OP_SINGLE_ECDH_USE # Security and performance
-        
+
         # Fast cipher suites (prioritize ECDHE for perfect forward secrecy)
         context.set_ciphers("ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS")
-        
+
         # Set minimum TLS version
         context.minimum_version = ssl.TLSVersion.TLSv1_2
-        
+
         # Enable session resumption for clients
         if not server_side:
             context.options |= ssl.OP_NO_TICKET  # Use session IDs instead of tickets
-        
+
         return context
-    
+
     def benchmark_tls_handshake(self, hostname, port, num_connections=100):
         """Benchmark TLS handshake performance"""
         print(f"Benchmarking TLS handshake performance ({num_connections} connections)")
-        
+
         context = self.create_optimized_context(server_side=False)
         handshake_times = []
-        
+
         for i in range(num_connections):
             try:
                 start_time = time.perf_counter()
-                
+
                 with socket.create_connection((hostname, port), timeout=10) as sock:
                     with context.wrap_socket(sock, server_hostname=hostname) as ssock:
                         handshake_time = time.perf_counter() - start_time
                         handshake_times.append(handshake_time)
-                
+
                 if i % 10 == 0:
                     avg_so_far = sum(handshake_times) / len(handshake_times)
                     print(f"Progress: {i+1}/{num_connections}, Avg: {avg_so_far*1000:.2f}ms")
-                    
+
             except Exception as e:
                 print(f"Connection {i+1} failed: {e}")
-        
+
         if handshake_times:
             avg_time = sum(handshake_times) / len(handshake_times)
             min_time = min(handshake_times)
             max_time = max(handshake_times)
-            
+
             print(f"TLS Handshake Performance:")
             print(f"  Average: {avg_time*1000:.2f}ms")
             print(f"  Minimum: {min_time*1000:.2f}ms")
             print(f"  Maximum: {max_time*1000:.2f}ms")
             print(f"  Success rate: {len(handshake_times)}/{num_connections}")
-            
+
             return avg_time
-        
+
         return None
-    
+
     def profile_tls_operations(self, hostname, port):
         """Profile TLS operations to identify bottlenecks"""
         print("Profiling TLS operations...")
-        
+
         profiler = cProfile.Profile()
         profiler.enable()
-        
+
         # Perform various TLS operations
         context = self.create_optimized_context(server_side=False)
-        
+
         try:
             with socket.create_connection((hostname, port), timeout=10) as sock:
                 with context.wrap_socket(sock, server_hostname=hostname) as ssock:
                     # Send some data
                     ssock.send(b"GET /health HTTP/1.1\r\nHost: " + hostname.encode() + b"\r\n\r\n")
                     response = ssock.recv(1024)
-                    
+
         except Exception as e:
             print(f"Profiling failed: {e}")
-        
+
         profiler.disable()
-        
+
         # Analyze profile
         stats = pstats.Stats(profiler)
         stats.sort_stats('cumulative')
-        
+
         print("Top TLS operations by time:")
         stats.print_stats(10)
-        
+
         return stats
 
 if __name__ == "__main__":
     optimizer = TLSPerformanceOptimizer()
-    
+
     # Benchmark handshake performance
     avg_time = optimizer.benchmark_tls_handshake("localhost", 8443, 50)
-    
+
     # Profile operations
     if avg_time:
         optimizer.profile_tls_operations("localhost", 8443)
@@ -1017,24 +1017,24 @@ if __name__ == "__main__":
 def create_high_performance_tls_server():
     """Create high-performance TLS server"""
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    
+
     # Load certificates
     context.load_cert_chain('/etc/ssl/certs/server.crt', '/etc/ssl/private/server.key')
-    
+
     # Performance optimizations
     context.options |= ssl.OP_NO_COMPRESSION
     context.options |= ssl.OP_SINGLE_DH_USE
     context.options |= ssl.OP_SINGLE_ECDH_USE
-    
+
     # Use ECDH for better performance
     context.set_ecdh_curve('prime256v1')
-    
+
     # Fast cipher suites
     context.set_ciphers('ECDHE+AESGCM:ECDHE+CHACHA20:!aNULL:!MD5:!DSS')
-    
+
     # Enable session caching
     context.set_session_cache_size(1000)
-    
+
     return context
 ```
 
@@ -1046,7 +1046,7 @@ class TLSSessionCache:
         self.cache = {}
         self.max_size = max_size
         self.timeout = timeout
-    
+
     def get_session(self, session_id):
         """Get cached session"""
         if session_id in self.cache:
@@ -1056,15 +1056,15 @@ class TLSSessionCache:
             else:
                 del self.cache[session_id]
         return None
-    
+
     def store_session(self, session_id, session_data):
         """Store session in cache"""
         if len(self.cache) >= self.max_size:
             # Remove oldest session
-            oldest_id = min(self.cache.keys(), 
+            oldest_id = min(self.cache.keys(),
                           key=lambda k: self.cache[k][1])
             del self.cache[oldest_id]
-        
+
         self.cache[session_id] = (session_data, time.time())
 ```
 
@@ -1093,11 +1093,11 @@ class HeartbeatDiagnostics:
         self.hub_port = hub_port
         self.received_heartbeats = []
         self.listening = False
-    
+
     def simulate_android_heartbeat(self, device_id="test_device"):
         """Simulate Android device sending heartbeats"""
         print(f"Simulating heartbeat from {device_id}")
-        
+
         heartbeat = {
             "v": 1,
             "type": "heartbeat",
@@ -1111,36 +1111,36 @@ class HeartbeatDiagnostics:
                 "network_type": "wifi"
             }
         }
-        
+
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(10)
             sock.connect((self.hub_ip, self.hub_port))
-            
+
             message = json.dumps(heartbeat) + "\n"
             sock.send(message.encode())
-            
+
             # Wait for response
             response = sock.recv(1024)
             if response:
                 print(f"✅ Hub responded: {response.decode().strip()}")
             else:
                 print("❌ No response from hub")
-            
+
             sock.close()
             return True
-            
+
         except Exception as e:
             print(f"❌ Failed to send heartbeat: {e}")
             return False
-    
+
     def listen_for_heartbeats(self, duration=60):
         """Listen for incoming heartbeat messages"""
         print(f"Listening for heartbeats for {duration} seconds...")
-        
+
         self.listening = True
         self.received_heartbeats = []
-        
+
         def listener():
             try:
                 server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1148,14 +1148,14 @@ class HeartbeatDiagnostics:
                 server_sock.bind(('0.0.0.0', 8081))  # Different port to avoid conflicts
                 server_sock.listen(5)
                 server_sock.settimeout(1)  # Short timeout for checking self.listening
-                
+
                 print("Heartbeat listener started on port 8081")
-                
+
                 while self.listening:
                     try:
                         client_sock, addr = server_sock.accept()
                         data = client_sock.recv(1024)
-                        
+
                         if data:
                             try:
                                 message = json.loads(data.decode().strip())
@@ -1168,39 +1168,39 @@ class HeartbeatDiagnostics:
                                     print(f"Received heartbeat from {addr[0]}: {message.get('device_id')}")
                             except json.JSONDecodeError:
                                 print(f"Received non-JSON data from {addr[0]}")
-                        
+
                         client_sock.close()
-                        
+
                     except socket.timeout:
                         continue
                     except Exception as e:
                         if self.listening:
                             print(f"Listener error: {e}")
-                
+
                 server_sock.close()
-                
+
             except Exception as e:
                 print(f"Failed to start heartbeat listener: {e}")
-        
+
         listener_thread = threading.Thread(target=listener)
         listener_thread.start()
-        
+
         # Wait for specified duration
         time.sleep(duration)
         self.listening = False
         listener_thread.join()
-        
+
         print(f"Heartbeat listening complete. Received {len(self.received_heartbeats)} heartbeats")
-        
+
         for hb in self.received_heartbeats:
             device_id = hb['message'].get('device_id', 'Unknown')
             battery = hb['message'].get('device_info', {}).get('battery_level', 'Unknown')
             print(f"  {hb['timestamp']}: {device_id} (Battery: {battery}%)")
-    
+
     def test_heartbeat_format(self):
         """Test heartbeat message format validation"""
         print("Testing heartbeat message formats...")
-        
+
         # Valid heartbeat
         valid_heartbeat = {
             "v": 1,
@@ -1215,10 +1215,10 @@ class HeartbeatDiagnostics:
                 "network_type": "cellular"
             }
         }
-        
+
         print("Valid heartbeat test:")
         self._send_test_heartbeat(valid_heartbeat)
-        
+
         # Test invalid formats
         invalid_tests = [
             # Missing required fields
@@ -1248,43 +1248,43 @@ class HeartbeatDiagnostics:
                 }
             }
         ]
-        
+
         for i, invalid_hb in enumerate(invalid_tests, 1):
             print(f"Invalid heartbeat test {i}:")
             self._send_test_heartbeat(invalid_hb)
-    
+
     def _send_test_heartbeat(self, heartbeat):
         """Send a test heartbeat and check response"""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
             sock.connect((self.hub_ip, self.hub_port))
-            
+
             message = json.dumps(heartbeat) + "\n"
             sock.send(message.encode())
-            
+
             response = sock.recv(1024)
             if response:
                 print(f"  Response: {response.decode().strip()}")
             else:
                 print("  No response received")
-            
+
             sock.close()
-            
+
         except Exception as e:
             print(f"  Error: {e}")
 
 if __name__ == "__main__":
     diagnostics = HeartbeatDiagnostics("192.168.1.100")
-    
+
     # Test sending heartbeat
     print("=== Testing Heartbeat Transmission ===")
     diagnostics.simulate_android_heartbeat("diagnostic_device")
-    
+
     # Test message formats
     print("\n=== Testing Message Formats ===")
     diagnostics.test_heartbeat_format()
-    
+
     # Listen for heartbeats (uncomment to test)
     # print("\n=== Listening for Heartbeats ===")
     # diagnostics.listen_for_heartbeats(30)
@@ -1298,33 +1298,33 @@ if __name__ == "__main__":
 class HeartbeatService : Service() {
     private var heartbeatTimer: Timer? = null
     private var heartbeatTask: TimerTask? = null
-    
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startHeartbeats()
         return START_STICKY  // Restart if killed
     }
-    
+
     private fun startHeartbeats() {
         stopHeartbeats()  // Stop any existing timer
-        
+
         heartbeatTimer = Timer()
         heartbeatTask = object : TimerTask() {
             override fun run() {
                 sendHeartbeat()
             }
         }
-        
+
         // Start immediately, then every 3 seconds
         heartbeatTimer?.scheduleAtFixedRate(heartbeatTask, 0, 3000)
-        
+
         Log.i("HeartbeatService", "Heartbeat service started")
     }
-    
+
     private fun sendHeartbeat() {
         try {
             val heartbeat = createHeartbeatMessage()
             val success = networkClient.sendMessage(heartbeat)
-            
+
             if (!success) {
                 Log.w("HeartbeatService", "Failed to send heartbeat, attempting reconnect")
                 // Attempt reconnection
@@ -1333,12 +1333,12 @@ class HeartbeatService : Service() {
                     networkClient.sendMessage(heartbeat)  // Retry
                 }
             }
-            
+
         } catch (e: Exception) {
             Log.e("HeartbeatService", "Heartbeat error", e)
         }
     }
-    
+
     private fun createHeartbeatMessage(): String {
         val deviceInfo = mapOf(
             "battery_level" to getBatteryLevel(),
@@ -1347,7 +1347,7 @@ class HeartbeatService : Service() {
             "uptime_ms" to SystemClock.elapsedRealtime(),
             "network_type" to getNetworkType()
         )
-        
+
         val heartbeat = mapOf(
             "v" to 1,
             "type" to "heartbeat",
@@ -1355,26 +1355,26 @@ class HeartbeatService : Service() {
             "device_id" to getDeviceId(),
             "device_info" to deviceInfo
         )
-        
+
         return JSONObject(heartbeat).toString()
     }
-    
+
     // Implement missing methods
     private fun getBatteryLevel(): Int {
         val batteryManager = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         return batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
     }
-    
+
     private fun getAvailableStorageMB(): Long {
         val statsFs = StatFs(filesDir.absolutePath)
         return statsFs.availableBytes / (1024 * 1024)
     }
-    
+
     private fun isRecording(): Boolean {
         // Check if recording service is active
         return RecordingController.isRecording()
     }
-    
+
     private fun getNetworkType(): String {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val networkInfo = connectivityManager.activeNetworkInfo
@@ -1391,13 +1391,13 @@ class HeartbeatService : Service() {
 ```kotlin
 // Handle Android battery optimization
 class BatteryOptimizationHelper(private val context: Context) {
-    
+
     fun requestBatteryOptimizationExemption() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val intent = Intent()
             val packageName = context.packageName
             val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-            
+
             if (!pm.isIgnoringBatteryOptimizations(packageName)) {
                 intent.action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
                 intent.data = Uri.parse("package:$packageName")
@@ -1405,7 +1405,7 @@ class BatteryOptimizationHelper(private val context: Context) {
             }
         }
     }
-    
+
     fun isOptimizationIgnored(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -1419,7 +1419,7 @@ class BatteryOptimizationHelper(private val context: Context) {
 // In your main activity
 private fun setupBatteryOptimization() {
     val batteryHelper = BatteryOptimizationHelper(this)
-    
+
     if (!batteryHelper.isOptimizationIgnored()) {
         AlertDialog.Builder(this)
             .setTitle("Battery Optimization")
@@ -1454,16 +1454,16 @@ class OptimizedHeartbeatManager(HeartbeatManager):
             reconnect_base_delay_s=2.0,      # Longer base delay
             reconnect_max_delay_s=60.0       # Longer max delay
         )
-    
+
     def is_device_offline(self, device_id: str) -> bool:
         """More conservative offline detection"""
         status = self.get_device_status(device_id)
         if not status or not status.last_heartbeat_time:
             return False  # Don't mark as offline if never received heartbeat
-        
+
         time_since_last = time.time() - status.last_heartbeat_time
         grace_period = self.heartbeat_interval_s * self.timeout_multiplier * 1.5  # Extra grace
-        
+
         return time_since_last > grace_period
 ```
 
@@ -1475,46 +1475,46 @@ class AdaptiveHeartbeatManager(HeartbeatManager):
         super().__init__()
         self.network_quality_samples = {}
         self.quality_window_size = 10
-    
+
     def process_heartbeat(self, message: dict) -> bool:
         """Process heartbeat with network quality tracking"""
         device_id = message.get('device_id')
         if not device_id:
             return False
-        
+
         # Calculate network delay
         received_time = time.time_ns()
         sent_time = message.get('timestamp_ns', received_time)
         network_delay = (received_time - sent_time) / 1_000_000  # Convert to ms
-        
+
         # Track network quality
         self._update_network_quality(device_id, network_delay)
-        
+
         # Adjust timeout based on network quality
         self._adjust_timeout_for_device(device_id)
-        
+
         return super().process_heartbeat(message)
-    
+
     def _update_network_quality(self, device_id: str, delay_ms: float):
         """Update network quality metrics for device"""
         if device_id not in self.network_quality_samples:
             self.network_quality_samples[device_id] = []
-        
+
         samples = self.network_quality_samples[device_id]
         samples.append(delay_ms)
-        
+
         # Keep only recent samples
         if len(samples) > self.quality_window_size:
             samples.pop(0)
-    
+
     def _adjust_timeout_for_device(self, device_id: str):
         """Adjust timeout based on observed network quality"""
         samples = self.network_quality_samples.get(device_id, [])
         if len(samples) < 3:
             return  # Not enough data
-        
+
         avg_delay = sum(samples) / len(samples)
-        
+
         # Adjust timeout multiplier based on network quality
         if avg_delay > 1000:  # High latency network
             multiplier = 6
@@ -1522,7 +1522,7 @@ class AdaptiveHeartbeatManager(HeartbeatManager):
             multiplier = 4
         else:  # Low latency
             multiplier = 3
-        
+
         # Store per-device timeout (you'd need to modify HeartbeatManager to support this)
         self._device_timeout_multipliers[device_id] = multiplier
 ```

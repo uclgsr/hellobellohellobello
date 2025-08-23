@@ -84,10 +84,10 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-video:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
-    
+
     // Camera2 API for advanced RAW capture capabilities
     implementation("androidx.camera:camera-extensions:$cameraxVersion")
-    
+
     // Samsung Camera SDK for advanced features and RAW DNG capture
     // Note: Samsung Camera SDK would be added here when available
     // For now, we'll use Camera2 API with Samsung-specific optimizations

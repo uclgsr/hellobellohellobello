@@ -82,7 +82,7 @@ To run from sources (development):
 
 **Essential Documentation:**
 - **[User Manual](docs/markdown/User_Manual.md)** - End-user guide for operating the platform
-- **[Developer Guide](docs/markdown/Developer_Guide.md)** - Technical implementation and development procedures  
+- **[Developer Guide](docs/markdown/Developer_Guide.md)** - Technical implementation and development procedures
 - **[Production Deployment Guide](docs/Production_Deployment_Guide.md)** - Enterprise deployment and security hardening
 - **[TRUE_TOPDON_SDK_INTEGRATION.md](docs/TRUE_TOPDON_SDK_INTEGRATION.md)** - **NEW**: Complete true SDK integration documentation with ±2°C thermal accuracy
 
@@ -91,7 +91,7 @@ To run from sources (development):
 
 **Technical Specifications:**
 - **[PROTOCOL.md](PROTOCOL.md)** - Complete communication protocol specification
-- **[TEST_PLAN.md](docs/TEST_PLAN.md)** - Comprehensive testing strategy and procedures  
+- **[TEST_PLAN.md](docs/TEST_PLAN.md)** - Comprehensive testing strategy and procedures
 - **[BACKUP_STRATEGY.md](docs/BACKUP_STRATEGY.md)** - Data backup and recovery procedures
 - **[TOPDON_SDK_INTEGRATION_ANALYSIS.md](docs/TOPDON_SDK_INTEGRATION_ANALYSIS.md)** - SDK integration analysis and comparison
 

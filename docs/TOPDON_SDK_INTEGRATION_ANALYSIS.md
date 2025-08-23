@@ -22,7 +22,7 @@ device.startStreaming() // Real hardware command with 12-bit ADC precision
 ```kotlin
 // TRUE SDK INTEGRATION - Now implemented in ThermalCameraRecorder.kt
 import com.energy.iruvc.ircmd.IRCMD
-import com.energy.iruvc.sdkisp.LibIRParse  
+import com.energy.iruvc.sdkisp.LibIRParse
 import com.energy.iruvc.sdkisp.LibIRProcess
 import com.energy.iruvc.dual.USBDualCamera
 
@@ -156,7 +156,7 @@ import com.energy.iruvc.sdkisp.LibIRParse
 
 class ThermalCameraRecorder(context: Context) {
     private val ircmd: IRCMD? = initializeTopdonSDK()
-    
+
     private fun initializeTopdonSDK(): IRCMD? {
         return try {
             val ircmdClass = Class.forName("com.energy.iruvc.ircmd.IRCMD")
@@ -178,15 +178,15 @@ private fun processRealThermalFrame(rawData: ByteArray) {
         val temperatureMatrix = LibIRProcess.convertToTemperature(
             parseResult.thermalData, width, height, emissivity
         )
-        
+
         // Professional thermal imaging with Iron color palette
         val thermalBitmap = generateThermalBitmap(temperatureMatrix, width, height)
-        
+
         // Real temperature statistics
         val centerTemp = temperatureMatrix[centerY * width + centerX]
         val minTemp = temperatureMatrix.minOrNull() ?: 0.0f
         val maxTemp = temperatureMatrix.maxOrNull() ?: 0.0f
-        
+
         logRealTemperatureData(centerTemp, minTemp, maxTemp)
     } catch (e: Exception) {
         // Fallback to simulation for development
@@ -229,7 +229,7 @@ private fun processRealThermalFrame(rawData: ByteArray) {
 ### ✅ All Long-term Benefits Achieved
 
 1. **✅ Research Validity**: Production-ready physiological thermal sensing research capability
-2. **✅ Production Readiness**: Real hardware deployment supported in research environments  
+2. **✅ Production Readiness**: Real hardware deployment supported in research environments
 3. **✅ Feature Completeness**: Full access to TC001 thermal imaging capabilities with professional color palettes
 4. **✅ Maintenance Reduction**: Vendor-supported SDK implementation with graceful simulation fallback
 

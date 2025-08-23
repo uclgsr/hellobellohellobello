@@ -28,13 +28,13 @@ This document defines performance budgets, timing constraints, data rate specifi
 ### Total System Data Budget
 
 **Per Device Per Hour:**
-- **High Quality Mode**: 32-53 GB/hour (RGB stills + thermal + video)  
+- **High Quality Mode**: 32-53 GB/hour (RGB stills + thermal + video)
 - **Standard Mode**: 25-40 GB/hour (video priority, reduced still rate)
 - **Compact Mode**: 4-6 GB/hour (video only + thermal + GSR)
 
 **Multi-Device Session (4 devices, 2 hours):**
 - **High Quality**: 256-424 GB total
-- **Standard**: 200-320 GB total  
+- **Standard**: 200-320 GB total
 - **Compact**: 32-48 GB total
 
 ### Storage Headroom Scenarios
@@ -49,7 +49,7 @@ This document defines performance budgets, timing constraints, data rate specifi
 
 **PC Hub Storage Planning:**
 - **Minimum**: 1 TB SSD for 10-15 standard sessions
-- **Recommended**: 2-4 TB SSD for 30-50 high-quality sessions  
+- **Recommended**: 2-4 TB SSD for 30-50 high-quality sessions
 - **Enterprise**: 8+ TB for 100+ sessions with exports
 
 ### Compression and Optimization
@@ -77,22 +77,22 @@ gantt
     title Preview Frame Latency Pipeline
     dateFormat X
     axisFormat %L
-    
+
     section Camera
     Capture          :0, 20
-    
-    section Processing  
+
+    section Processing
     JPEG Compress    :20, 60
     Base64 Encode    :60, 80
-    
+
     section Network
     TCP Transmit     :80, 120
-    
+
     section PC Display
     Decode Base64    :120, 140
     JPEG Decompress  :140, 170
     UI Update        :170, 200
-    
+
     section Budget
     Total Latency    :0, 200
 ```
@@ -112,10 +112,10 @@ gantt
 sequenceDiagram
     participant A as Android
     participant P as PC Time Server
-    
+
     Note over A: T1 = System.nanoTime()
     A->>P: UDP sync request (1-5 ms network)
-    Note over P: Process and respond (1-2 ms)  
+    Note over P: Process and respond (1-2 ms)
     P->>A: server_time response (1-5 ms network)
     Note over A: T2 = System.nanoTime()
     Note over A: offset = (server_time + (T2-T1)/2) - T2
@@ -131,7 +131,7 @@ sequenceDiagram
 
 **RGB Camera Timing:**
 - **Video Frame Rate**: 30 FPS (33.33 ms intervals)
-- **Still Capture Rate**: 6.67 Hz (150 ms intervals)  
+- **Still Capture Rate**: 6.67 Hz (150 ms intervals)
 - **Timestamp Precision**: Nanosecond (System.nanoTime())
 - **Jitter Tolerance**: ±10 ms from expected intervals
 
@@ -155,7 +155,7 @@ sequenceDiagram
 
 **CPU Utilization Targets:**
 - **Recording Idle**: <10% average CPU
-- **Recording Active**: 25-45% average CPU  
+- **Recording Active**: 25-45% average CPU
 - **Peak Load**: <80% sustained (thermal throttling prevention)
 - **Background Services**: <5% when not recording
 
@@ -167,11 +167,11 @@ sequenceDiagram
 
 **Storage I/O Performance:**
 - **Sequential Write**: 50+ MB/s sustained (thermal CSV)
-- **Random Write**: 10+ MB/s (RGB stills)  
+- **Random Write**: 10+ MB/s (RGB stills)
 - **Sync Operations**: <100 ms (CSV flush)
 - **Directory Operations**: <50 ms (session creation)
 
-### PC Controller Performance  
+### PC Controller Performance
 
 **Multi-Device Handling:**
 - **Device Connections**: 8+ simultaneous TCP connections
@@ -208,14 +208,14 @@ sequenceDiagram
 | Devices | Network Load | PC CPU | PC Memory | Storage Rate | Session Duration |
 |---------|--------------|--------|-----------|--------------|------------------|
 | 1 | 1-2 Mbps | 5-10% | 100 MB | 10 GB/hour | 4+ hours |
-| 2 | 2-4 Mbps | 8-15% | 150 MB | 20 GB/hour | 3-4 hours |  
+| 2 | 2-4 Mbps | 8-15% | 150 MB | 20 GB/hour | 3-4 hours |
 | 4 | 4-8 Mbps | 15-25% | 250 MB | 40 GB/hour | 2-3 hours |
 | 8 | 8-16 Mbps | 25-40% | 400 MB | 80 GB/hour | 1-2 hours |
 | 16 | 16-32 Mbps | 40-60% | 750 MB | 160 GB/hour | <1 hour |
 
 **Scaling Bottlenecks:**
 1. **Network Bandwidth**: WiFi saturation at 8+ devices
-2. **Storage I/O**: PC disk write limits at 12+ devices  
+2. **Storage I/O**: PC disk write limits at 12+ devices
 3. **CPU Processing**: Preview decoding limits at 16+ devices
 4. **Memory Usage**: Preview buffers grow linearly
 
@@ -227,7 +227,7 @@ sequenceDiagram
 - **Compression**: Enable ZIP compression for file transfers
 - **Connection Pooling**: Reuse TCP connections where possible
 
-**Storage Optimization:**  
+**Storage Optimization:**
 - **Write Coalescing**: Batch CSV writes to reduce I/O operations
 - **Background Compression**: Compress completed sessions offline
 - **Tiered Storage**: Move old sessions to slower storage
@@ -267,7 +267,7 @@ sequenceDiagram
 
 **Resource Monitoring:**
 - **CPU Usage**: Alert at >80% sustained
-- **Memory Usage**: Alert at >90% system RAM  
+- **Memory Usage**: Alert at >90% system RAM
 - **Disk Space**: Alert at <100 GB available
 - **Network Utilization**: Alert at >80% bandwidth
 
@@ -276,7 +276,7 @@ sequenceDiagram
 **Key Performance Indicators (KPIs):**
 - Time sync accuracy across all devices
 - Preview frame drop rate per device
-- Storage consumption rate vs available space  
+- Storage consumption rate vs available space
 - Network packet loss and retransmission rates
 - Session completion success rate
 
@@ -284,7 +284,7 @@ sequenceDiagram
 - Sync accuracy >10 ms between any two devices
 - Preview latency >500 ms sustained
 - Storage consumption >90% of available space
-- Network packet loss >1% sustained  
+- Network packet loss >1% sustained
 - Device disconnection rate >5% per hour
 
 This comprehensive performance specification ensures the system operates within defined resource constraints while maintaining data quality and user experience across various deployment scenarios.

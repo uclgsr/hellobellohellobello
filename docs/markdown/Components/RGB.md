@@ -23,44 +23,44 @@ graph TB
     subgraph "Camera Hardware"
         CS[Camera Sensor<br/>12MP+ Resolution]
     end
-    
+
     subgraph "CameraX Framework"
         CP[CameraProvider<br/>Hardware Abstraction]
         VC[VideoCapture<br/>H.264 Encoder]
-        IC[ImageCapture<br/>JPEG Encoder] 
+        IC[ImageCapture<br/>JPEG Encoder]
         PA[Preview Analysis<br/>Frame Processing]
     end
-    
+
     subgraph "RgbCameraRecorder"
         SCL[Still Capture Loop<br/>150ms Timer]
         PB[PreviewBus<br/>Event Emitter]
         CSV[CSV Writer<br/>Frame Index]
     end
-    
+
     subgraph "Storage Layer"
         VF[Video File<br/>video_{timestamp}.mp4]
-        SF[Still Frames<br/>frame_{timestamp}.jpg]  
+        SF[Still Frames<br/>frame_{timestamp}.jpg]
         CF[CSV Index<br/>rgb.csv]
     end
-    
-    subgraph "Network Layer"  
+
+    subgraph "Network Layer"
         RS[RecordingService<br/>TCP Broadcasting]
     end
-    
+
     CS --> CP
     CP --> VC
     CP --> IC
     CP --> PA
-    
+
     VC --> VF
     IC --> SCL
     IC --> SF
     PA --> PB
-    
+
     SCL --> CSV
     CSV --> CF
     PB --> RS
-    
+
     RS --> |TCP Frames| Network[Connected PC Clients]
 ```
 
@@ -82,12 +82,12 @@ class RgbCameraRecorder(
     override suspend fun start(sessionDir: File) {
         val provider = ProcessCameraProvider.getInstance(context).get()
         cameraProvider = provider
-        
+
         // Initialize concurrent use cases
         setupVideoCapture(sessionDir)
         setupImageCapture()
         setupPreviewAnalysis()
-        
+
         // Bind all use cases to lifecycle
         provider.bindToLifecycle(
             lifecycleOwner,
@@ -113,13 +113,13 @@ private fun setupVideoCapture(sessionDir: File) {
             )
         )
         .build()
-        
+
     videoCapture = VideoCapture.withOutput(recorder)
-    
+
     // Start recording immediately
     val videoFile = File(sessionDir, "video_${TimeManager.nowNanos()}.mp4")
     val outputOptions = FileOutputOptions.Builder(videoFile).build()
-    
+
     recording = recorder.prepareRecording(context, outputOptions)
         .start(ContextCompat.getMainExecutor(context)) { event ->
             handleRecordingEvent(event)
@@ -192,20 +192,20 @@ Parallel to video recording, the system captures high-resolution JPEG stills at 
 ```kotlin
 private fun startStillCaptureLoop(sessionDir: File) {
     val framesDir = File(sessionDir, "frames").apply { mkdirs() }
-    
+
     scope.launch {
         while (isRecording) {
             try {
                 val timestamp = TimeManager.nowNanos()
                 val filename = "frame_${timestamp}.jpg"
                 val outputFile = File(framesDir, filename)
-                
+
                 val outputOptions = ImageCapture.OutputFileOptions.Builder(outputFile)
                     .setMetadata(ImageCapture.Metadata().apply {
                         isReversedHorizontal = false
                     })
                     .build()
-                
+
                 imageCapture?.takePicture(
                     outputOptions,
                     executor,
@@ -214,17 +214,17 @@ private fun startStillCaptureLoop(sessionDir: File) {
                             // Update CSV index
                             csvWriter?.write("$timestamp,$filename\n")
                             csvWriter?.flush()
-                            
+
                             // Generate preview if needed
                             generatePreview(outputFile, timestamp)
                         }
-                        
+
                         override fun onError(exception: ImageCaptureException) {
                             Log.e(TAG, "Still capture failed", exception)
                         }
                     }
                 )
-                
+
                 delay(150) // 150ms interval = ~6.67 Hz
             } catch (e: Exception) {
                 Log.e(TAG, "Still capture loop error", e)
@@ -250,7 +250,7 @@ timestamp_ns,filename
 private fun initializeCsv(sessionDir: File) {
     csvFile = File(sessionDir, "rgb.csv")
     csvWriter = BufferedWriter(FileWriter(csvFile!!, true))
-    
+
     // Write header if new file
     if (csvFile!!.length() == 0L) {
         csvWriter!!.write("timestamp_ns,filename\n")
@@ -274,7 +274,7 @@ private fun setupPreviewAnalysis() {
         .setTargetResolution(Size(640, 480))  // Reduced resolution for network
         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
         .build()
-        
+
     previewAnalysis?.setAnalyzer(executor) { image ->
         processPreviewFrame(image)
     }
@@ -285,30 +285,30 @@ private fun setupPreviewAnalysis() {
 ```kotlin
 private fun processPreviewFrame(image: ImageProxy) {
     val currentTime = System.currentTimeMillis()
-    
+
     // Throttle to prevent network congestion
     if (currentTime - lastPreviewNs < 150) {
         image.close()
         return
     }
     lastPreviewNs = currentTime
-    
+
     try {
         // Convert ImageProxy to Bitmap
         val bitmap = imageProxyToBitmap(image)
-        
+
         // Compress to JPEG
         val outputStream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, 75, outputStream)
         val jpegBytes = outputStream.toByteArray()
-        
+
         // Emit to PreviewBus for network transmission
         PreviewBus.emit(PreviewFrame(
             deviceId = getDeviceId(),
             timestamp = TimeManager.nowNanos(),
             jpegData = jpegBytes
         ))
-        
+
     } catch (e: Exception) {
         Log.e(TAG, "Preview processing error", e)
     } finally {
@@ -325,7 +325,7 @@ The PreviewBus decouples preview generation from network transmission:
 object PreviewBus {
     private val _frames = MutableSharedFlow<PreviewFrame>()
     val frames = _frames.asSharedFlow()
-    
+
     fun emit(frame: PreviewFrame) {
         _frames.tryEmit(frame)
     }
@@ -363,13 +363,13 @@ sessions/20241218_143052_001/rgb/
 private fun checkStorageSpace(): Boolean {
     val sessionRoot = sessionDir ?: return false
     val availableBytes = sessionRoot.usableSpace
-    
+
     return when {
         availableBytes < 100_000_000 -> { // 100 MB
             Log.e(TAG, "Critical storage space: ${availableBytes / 1_000_000} MB")
             false
         }
-        availableBytes < 500_000_000 -> { // 500 MB  
+        availableBytes < 500_000_000 -> { // 500 MB
             Log.w(TAG, "Low storage space: ${availableBytes / 1_000_000} MB")
             true
         }
@@ -384,19 +384,19 @@ override suspend fun stop() {
     try {
         // Stop still capture loop
         isRecording = false
-        
+
         // Stop video recording
         recording?.stop()
         recording = null
-        
+
         // Finalize CSV
         csvWriter?.flush()
         csvWriter?.close()
-        
+
         // Release camera resources
         cameraProvider?.unbindAll()
         executor.shutdown()
-        
+
     } catch (e: Exception) {
         Log.e(TAG, "Error during stop", e)
     }
@@ -411,7 +411,7 @@ override suspend fun stop() {
 
 **Memory Management:**
 - **Image Buffers**: Reuse ImageProxy objects via CameraX buffer pools
-- **Preview Buffers**: Limit concurrent preview frames to 3-5 instances  
+- **Preview Buffers**: Limit concurrent preview frames to 3-5 instances
 - **Bitmap Recycling**: Explicitly recycle Bitmap objects after compression
 - **Stream Buffers**: Use appropriate buffer sizes for file I/O (64KB)
 
@@ -432,7 +432,7 @@ private fun handleCameraError(exception: Exception) {
             // Attempt recovery or graceful degradation
         }
         is IllegalStateException -> {
-            Log.e(TAG, "Camera in illegal state", exception)  
+            Log.e(TAG, "Camera in illegal state", exception)
             // Reset camera provider
         }
         else -> {
@@ -446,13 +446,13 @@ private fun handleCameraError(exception: Exception) {
 ```kotlin
 private fun handleStorageError(exception: IOException) {
     Log.e(TAG, "Storage I/O error", exception)
-    
+
     // Check available space
     if (!checkStorageSpace()) {
         // Trigger emergency stop
         scope.launch { stop() }
     }
-    
+
     // Notify service of error
     broadcastError("STORAGE_ERROR", exception.message)
 }

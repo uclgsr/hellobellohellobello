@@ -10,7 +10,7 @@
     <testcase classname="com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorderTest" name="testStopRecording" time="0.089"/>
     <testcase classname="com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorderTest" name="testDataProcessing" time="0.236"/>
   </testsuite>
-  
+
   <testsuite name="com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorderTest" tests="4" failures="1" errors="0" time="0.687" timestamp="2024-12-15T14:23:46">
     <testcase classname="com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorderTest" name="testInitialization" time="0.067"/>
     <testcase classname="com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorderTest" name="testStartRecording" time="0.234">
@@ -23,23 +23,23 @@
     <testcase classname="com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorderTest" name="testStopRecording" time="0.123"/>
     <testcase classname="com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorderTest" name="testMetadataExtraction" time="0.263"/>
   </testsuite>
-  
+
   <testsuite name="com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorderTest" tests="3" failures="0" errors="0" time="0.456" timestamp="2024-12-15T14:23:47">
     <testcase classname="com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorderTest" name="testCameraInitialization" time="0.187"/>
     <testcase classname="com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorderTest" name="testRecordingLifecycle" time="0.198"/>
     <testcase classname="com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorderTest" name="testVideoFormatSettings" time="0.071"/>
   </testsuite>
-  
+
   <testsuite name="com.yourcompany.sensorspoke.ui.MainActivityTest" tests="2" failures="0" errors="0" time="0.834" timestamp="2024-12-15T14:23:47">
     <testcase classname="com.yourcompany.sensorspoke.ui.MainActivityTest" name="testActivityCreation" time="0.445"/>
     <testcase classname="com.yourcompany.sensorspoke.ui.MainActivityTest" name="testNetworkConnectionFlow" time="0.389"/>
   </testsuite>
-  
+
   <testsuite name="com.yourcompany.sensorspoke.PytestBridgeTest" tests="2" failures="0" errors="0" time="0.347" timestamp="2024-12-15T14:23:48">
     <testcase classname="com.yourcompany.sensorspoke.PytestBridgeTest" name="testPytestBridgeInitialization" time="0.156"/>
     <testcase classname="com.yourcompany.sensorspoke.PytestBridgeTest" name="testTestResultsSerialization" time="0.191"/>
   </testsuite>
-  
+
   <system-out>
     <![CDATA[
 Test execution completed on Android API 34 emulator
@@ -49,7 +49,7 @@ Total memory used: 47.3 MB
 Test execution time: 2.847 seconds
     ]]>
   </system-out>
-  
+
   <system-err>
     <![CDATA[
 WARNING: Hardware sensor integrations not available in test environment

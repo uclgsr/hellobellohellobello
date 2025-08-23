@@ -13,15 +13,15 @@ flowchart LR
     UI[MainActivity] <--> Svc[RecordingService]
     Svc --> RC[RecordingController]
     RC --> RGB[RgbCameraRecorder]
-    RC --> TH[ThermalRecorder] 
+    RC --> TH[ThermalRecorder]
     RC --> GSR[ShimmerRecorder]
   end
-  
+
   subgraph PC["PC Controller"]
     NC[NetworkController] --> GUI[PyQt6 GUI]
     FTS[FileTransferServer] --> Storage[(Sessions)]
   end
-  
+
   PC <-->|TCP Control| Android
   Android -->|File Transfer| PC
 ```
@@ -30,7 +30,7 @@ flowchart LR
 ```mermaid
 graph TB
   subgraph WiFi["Local Network"]
-    A[Android Device<br/>192.168.1.100] 
+    A[Android Device<br/>192.168.1.100]
     P[PC Controller<br/>192.168.1.10]
   end
   A -.->|mDNS Discovery| P
@@ -48,7 +48,7 @@ PC -> Android: start_recording
 Android -> Android: Initialize sensors
 Android -> PC: ACK (success)
 note right: Recording active
-PC -> Android: stop_recording  
+PC -> Android: stop_recording
 Android -> Android: Finalize files
 Android -> PC: ACK (complete)
 @enduml
@@ -84,7 +84,7 @@ sessions/
 └── 20250818_173012_123_Device_ab12cd34/
     ├── rgb/
     │   ├── video_1692374212345678901.mp4
-    │   ├── frames/frame_*.jpg  
+    │   ├── frames/frame_*.jpg
     │   └── rgb.csv
     ├── thermal/
     │   ├── thermal.csv
@@ -102,14 +102,14 @@ gantt
   title Recording Session Timeline
   dateFormat X
   axisFormat %M:%S
-  
+
   section RGB Camera
   Video Recording: 0, 600000
   JPEG Capture: 0, 600000
-  
-  section GSR Sensor  
+
+  section GSR Sensor
   Data Streaming: 0, 600000
-  
+
   section File Transfer
   ZIP Creation: 600000, 630000
   Network Transfer: 630000, 660000
@@ -132,13 +132,13 @@ classDiagram
     +startSession(id)
     +stopSession()
   }
-  
+
   class SensorRecorder {
     <<interface>>
     +start(dir)
     +stop()
   }
-  
+
   RecordingController o-- SensorRecorder
   SensorRecorder <|.. RgbCameraRecorder
   SensorRecorder <|.. ThermalRecorder
@@ -173,7 +173,7 @@ graph LR
   A[Normal] --> B[Process]
   C[(Database)] --> D{{Decision}}
   E([Start/End]) --> F[[Subroutine]]
-  
+
   classDef errorClass fill:#ff6b6b
   classDef successClass fill:#51cf66
   class A errorClass
@@ -202,14 +202,14 @@ mermaid:
   theme: default
   themeVariables:
     primaryColor: "#00b4d8"
-    primaryTextColor: "#023e8a"  
+    primaryTextColor: "#023e8a"
     primaryBorderColor: "#0077b6"
 ```
 
 ## Usage Tips
 
 1. **Copy-Paste Ready**: All examples use standard syntax
-2. **Customizable**: Change labels, colors, and layout as needed  
+2. **Customizable**: Change labels, colors, and layout as needed
 3. **Scalable**: Add or remove components easily
 4. **Multiple Formats**: Both Mermaid and PlantUML versions provided
 5. **Documented**: Each example includes purpose and context
@@ -218,6 +218,6 @@ mermaid:
 
 - **VS Code**: Mermaid Preview, PlantUML extensions
 - **GitHub**: Native Mermaid support in markdown
-- **Online**: mermaid.live, plantuml.com  
+- **Online**: mermaid.live, plantuml.com
 - **Static Sites**: Hugo, Jekyll, Docusaurus support
 - **Export**: SVG, PNG, PDF formats available

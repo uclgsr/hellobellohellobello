@@ -7,7 +7,7 @@ This appendix consolidates key production code implementations referenced in the
 
 \begin{itemize}
     \item F.1 True Topdon TC001 SDK Integration (Android)
-    \item F.2 Production Shimmer3 GSR SDK Integration (Android) 
+    \item F.2 Production Shimmer3 GSR SDK Integration (Android)
     \item F.3 Hardware-Calibrated Temperature Processing (Android)
     \item F.4 Scientific-Accurate 12-bit ADC GSR Conversion (Android)
     \item F.5 Production-Ready Data Pipeline with Hardware Fallback (Python/Android)
@@ -20,7 +20,7 @@ The production implementation utilizes official Topdon SDK classes for hardware-
 \begin{verbatim}
 // Production Topdon TC001 Integration
 import com.energy.iruvc.ircmd.IRCMD
-import com.energy.iruvc.sdkisp.LibIRParse  
+import com.energy.iruvc.sdkisp.LibIRParse
 import com.energy.iruvc.sdkisp.LibIRProcess
 
 class ThermalCameraRecorder {
@@ -28,10 +28,10 @@ class ThermalCameraRecorder {
         return try {
             // Hardware-specific device detection
             val device = IRCMD.detectTC001Device(
-                vendorId = 0x0525, 
+                vendorId = 0x0525,
                 productIds = listOf(0xa4a2, 0xa4a5)
             )
-            
+
             // Hardware calibration setup
             IRCMD.initializeCalibration(device, emissivity = 0.95)
             true
@@ -41,14 +41,14 @@ class ThermalCameraRecorder {
             false
         }
     }
-    
+
     private fun processFrame(rawData: ByteArray): TemperatureFrame {
         // Hardware-calibrated temperature conversion
         val parseResult = LibIRParse.parseData(rawData, 256 * 192)
         val tempMatrix = LibIRProcess.convertToTemperature(
             parseResult.thermalData, 256, 192, emissivity = 0.95
         )
-        
+
         return TemperatureFrame(
             timestamp = getCurrentTimestampNanos(),
             temperatures = tempMatrix, // Calibrated °C values
@@ -67,23 +67,23 @@ class ThermalCameraRecorder {
 Scientific-grade GSR integration with correct 12-bit ADC conversion:
 
 \begin{verbatim}
-// Production Shimmer GSR Integration  
+// Production Shimmer GSR Integration
 import com.shimmerresearch.android.shimmerapi.ShimmerBluetooth
 import com.shimmerresearch.android.shimmerapi.ShimmerConfig
 
 class ShimmerRecorder {
     private fun configureDevice(): Boolean {
         val shimmerDevice = ShimmerBluetooth(targetDevice, context)
-        
+
         return try {
             // Production sensor configuration
             sensorConfig.enableSensor(ShimmerConfig.SENSOR_GSR)
             sensorConfig.setSamplingRate(128.0) // Hardware-validated 128 Hz
-            
+
             // Critical: 12-bit ADC precision (0-4095 range)
             shimmerDevice.writeGSRRange(ShimmerConfig.GSR_RANGE_AUTO)
             shimmerDevice.enableDefaultECGConfiguration()
-            
+
             true
         } catch (e: Exception) {
             // Graceful hardware fallback
@@ -91,20 +91,20 @@ class ShimmerRecorder {
             false
         }
     }
-    
+
     // Scientifically-accurate GSR conversion
     private fun convertGsrToMicroSiemens(rawValue: Int): Double {
         // CRITICAL: 12-bit ADC (0-4095), not 16-bit
         val normalizedValue = rawValue.toDouble() / 4095.0
-        
+
         // Hardware-calibrated conversion formula
         val resistance = ((2.420 / normalizedValue) - 1.0) * 40200.0
         return (1.0 / resistance) * 1_000_000.0 // Convert to µS
     }
-    
+
     private fun processSample(rawGsr: Int, rawPpg: Int) {
         val calibratedGsr = convertGsrToMicroSiemens(rawGsr)
-        
+
         recordSample(Sample(
             timestamp = getCurrentTimestampNanos(),
             gsrMicroSiemens = calibratedGsr,

@@ -224,7 +224,7 @@ class NetworkClient(private val context: Context) {
             "timeout_ms" to connectionTimeoutMs,
         )
     }
-    
+
     /**
      * Get user-friendly connection status for display in UI.
      */
@@ -239,7 +239,7 @@ class NetworkClient(private val context: Context) {
     // PC Discovery functionality
     private var discoveryListener: NsdManager.DiscoveryListener? = null
     private var resolveListener: NsdManager.ResolveListener? = null
-    
+
     /**
      * Discover PC Hub services on the network.
      * @param serviceType The service type to discover (e.g., "_gsr-controller._tcp.")
@@ -252,35 +252,35 @@ class NetworkClient(private val context: Context) {
         onLost: (String) -> Unit
     ) {
         stopDiscovery() // Stop any existing discovery
-        
+
         val sanitizedType = if (serviceType.endsWith(".local.")) serviceType else "$serviceType.local."
-        
+
         discoveryListener = object : NsdManager.DiscoveryListener {
             override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
                 Log.e(TAG, "PC Hub discovery start failed: $errorCode")
             }
-            
+
             override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
                 Log.e(TAG, "PC Hub discovery stop failed: $errorCode")
             }
-            
+
             override fun onDiscoveryStarted(serviceType: String) {
                 Log.i(TAG, "PC Hub discovery started for: $serviceType")
             }
-            
+
             override fun onDiscoveryStopped(serviceType: String) {
                 Log.i(TAG, "PC Hub discovery stopped for: $serviceType")
             }
-            
+
             override fun onServiceFound(serviceInfo: NsdServiceInfo) {
                 Log.d(TAG, "PC Hub service found: ${serviceInfo.serviceName}")
-                
+
                 // Resolve the service to get IP and port
                 resolveListener = object : NsdManager.ResolveListener {
                     override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
                         Log.w(TAG, "PC Hub resolve failed: $errorCode")
                     }
-                    
+
                     override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
                         Log.i(TAG, "PC Hub resolved: ${serviceInfo.serviceName} @ ${serviceInfo.host}:${serviceInfo.port}")
                         onDiscovered(
@@ -290,19 +290,19 @@ class NetworkClient(private val context: Context) {
                         )
                     }
                 }
-                
+
                 nsdManager.resolveService(serviceInfo, resolveListener)
             }
-            
+
             override fun onServiceLost(serviceInfo: NsdServiceInfo) {
                 Log.d(TAG, "PC Hub service lost: ${serviceInfo.serviceName}")
                 onLost(serviceInfo.serviceName)
             }
         }
-        
+
         nsdManager.discoverServices(sanitizedType, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
     }
-    
+
     /**
      * Stop PC Hub discovery.
      */
@@ -317,11 +317,11 @@ class NetworkClient(private val context: Context) {
         discoveryListener = null
         resolveListener = null
     }
-    
+
     /**
      * Enhanced connection method that automatically discovers and connects to first available PC Hub.
      * @param serviceType The service type to discover
-     * @param onConnected Callback when connection is established 
+     * @param onConnected Callback when connection is established
      * @param onFailed Callback when connection fails
      */
     fun autoConnectToPCHub(
@@ -330,15 +330,15 @@ class NetworkClient(private val context: Context) {
         onFailed: (String) -> Unit
     ) {
         Log.i(TAG, "Starting automatic PC Hub connection...")
-        
+
         discoverPCHubs(
             serviceType = serviceType,
             onDiscovered = { name, host, port ->
                 Log.i(TAG, "Attempting auto-connection to $name at $host:$port")
-                
+
                 // Stop discovery once we find a service
                 stopDiscovery()
-                
+
                 // Attempt connection
                 if (connect(host, port)) {
                     Log.i(TAG, "Auto-connection successful to $name")
@@ -352,7 +352,7 @@ class NetworkClient(private val context: Context) {
                 Log.d(TAG, "PC Hub service lost during discovery: $name")
             }
         )
-        
+
         // Set a timeout for discovery
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             if (discoveryListener != null && !isConnected()) {

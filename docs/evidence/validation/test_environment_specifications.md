@@ -7,7 +7,7 @@
 - **Processor:** Intel Core i7-8700K @ 3.70GHz (6 cores, 12 threads)
 - **Memory:** 32GB DDR4 RAM @ 2666MHz
 - **Storage:** Samsung 970 EVO Plus 1TB NVMe SSD
-- **Network Interface:** 
+- **Network Interface:**
   - Ethernet: Intel I219-V Gigabit (primary)
   - WiFi: Intel AX200 802.11ax (testing/backup)
 - **Graphics:** NVIDIA GeForce GTX 1070 (for UI acceleration)
@@ -16,7 +16,7 @@
 ### Android Device Test Platform
 - **Primary Devices:**
   - Samsung Galaxy S21 (Android 13, API level 33)
-  - Google Pixel 6 (Android 14, API level 34)  
+  - Google Pixel 6 (Android 14, API level 34)
   - OnePlus Nord N20 (Android 12, API level 31)
 - **Secondary Devices:**
   - Samsung Galaxy Tab S7 (Android 13, tablet form factor)
@@ -36,7 +36,7 @@
 Python: 3.12.3
 PyQt6: 6.5.0
 OpenCV: 4.8.0
-NumPy: 1.24.3  
+NumPy: 1.24.3
 Pandas: 2.0.2
 Cryptography: 41.0.1
 Pytest: 7.4.0
@@ -106,7 +106,7 @@ Coverage: 7.2.7
 
 ### Performance Standards
 - **Memory Leak Detection:** No growth >5MB over 4-hour sessions
-- **CPU Usage:** Average <25%, peak <60% during normal operation  
+- **CPU Usage:** Average <25%, peak <60% during normal operation
 - **Response Time:** UI interactions <200ms, network calls <2000ms
 - **Synchronization:** 95% of measurements within +/-10ms target
 
@@ -144,7 +144,7 @@ Coverage: 7.2.7
 - **Multi-Platform:** Windows and macOS testing not included in current scope
 - **Resource Constraints:** Testing limited to available hardware configuration
 
-### Software Limitations  
+### Software Limitations
 - **Simulation Fidelity:** Hardware sensor behavior approximated, not replicated
 - **Scale Testing:** Maximum 8 concurrent devices due to hardware constraints
 - **Long-Term Testing:** Extended tests limited to 8-hour maximum duration

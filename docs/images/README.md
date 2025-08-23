@@ -10,7 +10,7 @@ This directory contains sample visualizations demonstrating the enhanced visuali
 
 **Features**:
 - **RGB Camera**: Frame capture timeline (~6.67 Hz)
-- **Thermal Camera**: Temperature measurements (10 Hz)  
+- **Thermal Camera**: Temperature measurements (10 Hz)
 - **GSR Sensor**: Galvanic skin response and physiological responses (128 Hz)
 - **PPG Signal**: Photoplethysmography from GSR sensor (downsampled for display)
 - **Flash Sync Events**: Orange dashed lines marking synchronization points
@@ -77,7 +77,7 @@ These visualizations are referenced throughout the enhanced documentation:
 
 All visualizations are generated as high-resolution PNG files (300 DPI) suitable for:
 - Research publications and presentations
-- Quality control reports  
+- Quality control reports
 - System documentation
 - Technical specifications
 

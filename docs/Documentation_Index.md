@@ -44,7 +44,7 @@ Complete documentation index for the multi-modal physiological sensing platform.
 
 **Root-level essentials retained:**
 - `README.md` - Project overview
-- `PROTOCOL.md` - Communication specification  
+- `PROTOCOL.md` - Communication specification
 - `CHANGELOG.md` - Version history
 
 **Everything else organized in `docs/`** with clear categorization and consolidated guides:

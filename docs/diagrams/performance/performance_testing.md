@@ -13,7 +13,7 @@
 ```mermaid
 xychart-beta
     title "Preview Frame Rate vs CPU Usage"
-    x-axis "Preview FPS" [1, 2, 4, 6, 8, 10, 15, 20, 30]  
+    x-axis "Preview FPS" [1, 2, 4, 6, 8, 10, 15, 20, 30]
     y-axis "CPU Usage (%)" 0 --> 100
     line [5, 8, 12, 18, 25, 35, 55, 75, 95]
 ```
@@ -48,7 +48,7 @@ xychart-beta
 **Purpose**: Show memory stability during extended recording sessions.
 
 ```mermaid
-xychart-beta  
+xychart-beta
     title "Memory Usage - 30 Minute Recording Session"
     x-axis "Time (minutes)" [0, 5, 10, 15, 20, 25, 30]
     y-axis "Memory (MB)" 0 --> 300
@@ -58,7 +58,7 @@ xychart-beta
 **Components**:
 - Base app memory: ~85 MB
 - Camera buffers: ~15-20 MB
-- CSV write buffers: ~5 MB  
+- CSV write buffers: ~5 MB
 - Preview processing: ~10-15 MB
 - Network buffers: ~5 MB
 
@@ -80,7 +80,7 @@ xychart-beta
 | **Decode & Display** | 5-10ms | PC-side processing, GUI update |
 | **Total** | **43-93ms** | **End-to-end latency** |
 
-**Target**: <100ms for responsive live preview  
+**Target**: <100ms for responsive live preview
 **Achieved**: 43-93ms (meets requirement)
 
 ### Time Synchronization Precision
@@ -95,7 +95,7 @@ xychart-beta
 
 **Statistics**:
 - Mean error: 0.02ms (excellent)
-- Standard deviation: 1.8ms  
+- Standard deviation: 1.8ms
 - 95th percentile: <3ms
 - 99th percentile: <5ms (meets NFR2 requirement)
 
@@ -121,18 +121,18 @@ flowchart TD
     A[Error Detected] --> B{Critical Error?}
     B -->|Yes| C[Stop All Recording]
     B -->|No| D[Continue with Reduced Functionality]
-    
+
     C --> E[Preserve Partial Data]
     E --> F[Notify User]
     F --> G[Log for Analysis]
-    
+
     D --> H{Recoverable?}
     H -->|Yes| I[Attempt Recovery]
     H -->|No| J[Disable Component]
-    
+
     I --> K[Log Recovery Attempt]
     J --> L[Log Component Disabled]
-    
+
     K --> M[Monitor Status]
     L --> M
     G --> M
@@ -170,7 +170,7 @@ flowchart TD
 
 #### Unit Tests
 - **Scope**: Individual classes and methods
-- **Environment**: JUnit (Android), pytest (Python)  
+- **Environment**: JUnit (Android), pytest (Python)
 - **Mocking**: Hardware dependencies, network connections
 - **Coverage Target**: >90% line coverage
 
@@ -199,7 +199,7 @@ flowchart LR
     F -->|Yes| G[Performance Tests]
     G --> H[Generate Reports]
     H --> I[Deploy to Staging]
-    
+
     subgraph "Test Reports"
         H --> J[Coverage Report]
         H --> K[Performance Metrics]
@@ -209,7 +209,7 @@ flowchart LR
 
 **Pipeline Stages**:
 1. **Unit Tests**: Fast feedback (2-3 minutes)
-2. **Integration Tests**: Medium confidence (10-15 minutes)  
+2. **Integration Tests**: Medium confidence (10-15 minutes)
 3. **Performance Tests**: Full validation (30-60 minutes)
 4. **Hardware Tests**: Manual/scheduled (varies)
 
@@ -243,6 +243,6 @@ xychart-beta
 ### Optimization Techniques Applied
 - Preview throttling and downsampling
 - Streaming file transfer (no temp files)
-- Background thread optimization  
+- Background thread optimization
 - Memory pool reuse for camera buffers
 - Efficient JSON parsing and protocol handling

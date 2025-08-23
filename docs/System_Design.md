@@ -33,12 +33,12 @@ The system employs a **Hub-and-Spoke architecture** with a central PC acting as 
 │   PC Hub        │◄────────┤ Android Spoke 1  │
 │   (Controller)  │         │  (Sensor Node)  │
 └─────────────────┘         └─────────────────┘
-         ▲                           
+         ▲
          │                  ┌─────────────────┐
          └──────────────────┤ Android Spoke 2  │
          │                  │  (Sensor Node)  │
          │                  └─────────────────┘
-         │                           
+         │
          │                  ┌─────────────────┐
          └──────────────────┤ Android Spoke N  │
                             │  (Sensor Node)  │
@@ -61,40 +61,40 @@ graph TB
         R[Researcher/Investigator]
         S[Study Participants]
     end
-    
+
     subgraph "Core Platform"
         PC[PC Hub Controller<br/>Session Management & Data Aggregation]
         A1[Android Sensor Node 1<br/>RGB + Thermal + GSR]
         A2[Android Sensor Node 2<br/>RGB + Thermal + GSR]
         AN[Android Sensor Node N<br/>RGB + Thermal + GSR]
     end
-    
+
     subgraph "External Devices"
         TC[Topdon TC001<br/>Thermal Camera]
         GS[Shimmer GSR+<br/>Physiological Sensor]
     end
-    
+
     subgraph "Storage & Analysis"
         LS[Local File System<br/>Session Data Storage]
         AS[Analysis Software<br/>MATLAB/Python/R]
     end
-    
+
     R -->|controls sessions| PC
     R -->|monitors participants| S
     S -->|worn by| GS
     S -->|observed by| A1
     S -->|observed by| A2
     S -->|observed by| AN
-    
+
     PC <-->|TCP/IP commands & sync| A1
-    PC <-->|TCP/IP commands & sync| A2  
+    PC <-->|TCP/IP commands & sync| A2
     PC <-->|TCP/IP commands & sync| AN
-    
+
     A1 <-->|USB-OTG| TC
     A1 <-->|BLE| GS
     A2 <-->|USB-OTG| TC
     A2 <-->|BLE| GS
-    
+
     PC -->|aggregated data| LS
     LS -->|export formats| AS
 ```

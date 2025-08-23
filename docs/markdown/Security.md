@@ -61,36 +61,36 @@ graph TB
             PCData[Session Data Storage]
             PCConfig[System Configuration]
         end
-        
+
         subgraph "Android Devices (Semi-Trusted)"
             AndroidApp[SensorSpoke Application]
             AndroidData[Local Session Storage]
             AndroidOS[Android Operating System]
         end
     end
-    
+
     subgraph "External Interfaces (Untrusted)"
         WiFi[WiFi Network Infrastructure]
         USB[USB Devices<br/>Thermal Camera]
         BLE[BLE Devices<br/>Shimmer Sensors]
         FileSystem[External Storage<br/>USB Drives]
     end
-    
+
     subgraph "Physical Environment"
         Lab[Research Laboratory<br/>Physical Access]
         Participants[Study Participants<br/>Data Subjects]
     end
-    
+
     PCApp <--> |Encrypted Control| AndroidApp
     AndroidApp <--> |Unencrypted TCP| WiFi
     AndroidApp <--> |USB-OTG| USB
     AndroidApp <--> |BLE| BLE
     PCData --> |Backup/Export| FileSystem
-    
+
     classDef trusted fill:#90EE90
-    classDef semiTrusted fill:#FFE4B5  
+    classDef semiTrusted fill:#FFE4B5
     classDef untrusted fill:#FFB6C1
-    
+
     class PCApp,PCData,PCConfig trusted
     class AndroidApp,AndroidData,AndroidOS semiTrusted
     class WiFi,USB,BLE,FileSystem,Lab,Participants untrusted
@@ -126,14 +126,14 @@ graph TB
 ```
 Current State: MINIMAL
 - No device authentication between PC and Android
-- No user authentication on PC Controller application  
+- No user authentication on PC Controller application
 - Android devices rely on OS-level screen lock protection
 - No role-based access controls for research data
 ```
 
 **Network Security:**
 ```
-Current State: UNPROTECTED  
+Current State: UNPROTECTED
 - All TCP/IP communications are plaintext
 - No encryption for command/control messages
 - No message authentication or integrity checking
@@ -166,7 +166,7 @@ Current State: MODERATE
 3. **Plaintext Data Storage**: Participant data stored without encryption
 4. **No Access Controls**: No authentication required for PC controller access
 
-**Medium-Risk Vulnerabilities:**  
+**Medium-Risk Vulnerabilities:**
 1. **Network Discovery**: mDNS broadcasts expose device information
 2. **USB Device Trust**: Automatic trust of connected thermal cameras
 3. **BLE Security**: Limited pairing security for Shimmer sensors
@@ -191,7 +191,7 @@ Current State: MODERATE
 
 **Sensitive Data (Research Measurements):**
 - Individual GSR/PPG readings
-- Thermal temperature measurements  
+- Thermal temperature measurements
 - Session metadata with timestamps
 - Device identifiers and configurations
 
@@ -211,7 +211,7 @@ class SessionManager {
         // Stores participant ID directly - NO ANONYMIZATION
         val metadata = SessionMetadata(
             participantId = participantId,  // PRIVACY RISK
-            researcherId = getCurrentUser(), // PRIVACY RISK  
+            researcherId = getCurrentUser(), // PRIVACY RISK
             timestamp = System.currentTimeMillis()
         )
     }
@@ -236,7 +236,7 @@ class PrivacyManager {
     fun anonymizeParticipant(participantId: String): String {
         return generatePseudonym(participantId, sessionSalt)
     }
-    
+
     fun redactSensitiveMetadata(metadata: SessionMetadata): SessionMetadata {
         return metadata.copy(
             participantId = anonymizeParticipant(metadata.participantId),
@@ -258,25 +258,25 @@ sequenceDiagram
     participant A as Android Device
     participant W as WiFi Network<br/>(Untrusted)
     participant P as PC Controller
-    
+
     Note over A,P: mDNS Service Discovery (Plaintext)
     A->>W: Broadcast service "_gsr-controller._tcp"
     W->>P: Forward service announcement
-    
+
     Note over A,P: TCP Connection (Unencrypted)
     P->>W: Connect to Android:8080
     W->>A: Forward connection
-    
+
     Note over A,P: Command/Control (Plaintext JSON)
     P->>W: {"command":"start_recording"}
     W->>A: Forward command
     A->>W: {"status":"ok"}
     W->>P: Forward response
-    
-    Note over A,P: Preview Streaming (Unencrypted)  
+
+    Note over A,P: Preview Streaming (Unencrypted)
     A->>W: {"type":"preview_frame","jpeg_base64":"..."}
     W->>P: Forward preview data
-    
+
     Note over A,P: File Transfer (Unencrypted ZIP)
     A->>W: ZIP stream with session data
     W->>P: Forward file data
@@ -336,19 +336,19 @@ Mitigation: Device certificates and authentication protocols
 ```kotlin
 // Enhanced Network Security Implementation
 class SecureNetworkController {
-    
+
     fun setupTLSServer(): TLSServerSocket {
         val keyStore = loadOrGenerateKeyStore()
         val sslContext = SSLContext.getInstance("TLSv1.3")
-        
+
         val keyManagerFactory = KeyManagerFactory.getInstance("X509")
         keyManagerFactory.init(keyStore, keyStorePassword)
-        
+
         sslContext.init(keyManagerFactory.keyManagers, null, SecureRandom())
-        
+
         return sslContext.serverSocketFactory.createServerSocket(8443) // HTTPS port
     }
-    
+
     fun establishMutualTLS(clientCertificate: X509Certificate): Boolean {
         // Verify client certificate against trusted CA
         return certificateValidator.validateClientCertificate(clientCertificate)
@@ -359,19 +359,19 @@ class SecureNetworkController {
 **Certificate Management:**
 ```kotlin
 class CertificateManager {
-    
+
     fun generateDeviceCertificate(deviceId: String): X509Certificate {
         // Generate device-specific certificate with unique identity
         val keyPair = generateRSAKeyPair(2048)
-        
+
         val certBuilder = X509CertificateBuilder()
             .setSubject("CN=$deviceId,O=MultiModalSensing")
             .setValidityPeriod(365) // 1 year validity
             .setKeyUsage(KeyUsage.DIGITAL_SIGNATURE or KeyUsage.KEY_ENCIPHERMENT)
-            
+
         return certBuilder.build(keyPair, signingCertificate)
     }
-    
+
     fun validateCertificateChain(certificate: X509Certificate): Boolean {
         return try {
             certificate.verify(caCertificate.publicKey)
@@ -390,7 +390,7 @@ class CertificateManager {
 **Android Storage Encryption:**
 ```kotlin
 class SecureStorageManager {
-    
+
     private val encryptedSharedPrefs = EncryptedSharedPreferences.create(
         "secure_config",
         MasterKeys.AES256_GCM_SPEC,
@@ -398,11 +398,11 @@ class SecureStorageManager {
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
-    
+
     fun encryptSessionData(sessionDir: File, password: CharArray) {
         val cipher = createAESGCMCipher()
         val secretKey = deriveKeyFromPassword(password, generateSalt())
-        
+
         sessionDir.walkTopDown().forEach { file ->
             if (file.isFile) {
                 val encryptedFile = File(file.parent, "${file.name}.enc")
@@ -411,7 +411,7 @@ class SecureStorageManager {
             }
         }
     }
-    
+
     private fun createAESGCMCipher(): Cipher {
         return Cipher.getInstance("AES/GCM/NoPadding")
     }
@@ -422,29 +422,29 @@ class SecureStorageManager {
 ```python
 # Python PC Controller - Secure Data Handling
 class SecureDataManager:
-    
+
     def encrypt_session_directory(self, session_path: Path, key: bytes):
         """Encrypt all files in session directory using AES-256-GCM"""
-        
+
         for file_path in session_path.rglob('*'):
             if file_path.is_file() and not file_path.suffix == '.enc':
                 encrypted_path = file_path.with_suffix(file_path.suffix + '.enc')
-                
+
                 with open(file_path, 'rb') as plaintext_file:
                     data = plaintext_file.read()
-                
+
                 # Encrypt with AES-256-GCM
                 cipher = AES.new(key, AES.MODE_GCM)
                 ciphertext, auth_tag = cipher.encrypt_and_digest(data)
-                
+
                 # Store IV, auth tag, and ciphertext
                 with open(encrypted_path, 'wb') as encrypted_file:
                     encrypted_file.write(cipher.nonce)  # 16 bytes
-                    encrypted_file.write(auth_tag)      # 16 bytes  
+                    encrypted_file.write(auth_tag)      # 16 bytes
                     encrypted_file.write(ciphertext)
-                
+
                 file_path.unlink()  # Delete plaintext
-    
+
     def generate_session_key(self) -> bytes:
         """Generate cryptographically strong session key"""
         return os.urandom(32)  # 256-bit key
@@ -457,36 +457,36 @@ class SecureDataManager:
 **Multi-Factor Authentication:**
 ```kotlin
 class AuthenticationManager {
-    
+
     fun authenticateResearcher(credentials: UserCredentials): AuthResult {
         // Primary authentication (username/password)
         val primaryAuth = validateCredentials(credentials)
         if (!primaryAuth.success) {
             return AuthResult.FAILURE
         }
-        
+
         // Secondary authentication (mobile app or hardware token)
         val secondaryAuth = requestSecondaryAuthentication(credentials.username)
         if (!secondaryAuth.success) {
-            return AuthResult.FAILURE  
+            return AuthResult.FAILURE
         }
-        
+
         // Generate session token with limited lifetime
         val sessionToken = generateSessionToken(
             userId = credentials.username,
             permissions = getUserPermissions(credentials.username),
             expiryMinutes = 480 // 8 hour session
         )
-        
+
         return AuthResult.SUCCESS(sessionToken)
     }
-    
+
     fun authorizeAction(sessionToken: String, action: String, resource: String): Boolean {
         val session = validateSessionToken(sessionToken)
         if (session == null || session.isExpired()) {
             return false
         }
-        
+
         return session.permissions.contains("$action:$resource")
     }
 }
@@ -495,29 +495,29 @@ class AuthenticationManager {
 **Role-Based Access Control:**
 ```python
 class AccessControlManager:
-    
+
     ROLES = {
         'principal_investigator': {
             'permissions': ['create_session', 'view_all_data', 'export_data', 'manage_users']
         },
         'research_assistant': {
-            'permissions': ['create_session', 'view_assigned_data', 'export_assigned_data']  
+            'permissions': ['create_session', 'view_assigned_data', 'export_assigned_data']
         },
         'data_analyst': {
             'permissions': ['view_anonymized_data', 'export_anonymized_data']
         }
     }
-    
+
     def check_permission(self, user_id: str, action: str, resource_id: str) -> bool:
         user_roles = self.get_user_roles(user_id)
         required_permission = f"{action}:{resource_id}"
-        
+
         for role in user_roles:
             role_permissions = self.ROLES[role]['permissions']
-            if any(self.permission_matches(perm, required_permission) 
+            if any(self.permission_matches(perm, required_permission)
                    for perm in role_permissions):
                 return True
-                
+
         return False
 ```
 
@@ -526,31 +526,31 @@ class AccessControlManager:
 **Data Loss Prevention:**
 ```kotlin
 class DataLossPrevention {
-    
+
     fun scanForSensitiveData(filePath: String): ScanResult {
         val content = File(filePath).readText()
         val violations = mutableListOf<PolicyViolation>()
-        
+
         // Check for PII patterns
         if (containsPersonalIdentifiers(content)) {
             violations.add(PolicyViolation.PII_DETECTED)
         }
-        
+
         // Check for unencrypted biometric data
         if (containsBiometricData(content) && !isEncrypted(filePath)) {
             violations.add(PolicyViolation.UNENCRYPTED_BIOMETRIC)
         }
-        
+
         return ScanResult(violations)
     }
-    
+
     fun quarantineSensitiveFile(filePath: String) {
         val quarantineDir = File(context.cacheDir, "quarantine")
         quarantineDir.mkdirs()
-        
+
         val originalFile = File(filePath)
         val quarantineFile = File(quarantineDir, originalFile.name)
-        
+
         originalFile.renameTo(quarantineFile)
         logSecurityEvent("FILE_QUARANTINED", filePath)
     }
@@ -560,11 +560,11 @@ class DataLossPrevention {
 **Audit Logging and Monitoring:**
 ```python
 class SecurityAuditLogger:
-    
-    def log_security_event(self, event_type: str, user_id: str, 
+
+    def log_security_event(self, event_type: str, user_id: str,
                           resource: str, outcome: str, details: dict):
         """Log security-relevant events for compliance and monitoring"""
-        
+
         audit_entry = {
             'timestamp': datetime.utcnow().isoformat(),
             'event_type': event_type,
@@ -574,11 +574,11 @@ class SecurityAuditLogger:
             'source_ip': self.get_client_ip(),
             'details': details
         }
-        
+
         # Write to secure audit log (append-only, integrity protected)
         with open(self.audit_log_path, 'a') as log_file:
             log_file.write(json.dumps(audit_entry) + '\n')
-        
+
         # Send critical events to SIEM
         if event_type in ['AUTHENTICATION_FAILURE', 'UNAUTHORIZED_ACCESS', 'DATA_EXPORT']:
             self.send_to_siem(audit_entry)
@@ -598,7 +598,7 @@ class SecurityAuditLogger:
 
 **HIPAA Compliance (US Healthcare Research):**
 - **Administrative Safeguards**: User training, access controls, audit procedures
-- **Physical Safeguards**: Device encryption, secure disposal, facility access controls  
+- **Physical Safeguards**: Device encryption, secure disposal, facility access controls
 - **Technical Safeguards**: Data encryption, authentication, audit logging
 
 **Research Ethics Requirements:**

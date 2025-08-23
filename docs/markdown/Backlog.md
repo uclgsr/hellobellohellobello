@@ -22,7 +22,7 @@ This document tracks near-term tasks and priorities. It complements CHANGELOG.md
 ### P3 — Android Spoke Completeness (MVVM, Sensors)
 - ThermalCameraRecorder (Topdon TC001) SDK integration
   - Stream radiometric frames (256x192@25 Hz) and append CSV rows: `timestamp_ns,w,h,v0..v49151`.
-  - Persist accurate metadata (emissivity, calibration, temperature units) and device settings per session. 
+  - Persist accurate metadata (emissivity, calibration, temperature units) and device settings per session.
 - ShimmerRecorder (ShimmerAndroidAPI)
   - Implement BLE connect, send start (0x07) and stop (0x20) commands.
   - Parse notifications; compute GSR (μS) with correct 12-bit ADC pipeline and range handling; log `timestamp_ns,gsr_microsiemens,ppg_raw`.

@@ -16,6 +16,7 @@ dependencies = [
     "pybind11>=2.11",
     "pandas>=2.2",
     "h5py>=3.10",
+    "pyinstaller>=6.8",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +26,13 @@ dev = [
     "pytest-timeout>=2.1",
     "ruff>=0.1.0",
     "mypy>=1.0",
+    "pre-commit>=3.0.0",
+    "black>=25.0.0",
+    "isort>=6.0.0",
+    "bandit>=1.8.0",
+    "pytest-cov>=6.0.0",
+]
+build = [
     "pyinstaller>=6.8",
 ]
 
@@ -48,7 +56,7 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-# Enable common rule sets: 
+# Enable common rule sets:
 # - E/F/W (pycodestyle/pyflakes), I (isort), B (flake8-bugbear), UP (pyupgrade)
 select = ["E", "F", "W", "I", "B", "UP"]
 ignore = [

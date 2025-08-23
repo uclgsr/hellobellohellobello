@@ -8,32 +8,32 @@ flowchart TD
     subgraph CNS["[AI] Central Nervous System"]
         BRAIN["Brain (Emotion Processing)<br/>[UNICODE] Amygdala (Fear/Stress)<br/>[UNICODE] Prefrontal Cortex (Cognitive Load)<br/>[UNICODE] Hypothalamus (Stress Response)"]
     end
-    
+
     subgraph ANS["[SIGNAL] Autonomic Nervous System"]
         SYMPATH["Sympathetic Branch<br/>(Fight-or-Flight Response)"]
         PARASYMPATH["Parasympathetic Branch<br/>(Rest-and-Digest)"]
     end
-    
+
     %% Stress Response Chain
     subgraph RESPONSE["[CRITICAL] Stress Response Cascade"]
         STRESSOR["[UNICODE] Stressor<br/>(Cognitive/Emotional/Physical)"]
         ACTIVATION["[SIGNAL] Sympathetic Activation<br/>Norepinephrine Release"]
         GLANDS["[UNICODE] Sweat Gland Activation<br/>Eccrine Glands in Palms/Fingers"]
     end
-    
+
     %% Physical Manifestation
     subgraph SKIN["[UNICODE] Skin Conductance"]
         SWEAT["[UNICODE] Sweat Secretion<br/>NaCl + H2O increases<br/>skin ionic conductivity"]
         CONDUCTANCE["[DATA] Measurable Change<br/>Baseline: 2-20 [UNICODE]S<br/>Response: +0.1-3.0 [UNICODE]S"]
         ELECTRODES["[SENSOR] GSR Electrodes<br/>Ag/AgCl on index/middle fingers<br/>0.5V DC measurement"]
     end
-    
+
     %% Measurement Components
     subgraph SIGNAL["[PERFORMANCE] GSR Signal Components"]
         TONIC["[DATA] Tonic Level (SCL)<br/>Baseline arousal state<br/>Slow changes (minutes)"]
         PHASIC["[SIGNAL] Phasic Response (SCR)<br/>Event-related peaks<br/>1-3 second onset<br/>5-10 second recovery"]
     end
-    
+
     %% Timeline
     subgraph TIMELINE["[TIME] Response Timeline"]
         T0["T+0s: Stimulus"]
@@ -41,7 +41,7 @@ flowchart TD
         T2["T+3-5s: Peak Response<br/>Maximum conductance"]
         T3["T+5-15s: Recovery<br/>Return to baseline"]
     end
-    
+
     %% Connections
     BRAIN --> ANS
     ANS --> SYMPATH
@@ -54,15 +54,15 @@ flowchart TD
     ELECTRODES --> SIGNAL
     SIGNAL --> TONIC
     SIGNAL --> PHASIC
-    
+
     %% Timeline connections
     T0 --> T1 --> T2 --> T3
-    
+
     %% Key characteristics
     PROPERTIES["[LIST] GSR Characteristics<br/>[UNICODE] Involuntary response<br/>[UNICODE] Cannot be consciously controlled<br/>[UNICODE] Reflects emotional arousal<br/>[UNICODE] Independent of stimulus valence<br/>[UNICODE] Correlates with stress, attention, effort"]
-    
+
     SIGNAL --> PROPERTIES
-    
+
     %% Styling
     classDef cnsStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef ansStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
@@ -71,7 +71,7 @@ flowchart TD
     classDef signalStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px
     classDef timeStyle fill:#f1f8e9,stroke:#689f38,stroke-width:2px
     classDef propStyle fill:#e0f2f1,stroke:#00796b,stroke-width:2px
-    
+
     class CNS,BRAIN cnsStyle
     class ANS,SYMPATH,PARASYMPATH ansStyle
     class RESPONSE,STRESSOR,ACTIVATION,GLANDS responseStyle
@@ -88,49 +88,49 @@ flowchart TD
     %% Face diagram with ROIs
     subgraph FACE["[UNICODE] Facial Thermal Regions of Interest"]
         NOSE["[UNICODE] Nasal Region<br/>Primary stress indicator<br/>-0.3degC to -0.7degC cooling<br/>Sympathetic vasoconstriction"]
-        
+
         FOREHEAD["[AI] Forehead<br/>Cognitive load indicator<br/>+0.2degC to +0.5degC warming<br/>Increased blood flow"]
-        
+
         PERIORBITAL["[UNICODE] Periorbital Area<br/>Emotional arousal<br/>+/-0.1degC to +/-0.3degC<br/>Varies with stress type"]
-        
+
         CHEEKS["[UNICODE] Cheek Region<br/>Social stress response<br/>Temperature changes<br/>Context-dependent"]
     end
-    
+
     %% Physiological mechanisms
     subgraph MECHANISMS["[UNIT] Physiological Mechanisms"]
         VASOCONSTRICTION["[UNICODE] Vasoconstriction<br/>Sympathetic nervous system<br/>Reduced blood flow<br/>-> Temperature decrease"]
-        
+
         VASODILATION["[THERMAL] Vasodilation<br/>Cognitive effort<br/>Increased blood flow<br/>-> Temperature increase"]
-        
+
         PERSPIRATION["[UNICODE] Perspiration<br/>Evaporative cooling<br/>Sweat gland activation<br/>-> Localized cooling"]
     end
-    
+
     %% Measurement specifications
     subgraph THERMAL_SPECS["[UNICODE] Thermal Camera Specifications"]
         CAMERA["[TARGET] Topdon TC001<br/>256[UNICODE]192 pixel resolution<br/>25Hz frame rate<br/>+/-0.1degC accuracy<br/>7.5-14[UNICODE]m spectral range"]
-        
+
         PROCESSING["[INTEGRATION] Image Processing<br/>[UNICODE] ROI temperature extraction<br/>[UNICODE] Temporal filtering<br/>[UNICODE] Motion compensation<br/>[UNICODE] Baseline normalization"]
     end
-    
+
     %% Research findings
     subgraph FINDINGS["[DATA] Research Findings"]
         RTI_STUDY["[TEST] RTI International (2024)<br/>Nasal cooling: 0.3-0.7degC<br/>Cognitive load correlation: r=0.68<br/>Response time: 10-30 seconds"]
-        
+
         ZHANG_STUDY["[PERFORMANCE] Zhang et al. (2021)<br/>Multi-ROI approach<br/>89.7% stress classification<br/>FLIR Lepton 160[UNICODE]120, 9Hz"]
-        
+
         LIMITATIONS["[WARNING] Known Limitations<br/>[UNICODE] Ambient temperature effects<br/>[UNICODE] Individual variation<br/>[UNICODE] Motion artifacts<br/>[UNICODE] Lighting conditions"]
     end
-    
+
     %% Connections
     NOSE --> VASOCONSTRICTION
     FOREHEAD --> VASODILATION
     PERIORBITAL --> VASODILATION
     CHEEKS --> PERSPIRATION
-    
+
     CAMERA --> PROCESSING
     PROCESSING --> RTI_STUDY
     PROCESSING --> ZHANG_STUDY
-    
+
     %% Thermal response timeline
     subgraph THERMAL_TIMELINE["[TIME] Thermal Response Timeline"]
         TT0["T+0s: Stress Onset"]
@@ -138,16 +138,16 @@ flowchart TD
         TT2["T+1-2min: Peak Change<br/>Maximum temperature shift"]
         TT3["T+3-5min: Stabilization<br/>New thermal equilibrium"]
     end
-    
+
     TT0 --> TT1 --> TT2 --> TT3
-    
+
     %% Styling
     classDef faceStyle fill:#ffebee,stroke:#d32f2f,stroke-width:2px
     classDef mechStyle fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
     classDef specStyle fill:#e0f2f1,stroke:#00796b,stroke-width:2px
     classDef findingStyle fill:#fff8e1,stroke:#ff8f00,stroke-width:2px
     classDef timeStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    
+
     class FACE,NOSE,FOREHEAD,PERIORBITAL,CHEEKS faceStyle
     class MECHANISMS,VASOCONSTRICTION,VASODILATION,PERSPIRATION mechStyle
     class THERMAL_SPECS,CAMERA,PROCESSING specStyle
@@ -208,7 +208,7 @@ flowchart TD
 
 **Table 2.2**: Detailed sensor specifications for the Shimmer3 GSR+ and Topdon TC001 thermal camera, documenting the research-grade capabilities that enable precise physiological measurements.
 
-**Thesis Placement**: 
+**Thesis Placement**:
 - Chapter 2, Section 2.1 (Physiological Foundations)
 - Chapter 2, Section 2.2 (Contactless Measurement Technologies)
 - Chapter 2, Section 2.3 (Comparative Analysis of Stress Indicators)

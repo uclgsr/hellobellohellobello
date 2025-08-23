@@ -82,9 +82,9 @@ C:\Users\{username}\Documents\MultiModalSensing\
 
 ### RGB Camera Data Schema (`rgb.csv`)
 
-**Purpose**: Index of captured still frames with precise timestamps  
-**Location**: `sessions/{session_id}/rgb/rgb.csv`  
-**Encoding**: UTF-8  
+**Purpose**: Index of captured still frames with precise timestamps
+**Location**: `sessions/{session_id}/rgb/rgb.csv`
+**Encoding**: UTF-8
 **Line Terminator**: LF (`\n`)
 
 | Column | Type | Unit | Range | Description |
@@ -109,9 +109,9 @@ timestamp_ns,filename
 
 ### Thermal Camera Data Schema (`thermal.csv`)
 
-**Purpose**: Raw thermal matrix data from Topdon TC001 camera  
-**Location**: `sessions/{session_id}/thermal/thermal.csv`  
-**Encoding**: UTF-8  
+**Purpose**: Raw thermal matrix data from Topdon TC001 camera
+**Location**: `sessions/{session_id}/thermal/thermal.csv`
+**Encoding**: UTF-8
 **Line Terminator**: LF (`\n`)
 
 | Column | Type | Unit | Range | Description |
@@ -141,9 +141,9 @@ timestamp_ns,w,h,v0,v1,v2,...,v49151
 
 ### GSR Sensor Data Schema (`gsr.csv`)
 
-**Purpose**: Galvanic Skin Response and Photoplethysmography measurements  
-**Location**: `sessions/{session_id}/gsr/gsr.csv`  
-**Encoding**: UTF-8  
+**Purpose**: Galvanic Skin Response and Photoplethysmography measurements
+**Location**: `sessions/{session_id}/gsr/gsr.csv`
+**Encoding**: UTF-8
 **Line Terminator**: LF (`\n`)
 
 | Column | Type | Unit | Range | Description |
@@ -156,7 +156,7 @@ timestamp_ns,w,h,v0,v1,v2,...,v49151
 ```csv
 timestamp_ns,gsr_microsiemens,ppg_raw
 1703856123456789012,12.34,2048
-1703856123464289012,12.35,2051  
+1703856123464289012,12.35,2051
 1703856123472289012,12.33,2045
 ```
 
@@ -168,9 +168,9 @@ timestamp_ns,gsr_microsiemens,ppg_raw
 
 ### Flash Sync Events Schema (`flash_sync_events.csv`)
 
-**Purpose**: Global synchronization markers across all devices  
-**Location**: Root of files directory (Android) or session directory (PC)  
-**Encoding**: UTF-8  
+**Purpose**: Global synchronization markers across all devices
+**Location**: Root of files directory (Android) or session directory (PC)
+**Encoding**: UTF-8
 **Line Terminator**: LF (`\n`)
 
 | Column | Type | Unit | Range | Description |
@@ -217,7 +217,7 @@ timestamp_ns,device_id,session_id,confidence,method
 - Single video file per session per device
 - Example: `video_1703856123456789012.mp4`
 
-### JPEG Frame Specifications  
+### JPEG Frame Specifications
 
 **Still Image Files**: `sessions/{session_id}/rgb/frames/frame_{timestamp_ns}.jpg`
 
@@ -231,7 +231,7 @@ timestamp_ns,device_id,session_id,confidence,method
 | **Compression** | Optimized | Hardware encoder preferred |
 
 **File Naming Convention:**
-- Timestamp represents exact capture time in nanoseconds  
+- Timestamp represents exact capture time in nanoseconds
 - One file per preview frame (~150ms intervals)
 - Example: `frame_1703856123456789012.jpg`
 
@@ -241,14 +241,14 @@ timestamp_ns,device_id,session_id,confidence,method
 
 ### Session Metadata (`session_metadata.json`)
 
-**Location**: `sessions/{session_id}/session_metadata.json` (PC only)  
+**Location**: `sessions/{session_id}/session_metadata.json` (PC only)
 **Purpose**: High-level session information and device inventory
 
 ```json
 {
   "session_id": "20241218_143052_001",
   "created_at": "2024-12-18T14:30:52.123456789Z",
-  "started_at": "2024-12-18T14:31:15.987654321Z", 
+  "started_at": "2024-12-18T14:31:15.987654321Z",
   "stopped_at": "2024-12-18T14:45:32.456789123Z",
   "duration_seconds": 856.469,
   "researcher": "Dr. Jane Smith",
@@ -283,7 +283,7 @@ timestamp_ns,device_id,session_id,confidence,method
 
 ### Thermal Camera Metadata (`metadata.json`)
 
-**Location**: `sessions/{session_id}/thermal/metadata.json`  
+**Location**: `sessions/{session_id}/thermal/metadata.json`
 **Purpose**: Thermal camera configuration and calibration data
 
 ```json
@@ -322,14 +322,14 @@ timestamp_ns,device_id,session_id,confidence,method
 
 ### Device Configuration (`device_config.json`)
 
-**Location**: `config/device_config.json` (Android)  
+**Location**: `config/device_config.json` (Android)
 **Purpose**: Device-specific settings and capabilities
 
 ```json
 {
   "device_info": {
     "device_id": "pixel7_abc123",
-    "device_model": "Google Pixel 7", 
+    "device_model": "Google Pixel 7",
     "manufacturer": "Google",
     "android_version": "13",
     "api_level": 33,
@@ -378,7 +378,7 @@ timestamp_ns,device_id,session_id,confidence,method
 
 **File-level Validation:**
 - All CSV files must have valid headers matching schema
-- Timestamp columns must be monotonically increasing  
+- Timestamp columns must be monotonically increasing
 - No missing critical columns
 - File sizes within expected ranges
 - Character encoding must be UTF-8
@@ -400,7 +400,7 @@ timestamp_ns,device_id,session_id,confidence,method
 **Completeness Scores:**
 ```python
 rgb_completeness = rgb_frames_received / rgb_frames_expected
-thermal_completeness = thermal_samples_received / thermal_samples_expected  
+thermal_completeness = thermal_samples_received / thermal_samples_expected
 gsr_completeness = gsr_samples_received / gsr_samples_expected
 overall_completeness = min(rgb_completeness, thermal_completeness, gsr_completeness)
 ```
@@ -414,7 +414,7 @@ synchronization_score = 1.0 - (time_sync_accuracy / max_acceptable_offset)
 
 **Signal Quality Indicators:**
 - RGB: Motion blur detection, exposure analysis
-- Thermal: Temperature range validation, dead pixel detection  
+- Thermal: Temperature range validation, dead pixel detection
 - GSR: Signal-to-noise ratio, electrode contact quality
 
 ### Error Handling

@@ -14,23 +14,23 @@
 sequenceDiagram
     participant A as Android TimeManager
     participant P as PC TimeServer
-    
+
     Note over A,P: UDP Time Synchronization Protocol
-    
+
     A->>A: t1 = System.nanoTime()
     A->>P: UDP packet [1 byte probe]
     Note over P: Receive at T_server
     P->>P: T_server = time.monotonic_ns()
     P->>A: UDP response [T_server as ASCII bytes]
     A->>A: t2 = System.nanoTime()
-    
+
     Note over A: Calculate offset
     Note over A: rtt = t2 - t1
-    Note over A: network_delay = rtt / 2  
+    Note over A: network_delay = rtt / 2
     Note over A: offset = (T_server + network_delay) - t2
     Note over A: offset = T_server + (t2 - t1) / 2 - t2
     Note over A: offsetNs = offset (store for future use)
-    
+
     A->>A: Synchronized timestamp = System.nanoTime() + offsetNs
 ```
 
@@ -40,7 +40,7 @@ sequenceDiagram
 ```
 Given:
   t1 = Android timestamp when packet sent
-  t2 = Android timestamp when response received  
+  t2 = Android timestamp when response received
   T_server = PC server timestamp when packet processed
 
 Round-trip time:
@@ -49,7 +49,7 @@ Round-trip time:
 Network delay (assuming symmetric):
   network_delay = rtt / 2
 
-Server time when response received:  
+Server time when response received:
   T_server_adjusted = T_server + network_delay
                     = T_server + (t2 - t1) / 2
 
@@ -74,19 +74,19 @@ fun getSyncedTimestamp(): Long {
 ### Sequence Diagram
 
 ```mermaid
-sequenceDiagram  
+sequenceDiagram
     participant PC as PC Controller
     participant RS as Android RecordingService
     participant TM as TimeManager
-    
+
     Note over PC,TM: TCP Time Sync Command
-    
+
     PC->>RS: {"v":1,"type":"cmd","id":2,"command":"time_sync"}
     RS->>TM: t1 = TimeManager.nowNanos()
     Note over RS: Process command
-    RS->>TM: t2 = TimeManager.nowNanos()  
+    RS->>TM: t2 = TimeManager.nowNanos()
     RS->>PC: {"v":1,"type":"ack","ack_id":2,"status":"ok","t1":t1,"t2":t2}
-    
+
     Note over PC: Calculate round-trip time
     Note over PC: Can estimate network delay from t2 - t1
     Note over PC: Store timing data for validation
@@ -110,16 +110,16 @@ gantt
     title Preview Frame Throttling (6-8 FPS Target)
     dateFormat X
     axisFormat %L ms
-    
+
     section Camera Capture (30 FPS)
     Frame 1: 0, 33
-    Frame 2: 33, 67  
+    Frame 2: 33, 67
     Frame 3: 67, 100
     Frame 4: 100, 133
     Frame 5: 133, 167
     Frame 6: 167, 200
-    
-    section PreviewBus Emission (6-8 FPS)  
+
+    section PreviewBus Emission (6-8 FPS)
     Emit Frame 1: 0, 10
     Throttled: 33, 150
     Emit Frame 4: 150, 160
@@ -179,7 +179,7 @@ xychart-beta
 
 ### Synchronization Quality Metrics
 
-```mermaid  
+```mermaid
 xychart-beta
     title "Time Sync Accuracy Over Session Duration"
     x-axis "Time (minutes)" [0, 5, 10, 15, 20, 25, 30]
@@ -189,7 +189,7 @@ xychart-beta
 
 **Acceptable Thresholds**:
 - **Excellent**: <2ms error
-- **Good**: <5ms error (meets NFR2 requirement)  
+- **Good**: <5ms error (meets NFR2 requirement)
 - **Warning**: 5-10ms error
 - **Poor**: >10ms error (re-sync recommended)
 
@@ -199,26 +199,26 @@ xychart-beta
 sequenceDiagram
     participant PC as PC TimeServer
     participant A1 as Android Device 1
-    participant A2 as Android Device 2  
+    participant A2 as Android Device 2
     participant A3 as Android Device 3
-    
+
     Note over PC,A3: Simultaneous Flash Sync Event
-    
+
     PC->>A1: flash_sync command
-    PC->>A2: flash_sync command  
+    PC->>A2: flash_sync command
     PC->>A3: flash_sync command
-    
+
     par Flash Event Processing
         A1->>A1: Record flash timestamp
         A1->>PC: ACK with ts=1692374212450000000
     and
-        A2->>A2: Record flash timestamp  
-        A2->>PC: ACK with ts=1692374212450001200  
+        A2->>A2: Record flash timestamp
+        A2->>PC: ACK with ts=1692374212450001200
     and
         A3->>A3: Record flash timestamp
         A3->>PC: ACK with ts=1692374212449999800
     end
-    
+
     Note over PC: Analyze timestamp spread
     Note over PC: Max deviation: 1.4ms (acceptable)
     Note over PC: All devices synchronized within 5ms target
@@ -240,7 +240,7 @@ sequenceDiagram
 
 ### PC TimeServer Implementation
 - Uses `time.monotonic_ns()` for high precision
-- UDP socket with 1-second timeout  
+- UDP socket with 1-second timeout
 - Handles concurrent sync requests from multiple devices
 - Logs sync statistics for quality monitoring
 

@@ -32,7 +32,7 @@ fun detectAndroidSdk(): Boolean {
             return true
         }
     }
-    
+
     // Check environment variables
     val envSdk = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
     return envSdk != null && file(envSdk).exists()
