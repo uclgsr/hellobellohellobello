@@ -171,6 +171,12 @@ def validate_requirements_consistency() -> List[str]:
 
 def main() -> int:
     """Main validation function."""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Validate project configuration files")
+    parser.add_argument("--fast", action="store_true", help="Run only essential validations")
+    args = parser.parse_args()
+    
     print("🔍 Validating project configuration files...")
 
     all_errors = []
@@ -182,6 +188,13 @@ def main() -> int:
         (".pre-commit-config.yaml", validate_pre_commit_config),
         ("requirements consistency", validate_requirements_consistency),
     ]
+
+    # In fast mode, skip the more expensive validations
+    if args.fast:
+        validations = [
+            ("pyproject.toml", validate_pyproject_toml),
+            ("requirements consistency", validate_requirements_consistency),
+        ]
 
     for name, validation_func in validations:
         print(f"  Validating {name}...")

@@ -8,6 +8,12 @@ allprojects {
     version = "1.0-SNAPSHOT"
 }
 
+// Performance: Enable build caching and parallel execution
+gradle.startParameter.apply {
+    isBuildCacheEnabled = true
+    maxWorkerCount = Runtime.getRuntime().availableProcessors()
+}
+
 // Aggregate verification: Android unit tests + Python pytest
 // Also provide a root-level pyTest task so this repo can run tests without a Gradle subproject in pc_controller.
 

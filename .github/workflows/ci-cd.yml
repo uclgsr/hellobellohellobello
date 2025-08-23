@@ -8,8 +8,12 @@ on:
 
 env:
   PYTHON_VERSION: '3.12'
-  ANDROID_API_LEVEL: 31
-  ANDROID_BUILD_TOOLS: '31.0.0'
+  ANDROID_API_LEVEL: 35
+  ANDROID_BUILD_TOOLS: '35.0.0'
+  # Performance optimizations
+  PIP_CACHE_DIR: ~/.cache/pip
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.configureondemand=true -Dorg.gradle.caching=true
+  GRADLE_USER_HOME: ~/.gradle
 
 jobs:
   # Python Tests Job
@@ -28,10 +32,15 @@ jobs:
     - name: Cache Python dependencies
       uses: actions/cache@v4
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('pc_controller/requirements.txt') }}
+        path: |
+          ~/.cache/pip
+          ~/.cache/pre-commit
+          .ruff_cache
+          .mypy_cache
+          .pytest_cache
+        key: ${{ runner.os }}-python-${{ hashFiles('**/pyproject.toml', '**/requirements*.txt', '.pre-commit-config.yaml') }}
         restore-keys: |
-          ${{ runner.os }}-pip-
+          ${{ runner.os }}-python-
 
     - name: Install system dependencies for PyQt6
       run: |
@@ -107,8 +116,12 @@ jobs:
         path: |
           ~/.gradle/caches
           ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          ~/.gradle/buildOutputCleanup
+          ~/.gradle/vcs-1
+          ~/.gradle/build-cache
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle.properties') }}
         restore-keys: |
+          ${{ runner.os }}-gradle-
           ${{ runner.os }}-gradle-
 
     - name: Make gradlew executable

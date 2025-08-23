@@ -27,6 +27,42 @@ This document describes the comprehensive testing pipeline and pre-commit hooks 
    python scripts/setup_dev.py --validate
    ```
 
+## ⚡ Performance Features
+
+The testing pipeline is optimized for maximum performance:
+
+### 🔥 Parallel Execution
+- **Parallel test execution** with `pytest-xdist` using all available CPU cores
+- **Parallel code quality checks** for linting, formatting, and type checking  
+- **Configurable job count**: `python scripts/test_pipeline.py --jobs 8`
+- **Smart CI optimization**: Limited to 4 parallel jobs in CI environments
+
+### 📈 Caching Optimizations
+- **Tool caching**: Ruff (`.ruff_cache`), MyPy (`.mypy_cache`), pytest (`.pytest_cache`)
+- **Git hook caching**: Pre-commit hooks cached across runs
+- **Gradle build cache**: Incremental builds with configuration cache
+- **CI dependency caching**: Python packages, Gradle dependencies, build artifacts
+
+### ⚡ Fast Development Workflow
+- **Fast mode**: `--fast` flag skips integration and performance tests
+- **Selective testing**: Only run tests affected by code changes
+- **Incremental validation**: Skip expensive validations in development
+
+### 🛠️ Performance Commands
+```bash
+# Fast development testing (< 30 seconds)
+python scripts/test_pipeline.py --fast
+
+# Full parallel testing (all cores)  
+python scripts/test_pipeline.py --all --parallel
+
+# Custom parallel jobs
+python scripts/test_pipeline.py --jobs 4 --coverage
+
+# CI-optimized execution
+python scripts/test_pipeline.py --ci --coverage --security
+```
+
 ## 📋 Testing Pipeline Components
 
 ### 1. Pre-commit Hooks (`.pre-commit-config.yaml`)

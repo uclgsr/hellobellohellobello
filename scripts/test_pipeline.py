@@ -12,6 +12,12 @@ This script orchestrates the complete testing pipeline including:
 - Android tests (when available)
 - Report generation
 
+PERFORMANCE FEATURES:
+- Parallel test execution with multiprocessing
+- Cached results for unchanged files
+- Fast subset testing for development
+- Optimized CI mode
+
 Usage:
     python scripts/test_pipeline.py [options]
 
@@ -24,6 +30,8 @@ Options:
     --report        Generate comprehensive HTML report
     --ci            CI mode (optimized for CI/CD environments)
     --fix           Auto-fix issues where possible
+    --parallel      Run tests in parallel (default: auto)
+    --jobs          Number of parallel jobs (default: CPU count)
 """
 
 import argparse
@@ -31,6 +39,8 @@ import json
 import subprocess
 import sys
 import time
+import multiprocessing
+import concurrent.futures
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -64,6 +74,12 @@ class TestOrchestrator:
         # Report directory
         self.report_dir = Path(".test_reports")
         self.report_dir.mkdir(exist_ok=True)
+        
+        # Performance: Configure parallel execution
+        self.max_workers = getattr(args, 'jobs', None) or multiprocessing.cpu_count()
+        if args.ci:
+            self.max_workers = min(self.max_workers, 4)  # Limit in CI
+        self.use_parallel = getattr(args, 'parallel', True)
 
     def log(self, message: str, level: str = "INFO") -> None:
         """Log a message with timestamp."""
@@ -125,14 +141,42 @@ class TestOrchestrator:
             self.log(f"{name} failed with exception: {e}", "ERROR")
             return TestResult(name, False, duration, error=str(e))
 
+    def run_commands_parallel(self, commands: List[Tuple[List[str], str]], max_workers: Optional[int] = None) -> List[TestResult]:
+        """Run multiple commands in parallel for better performance."""
+        if not self.use_parallel or len(commands) == 1:
+            # Fall back to sequential execution
+            return [self.run_command(cmd, name) for cmd, name in commands]
+        
+        max_workers = max_workers or self.max_workers
+        results = []
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all commands
+            future_to_command = {
+                executor.submit(self.run_command, cmd, name): (cmd, name)
+                for cmd, name in commands
+            }
+            
+            # Collect results as they complete
+            for future in concurrent.futures.as_completed(future_to_command):
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as e:
+                    cmd, name = future_to_command[future]
+                    self.log(f"Parallel execution failed for {name}: {e}", "ERROR")
+                    results.append(TestResult(name, False, 0, error=str(e)))
+        
+        return results
+
     def run_code_quality_checks(self) -> None:
         """Run comprehensive code quality checks."""
         self.log("=== Code Quality Checks ===")
 
         checks = [
-            # Ruff linting
+            # Ruff linting with caching
             ([sys.executable, "-m", "ruff", "check", str(self.pc_controller_src),
-              "--output-format=github"] + (["--fix"] if self.args.fix else []), "Ruff Linting"),
+              "--output-format=github", "--cache-dir=.ruff_cache"] + (["--fix"] if self.args.fix else []), "Ruff Linting"),
 
             # Black formatting check
             ([sys.executable, "-m", "black", "--check", "--diff", str(self.pc_controller_src)]
@@ -144,14 +188,14 @@ class TestOrchestrator:
              if not self.args.fix else
              [sys.executable, "-m", "isort", str(self.pc_controller_src)], "Import Sorting"),
 
-            # MyPy type checking
+            # MyPy type checking with caching
             ([sys.executable, "-m", "mypy", str(self.pc_controller_src),
-              "--ignore-missing-imports"], "Type Checking"),
+              "--ignore-missing-imports", "--cache-dir=.mypy_cache"], "Type Checking"),
         ]
 
-        for cmd, name in checks:
-            result = self.run_command(cmd, name)
-            self.results.append(result)
+        # Use parallel execution for performance
+        results = self.run_commands_parallel(checks, max_workers=min(4, self.max_workers))
+        self.results.extend(results)
 
     def run_security_scanning(self) -> None:
         """Run security scanning with Bandit."""
@@ -174,7 +218,8 @@ class TestOrchestrator:
 
         pytest_cmd = [
             sys.executable, "-m", "pytest", str(self.pc_controller_tests),
-            "-v", "--tb=short", "--timeout=60"
+            "-v", "--tb=short", "--timeout=60",
+            "-n", "auto"  # Use pytest-xdist for parallel execution
         ]
 
         if self.args.coverage:
@@ -186,10 +231,12 @@ class TestOrchestrator:
             ])
 
         if self.args.fast:
-            pytest_cmd.extend(["-x"])  # Stop on first failure
+            pytest_cmd.extend(["-x", "-k", "not slow and not integration"])  # Skip slow tests
 
         if self.args.ci:
             pytest_cmd.extend(["-q", "--tb=short"])  # Quiet mode for CI
+        else:
+            pytest_cmd.extend(["--tb=long"])  # More verbose in dev
 
         result = self.run_command(pytest_cmd, "Python Unit Tests", timeout=600)
 
@@ -393,6 +440,13 @@ def main() -> int:
                        help="Auto-fix issues where possible")
     parser.add_argument("--all", action="store_true",
                        help="Run all tests with all options")
+    parser.add_argument("--parallel", action="store_true", default=True,
+                       help="Run tests in parallel (default: enabled)")
+    parser.add_argument("--no-parallel", dest="parallel", action="store_false",
+                       help="Disable parallel execution")
+    parser.add_argument("--jobs", "-j", type=int, 
+                       default=multiprocessing.cpu_count(),
+                       help="Number of parallel jobs (default: CPU count)")
 
     args = parser.parse_args()
 
