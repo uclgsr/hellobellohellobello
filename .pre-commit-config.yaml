@@ -107,13 +107,13 @@ repos:
         args: [--config=.markdownlint.yaml]
         files: ^docs/.*\.md$
 
-  # Custom Python test runner (only runs affected tests)
+  # Custom Python test runner (only runs affected tests - fast subset)
   - repo: local
     hooks:
-      - id: python-tests
-        name: Run Python unit tests
+      - id: python-tests-fast
+        name: Run fast Python unit tests
         entry: python
-        args: [-m, pytest, pc_controller/tests/, -x, --tb=short, --timeout=30, -q]
+        args: [-m, pytest, pc_controller/tests/, -x, --tb=short, --timeout=30, -q, -k, "not integration and not slow"]
         language: system
         files: ^pc_controller/.*\.py$
         pass_filenames: false
@@ -137,7 +137,7 @@ ci:
   autoupdate_branch: "develop"
   autoupdate_commit_msg: "chore: update pre-commit hooks"
   autoupdate_schedule: "weekly"
-  skip: [ktlint-check, python-tests]  # Skip slow hooks in CI
+  skip: [ktlint-check, python-tests-fast]  # Skip slow hooks in CI
 
 # Pre-commit hook configuration
 default_stages: [pre-commit, pre-push]

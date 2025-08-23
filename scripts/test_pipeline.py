@@ -132,7 +132,7 @@ class TestOrchestrator:
         checks = [
             # Ruff linting
             ([sys.executable, "-m", "ruff", "check", str(self.pc_controller_src),
-              "--output-format=text"] + (["--fix"] if self.args.fix else []), "Ruff Linting"),
+              "--output-format=github"] + (["--fix"] if self.args.fix else []), "Ruff Linting"),
 
             # Black formatting check
             ([sys.executable, "-m", "black", "--check", "--diff", str(self.pc_controller_src)]
