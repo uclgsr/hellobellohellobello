@@ -38,7 +38,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
     private var recordingJob: Job? = null
     
     // Real Topdon integration
-    private var topdonIntegration: RealTopdonIntegration? = null
+    private var topdonIntegration: TopdonThermalIntegration? = null
     private var frameCount = 0
     private val dateFormatter = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
     
@@ -73,26 +73,40 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     thermalImagesDir!!.mkdirs()
                 }
                 
-                // Initialize real Topdon integration
-                topdonIntegration = RealTopdonIntegration(context)
-                val initialized = topdonIntegration!!.initialize()
+                // Initialize new Topdon thermal integration
+                topdonIntegration = TopdonThermalIntegration(context)
+                val initResult = topdonIntegration!!.initialize()
                 
-                if (initialized) {
-                    // Configure thermal camera for optimal recording
-                    topdonIntegration!!.configure(
-                        emissivity = 0.95f,
-                        temperatureRange = RealTopdonIntegration.ThermalRange(-20f, 150f),
-                        palette = RealTopdonIntegration.ThermalPalette.IRON,
-                        autoGainControl = true
-                    )
+                if (initResult == TopdonResult.SUCCESS) {
+                    // Scan for available devices
+                    val devices = topdonIntegration!!.scanForDevices()
                     
-                    Log.i(TAG, "Real thermal camera initialized successfully")
-                    true
+                    if (devices.isNotEmpty()) {
+                        // Connect to first available device
+                        val device = devices.first()
+                        val connectResult = topdonIntegration!!.connectDevice(device.usbDevice!!)
+                        
+                        if (connectResult == TopdonResult.SUCCESS) {
+                            // Configure thermal camera settings
+                            topdonIntegration!!.setEmissivity(0.95f)
+                            topdonIntegration!!.setTemperatureRange(-20f, 150f)
+                            topdonIntegration!!.setThermalPalette(TopdonThermalPalette.IRON)
+                            topdonIntegration!!.enableAutoGainControl(true)
+                            topdonIntegration!!.enableTemperatureCompensation(true)
+                            topdonIntegration!!.configureDevice()
+                            
+                            Log.i(TAG, "Real thermal camera connected and configured successfully")
+                        } else {
+                            Log.w(TAG, "Failed to connect to thermal camera, using simulation mode")
+                        }
+                    } else {
+                        Log.w(TAG, "No thermal cameras found, using simulation mode")
+                    }
                 } else {
-                    Log.w(TAG, "Failed to initialize real thermal camera, falling back to simulation")
-                    // Still return true to allow recording in simulation mode
-                    true
+                    Log.w(TAG, "Failed to initialize thermal integration, using simulation mode")
                 }
+                
+                true
                 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize thermal recorder: ${e.message}", e)
@@ -138,7 +152,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
     /**
      * Process individual thermal frame and log to CSV/images
      */
-    private suspend fun processThermalFrame(thermalFrame: RealTopdonIntegration.ThermalFrame) {
+    private suspend fun processThermalFrame(thermalFrame: TopdonThermalFrame) {
         withContext(Dispatchers.IO) {
             try {
                 frameCount++
@@ -148,10 +162,9 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 val imageFilename = "thermal_${frameCount.toString().padStart(6, '0')}.png"
                 val imageFile = File(thermalImagesDir!!, imageFilename)
                 
-                // Save thermal bitmap if available
-                thermalFrame.thermalBitmap?.let { bitmap ->
-                    saveBitmapAsPNG(bitmap, imageFile)
-                }
+                // Save thermal bitmap
+                val bitmap = thermalFrame.generateThermalBitmap()
+                saveBitmapAsPNG(bitmap, imageFile)
                 
                 // Write thermal data to CSV
                 csvWriter?.let { writer ->
@@ -160,15 +173,17 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                         append(",")
                         append(frameCount)
                         append(",")
-                        append(String.format("%.2f", thermalFrame.minTemp))
+                        append(String.format("%.2f", thermalFrame.minTemperature))
                         append(",")
-                        append(String.format("%.2f", thermalFrame.maxTemp))
+                        append(String.format("%.2f", thermalFrame.maxTemperature))
                         append(",")
-                        append(String.format("%.2f", thermalFrame.avgTemp))
+                        append(String.format("%.2f", thermalFrame.averageTemperature))
                         append(",")
-                        append(String.format("%.2f", thermalFrame.centerTemp))
+                        append(String.format("%.2f", thermalFrame.centerTemperature))
                         append(",")
-                        append("0.95") // Current emissivity
+                        append(String.format("%.2f", thermalFrame.emissivity))
+                        append(",")
+                        append(thermalFrame.palette.name)
                         append(",")
                         append(imageFilename)
                         append("\n")
@@ -184,9 +199,9 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 
                 if (frameCount % 30 == 0) { // Log every second at 30 FPS
                     Log.d(TAG, "Thermal frame $frameCount: " +
-                            "Min=${String.format("%.1f", thermalFrame.minTemp)}°C, " +
-                            "Max=${String.format("%.1f", thermalFrame.maxTemp)}°C, " +
-                            "Center=${String.format("%.1f", thermalFrame.centerTemp)}°C")
+                            "Min=${String.format("%.1f", thermalFrame.minTemperature)}°C, " +
+                            "Max=${String.format("%.1f", thermalFrame.maxTemperature)}°C, " +
+                            "Center=${String.format("%.1f", thermalFrame.centerTemperature)}°C")
                 }
                 
             } catch (e: Exception) {
