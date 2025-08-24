@@ -185,7 +185,8 @@ class TestCompleteRecordingWorkflows:
         assert self.env.device_manager.get_status(device.device_id) == "Online"
 
         # Start session
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("single_device_test")
+        self.env.session_manager.start_recording()
         assert self.env.session_manager.is_active()
         assert session_id is not None
 
@@ -243,7 +244,8 @@ class TestCompleteRecordingWorkflows:
             assert self.env.device_manager.get_status(device.device_id) == "Online"
 
         # Start session
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("multi_device_test")
+        self.env.session_manager.start_recording()
         assert self.env.session_manager.is_active()
 
         # Start recording on all devices simultaneously
@@ -314,7 +316,8 @@ class TestCompleteRecordingWorkflows:
             self.env.device_manager.register(device.device_id)
 
         # Start session and recording
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
         for device in devices:
             device.start_recording(session_id)
             self.env.device_manager.set_status(device.device_id, "Recording")
@@ -368,7 +371,8 @@ class TestCompleteRecordingWorkflows:
         device = self.env.create_mock_android_device("long-duration-device")
         self.env.device_manager.register(device.device_id)
 
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
         device.start_recording(session_id)
         self.env.device_manager.set_status(device.device_id, "Recording")
 
@@ -423,7 +427,8 @@ class TestDataIntegrityAndSynchronization:
             self.env.device_manager.register(device.device_id)
 
         # Start synchronized recording
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
         recording_start_time = time.time_ns()
 
         for device in devices:
@@ -474,7 +479,8 @@ class TestDataIntegrityAndSynchronization:
         )
 
         self.env.device_manager.register(device.device_id)
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
 
         device.start_recording(session_id)
         time.sleep(0.1)
@@ -526,7 +532,8 @@ class TestDataIntegrityAndSynchronization:
         device = self.env.create_mock_android_device("export-device")
         self.env.device_manager.register(device.device_id)
 
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
         device.start_recording(session_id)
         time.sleep(0.1)
         device.stop_recording()
@@ -609,7 +616,8 @@ class TestPerformanceAndReliability:
                 self.env.device_manager.register(device_id)
 
             # Start and stop session
-            session_id = self.env.session_manager.start_session()
+            session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
 
             for device in devices:
                 device.start_recording(session_id)
@@ -645,7 +653,8 @@ class TestPerformanceAndReliability:
 
         for i in range(session_count):
             # Start session
-            session_id = self.env.session_manager.start_session()
+            session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
             assert self.env.session_manager.is_active()
 
             # Start recording
@@ -676,7 +685,8 @@ class TestPerformanceAndReliability:
         for device in devices:
             self.env.device_manager.register(device.device_id)
 
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
 
         # Start recording on all devices
         for device in devices:

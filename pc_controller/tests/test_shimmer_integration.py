@@ -182,9 +182,10 @@ class TestCriticalRequirements:
             voltage = (adc_value / 4095.0) * 3.0  # 12-bit ADC, 3V reference
             assert 0.0 <= voltage <= 3.0
 
-            # Verify we're not using 16-bit range (65535)
-            wrong_voltage = (adc_value / 65535.0) * 3.0  # Wrong: 16-bit
-            assert voltage != wrong_voltage  # Should be different calculations
+            # Verify we're not using 16-bit range (65535) for non-zero values
+            if adc_value > 0:  # Skip comparison for 0 since both would be 0.0
+                wrong_voltage = (adc_value / 65535.0) * 3.0  # Wrong: 16-bit
+                assert voltage != wrong_voltage  # Should be different calculations
 
     def test_sampling_rate_compliance(self):
         """Test 128 Hz sampling rate compliance."""

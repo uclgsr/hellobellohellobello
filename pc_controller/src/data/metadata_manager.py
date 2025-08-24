@@ -335,6 +335,8 @@ class SessionMetadataManager:
                 "timestamp_ns": "Nanosecond timestamp (monotonic clock)",
                 "filename": "DNG filename (relative to session directory)",
                 "format": "Image format (DNG raw format for Phase 3)",
+                "width": "Frame width in pixels",
+                "height": "Frame height in pixels",
             },
             "thermal": {
                 "timestamp_ns": "Nanosecond timestamp (monotonic clock)",
@@ -343,6 +345,8 @@ class SessionMetadataManager:
                 "h": "Frame height (192)",
                 "min_temp_celsius": "Minimum temperature in frame (Celsius)",
                 "max_temp_celsius": "Maximum temperature in frame (Celsius)",
+                # Add flattened pixel values for thermal data
+                **{f"v{i}": f"Temperature value at pixel {i}" for i in range(0, 49152, 1000)[:50]}  # 256x192 = 49152 pixels, sample every 1000
             },
         }
 
