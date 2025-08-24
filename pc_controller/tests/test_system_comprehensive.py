@@ -187,7 +187,7 @@ class TestCompleteRecordingWorkflows:
         # Start session
         session_id = self.env.session_manager.create_session("single_device_test")
         self.env.session_manager.start_recording()
-        assert self.env.session_manager.is_active()
+        assert self.env.session_manager.is_active
         assert session_id is not None
 
         # Start recording on device
@@ -209,8 +209,8 @@ class TestCompleteRecordingWorkflows:
         assert device.recording is False
 
         # Stop session
-        self.env.session_manager.stop_session()
-        assert not self.env.session_manager.is_active()
+        self.env.session_manager.stop_recording()
+        assert not self.env.session_manager.is_active
 
         # Verify data files were created
         data_files = device.get_data_files()
@@ -246,7 +246,7 @@ class TestCompleteRecordingWorkflows:
         # Start session
         session_id = self.env.session_manager.create_session("multi_device_test")
         self.env.session_manager.start_recording()
-        assert self.env.session_manager.is_active()
+        assert self.env.session_manager.is_active
 
         # Start recording on all devices simultaneously
         start_times = []
@@ -288,7 +288,7 @@ class TestCompleteRecordingWorkflows:
         assert max_stop_diff < 0.1  # Within 100ms
 
         # Stop session
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Verify all devices generated data files
         total_files = 0
@@ -358,7 +358,7 @@ class TestCompleteRecordingWorkflows:
         # Stop session
         for device in devices:
             device.stop_recording()
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Verify data files exist for all devices (including recovered one)
         for device in devices:
@@ -386,7 +386,7 @@ class TestCompleteRecordingWorkflows:
 
             # Verify device stays online and recording
             assert self.env.device_manager.get_status(device.device_id) == "Recording"
-            assert self.env.session_manager.is_active()
+            assert self.env.session_manager.is_active
 
             time.sleep(0.5)  # Check every 500ms
 
@@ -396,7 +396,7 @@ class TestCompleteRecordingWorkflows:
 
         # Stop gracefully
         device.stop_recording()
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Verify data integrity
         data_files = device.get_data_files()
@@ -442,7 +442,7 @@ class TestDataIntegrityAndSynchronization:
         for device in devices:
             device.stop_recording()
 
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Analyze timestamp synchronization
         all_timestamps = []
@@ -486,7 +486,7 @@ class TestDataIntegrityAndSynchronization:
         time.sleep(0.1)
         device.stop_recording()
 
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         data_files = device.get_data_files()
 
@@ -537,7 +537,7 @@ class TestDataIntegrityAndSynchronization:
         device.start_recording(session_id)
         time.sleep(0.1)
         device.stop_recording()
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Test export to HDF5
         session_data_dir = Path(self.env.temp_dir) / device.device_id
@@ -619,9 +619,9 @@ class TestPerformanceAndReliability:
             session_id = self.env.session_manager.create_session("test_session")
         self.env.session_manager.start_recording()
 
-            for device in devices:
-                device.start_recording(session_id)
-                self.env.device_manager.set_status(device.device_id, "Recording")
+        for device in devices:
+            device.start_recording(session_id)
+            self.env.device_manager.set_status(device.device_id, "Recording")
 
             # Brief recording period
             time.sleep(0.1)
@@ -630,7 +630,7 @@ class TestPerformanceAndReliability:
                 device.stop_recording()
                 self.env.device_manager.remove(device.device_id)
 
-            self.env.session_manager.stop_session()
+            self.env.session_manager.stop_recording()
 
             # Clean up devices
             devices.clear()
@@ -654,8 +654,8 @@ class TestPerformanceAndReliability:
         for i in range(session_count):
             # Start session
             session_id = self.env.session_manager.create_session("test_session")
-        self.env.session_manager.start_recording()
-            assert self.env.session_manager.is_active()
+            self.env.session_manager.start_recording()
+            assert self.env.session_manager.is_active
 
             # Start recording
             device.start_recording(session_id)
@@ -666,8 +666,8 @@ class TestPerformanceAndReliability:
 
             # Stop recording and session
             device.stop_recording()
-            self.env.session_manager.stop_session()
-            assert not self.env.session_manager.is_active()
+            self.env.session_manager.stop_recording()
+            assert not self.env.session_manager.is_active
 
             successful_sessions += 1
 
@@ -723,10 +723,10 @@ class TestPerformanceAndReliability:
         for device in devices:
             device.stop_recording()
 
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Verify clean state
-        assert not self.env.session_manager.is_active()
+        assert not self.env.session_manager.is_active
 
 
 if __name__ == "__main__":

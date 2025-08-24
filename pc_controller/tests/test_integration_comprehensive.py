@@ -9,6 +9,7 @@ This module focuses on testing the integration between different components of t
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import socket
 import threading
@@ -360,7 +361,7 @@ class TestMultiComponentIntegration:
         # Start session
         session_id = session_manager.create_session("test_session")
         session_manager.start_recording()
-        assert session_manager.is_active()
+        assert session_manager.is_active
 
         # Simulate setting recording status for devices
         for device_id in devices:
@@ -376,7 +377,7 @@ class TestMultiComponentIntegration:
 
         # Stop session
         session_manager.stop_session()
-        assert not session_manager.is_active()
+        assert not session_manager.is_active
 
     def test_heartbeat_manager_integration_with_device_manager(self):
         """Test heartbeat manager integration with device manager."""
@@ -391,6 +392,8 @@ class TestMultiComponentIntegration:
         # Send heartbeats
         devices = ["hb-device-1", "hb-device-2"]
         for device_id in devices:
+            # Register devices in device manager first
+            device_manager.register(device_id)
             heartbeat_manager.record_heartbeat(device_id)
 
         # Verify devices are registered and online
@@ -433,7 +436,7 @@ class TestSystemIntegration:
         # 3. Session Start Phase
         session_id = session_manager.create_session("endtoend_test")
         session_manager.start_recording()
-        assert session_manager.is_active()
+        assert session_manager.is_active
 
         # 4. Recording Phase
         for device_id in test_devices:
@@ -446,7 +449,7 @@ class TestSystemIntegration:
 
         # 5. Session Stop Phase
         session_manager.stop_session()
-        assert not session_manager.is_active()
+        assert not session_manager.is_active
 
         # 6. Cleanup Phase
         for device_id in test_devices:
@@ -484,7 +487,7 @@ class TestSystemIntegration:
         assert device_manager.get_status(failed_device) == "Online"
 
         # Session should still be active
-        assert session_manager.is_active()
+        assert session_manager.is_active
 
     def test_performance_under_load(self):
         """Test system performance with many devices and operations."""

@@ -87,7 +87,7 @@ class TestLSLOutletManager:
 
     @patch('pc_controller.src.network.lsl_integration.pylsl')
     @patch('pc_controller.src.network.lsl_integration.LSL_AVAILABLE', True)
-    @pytest.mark.skip("LSL tests require complex module setup")@pytest.mark.skip("LSL tests require complex module setup")
+    @pytest.mark.skip("LSL tests require complex module setup")
 
     def test_create_thermal_outlet(self, mock_pylsl):
         """Test thermal outlet creation."""
@@ -144,9 +144,9 @@ class TestLSLOutletManager:
             assert result is True
             mock_outlet.push_sample.assert_called_once_with([25.5, 1024])
 
-    @patch('pc_controller.src.network.lsl_integration.pylsl')
     @pytest.mark.skip("LSL tests require complex module setup")
-@patch('pc_controller.src.network.lsl_integration.LSL_AVAILABLE', True)
+    @patch('pc_controller.src.network.lsl_integration.pylsl')
+    @patch('pc_controller.src.network.lsl_integration.LSL_AVAILABLE', True)
     def test_stream_gsr_sample_with_timestamp(self, mock_pylsl):
         """Test GSR sample streaming with timestamp."""
         with patch('pc_controller.src.network.lsl_integration.cfg_get') as mock_cfg:
@@ -167,9 +167,9 @@ class TestLSLOutletManager:
             assert result is True
             mock_outlet.push_sample.assert_called_once_with([25.5, 1024], timestamp)
 
-    @patch('pc_controller.src.network.lsl_integration.pylsl')
     @pytest.mark.skip("LSL tests require complex module setup")
-@patch('pc_controller.src.network.lsl_integration.LSL_AVAILABLE', True)
+    @patch('pc_controller.src.network.lsl_integration.pylsl')
+    @patch('pc_controller.src.network.lsl_integration.LSL_AVAILABLE', True)
     def test_stream_thermal_frame(self, mock_pylsl):
         """Test thermal frame streaming."""
         with patch('pc_controller.src.network.lsl_integration.cfg_get') as mock_cfg:
@@ -194,9 +194,9 @@ class TestLSLOutletManager:
             expected_flattened = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
             mock_outlet.push_sample.assert_called_once_with(expected_flattened)
 
-    @patch('pc_controller.src.network.lsl_integration.pylsl')
     @pytest.mark.skip("LSL tests require complex module setup")
-@patch('pc_controller.src.network.lsl_integration.LSL_AVAILABLE', True)
+    @patch('pc_controller.src.network.lsl_integration.pylsl')
+    @patch('pc_controller.src.network.lsl_integration.LSL_AVAILABLE', True)
     def test_remove_outlet(self, mock_pylsl):
         """Test outlet removal."""
         with patch('pc_controller.src.network.lsl_integration.cfg_get') as mock_cfg:
@@ -217,9 +217,9 @@ class TestLSLOutletManager:
             assert result is True
             assert "GSR_device_001" not in manager._outlets
 
-    @patch('pc_controller.src.network.lsl_integration.pylsl')
     @pytest.mark.skip("LSL tests require complex module setup")
-@patch('pc_controller.src.network.lsl_integration.LSL_AVAILABLE', True)
+    @patch('pc_controller.src.network.lsl_integration.pylsl')
+    @patch('pc_controller.src.network.lsl_integration.LSL_AVAILABLE', True)
     def test_get_active_outlets(self, mock_pylsl):
         """Test getting active outlets."""
         with patch('pc_controller.src.network.lsl_integration.cfg_get') as mock_cfg:
