@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "session_id": "20250824_044318_multi_device_test",
+  "name": "multi_device_test",
+  "created_at_ns": 1756010598503092249,
+  "created_at": "2025-08-24T04:43:18",
+  "state": "Stopped",
+  "start_time_ns": 1756010598503203277,
+  "end_time_ns": 1756010599005266448,
+  "duration_ns": 502063171
+}
