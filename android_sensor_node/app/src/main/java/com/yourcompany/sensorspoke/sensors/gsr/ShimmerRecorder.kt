@@ -119,7 +119,18 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
                 isConnected = true
 
             } catch (e: Exception) {
-                throw RuntimeException("Shimmer connection failed: ${e.message}", e)
+                // Provide specific error information for different failure types
+                val errorType = when {
+                    e.message?.contains("timeout") == true -> "CONNECTION_TIMEOUT"
+                    e.message?.contains("permission") == true -> "PERMISSION_DENIED"
+                    e.message?.contains("Bluetooth") == true -> "BLUETOOTH_ERROR"
+                    e.message?.contains("No Shimmer devices found") == true -> "NO_DEVICES_FOUND"
+                    e is SecurityException -> "SECURITY_PERMISSION_ERROR"
+                    else -> "UNKNOWN_CONNECTION_ERROR"
+                }
+                
+                println("Shimmer connection failed with error type: $errorType - ${e.message}")
+                throw RuntimeException("Shimmer connection failed ($errorType): ${e.message}", e)
             }
         }
     }
@@ -368,6 +379,11 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
      * @return GSR value in microsiemens
      */
     fun convertGsrToMicroSiemens(rawAdc: Int, calData: Double? = null): Double {
+        // Validate input range to ensure correct 12-bit ADC usage
+        if (rawAdc < 0 || rawAdc > 4095) {
+            println("WARNING: ADC value $rawAdc outside 12-bit range (0-4095). Clamping to valid range.")
+        }
+        
         // Use calibrated data if available from ShimmerAndroidAPI
         if (calData != null) {
             return calData // API already provides calibrated microsiemens value

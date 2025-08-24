@@ -574,9 +574,11 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
 
     /**
      * Try to start streaming using available SDK methods.
+     * Enhanced error handling to distinguish between different failure types.
      */
     private fun tryStartStreaming(ircmdObj: IRCMD): Boolean {
         val streamingMethods = listOf("startStreaming", "start", "startCapture", "beginStream")
+        val attemptResults = mutableListOf<String>()
 
         for (methodName in streamingMethods) {
             try {
@@ -591,15 +593,37 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     else -> true
                 }
 
+                attemptResults.add("$methodName: ${if (success) "SUCCESS" else "FAILED(result=$result)"}")
+
                 if (success) {
                     println("Started thermal streaming using: $methodName")
                     return true
                 }
+            } catch (e: NoSuchMethodException) {
+                attemptResults.add("$methodName: METHOD_NOT_FOUND")
+                // Method doesn't exist in this SDK version - continue to next
+            } catch (e: IllegalAccessException) {
+                attemptResults.add("$methodName: ACCESS_DENIED")
+                // Method exists but can't be accessed - continue to next
+            } catch (e: java.lang.reflect.InvocationTargetException) {
+                val cause = e.cause
+                val errorType = when {
+                    cause?.message?.contains("device", ignoreCase = true) == true -> "DEVICE_ERROR"
+                    cause?.message?.contains("permission", ignoreCase = true) == true -> "PERMISSION_ERROR"
+                    cause?.message?.contains("busy", ignoreCase = true) == true -> "DEVICE_BUSY"
+                    else -> "INVOCATION_ERROR"
+                }
+                attemptResults.add("$methodName: $errorType(${cause?.message})")
+                // Method threw exception - log but continue to next
             } catch (e: Exception) {
-                // Try next method
+                attemptResults.add("$methodName: UNKNOWN_ERROR(${e.javaClass.simpleName}: ${e.message})")
+                // Other unexpected error - continue to next
             }
         }
 
+        // Log all attempts for debugging
+        println("Thermal streaming attempts: ${attemptResults.joinToString(", ")}")
+        
         return false
     }
 
