@@ -62,7 +62,9 @@ class DeviceManager:
             self.register(device_id)
             info = self._devices[device_id]
         info.last_heartbeat_ns = now
-        info.status = "Online"
+        # Only change status to Online if it was Offline, otherwise preserve current status
+        if info.status == "Offline":
+            info.status = "Online"
 
     def get_status(self, device_id: str) -> str | None:
         info = self._devices.get(device_id)

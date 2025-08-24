@@ -235,7 +235,7 @@ def test_concurrent_device_operations() -> None:
 
     # Final state should be consistent
     info = dm.get_info(device_id)
-    assert info.status == "Online"  # update_heartbeat overwrites status to Online
+    assert info.status == "Processing"  # update_heartbeat preserves non-Offline status
     assert info.device_id == device_id
 
 

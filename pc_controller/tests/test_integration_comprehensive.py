@@ -341,7 +341,7 @@ class TestMultiComponentIntegration:
             await asyncio.sleep(0.1)  # Allow time for response
             
             # Verify server is running (basic test)
-            assert time_server._server_task is not None
+            assert time_server.is_running()
             
         finally:
             transport.close()
@@ -469,9 +469,20 @@ class TestSystemIntegration:
         session_id = session_manager.create_session("fault_tolerance_test")
         session_manager.start_recording()
 
-        # Simulate one device failure (timeout)
+        # Simulate one device failure (timeout) by advancing time
         failed_device = devices[1]
-        future_time = time.time_ns() + int(2 * 1e9)  # 2 seconds
+        future_time = time.time_ns() + int(2 * 1e9)  # 2 seconds in the future
+        
+        # Update heartbeats for the devices that should stay online
+        # We need to update their heartbeat to the future time minus a small margin
+        # so they don't timeout
+        for device_id in [devices[0], devices[2]]:
+            device_info = device_manager.get_info(device_id)
+            if device_info:
+                # Set heartbeat to just within the timeout window
+                device_info.last_heartbeat_ns = future_time - int(0.5 * 1e9)  # 0.5 seconds ago
+                device_info.status = "Recording"
+        
         device_manager.check_timeouts(now_ns=future_time)
 
         # Verify failed device is offline
@@ -484,7 +495,7 @@ class TestSystemIntegration:
         # Simulate device recovery
         device_manager.update_heartbeat(failed_device)
         device_manager.set_status(failed_device, "Recording")
-        assert device_manager.get_status(failed_device) == "Online"
+        assert device_manager.get_status(failed_device) == "Recording"
 
         # Session should still be active
         assert session_manager.is_active

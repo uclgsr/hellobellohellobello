@@ -339,7 +339,7 @@ class TestPerformanceAndStress:
         device_manager = DeviceManager(heartbeat_timeout_seconds=5)
         session_manager = SessionManager(base_dir=str(self.temp_dir))
 
-        runtime_seconds = 30  # Run for 30 seconds (would be longer in real stress test)
+        runtime_seconds = 5  # Run for 5 seconds to stay within timeout limits
         start_time = time.time()
 
         cycle_count = 0

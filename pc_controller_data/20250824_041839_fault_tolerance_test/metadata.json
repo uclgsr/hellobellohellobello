@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "session_id": "20250824_041839_fault_tolerance_test",
+  "name": "fault_tolerance_test",
+  "created_at_ns": 1756009119485877257,
+  "created_at": "2025-08-24T04:18:39",
+  "state": "Recording",
+  "start_time_ns": 1756009119485974350,
+  "end_time_ns": null,
+  "duration_ns": null
+}

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "session_id": "20250824_040916_test_session",
+  "name": "test_session",
+  "created_at_ns": 1756008556993812715,
+  "created_at": "2025-08-24T04:09:16",
+  "state": "Stopped",
+  "start_time_ns": 1756008556993952959,
+  "end_time_ns": 1756008556994102249,
+  "duration_ns": 149290
+}

@@ -334,6 +334,15 @@ class TestCompleteRecordingWorkflows:
 
         # Check timeouts - failed device should be offline
         future_time = time.time_ns() + int(6 * 1e9)  # 6 seconds
+        
+        # Update healthy device heartbeats to be within timeout window for the future time
+        for device in healthy_devices:
+            device_info = self.env.device_manager.get_info(device.device_id)
+            if device_info:
+                # Set heartbeat to just within the timeout window (5 seconds before future_time)
+                device_info.last_heartbeat_ns = future_time - int(5 * 1e9)  
+                device_info.status = "Recording"
+        
         self.env.device_manager.check_timeouts(now_ns=future_time)
 
         assert self.env.device_manager.get_status(failed_device.device_id) == "Offline"
@@ -347,7 +356,7 @@ class TestCompleteRecordingWorkflows:
         failed_device.start_recording(session_id)  # Restart recording
         self.env.device_manager.set_status(failed_device.device_id, "Recording")
 
-        assert self.env.device_manager.get_status(failed_device.device_id) == "Online"
+        assert self.env.device_manager.get_status(failed_device.device_id) == "Recording"
 
         # Continue recording for all devices
         for _ in range(5):
@@ -617,11 +626,11 @@ class TestPerformanceAndReliability:
 
             # Start and stop session
             session_id = self.env.session_manager.create_session("test_session")
-        self.env.session_manager.start_recording()
+            self.env.session_manager.start_recording()
 
-        for device in devices:
-            device.start_recording(session_id)
-            self.env.device_manager.set_status(device.device_id, "Recording")
+            for device in devices:
+                device.start_recording(session_id)
+                self.env.device_manager.set_status(device.device_id, "Recording")
 
             # Brief recording period
             time.sleep(0.1)
@@ -697,14 +706,24 @@ class TestPerformanceAndReliability:
 
         # 1. Device timeout and recovery
         failed_device = devices[0]
+        healthy_devices = devices[1:]
+        
+        # Update heartbeats for healthy devices to keep them within timeout window
         future_time = time.time_ns() + int(10 * 1e9)
+        for device in healthy_devices:
+            device_info = self.env.device_manager.get_info(device.device_id)
+            if device_info:
+                # Set heartbeat to just within the timeout window
+                device_info.last_heartbeat_ns = future_time - int(5 * 1e9)  
+                device_info.status = "Recording"
+        
         self.env.device_manager.check_timeouts(now_ns=future_time)
         assert self.env.device_manager.get_status(failed_device.device_id) == "Offline"
 
         # Recovery
         self.env.device_manager.update_heartbeat(failed_device.device_id)
         self.env.device_manager.set_status(failed_device.device_id, "Recording")
-        assert self.env.device_manager.get_status(failed_device.device_id) == "Online"
+        assert self.env.device_manager.get_status(failed_device.device_id) == "Recording"
 
         # 2. Duplicate device registration (should handle gracefully)
         self.env.device_manager.register(devices[1].device_id)

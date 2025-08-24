@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "session_id": "20250824_040909_single_device_test",
+  "name": "single_device_test",
+  "created_at_ns": 1756008549045873590,
+  "created_at": "2025-08-24T04:09:09",
+  "state": "Stopped",
+  "start_time_ns": 1756008549046016329,
+  "end_time_ns": 1756008549547151889,
+  "duration_ns": 501135560
+}
