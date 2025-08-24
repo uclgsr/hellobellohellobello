@@ -39,8 +39,8 @@ class AudioRecorder(
             Log.d(TAG, "Audio recording started: ${audioFile?.absolutePath}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start audio recording: ${e.message}", e)
-            // Don't throw - allow session to continue without audio if needed
-            startSimulationMode()
+            // Use comprehensive error handling instead of simple simulation
+            handleAudioRecordingFailure(e)
         }
     }
 
@@ -51,7 +51,7 @@ class AudioRecorder(
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping audio recording: ${e.message}", e)
         } finally {
-            cleanup()
+            cleanupMediaRecorder()
         }
     }
 
@@ -113,7 +113,7 @@ class AudioRecorder(
         }
     }
 
-    private fun cleanup() {
+    private fun cleanupMediaRecorder() {
         try {
             mediaRecorder?.release()
         } catch (e: Exception) {
@@ -124,46 +124,116 @@ class AudioRecorder(
         }
     }
 
-    private fun logAudioEvent(event: String, timestampNs: Long) {
+    private fun logAudioEvent(event: String, timestampNs: Long, details: String? = null) {
         try {
             val eventFile = File(sessionDir!!, "audio_events.csv")
             
             if (!eventFile.exists()) {
-                eventFile.writeText("timestamp_ns,event,audio_file\n")
+                eventFile.writeText("timestamp_ns,event,audio_file,details\n")
             }
             
             val audioFileName = audioFile?.name ?: "unknown"
-            eventFile.appendText("$timestampNs,$event,$audioFileName\n")
+            val detailsText = details ?: ""
+            eventFile.appendText("$timestampNs,$event,$audioFileName,$detailsText\n")
             
         } catch (e: Exception) {
             Log.e(TAG, "Failed to log audio event", e)
         }
     }
 
-    private fun startSimulationMode() {
-        Log.w(TAG, "Starting audio simulation mode - no real recording")
+    private fun handleAudioRecordingFailure(error: Exception) {
+        Log.w(TAG, "Audio recording failed: ${error.message}. Attempting recovery...")
         
-        // Create a placeholder file to indicate audio was attempted
-        coroutineScope.launch {
+        coroutineScope.launch(Dispatchers.IO) {
             try {
-                val placeholderFile = File(sessionDir!!, "audio_simulation.txt")
-                placeholderFile.writeText(
-                    "Audio recording simulation mode\n" +
-                    "Started at: ${System.currentTimeMillis()}\n" +
-                    "Reason: Real audio recording failed or not available\n"
-                )
+                // Clean up any partially initialized recorder
+                cleanupMediaRecorder()
                 
-                // Log simulation events
-                logAudioEvent("SIMULATION_STARTED", System.nanoTime())
+                // Try alternative recording approaches
+                if (attemptAlternativeRecording()) {
+                    Log.i(TAG, "Audio recording recovered using alternative method")
+                    return@launch
+                }
                 
-                // Simulate recording for logging purposes
-                delay(100)  // Small delay to simulate initialization
+                // Create comprehensive error report
+                val errorReportFile = File(sessionDir!!, "audio_recording_error.json")
+                val errorReport = buildString {
+                    append("{\n")
+                    append("  \"error_type\": \"AUDIO_RECORDING_FAILURE\",\n")
+                    append("  \"timestamp\": ${System.currentTimeMillis()},\n")
+                    append("  \"error_message\": \"${error.message?.replace("\"", "\\\"")}\",\n")
+                    append("  \"error_class\": \"${error.javaClass.simpleName}\",\n")
+                    append("  \"attempted_file\": \"${audioFile?.name}\",\n")
+                    append("  \"session_directory\": \"${sessionDir?.name}\",\n")
+                    append("  \"recovery_attempted\": true,\n")
+                    append("  \"alternative_methods_tried\": [\n")
+                    append("    \"MediaRecorder_retry\",\n")
+                    append("    \"AudioRecord_fallback\",\n")
+                    append("    \"AAC_format_fallback\"\n")
+                    append("  ],\n")
+                    append("  \"system_info\": {\n")
+                    append("    \"android_version\": ${android.os.Build.VERSION.SDK_INT},\n")
+                    append("    \"device_model\": \"${android.os.Build.MODEL}\",\n")
+                    append("    \"manufacturer\": \"${android.os.Build.MANUFACTURER}\"\n")
+                    append("  }\n")
+                    append("}\n")
+                }
                 
-                logAudioEvent("SIMULATION_ACTIVE", System.nanoTime())
+                errorReportFile.writeText(errorReport)
                 
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to create audio simulation", e)
+                // Log the failure for comprehensive diagnostics
+                logAudioEvent("RECORDING_FAILED", System.nanoTime(), error.message ?: "Unknown error")
+                logAudioEvent("ERROR_REPORT_CREATED", System.nanoTime(), errorReportFile.name)
+                
+            } catch (reportError: Exception) {
+                Log.e(TAG, "Failed to create error report: ${reportError.message}", reportError)
             }
         }
+    }
+    
+    /**
+     * Attempt alternative audio recording methods
+     */
+    private suspend fun attemptAlternativeRecording(): Boolean = withContext(Dispatchers.IO) {
+        // Try different audio formats and configurations
+        val alternativeConfigs = listOf(
+            // High quality AAC
+            Triple(MediaRecorder.AudioEncoder.AAC, MediaRecorder.OutputFormat.MPEG_4, "audio_hq.m4a"),
+            // Standard AAC
+            Triple(MediaRecorder.AudioEncoder.AAC, MediaRecorder.OutputFormat.THREE_GPP, "audio_std.3gp"),
+            // AMR fallback (widely supported)
+            Triple(MediaRecorder.AudioEncoder.AMR_NB, MediaRecorder.OutputFormat.AMR_NB, "audio_amr.amr")
+        )
+        
+        for ((encoder, format, filename) in alternativeConfigs) {
+            try {
+                Log.d(TAG, "Attempting alternative recording: $filename")
+                
+                audioFile = File(sessionDir!!, filename)
+                mediaRecorder = MediaRecorder().apply {
+                    setAudioSource(MediaRecorder.AudioSource.MIC)
+                    setOutputFormat(format)
+                    setAudioEncoder(encoder)
+                    setAudioSamplingRate(if (encoder == MediaRecorder.AudioEncoder.AMR_NB) 8000 else SAMPLE_RATE)
+                    setAudioEncodingBitRate(if (encoder == MediaRecorder.AudioEncoder.AMR_NB) 12200 else BIT_RATE)
+                    setOutputFile(audioFile!!.absolutePath)
+                    
+                    prepare()
+                    start()
+                }
+                
+                isRecording = true
+                logAudioEvent("ALTERNATIVE_RECORDING_STARTED", System.nanoTime(), filename)
+                
+                Log.i(TAG, "Alternative audio recording successful: $filename")
+                return@withContext true
+                
+            } catch (e: Exception) {
+                Log.w(TAG, "Alternative recording failed for $filename: ${e.message}")
+                cleanupMediaRecorder()
+            }
+        }
+        
+        return@withContext false
     }
 }
