@@ -11,6 +11,10 @@
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera2.full" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.capability.raw" android:required="false"/>
+    
+    <!-- Audio recording (FR5 requirement) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
 
     <!-- BLE (future Shimmer integration) -->
     <uses-permission android:name="android.permission.BLUETOOTH"/>

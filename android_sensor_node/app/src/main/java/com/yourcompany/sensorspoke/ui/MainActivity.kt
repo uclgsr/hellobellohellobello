@@ -29,6 +29,7 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.controller.RecordingController
+import com.yourcompany.sensorspoke.sensors.audio.AudioRecorder
 import com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder
 import com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
 import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
@@ -242,6 +243,7 @@ class MainActivity : AppCompatActivity() {
         c.register("rgb", RgbCameraRecorder(applicationContext, this))
         c.register("thermal", ThermalCameraRecorder(applicationContext))
         c.register("gsr", ShimmerRecorder(applicationContext))
+        c.register("audio", AudioRecorder(applicationContext))  // FR5: Audio recording support
         controller = c
         return c
     }

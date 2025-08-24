@@ -1,6 +1,8 @@
 package com.yourcompany.sensorspoke.sensors.gsr
 
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.content.Context
 import com.shimmerresearch.android.shimmerapi.ShimmerBluetooth
 import com.shimmerresearch.android.shimmerapi.ShimmerConfig
@@ -125,18 +127,65 @@ class ShimmerRecorder(private val context: Context) : SensorRecorder {
     private suspend fun scanForShimmerDevices(): List<BluetoothDevice> {
         return withContext(Dispatchers.IO) {
             try {
-                // Use ShimmerAndroidAPI device discovery
+                // Use ShimmerAndroidAPI device discovery with proper BLE scanning
                 suspendCancellableCoroutine<List<BluetoothDevice>> { continuation ->
                     val discoveredDevices = mutableListOf<BluetoothDevice>()
-
-                    // Scan for Shimmer devices (implementation depends on API version)
-                    // This is a simplified version - actual implementation would use
-                    // proper BLE scanning with device filtering
-
-                    // For now, return empty list to trigger simulation fallback
-                    continuation.resume(discoveredDevices)
+                    
+                    // Check for Bluetooth permissions and adapter availability
+                    val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+                    val bluetoothAdapter = bluetoothManager?.adapter
+                    
+                    if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
+                        println("Bluetooth adapter not available or not enabled")
+                        continuation.resume(discoveredDevices)
+                        return@suspendCancellableCoroutine
+                    }
+                    
+                    // Start BLE scan for Shimmer devices
+                    val scanCallback = object : BluetoothAdapter.LeScanCallback {
+                        override fun onLeScan(device: BluetoothDevice?, rssi: Int, scanRecord: ByteArray?) {
+                            device?.let { btDevice ->
+                                // Filter for Shimmer devices by name pattern
+                                val deviceName = btDevice.name
+                                if (deviceName != null && 
+                                   (deviceName.startsWith("Shimmer") || deviceName.contains("GSR+"))) {
+                                    if (!discoveredDevices.contains(btDevice)) {
+                                        discoveredDevices.add(btDevice)
+                                        println("Found Shimmer device: ${btDevice.name} (${btDevice.address})")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    try {
+                        // Start scanning
+                        @Suppress("DEPRECATION")
+                        bluetoothAdapter.startLeScan(scanCallback)
+                        
+                        // Scan for 10 seconds
+                        val scanJob = CoroutineScope(Dispatchers.IO).launch {
+                            delay(10_000)
+                            @Suppress("DEPRECATION")
+                            bluetoothAdapter.stopLeScan(scanCallback)
+                            continuation.resume(discoveredDevices)
+                        }
+                        
+                        continuation.invokeOnCancellation {
+                            scanJob.cancel()
+                            @Suppress("DEPRECATION")
+                            bluetoothAdapter.stopLeScan(scanCallback)
+                        }
+                        
+                    } catch (securityException: SecurityException) {
+                        println("BLE scan failed due to missing permissions: ${securityException.message}")
+                        @Suppress("DEPRECATION")
+                        bluetoothAdapter.stopLeScan(scanCallback)
+                        continuation.resume(discoveredDevices)
+                    }
                 }
             } catch (e: Exception) {
+                println("Shimmer BLE scan failed: ${e.message}")
                 emptyList()
             }
         }

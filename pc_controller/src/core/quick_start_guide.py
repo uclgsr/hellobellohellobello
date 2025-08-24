@@ -381,18 +381,31 @@ class QuickStartGuide(QDialog):
         )
 
     def _demo_calibration(self):
-        """Demo calibration dialog."""
-        from PyQt6.QtWidgets import QMessageBox
-
-        QMessageBox.information(
-            self,
-            "Calibration Demo",
-            "This would open the calibration dialog.\n"
-            "The actual implementation includes:\n"
-            "• File browser for calibration images\n"
-            "• Checkerboard parameter configuration\n"
-            "• Real-time calibration progress tracking",
-        )
+        """Open the camera calibration dialog."""
+        try:
+            from pc_controller.src.gui.calibration_dialog import CalibrationDialog
+            
+            dialog = CalibrationDialog(self)
+            dialog.exec()
+            
+        except ImportError as e:
+            from PyQt6.QtWidgets import QMessageBox
+            
+            QMessageBox.warning(
+                self,
+                "Feature Unavailable",
+                f"Camera calibration feature requires OpenCV:\n{e}\n\n"
+                "Please install OpenCV to use this feature:\n"
+                "pip install opencv-python",
+            )
+        except Exception as e:
+            from PyQt6.QtWidgets import QMessageBox
+            
+            QMessageBox.critical(
+                self,
+                "Calibration Error",
+                f"Failed to open calibration dialog:\n{e}",
+            )
 
     def _highlight_session_controls(self):
         """Demo highlighting session controls."""

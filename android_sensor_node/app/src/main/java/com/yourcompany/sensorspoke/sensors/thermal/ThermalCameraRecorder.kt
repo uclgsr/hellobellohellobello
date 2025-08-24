@@ -110,7 +110,27 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
             startTopdonStreaming()
 
         } catch (e: Exception) {
+            // Provide specific error feedback instead of silent fallback
+            val errorType = when {
+                e.message?.contains("USB") == true -> "USB_CONNECTION_FAILED"
+                e.message?.contains("permission") == true -> "USB_PERMISSION_DENIED"
+                e.message?.contains("device not found") == true -> "DEVICE_NOT_FOUND"
+                e.message?.contains("SDK") == true -> "SDK_INITIALIZATION_FAILED"
+                else -> "UNKNOWN_THERMAL_ERROR"
+            }
+            
+            println("Thermal camera initialization failed: $errorType - ${e.message}")
+            
+            // Notify recording controller of the specific error
+            try {
+                // This could be used to inform the UI/user about the specific issue
+                broadcastThermalError(errorType, e.message ?: "Unknown error")
+            } catch (ignored: Exception) {
+                // If broadcast fails, continue with fallback
+            }
+            
             // If real device connection fails, fall back to simulation mode
+            println("Falling back to thermal simulation mode due to hardware unavailability")
             startSimulationMode()
         }
     }
@@ -1209,5 +1229,19 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         } catch (_: Exception) {
             // Handle error silently for now
         }
+    }
+    
+    /**
+     * Broadcast thermal camera error information for user feedback.
+     */
+    private fun broadcastThermalError(errorType: String, errorMessage: String) {
+        // This could be expanded to use Android's broadcast system or callback interface
+        println("THERMAL_ERROR_BROADCAST: $errorType - $errorMessage")
+        
+        // In a full implementation, this would:
+        // 1. Send error info to RecordingController
+        // 2. Update UI with specific error message
+        // 3. Log structured error data for debugging
+        // 4. Potentially trigger recovery actions
     }
 }
