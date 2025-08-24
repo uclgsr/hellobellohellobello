@@ -376,7 +376,7 @@ class TestMultiComponentIntegration:
         assert len(recording_devices) == len(devices)
 
         # Stop session
-        session_manager.stop_session()
+        session_manager.stop_recording()
         assert not session_manager.is_active
 
     def test_heartbeat_manager_integration_with_device_manager(self):
@@ -448,7 +448,7 @@ class TestSystemIntegration:
         assert recording_count == len(test_devices)
 
         # 5. Session Stop Phase
-        session_manager.stop_session()
+        session_manager.stop_recording()
         assert not session_manager.is_active
 
         # 6. Cleanup Phase
