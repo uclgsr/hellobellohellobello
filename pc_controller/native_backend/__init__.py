@@ -8,8 +8,8 @@ ImportError; the GUI uses Python fallbacks in that case.
 from __future__ import annotations
 
 try:
-    from .native_backend import NativeShimmer, NativeWebcam  # type: ignore[attr-defined]
-    __all__ = ["NativeShimmer", "NativeWebcam"]
+    from .native_backend import NativeShimmer, NativeWebcam, __version__, shimmer_capi_enabled  # type: ignore[attr-defined]
+    __all__ = ["NativeShimmer", "NativeWebcam", "__version__", "shimmer_capi_enabled"]
 except Exception as exc:  # pragma: no cover - optional
     # Keep explicit error to help developers build the extension
     raise ImportError(
