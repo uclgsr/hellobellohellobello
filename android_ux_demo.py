@@ -275,7 +275,7 @@ class AndroidUXDemo:
         for feature in interaction_features:
             print(f"   ✅ {feature}")
 
-    def run_demo(self, demo_name: str = None) -> None:
+    def run_demo(self, demo_name: str | None = None) -> None:
         """Run a specific demo or all demos."""
         if demo_name and demo_name in self.demos:
             self.demos[demo_name]()
@@ -293,7 +293,7 @@ class AndroidUXDemo:
         print("complement the PC Controller enhancements, providing a")
         print("consistent, research-ready user experience.")
 
-        for _demo_name, demo_func in self.demos.items():
+        for demo_func in self.demos.values():
             demo_func()
             time.sleep(1)  # Brief pause between sections
 

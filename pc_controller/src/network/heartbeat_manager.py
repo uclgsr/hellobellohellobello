@@ -51,6 +51,7 @@ class HeartbeatManager:
         timeout_multiplier: int = 3,
         max_reconnect_attempts: int = 10,
         reconnect_backoff_s: float = 5.0,
+        callback: Callable[[str], None] | None = None,
     ):
         """Initialize the heartbeat manager.
 
@@ -59,10 +60,12 @@ class HeartbeatManager:
             timeout_multiplier: Number of missed intervals before marking unhealthy
             max_reconnect_attempts: Maximum reconnection attempts
             reconnect_backoff_s: Delay between reconnection attempts
+            callback: Optional callback function for heartbeat events
         """
         self.heartbeat_interval_s = heartbeat_interval_s
         self.timeout_ns = int(heartbeat_interval_s * timeout_multiplier * 1_000_000_000)
         self.max_reconnect_attempts = max_reconnect_attempts
+        self.callback = callback
         self.reconnect_backoff_s = reconnect_backoff_s
 
         self._devices: dict[str, HeartbeatStatus] = {}

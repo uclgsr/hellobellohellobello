@@ -38,13 +38,16 @@ COMMAND_REJOIN_SESSION = "rejoin_session"
 V1 = 1
 
 
-def build_query_capabilities() -> str:
+def build_query_capabilities(cmd_id: int | None = None) -> str:
     """Return a JSON line string for the capabilities query (legacy).
 
     The payload matches the early spec and ends with a newline suitable
     for line-oriented TCP protocols.
+    
+    Args:
+        cmd_id: Optional command ID. If not provided, uses QUERY_CMD_ID.
     """
-    payload = {"id": QUERY_CMD_ID, "command": COMMAND_QUERY_CAPABILITIES}
+    payload = {"id": cmd_id or QUERY_CMD_ID, "command": COMMAND_QUERY_CAPABILITIES}
     return json.dumps(payload) + "\n"
 
 

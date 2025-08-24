@@ -2,17 +2,36 @@ plugins {
     base
 }
 
+// Cross-platform support for different operating systems
+val isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows()
 val venvDir = project.layout.projectDirectory.dir(".venv")
-val venvPython = venvDir.file("Scripts/python.exe")
+val venvPython = if (isWindows) {
+    venvDir.file("Scripts/python.exe")
+} else {
+    venvDir.file("bin/python")
+}
+
+// Determine shell command based on platform
+fun shellCommand(vararg cmd: String): List<String> {
+    return if (isWindows) {
+        listOf("cmd", "/c") + cmd
+    } else {
+        listOf("bash", "-c") + cmd
+    }
+}
 
 // Create a Python virtual environment under pc_controller/.venv
 val setupVenv by tasks.registering(Exec::class) {
     group = "python"
     description = "Create a Python virtual environment for pc_controller"
-    commandLine("cmd", "/c", "python -m venv .venv")
+    val pythonCmd = if (isWindows) "python" else "python3"
+    commandLine(shellCommand("$pythonCmd -m venv .venv"))
     workingDir = project.projectDir
-    // Only create if missing
-    onlyIf { !venvDir.asFile.exists() }
+    // Only create if missing - using a simpler check
+    onlyIf { 
+        val venvExists = project.projectDir.resolve(".venv").exists()
+        !venvExists
+    }
 }
 
 // Install Python dependencies into the venv, including pytest and pyinstaller
@@ -20,12 +39,23 @@ val installRequirements by tasks.registering(Exec::class) {
     group = "python"
     description = "Install Python dependencies into the venv (requirements + pytest + pyinstaller)"
     dependsOn(setupVenv)
-    doFirst {
-        val pythonExe = if (venvPython.asFile.exists()) venvPython.asFile.absolutePath else "python"
-        val cmd = "\"$pythonExe\" -m pip install -U pip && \"$pythonExe\" -m pip install -r requirements.txt && \"$pythonExe\" -m pip install pytest pyinstaller"
-        commandLine("cmd", "/c", cmd)
-    }
     workingDir = project.projectDir
+    
+    doFirst {
+        val venvPythonPath = if (isWindows) {
+            project.projectDir.resolve(".venv/Scripts/python.exe")
+        } else {
+            project.projectDir.resolve(".venv/bin/python")
+        }
+        
+        val pythonExe = if (venvPythonPath.exists()) {
+            venvPythonPath.absolutePath
+        } else {
+            if (isWindows) "python" else "python3"
+        }
+        val cmd = "$pythonExe -m pip install -U pip && $pythonExe -m pip install -r requirements.txt && $pythonExe -m pip install pytest pyinstaller"
+        commandLine(shellCommand(cmd))
+    }
 }
 
 // Run pytest using the system Python (relies on environment pytest)
@@ -33,7 +63,8 @@ val pyTest by tasks.registering(Exec::class) {
     group = "verification"
     description = "Run pytest for pc_controller"
     // Do not depend on venv to avoid heavy installs in CI; pytest is executed from repo root
-    commandLine("cmd", "/c", "pytest")
+    val pytestCmd = if (isWindows) "pytest" else "python3 -m pytest"
+    commandLine(shellCommand(pytestCmd))
     workingDir = project.rootDir // pytest.ini is at repo root
 }
 
@@ -42,14 +73,25 @@ val pyInstaller by tasks.registering(Exec::class) {
     group = "build"
     description = "Build pc_controller executable using PyInstaller"
     dependsOn(installRequirements)
+    workingDir = project.projectDir
+    
     doFirst {
-        val pythonExe = if (venvPython.asFile.exists()) venvPython.asFile.absolutePath else "python"
+        val venvPythonPath = if (isWindows) {
+            project.projectDir.resolve(".venv/Scripts/python.exe")
+        } else {
+            project.projectDir.resolve(".venv/bin/python")
+        }
+        
+        val pythonExe = if (venvPythonPath.exists()) {
+            venvPythonPath.absolutePath
+        } else {
+            if (isWindows) "python" else "python3"
+        }
         val entry = File(project.projectDir, "src/main.py").absolutePath
         val distDir = project.layout.buildDirectory.get().asFile.resolve("dist").absolutePath
-        val cmd = "\"$pythonExe\" -m PyInstaller --noconfirm --clean -F --name pc_controller --distpath \"$distDir\" \"$entry\""
-        commandLine("cmd", "/c", cmd)
+        val cmd = "$pythonExe -m PyInstaller --noconfirm --clean -F --name pc_controller --distpath $distDir $entry"
+        commandLine(shellCommand(cmd))
     }
-    workingDir = project.projectDir
 }
 
 // Make root :build depend on this artifact if desired

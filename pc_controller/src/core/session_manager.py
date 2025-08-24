@@ -18,16 +18,27 @@ from typing import Any
 
 try:
     # Centralized config loader (NFR8)
-    from pc_controller.src.config import \
-        get as cfg_get  # when running as a script
-except Exception:  # pragma: no cover
+    from pc_controller.src.config import get as cfg_get
+except ImportError:
+    # Fallback for different module contexts (tests, scripts, etc.)
     try:
-        from ..config import \
-            get as cfg_get  # when imported via tests (pythonpath set)
-    except Exception:  # pragma: no cover
-
-        def cfg_get(key: str, default=None):  # type: ignore
-            return default
+        from ..config import get as cfg_get
+    except ImportError:
+        import os
+        import sys
+        
+        # Try to add the project root to Python path
+        project_root = Path(__file__).parents[3]
+        if str(project_root) not in sys.path:
+            sys.path.insert(0, str(project_root))
+            
+        try:
+            from pc_controller.src.config import get as cfg_get
+        except ImportError:
+            # Ultimate fallback - create a no-op config function
+            def cfg_get(key: str, default=None):  # type: ignore
+                """Fallback config function when config module unavailable."""
+                return default
 
 
 @dataclass

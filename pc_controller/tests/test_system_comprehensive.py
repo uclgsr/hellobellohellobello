@@ -185,8 +185,9 @@ class TestCompleteRecordingWorkflows:
         assert self.env.device_manager.get_status(device.device_id) == "Online"
 
         # Start session
-        session_id = self.env.session_manager.start_session()
-        assert self.env.session_manager.is_active()
+        session_id = self.env.session_manager.create_session("single_device_test")
+        self.env.session_manager.start_recording()
+        assert self.env.session_manager.is_active
         assert session_id is not None
 
         # Start recording on device
@@ -208,8 +209,8 @@ class TestCompleteRecordingWorkflows:
         assert device.recording is False
 
         # Stop session
-        self.env.session_manager.stop_session()
-        assert not self.env.session_manager.is_active()
+        self.env.session_manager.stop_recording()
+        assert not self.env.session_manager.is_active
 
         # Verify data files were created
         data_files = device.get_data_files()
@@ -243,8 +244,9 @@ class TestCompleteRecordingWorkflows:
             assert self.env.device_manager.get_status(device.device_id) == "Online"
 
         # Start session
-        session_id = self.env.session_manager.start_session()
-        assert self.env.session_manager.is_active()
+        session_id = self.env.session_manager.create_session("multi_device_test")
+        self.env.session_manager.start_recording()
+        assert self.env.session_manager.is_active
 
         # Start recording on all devices simultaneously
         start_times = []
@@ -286,7 +288,7 @@ class TestCompleteRecordingWorkflows:
         assert max_stop_diff < 0.1  # Within 100ms
 
         # Stop session
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Verify all devices generated data files
         total_files = 0
@@ -314,7 +316,8 @@ class TestCompleteRecordingWorkflows:
             self.env.device_manager.register(device.device_id)
 
         # Start session and recording
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
         for device in devices:
             device.start_recording(session_id)
             self.env.device_manager.set_status(device.device_id, "Recording")
@@ -331,6 +334,15 @@ class TestCompleteRecordingWorkflows:
 
         # Check timeouts - failed device should be offline
         future_time = time.time_ns() + int(6 * 1e9)  # 6 seconds
+        
+        # Update healthy device heartbeats to be within timeout window for the future time
+        for device in healthy_devices:
+            device_info = self.env.device_manager.get_info(device.device_id)
+            if device_info:
+                # Set heartbeat to just within the timeout window (5 seconds before future_time)
+                device_info.last_heartbeat_ns = future_time - int(5 * 1e9)  
+                device_info.status = "Recording"
+        
         self.env.device_manager.check_timeouts(now_ns=future_time)
 
         assert self.env.device_manager.get_status(failed_device.device_id) == "Offline"
@@ -344,7 +356,7 @@ class TestCompleteRecordingWorkflows:
         failed_device.start_recording(session_id)  # Restart recording
         self.env.device_manager.set_status(failed_device.device_id, "Recording")
 
-        assert self.env.device_manager.get_status(failed_device.device_id) == "Online"
+        assert self.env.device_manager.get_status(failed_device.device_id) == "Recording"
 
         # Continue recording for all devices
         for _ in range(5):
@@ -355,7 +367,7 @@ class TestCompleteRecordingWorkflows:
         # Stop session
         for device in devices:
             device.stop_recording()
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Verify data files exist for all devices (including recovered one)
         for device in devices:
@@ -368,7 +380,8 @@ class TestCompleteRecordingWorkflows:
         device = self.env.create_mock_android_device("long-duration-device")
         self.env.device_manager.register(device.device_id)
 
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
         device.start_recording(session_id)
         self.env.device_manager.set_status(device.device_id, "Recording")
 
@@ -382,7 +395,7 @@ class TestCompleteRecordingWorkflows:
 
             # Verify device stays online and recording
             assert self.env.device_manager.get_status(device.device_id) == "Recording"
-            assert self.env.session_manager.is_active()
+            assert self.env.session_manager.is_active
 
             time.sleep(0.5)  # Check every 500ms
 
@@ -392,7 +405,7 @@ class TestCompleteRecordingWorkflows:
 
         # Stop gracefully
         device.stop_recording()
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Verify data integrity
         data_files = device.get_data_files()
@@ -423,7 +436,8 @@ class TestDataIntegrityAndSynchronization:
             self.env.device_manager.register(device.device_id)
 
         # Start synchronized recording
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
         recording_start_time = time.time_ns()
 
         for device in devices:
@@ -437,7 +451,7 @@ class TestDataIntegrityAndSynchronization:
         for device in devices:
             device.stop_recording()
 
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Analyze timestamp synchronization
         all_timestamps = []
@@ -474,13 +488,14 @@ class TestDataIntegrityAndSynchronization:
         )
 
         self.env.device_manager.register(device.device_id)
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
 
         device.start_recording(session_id)
         time.sleep(0.1)
         device.stop_recording()
 
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         data_files = device.get_data_files()
 
@@ -526,11 +541,12 @@ class TestDataIntegrityAndSynchronization:
         device = self.env.create_mock_android_device("export-device")
         self.env.device_manager.register(device.device_id)
 
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
         device.start_recording(session_id)
         time.sleep(0.1)
         device.stop_recording()
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Test export to HDF5
         session_data_dir = Path(self.env.temp_dir) / device.device_id
@@ -609,7 +625,8 @@ class TestPerformanceAndReliability:
                 self.env.device_manager.register(device_id)
 
             # Start and stop session
-            session_id = self.env.session_manager.start_session()
+            session_id = self.env.session_manager.create_session("test_session")
+            self.env.session_manager.start_recording()
 
             for device in devices:
                 device.start_recording(session_id)
@@ -622,7 +639,7 @@ class TestPerformanceAndReliability:
                 device.stop_recording()
                 self.env.device_manager.remove(device.device_id)
 
-            self.env.session_manager.stop_session()
+            self.env.session_manager.stop_recording()
 
             # Clean up devices
             devices.clear()
@@ -645,8 +662,9 @@ class TestPerformanceAndReliability:
 
         for i in range(session_count):
             # Start session
-            session_id = self.env.session_manager.start_session()
-            assert self.env.session_manager.is_active()
+            session_id = self.env.session_manager.create_session("test_session")
+            self.env.session_manager.start_recording()
+            assert self.env.session_manager.is_active
 
             # Start recording
             device.start_recording(session_id)
@@ -657,8 +675,8 @@ class TestPerformanceAndReliability:
 
             # Stop recording and session
             device.stop_recording()
-            self.env.session_manager.stop_session()
-            assert not self.env.session_manager.is_active()
+            self.env.session_manager.stop_recording()
+            assert not self.env.session_manager.is_active
 
             successful_sessions += 1
 
@@ -676,7 +694,8 @@ class TestPerformanceAndReliability:
         for device in devices:
             self.env.device_manager.register(device.device_id)
 
-        session_id = self.env.session_manager.start_session()
+        session_id = self.env.session_manager.create_session("test_session")
+        self.env.session_manager.start_recording()
 
         # Start recording on all devices
         for device in devices:
@@ -687,14 +706,24 @@ class TestPerformanceAndReliability:
 
         # 1. Device timeout and recovery
         failed_device = devices[0]
+        healthy_devices = devices[1:]
+        
+        # Update heartbeats for healthy devices to keep them within timeout window
         future_time = time.time_ns() + int(10 * 1e9)
+        for device in healthy_devices:
+            device_info = self.env.device_manager.get_info(device.device_id)
+            if device_info:
+                # Set heartbeat to just within the timeout window
+                device_info.last_heartbeat_ns = future_time - int(5 * 1e9)  
+                device_info.status = "Recording"
+        
         self.env.device_manager.check_timeouts(now_ns=future_time)
         assert self.env.device_manager.get_status(failed_device.device_id) == "Offline"
 
         # Recovery
         self.env.device_manager.update_heartbeat(failed_device.device_id)
         self.env.device_manager.set_status(failed_device.device_id, "Recording")
-        assert self.env.device_manager.get_status(failed_device.device_id) == "Online"
+        assert self.env.device_manager.get_status(failed_device.device_id) == "Recording"
 
         # 2. Duplicate device registration (should handle gracefully)
         self.env.device_manager.register(devices[1].device_id)
@@ -713,10 +742,10 @@ class TestPerformanceAndReliability:
         for device in devices:
             device.stop_recording()
 
-        self.env.session_manager.stop_session()
+        self.env.session_manager.stop_recording()
 
         # Verify clean state
-        assert not self.env.session_manager.is_active()
+        assert not self.env.session_manager.is_active
 
 
 if __name__ == "__main__":

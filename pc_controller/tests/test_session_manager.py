@@ -151,7 +151,7 @@ def test_session_metadata_persistence(tmp_path: Path) -> None:
     assert metadata["created_at_ns"] >= start_time
     assert metadata["created_at"] is not None
     assert metadata["start_time_ns"] >= start_time
-    assert metadata["end_time_ns"] >= pre_stop_time  # Allow some tolerance
+    assert metadata["end_time_ns"] >= end_time  # Allow some tolerance
     assert metadata["duration_ns"] == metadata["end_time_ns"] - metadata["start_time_ns"]
 
 

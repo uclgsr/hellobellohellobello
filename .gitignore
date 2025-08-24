@@ -62,6 +62,9 @@ docs/latex/*.toc
 docs/latex/*.out
 docs/latex/*.log
 
+# Test data and session files
+pc_controller_data/
+
 # Ignore auto-generated docs but allow documentation
 !README.md
 !CHANGELOG.md
