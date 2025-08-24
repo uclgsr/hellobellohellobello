@@ -48,6 +48,66 @@ log_error() {
 check_dependencies() {
     log_info "Checking build dependencies..."
     
+    # Check system dependencies
+    local missing_deps=()
+    
+    if ! command -v python3 &> /dev/null; then
+        missing_deps+=("python3")
+    fi
+    
+    if ! command -v cmake &> /dev/null; then
+        missing_deps+=("cmake")
+    fi
+    
+    if ! command -v ninja &> /dev/null && ! command -v make &> /dev/null; then
+        missing_deps+=("ninja or make")
+    fi
+    
+    # Check for Java (required for Android builds)
+    if ! command -v javac &> /dev/null; then
+        log_warning "Java compiler not found - Android build may fail"
+    fi
+    
+    # Check Python dependencies
+    log_info "Checking Python environment..."
+    python3 -c "
+import sys
+import subprocess
+
+required_packages = [
+    'PyQt6', 'numpy', 'opencv-python', 'pandas', 'h5py', 
+    'pybind11', 'pyqtgraph', 'zeroconf', 'psutil'
+]
+
+missing = []
+for package in required_packages:
+    try:
+        __import__(package.lower().replace('-', '_'))
+    except ImportError:
+        missing.append(package)
+
+if missing:
+    print('MISSING_PACKAGES:' + ','.join(missing))
+    sys.exit(1)
+else:
+    print('Python environment OK')
+" 2>/dev/null || {
+    log_warning "Some Python dependencies missing. Installing..."
+    pip install --user PyQt6 numpy opencv-python pandas h5py pybind11 pyqtgraph zeroconf psutil || {
+        log_error "Failed to install Python dependencies"
+        exit 1
+    }
+    }
+    
+    if [ ${#missing_deps[@]} -ne 0 ]; then
+        log_error "Missing system dependencies: ${missing_deps[*]}"
+        log_error "Please install missing dependencies and try again"
+        exit 1
+    fi
+    
+    log_info "Android build environment detected"
+    log_success "All dependencies satisfied"
+}
     local missing_deps=()
     
     # Python dependencies

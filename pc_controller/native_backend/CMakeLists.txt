@@ -9,10 +9,22 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find pybind11
-find_package(pybind11 CONFIG QUIET)
+find_package(pybind11 QUIET)
 if (NOT pybind11_FOUND)
-    message(STATUS "pybind11 Config not found, trying module mode")
-    find_package(pybind11 REQUIRED)
+    # Try to find pybind11 via Python
+    execute_process(
+        COMMAND python3 -c "import pybind11; print(pybind11.get_cmake_dir())"
+        OUTPUT_VARIABLE PYBIND11_CMAKE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE PYBIND11_PYTHON_RESULT
+    )
+    if (PYBIND11_PYTHON_RESULT EQUAL 0 AND EXISTS ${PYBIND11_CMAKE_DIR})
+        list(APPEND CMAKE_PREFIX_PATH ${PYBIND11_CMAKE_DIR})
+        find_package(pybind11 REQUIRED CONFIG)
+        message(STATUS "Found pybind11 via Python at ${PYBIND11_CMAKE_DIR}")
+    else()
+        message(FATAL_ERROR "pybind11 not found. Install with: pip install pybind11")
+    endif()
 endif()
 
 if (USE_OPENCV)
