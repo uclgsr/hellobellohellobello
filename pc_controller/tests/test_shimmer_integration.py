@@ -1,16 +1,16 @@
 """Tests for Shimmer sensor integration and management."""
 
-import pytest
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
 import time
+from unittest.mock import Mock, patch
 
+import numpy as np
+import pytest
 from core.shimmer_manager import (
+    SHIMMER_AVAILABLE,
     RealShimmer,
+    ShimmerManager,
     SimulatedShimmer,
     create_shimmer_manager,
-    ShimmerManager,
-    SHIMMER_AVAILABLE
 )
 
 
@@ -22,7 +22,7 @@ class TestSimulatedShimmer:
         shimmer = SimulatedShimmer(sample_rate_hz=10)
 
         # Should connect successfully
-        assert shimmer.connect() == True
+        assert shimmer.connect()
 
         # Test data callback
         received_data = []
@@ -58,7 +58,7 @@ class TestRealShimmer:
             shimmer = RealShimmer(device_port="COM3", sample_rate_hz=128)
 
             # Should attempt connection
-            result = shimmer.connect()
+            shimmer.connect()
 
             # Verify shimmer was configured
             mock_shimmer.assert_called_once()
@@ -100,9 +100,9 @@ class TestShimmerManager:
             manager = ShimmerManager(prefer_real=True)
 
             result = manager.initialize()
-            assert result == True
-            assert manager.is_real == False
-            assert manager.is_initialized == True
+            assert result
+            assert not manager.is_real
+            assert manager.is_initialized
 
     @pytest.mark.skipif(not SHIMMER_AVAILABLE, reason="pyshimmer not available")
     def test_auto_detection_real(self):
@@ -115,7 +115,7 @@ class TestShimmerManager:
             manager = ShimmerManager(prefer_real=True)
             result = manager.initialize()
 
-            assert result == True
+            assert result
             # Should use real if available and connection succeeds
 
     def test_graceful_degradation(self):
@@ -129,8 +129,8 @@ class TestShimmerManager:
                 result = manager.initialize()
 
                 # Should fall back to simulation
-                assert result == True
-                assert manager.is_real == False
+                assert result
+                assert not manager.is_real
 
 
 class TestShimmerFactory:
@@ -148,7 +148,7 @@ class TestShimmerFactory:
             with patch('core.shimmer_manager.cfg_get', return_value=True):
                 shimmer = create_shimmer_manager(use_real=None)
                 # Could be either depending on config
-                assert isinstance(shimmer, (RealShimmer, SimulatedShimmer))
+                assert isinstance(shimmer, RealShimmer | SimulatedShimmer)
 
     def test_create_shimmer_explicit(self):
         """Test explicit shimmer type selection."""
@@ -171,7 +171,7 @@ class TestCriticalRequirements:
     def test_twelve_bit_adc_requirement(self):
         """Test critical 12-bit ADC resolution requirement."""
         # This is a critical requirement from the project specifications
-        shimmer = SimulatedShimmer()
+        SimulatedShimmer()
 
         # Test that conversion uses 12-bit range (0-4095) not 16-bit
         test_values = [0, 1024, 2048, 3072, 4095]

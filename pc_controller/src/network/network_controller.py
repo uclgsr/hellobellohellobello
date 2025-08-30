@@ -30,10 +30,17 @@ from zeroconf import IPVersion, ServiceBrowser, Zeroconf
 
 from ..config import get as cfg_get
 from .file_transfer_server import FileTransferServer
-from .protocol import (build_v1_cmd, build_v1_query_capabilities,
-                       build_v1_start_recording, build_v1_time_sync_req,
-                       compute_backoff_schedule, compute_time_sync,
-                       compute_time_sync_stats, decode_frames, encode_frame)
+from .protocol import (
+    build_v1_cmd,
+    build_v1_query_capabilities,
+    build_v1_start_recording,
+    build_v1_time_sync_req,
+    compute_backoff_schedule,
+    compute_time_sync,
+    compute_time_sync_stats,
+    decode_frames,
+    encode_frame,
+)
 
 # TLS (optional)
 try:
@@ -88,12 +95,12 @@ class _ZeroconfListener:
 
     def remove_service(
         self, zeroconf: Zeroconf, type_: str, name: str
-    ) -> None:  # noqa: D401
+    ) -> None:
         self._parent._on_service_removed(name)
 
     def add_service(
         self, zeroconf: Zeroconf, type_: str, name: str
-    ) -> None:  # noqa: D401
+    ) -> None:
         info = zeroconf.get_service_info(type_, name, 5000)
         if not info:
             self._parent._emit_log(f"Service resolved empty: {name}")
@@ -125,7 +132,7 @@ class ConnectionWorker(QThread):
         self._device = device
         self._timeout = timeout
 
-    def run(self) -> None:  # noqa: D401
+    def run(self) -> None:
         try:
             sock = _connect(self._device.address, self._device.port, self._timeout)
             try:
@@ -172,7 +179,7 @@ class ConnectionWorker(QThread):
                     sock.close()
                 except Exception:
                     pass
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self.log.emit(f"Connection error to {self._device.name}: {exc}")
 
 
@@ -339,7 +346,7 @@ class _BroadcastWorker(QThread):
                 return False
         return True  # consider success if send succeeded
 
-    def run(self) -> None:  # noqa: D401
+    def run(self) -> None:
         try:
             for name, dev in self._devices.items():
                 schedule = compute_backoff_schedule(self._base_delay_ms, self._attempts)
@@ -385,7 +392,7 @@ class _BroadcastWorker(QThread):
                     self.log.emit(
                         f"Broadcast to {name} failed after {len(schedule)} attempts"
                     )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self.log.emit(f"Broadcast worker error: {exc}")
 
 
@@ -440,7 +447,7 @@ class PreviewStreamWorker(QThread):
         except Exception:
             pass
 
-    def run(self) -> None:  # noqa: D401
+    def run(self) -> None:
         while not self._stopped:
             try:
                 sock = _connect(self._device.address, self._device.port, self._timeout)
@@ -477,7 +484,7 @@ class PreviewStreamWorker(QThread):
                         pass
                 # Socket closed; retry after short delay
                 time.sleep(1.0)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 self.log.emit(f"Stream error for {self._device.name}: {exc}")
                 time.sleep(2.0)
 

@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 import h5py
 import numpy as np
@@ -53,9 +53,9 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
         self,
         session_dir: Path,
         output_path: Path,
-        metadata: Dict[str, Any] = None,
+        metadata: dict[str, Any] | None = None,
         anonymize: bool = True,
-        participant_id: str = None
+        participant_id: str | None = None
     ) -> bool:
         """
         Export with data integrity verification and comprehensive metadata.
@@ -82,7 +82,7 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
             with h5py.File(output_path, 'w') as hdf:
                 # Enhanced metadata
                 export_metadata = {
-                    "export_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "export_timestamp": datetime.now(UTC).isoformat(),
                     "exporter_version": "2.0.0-production",
                     "hdf5_version": h5py.version.hdf5_version,
                     "anonymized": anonymize,
@@ -114,7 +114,7 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
             return True
 
         except Exception as e:
-            error_msg = f"Production HDF5 export failed: {str(e)}"
+            error_msg = f"Production HDF5 export failed: {e!s}"
             if HAS_QT and hasattr(self, 'export_error'):
                 self.export_error.emit(error_msg)
             else:
@@ -233,7 +233,7 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
 
             for config_file in config_files:
                 try:
-                    with open(config_file, 'r') as f:
+                    with open(config_file) as f:
                         config_data = json.load(f)
 
                     rel_path = config_file.relative_to(session_dir)
@@ -249,9 +249,9 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
 def export_session_production(
     session_dir: Path,
     output_path: Path,
-    metadata: Dict[str, Any] = None,
+    metadata: dict[str, Any] | None = None,
     anonymize: bool = True,
-    participant_id: str = None
+    participant_id: str | None = None
 ) -> bool:
     """
     Convenience function for production HDF5 export.

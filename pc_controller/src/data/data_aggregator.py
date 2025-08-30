@@ -116,7 +116,7 @@ class FileReceiverServer(QThread):
             buf.extend(chunk)
         return bytes(buf)
 
-    def run(self) -> None:  # noqa: D401
+    def run(self) -> None:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -136,7 +136,7 @@ class FileReceiverServer(QThread):
                         conn, addr = s.accept()
                     except TimeoutError:
                         continue
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:
                         self.log.emit(f"Accept error: {exc}")
                         continue
                     # Handle single connection
@@ -213,13 +213,13 @@ class FileReceiverServer(QThread):
                                     f"Received and unpacked {bytes_written} bytes "
                                     f"from {header.device_id}"
                                 )
-                            except Exception as exc:  # noqa: BLE001
+                            except Exception as exc:
                                 self.log.emit(
                                     f"Failed to unpack zip from {header.device_id}: {exc}"
                                 )
-                        except Exception as exc:  # noqa: BLE001
+                        except Exception as exc:
                             self.log.emit(f"Receiver error from {addr}: {exc}")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self.log.emit(f"FileReceiver fatal error: {exc}")
 
 

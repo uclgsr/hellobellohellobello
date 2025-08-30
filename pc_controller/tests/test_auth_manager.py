@@ -3,8 +3,6 @@
 import time
 from unittest.mock import patch
 
-import pytest
-
 from pc_controller.src.network.auth_manager import AuthManager
 
 
@@ -38,8 +36,8 @@ class TestAuthManager:
         challenge_data = auth.create_challenge(device_id)
 
         # Simulate device response
-        import hmac
         import hashlib
+        import hmac
 
         challenge = challenge_data["challenge"]
         nonce = challenge_data["nonce"]
@@ -47,7 +45,7 @@ class TestAuthManager:
 
         payload = f"{challenge}:{nonce}:{timestamp}"
         signature = hmac.new(
-            "test_secret".encode(),
+            b"test_secret",
             payload.encode(),
             hashlib.sha256
         ).hexdigest()
@@ -87,8 +85,8 @@ class TestAuthManager:
         # First successful auth
         challenge_data = auth.create_challenge(device_id)
 
-        import hmac
         import hashlib
+        import hmac
 
         challenge = challenge_data["challenge"]
         nonce = challenge_data["nonce"]
@@ -96,7 +94,7 @@ class TestAuthManager:
 
         payload = f"{challenge}:{nonce}:{timestamp}"
         signature = hmac.new(
-            "test_secret".encode(),
+            b"test_secret",
             payload.encode(),
             hashlib.sha256
         ).hexdigest()
@@ -126,8 +124,8 @@ class TestAuthManager:
             # Authenticate device
             challenge_data = auth.create_challenge(device_id)
 
-            import hmac
             import hashlib
+            import hmac
 
             challenge = challenge_data["challenge"]
             nonce = challenge_data["nonce"]
@@ -135,7 +133,7 @@ class TestAuthManager:
 
             payload = f"{challenge}:{nonce}:{timestamp}"
             signature = hmac.new(
-                "test_secret".encode(),
+                b"test_secret",
                 payload.encode(),
                 hashlib.sha256
             ).hexdigest()
@@ -162,8 +160,8 @@ class TestAuthManager:
         # Authenticate device
         challenge_data = auth.create_challenge(device_id)
 
-        import hmac
         import hashlib
+        import hmac
 
         challenge = challenge_data["challenge"]
         nonce = challenge_data["nonce"]
@@ -171,7 +169,7 @@ class TestAuthManager:
 
         payload = f"{challenge}:{nonce}:{timestamp}"
         signature = hmac.new(
-            "test_secret".encode(),
+            b"test_secret",
             payload.encode(),
             hashlib.sha256
         ).hexdigest()
@@ -201,8 +199,8 @@ class TestAuthManager:
         # Authenticate device
         challenge_data = auth.create_challenge(device_id)
 
-        import hmac
         import hashlib
+        import hmac
 
         challenge = challenge_data["challenge"]
         nonce = challenge_data["nonce"]
@@ -210,7 +208,7 @@ class TestAuthManager:
 
         payload = f"{challenge}:{nonce}:{timestamp}"
         signature = hmac.new(
-            "test_secret".encode(),
+            b"test_secret",
             payload.encode(),
             hashlib.sha256
         ).hexdigest()

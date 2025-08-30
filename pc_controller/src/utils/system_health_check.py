@@ -17,15 +17,16 @@ import asyncio
 import json
 import os
 import platform
-import psutil
 import socket
+import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Any
-from dataclasses import dataclass, asdict
-import subprocess
+from typing import Any
+
+import psutil
 
 try:
     from PyQt6.QtCore import QObject, pyqtSignal
@@ -46,12 +47,12 @@ class HealthCheckResult:
     component: str
     status: str  # "pass", "warning", "fail"
     message: str
-    details: Dict[str, Any] = None
+    details: dict[str, Any] = None
     timestamp: str = ""
 
     def __post_init__(self):
         if not self.timestamp:
-            self.timestamp = datetime.now(timezone.utc).isoformat()
+            self.timestamp = datetime.now(UTC).isoformat()
 
 
 @dataclass
@@ -59,13 +60,13 @@ class SystemHealthReport:
     """Complete system health assessment report."""
     overall_status: str  # "healthy", "warning", "critical"
     check_timestamp: str
-    system_info: Dict[str, Any]
-    check_results: List[HealthCheckResult]
-    recommendations: List[str]
+    system_info: dict[str, Any]
+    check_results: list[HealthCheckResult]
+    recommendations: list[str]
 
     def __post_init__(self):
         if not self.check_timestamp:
-            self.check_timestamp = datetime.now(timezone.utc).isoformat()
+            self.check_timestamp = datetime.now(UTC).isoformat()
 
 
 class SystemHealthChecker(QObject if HAS_QT else object):
@@ -118,7 +119,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
                 results.append(HealthCheckResult(
                     component=name,
                     status="fail",
-                    message=f"Check failed: {str(e)}"
+                    message=f"Check failed: {e!s}"
                 ))
 
         self.emit_progress(90, "Analyzing results...")
@@ -131,7 +132,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
 
         report = SystemHealthReport(
             overall_status=overall_status,
-            check_timestamp=datetime.now(timezone.utc).isoformat(),
+            check_timestamp=datetime.now(UTC).isoformat(),
             system_info=system_info,
             check_results=results,
             recommendations=recommendations
@@ -144,7 +145,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
 
         return report
 
-    def _collect_system_info(self) -> Dict[str, Any]:
+    def _collect_system_info(self) -> dict[str, Any]:
         """Collect basic system information."""
         return {
             "platform": platform.platform(),
@@ -252,7 +253,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             details["internet_latency_ms"] = round(latency, 2)
             if latency > 100:
                 issues.append(f"High internet latency: {latency:.1f}ms")
-        except socket.error:
+        except OSError:
             issues.append("No internet connectivity detected")
             if status == "pass":
                 status = "warning"
@@ -308,7 +309,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
 
             test_file.unlink(missing_ok=True)
         except Exception as e:
-            issues.append(f"Storage write test failed: {str(e)}")
+            issues.append(f"Storage write test failed: {e!s}")
 
         status = "fail" if any("critical" in issue.lower() for issue in issues) else (
             "warning" if issues else "pass"
@@ -512,7 +513,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             details={"issues": issues, **details}
         )
 
-    def _determine_overall_status(self, results: List[HealthCheckResult]) -> str:
+    def _determine_overall_status(self, results: list[HealthCheckResult]) -> str:
         """Determine overall system health status."""
         fail_count = sum(1 for r in results if r.status == "fail")
         warning_count = sum(1 for r in results if r.status == "warning")
@@ -524,7 +525,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
         else:
             return "healthy"
 
-    def _generate_recommendations(self, results: List[HealthCheckResult]) -> List[str]:
+    def _generate_recommendations(self, results: list[HealthCheckResult]) -> list[str]:
         """Generate actionable recommendations based on health check results."""
         recommendations = []
 

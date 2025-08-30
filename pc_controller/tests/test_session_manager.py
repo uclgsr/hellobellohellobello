@@ -101,7 +101,7 @@ def test_session_state_transitions(tmp_path: Path) -> None:
     assert sm.session_dir is None
 
     # Create session - should be in Created state
-    session_id = sm.create_session("state_test")
+    sm.create_session("state_test")
     assert sm.is_active
     assert sm.metadata["state"] == "Created"
 
@@ -238,7 +238,7 @@ def test_session_timing_accuracy(tmp_path: Path) -> None:
 
     # Create session
     create_time = time.time_ns()
-    session_id = sm.create_session("timing_test")
+    sm.create_session("timing_test")
 
     # Start recording
     start_time = time.time_ns()
@@ -315,7 +315,7 @@ def test_concurrent_session_operations(tmp_path: Path) -> None:
     import threading
 
     sm = SessionManager(base_dir=str(tmp_path))
-    session_id = sm.create_session("concurrent_test")
+    sm.create_session("concurrent_test")
 
     results = []
     exceptions = []

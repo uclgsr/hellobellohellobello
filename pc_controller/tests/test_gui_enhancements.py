@@ -126,7 +126,7 @@ class TestCalibrationWorkflow:
         # Verify the workflow would call correct functions
         assert result.rms_error == 0.5
         assert result.board_size == (9, 6)
-        
+
     def test_calibration_dialog_creation(self):
         """Test calibration dialog can be created without crashing."""
         try:
@@ -143,14 +143,14 @@ class TestCalibrationWorkflow:
                 raise
         except Exception as e:
             raise AssertionError(f"Unexpected error importing CalibrationDialog: {e}")
-            
+
     def test_calibration_parameters_defaults(self):
         """Test that calibration has sensible default parameters."""
         # Test the expected default values that would be in the dialog
         default_board_width = 9
-        default_board_height = 6  
+        default_board_height = 6
         default_square_size = 0.025  # 25mm
-        
+
         assert default_board_width > 2
         assert default_board_height > 2
         assert default_square_size > 0
@@ -225,7 +225,7 @@ class TestUserExperienceEnhancements:
             "ExportError": "Data export failed - check output location"
         }
 
-        for _error_type, user_message in technical_errors.items():
+        for user_message in technical_errors.values():
             # Verify user messages are descriptive and actionable
             assert len(user_message) > 10
             assert not user_message.isupper()  # Not all caps

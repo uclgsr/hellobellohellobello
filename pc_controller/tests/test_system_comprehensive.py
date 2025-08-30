@@ -10,10 +10,7 @@ and scenarios from a user's perspective, including:
 """
 from __future__ import annotations
 
-import json
-import os
 import tempfile
-import threading
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -22,10 +19,8 @@ import pytest
 
 from pc_controller.src.core.device_manager import DeviceManager
 from pc_controller.src.core.session_manager import SessionManager
-from pc_controller.src.data.data_aggregator import FileReceiverServer
 from pc_controller.src.data.hdf5_exporter import export_session_to_hdf5
 from pc_controller.src.network.heartbeat_manager import HeartbeatManager
-from pc_controller.src.network.time_server import TimeSyncServer as TimeServer
 
 
 class SystemTestEnvironment:
@@ -59,7 +54,7 @@ class SystemTestEnvironment:
         for device in self.mock_devices:
             device.cleanup()
 
-    def create_mock_android_device(self, device_id: str, capabilities: dict = None):
+    def create_mock_android_device(self, device_id: str, capabilities: dict | None = None):
         """Create a mock Android device for testing."""
         if capabilities is None:
             capabilities = {
@@ -262,10 +257,11 @@ class TestCompleteRecordingWorkflows:
         assert max_start_diff < 0.1  # Within 100ms
 
         # Verify all devices are recording
-        recording_devices = []
-        for device in devices:
-            if device.recording and self.env.device_manager.get_status(device.device_id) == "Recording":
-                recording_devices.append(device.device_id)
+        # Use list comprehension for better performance and readability
+        recording_devices = [
+            device.device_id for device in devices
+            if device.recording and self.env.device_manager.get_status(device.device_id) == "Recording"
+        ]
 
         assert len(recording_devices) == len(devices)
 
@@ -334,15 +330,15 @@ class TestCompleteRecordingWorkflows:
 
         # Check timeouts - failed device should be offline
         future_time = time.time_ns() + int(6 * 1e9)  # 6 seconds
-        
+
         # Update healthy device heartbeats to be within timeout window for the future time
         for device in healthy_devices:
             device_info = self.env.device_manager.get_info(device.device_id)
             if device_info:
                 # Set heartbeat to just within the timeout window (5 seconds before future_time)
-                device_info.last_heartbeat_ns = future_time - int(5 * 1e9)  
+                device_info.last_heartbeat_ns = future_time - int(5 * 1e9)
                 device_info.status = "Recording"
-        
+
         self.env.device_manager.check_timeouts(now_ns=future_time)
 
         assert self.env.device_manager.get_status(failed_device.device_id) == "Offline"
@@ -460,7 +456,7 @@ class TestDataIntegrityAndSynchronization:
             data_files = device.get_data_files()
             for file_path in data_files:
                 if file_path.suffix == '.csv':
-                    with open(file_path, 'r') as f:
+                    with open(file_path) as f:
                         lines = f.readlines()[1:]  # Skip header
                         for line in lines:
                             if line.strip():
@@ -510,7 +506,7 @@ class TestDataIntegrityAndSynchronization:
 
     def _validate_csv_format(self, file_path: Path):
         """Validate CSV file format and content."""
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             lines = f.readlines()
 
         # Should have header and data
@@ -607,7 +603,6 @@ class TestPerformanceAndReliability:
     def test_memory_usage_stability(self):
         """Test memory usage stability during operations."""
         import gc
-        import sys
 
         # Get baseline memory usage
         gc.collect()
@@ -660,7 +655,7 @@ class TestPerformanceAndReliability:
         session_count = 20
         successful_sessions = 0
 
-        for i in range(session_count):
+        for _i in range(session_count):
             # Start session
             session_id = self.env.session_manager.create_session("test_session")
             self.env.session_manager.start_recording()
@@ -707,16 +702,16 @@ class TestPerformanceAndReliability:
         # 1. Device timeout and recovery
         failed_device = devices[0]
         healthy_devices = devices[1:]
-        
+
         # Update heartbeats for healthy devices to keep them within timeout window
         future_time = time.time_ns() + int(10 * 1e9)
         for device in healthy_devices:
             device_info = self.env.device_manager.get_info(device.device_id)
             if device_info:
                 # Set heartbeat to just within the timeout window
-                device_info.last_heartbeat_ns = future_time - int(5 * 1e9)  
+                device_info.last_heartbeat_ns = future_time - int(5 * 1e9)
                 device_info.status = "Recording"
-        
+
         self.env.device_manager.check_timeouts(now_ns=future_time)
         assert self.env.device_manager.get_status(failed_device.device_id) == "Offline"
 

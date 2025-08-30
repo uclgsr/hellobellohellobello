@@ -13,9 +13,7 @@ import subprocess
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-import pytest
+from typing import Any
 
 
 @dataclass
@@ -25,9 +23,9 @@ class ExecutionResult:
     category: str
     status: str  # PASSED, FAILED, SKIPPED, ERROR
     duration_seconds: float
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -41,10 +39,10 @@ class SuiteExecutionReport:
     skipped: int
     errors: int
     duration_seconds: float
-    categories: Dict[str, Dict[str, int]]
-    test_results: List[TestResult]
+    categories: dict[str, dict[str, int]]
+    test_results: list[ExecutionResult]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             **asdict(self),
             "test_results": [result.to_dict() for result in self.test_results]
@@ -92,7 +90,7 @@ class SuiteOrganizer:
         self.pc_tests_dir = self.test_root / "pc_controller" / "tests"
         self.android_tests_dir = self.test_root / "android_sensor_node" / "app" / "src" / "test"
 
-    def categorize_tests(self) -> Dict[str, List[Path]]:
+    def categorize_tests(self) -> dict[str, list[Path]]:
         """Categorize all tests by type."""
         categorized = {}
 
@@ -115,7 +113,7 @@ class SuiteOrganizer:
 
         return categorized
 
-    def _matches_category(self, test_file: Path, config: Dict[str, Any]) -> bool:
+    def _matches_category(self, test_file: Path, config: dict[str, Any]) -> bool:
         """Check if a test file matches a category configuration."""
         file_name = test_file.name.lower()
 
@@ -133,7 +131,7 @@ class SuiteOrganizer:
 
         return include_match and not exclude_match
 
-    def get_test_execution_plan(self, categories: Optional[List[str]] = None) -> Dict[str, List[Path]]:
+    def get_test_execution_plan(self, categories: list[str] | None = None) -> dict[str, list[Path]]:
         """Get execution plan for specified categories."""
         all_categorized = self.categorize_tests()
 
@@ -156,10 +154,10 @@ class SuiteExecutor:
 
     def execute_python_tests(
         self,
-        test_files: List[Path],
+        test_files: list[Path],
         category: str,
-        markers: Optional[List[str]] = None
-    ) -> List[TestResult]:
+        markers: list[str] | None = None
+    ) -> list[ExecutionResult]:
         """Execute Python tests using pytest."""
         if not test_files:
             return []
@@ -217,7 +215,7 @@ class SuiteExecutor:
 
         return test_results
 
-    def execute_android_tests(self, test_files: List[Path]) -> List[TestResult]:
+    def execute_android_tests(self, test_files: list[Path]) -> list[ExecutionResult]:
         """Execute Android tests using Gradle."""
         if not test_files:
             return []
@@ -276,7 +274,7 @@ class SuiteExecutor:
 
         return test_results
 
-    def _parse_pytest_output(self, output: str, category: str, total_duration: float) -> List[TestResult]:
+    def _parse_pytest_output(self, output: str, category: str, total_duration: float) -> list[ExecutionResult]:
         """Parse pytest output to extract test results."""
         results = []
         lines = output.split('\n')
@@ -331,7 +329,7 @@ class SuiteExecutor:
 
         return results
 
-    def _parse_android_output(self, output: str, total_duration: float) -> List[TestResult]:
+    def _parse_android_output(self, output: str, total_duration: float) -> list[ExecutionResult]:
         """Parse Android test output to extract results."""
         # Simplified Android test result parsing
         if "BUILD SUCCESSFUL" in output:
@@ -354,9 +352,9 @@ class SuiteExecutor:
 
     def execute_comprehensive_suite(
         self,
-        categories: Optional[List[str]] = None,
-        output_file: Optional[Path] = None
-    ) -> TestSuiteReport:
+        categories: list[str] | None = None,
+        output_file: Path | None = None
+    ) -> SuiteExecutionReport:
         """Execute comprehensive test suite and generate report."""
         start_time = time.time()
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -409,7 +407,7 @@ class SuiteExecutor:
 
         return report
 
-    def _save_report(self, report: TestSuiteReport, output_file: Path) -> None:
+    def _save_report(self, report: SuiteExecutionReport, output_file: Path) -> None:
         """Save test report to file."""
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -425,11 +423,11 @@ class CoverageAnalyzer:
         self.pc_src_dir = self.test_root / "pc_controller" / "src"
         self.android_src_dir = self.test_root / "android_sensor_node" / "app" / "src" / "main"
 
-    def analyze_python_coverage(self) -> Dict[str, Any]:
+    def analyze_python_coverage(self) -> dict[str, Any]:
         """Analyze Python test coverage."""
         try:
             # Run coverage analysis
-            result = subprocess.run(
+            subprocess.run(
                 ["python", "-m", "pytest", "--cov=pc_controller/src", "--cov-report=json"],
                 cwd=self.test_root,
                 capture_output=True,
@@ -454,7 +452,7 @@ class CoverageAnalyzer:
 
         return {"error": "Coverage analysis not available"}
 
-    def _extract_missing_lines(self, coverage_data: Dict[str, Any]) -> Dict[str, List[int]]:
+    def _extract_missing_lines(self, coverage_data: dict[str, Any]) -> dict[str, list[int]]:
         """Extract missing lines from coverage data."""
         missing = {}
 
@@ -465,7 +463,7 @@ class CoverageAnalyzer:
 
         return missing
 
-    def generate_coverage_report(self) -> Dict[str, Any]:
+    def generate_coverage_report(self) -> dict[str, Any]:
         """Generate comprehensive coverage report."""
         python_coverage = self.analyze_python_coverage()
 
@@ -474,7 +472,7 @@ class CoverageAnalyzer:
             "recommendations": self._generate_recommendations(python_coverage)
         }
 
-    def _generate_recommendations(self, python_coverage: Dict[str, Any]) -> List[str]:
+    def _generate_recommendations(self, python_coverage: dict[str, Any]) -> list[str]:
         """Generate testing recommendations based on coverage analysis."""
         recommendations = []
 

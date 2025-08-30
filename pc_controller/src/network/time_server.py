@@ -29,12 +29,12 @@ class TimeSyncProtocol(asyncio.DatagramProtocol):
 
     def connection_made(
         self, transport: asyncio.transports.DatagramTransport
-    ) -> None:  # noqa: D401
+    ) -> None:
         self.transport = transport
 
     def datagram_received(
         self, data: bytes, addr: tuple[str, int]
-    ) -> None:  # noqa: D401
+    ) -> None:
         # Capture high-resolution monotonic timestamp immediately
         ts_ns = time.monotonic_ns()
         payload = str(ts_ns).encode("ascii")

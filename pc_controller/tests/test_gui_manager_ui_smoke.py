@@ -8,7 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 # Skip if PyQt6 is not available or if GUI libraries are missing
 try:
-    PyQt6 = pytest.importorskip("PyQt6")  # noqa: N816 (external import name)
+    PyQt6 = pytest.importorskip("PyQt6")
     from PyQt6.QtCore import QObject, pyqtSignal
     from PyQt6.QtWidgets import QApplication
 except ImportError as e:

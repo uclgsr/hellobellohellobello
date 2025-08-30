@@ -43,7 +43,7 @@ def build_query_capabilities(cmd_id: int | None = None) -> str:
 
     The payload matches the early spec and ends with a newline suitable
     for line-oriented TCP protocols.
-    
+
     Args:
         cmd_id: Optional command ID. If not provided, uses QUERY_CMD_ID.
     """
@@ -267,7 +267,7 @@ def compute_time_sync_stats(
     so = sorted(offsets[:n])
     # Determine trim count per side
     trim_ratio = max(0.0, min(0.45, float(trim_ratio)))
-    k = int(round(n * trim_ratio))
+    k = round(n * trim_ratio)
     if k * 2 >= n:
         k = max(0, (n - 1) // 2)
     trimmed = so[k : n - k] if k > 0 else so
@@ -283,10 +283,10 @@ def compute_time_sync_stats(
     else:
         mu = sum(trimmed) / float(len(trimmed))
         var = sum((x - mu) ** 2 for x in trimmed) / float(len(trimmed))
-        std_dev = int(round(var**0.5))
+        std_dev = round(var**0.5)
     # Min delay from all trials (not trimmed)
     min_delay = int(min(delays[:n]))
-    return int(median_offset), int(min_delay), int(std_dev), int(len(trimmed))
+    return int(median_offset), int(min_delay), int(std_dev), len(trimmed)
 
 
 def compute_backoff_schedule(

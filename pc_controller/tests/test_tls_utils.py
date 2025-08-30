@@ -20,7 +20,7 @@ class _FakeClientContext:
         self.loaded_chain = (certfile, keyfile)
 
     # Client-side wrap
-    def wrap_socket(self, sock, server_hostname=None):  # noqa: ANN001
+    def wrap_socket(self, sock, server_hostname=None):
         return types.SimpleNamespace(kind="wrapped", server_hostname=server_hostname, inner=sock)
 
 
@@ -69,7 +69,7 @@ def test_client_ctx_enabled_with_hostname_toggle_and_cert_chain(monkeypatch, cle
     # Prepare fake context
     fake = _FakeClientContext()
 
-    def _fake_create_default_context(purpose, cafile=None):  # noqa: ANN001
+    def _fake_create_default_context(purpose, cafile=None):
         # Assert correct purpose and forwarded cafile
         assert purpose == ssl.Purpose.SERVER_AUTH
         assert cafile == "dummy-ca.pem"
@@ -115,7 +115,7 @@ def test_server_ctx_enabled_basic_and_client_verification_paths(monkeypatch, cle
 
     fake = _FakeServerContext()
 
-    def _fake_ctx(purpose):  # noqa: ANN001
+    def _fake_ctx(purpose):
         assert purpose == ssl.Purpose.CLIENT_AUTH
         return fake
 
@@ -158,7 +158,7 @@ def test__connect_wraps_socket_when_tls_enabled(monkeypatch):
         def close(self) -> None:
             self.closed = True
 
-    def _fake_create_connection(addr, timeout=None):  # noqa: ANN001
+    def _fake_create_connection(addr, timeout=None):
         assert isinstance(addr, tuple)
         return _FakeSock()
 
@@ -167,10 +167,12 @@ def test__connect_wraps_socket_when_tls_enabled(monkeypatch):
         def __init__(self, check_hostname=True) -> None:
             self.check_hostname = check_hostname
 
-        def wrap_socket(self, s, server_hostname=None):  # noqa: ANN001
+        def wrap_socket(self, s, server_hostname=None):
             return types.SimpleNamespace(kind="wrapped", hn=server_hostname, inner=s)
 
-    monkeypatch.setattr("pc_controller.src.network.network_controller.socket.create_connection", _fake_create_connection)
+    # Monkeypatch socket creation for testing
+    socket_path = "pc_controller.src.network.network_controller.socket.create_connection"
+    monkeypatch.setattr(socket_path, _fake_create_connection)
     # Inject a fake TLS context factory into the imported module
     import pc_controller.src.network.network_controller as nc  # type: ignore
 
@@ -194,10 +196,12 @@ def test__connect_returns_plain_socket_when_tls_disabled(monkeypatch):
         def __init__(self) -> None:
             self.closed = False
 
-    def _fake_create_connection(addr, timeout=None):  # noqa: ANN001
+    def _fake_create_connection(addr, timeout=None):
         return _FakeSock()
 
-    monkeypatch.setattr("pc_controller.src.network.network_controller.socket.create_connection", _fake_create_connection)
+    # Monkeypatch socket creation for testing
+    socket_path = "pc_controller.src.network.network_controller.socket.create_connection"
+    monkeypatch.setattr(socket_path, _fake_create_connection)
     import pc_controller.src.network.network_controller as nc  # type: ignore
 
     # Simulate no TLS utils available (import guard returns lambda None normally)

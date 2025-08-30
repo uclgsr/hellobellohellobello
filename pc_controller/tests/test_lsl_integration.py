@@ -21,16 +21,16 @@ class TestLSLOutletManager:
         # Need to patch the cfg_get function that's actually being used
         # In case of import failure, the fallback function is used
         import pc_controller.src.network.lsl_integration as lsl_module
-        
+
         def mock_cfg_get(key: str, default=None):
             if key == "lsl_enabled":
                 return "true"
             return default
-        
+
         # Replace the cfg_get function directly
         original_cfg_get = lsl_module.cfg_get
         lsl_module.cfg_get = mock_cfg_get
-        
+
         try:
             manager = LSLOutletManager()
             assert manager.available is True

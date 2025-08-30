@@ -8,31 +8,29 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QDialog,
-    QVBoxLayout,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFormLayout,
+    QGroupBox,
     QHBoxLayout,
-    QLabel,
     QLineEdit,
+    QMessageBox,
+    QProgressBar,
     QPushButton,
     QSpinBox,
-    QDoubleSpinBox,
-    QProgressBar,
     QTextEdit,
-    QFileDialog,
-    QMessageBox,
-    QGroupBox,
-    QFormLayout,
+    QVBoxLayout,
     QWidget,
 )
 
 from pc_controller.src.tools.camera_calibration import (
+    CalibrationResult,
     calibrate_camera,
     save_calibration,
-    CalibrationResult,
 )
 
 
@@ -66,7 +64,7 @@ class CalibrationWorker(QObject):
             self.finished.emit(result)
 
         except Exception as e:
-            self.error.emit(f"Calibration failed: {str(e)}")
+            self.error.emit(f"Calibration failed: {e!s}")
 
 
 class CalibrationDialog(QDialog):
@@ -229,7 +227,7 @@ class CalibrationDialog(QDialog):
         self._log_progress("CALIBRATION RESULTS:")
         self._log_progress(f"RMS Reprojection Error: {result.rms_error:.4f} pixels")
         self._log_progress(f"Image Size: {result.image_size[0]}x{result.image_size[1]}")
-        self._log_progress(f"Camera Matrix:")
+        self._log_progress("Camera Matrix:")
         for i in range(3):
             row_str = "  [" + ", ".join(f"{result.camera_matrix[i, j]:8.3f}" for j in range(3)) + "]"
             self._log_progress(row_str)
@@ -274,7 +272,7 @@ class CalibrationDialog(QDialog):
                 QMessageBox.information(self, "Success", f"Calibration saved to:\n{filename}")
                 self._log_progress(f"Results saved to: {filename}")
             except Exception as e:
-                QMessageBox.critical(self, "Save Error", f"Failed to save calibration:\n{str(e)}")
+                QMessageBox.critical(self, "Save Error", f"Failed to save calibration:\n{e!s}")
 
     def closeEvent(self, event):
         """Handle dialog close event."""

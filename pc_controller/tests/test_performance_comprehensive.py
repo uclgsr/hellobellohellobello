@@ -15,8 +15,6 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -354,7 +352,7 @@ class TestPerformanceAndStress:
                     device_manager.update_heartbeat(device_id)
 
                 # Create and run a session
-                session_id = session_manager.create_session(f"stability-session-{cycle_count}")
+                session_manager.create_session(f"stability-session-{cycle_count}")
                 session_manager.start_recording()
 
                 time.sleep(0.1)  # Brief recording
@@ -424,8 +422,9 @@ class TestPerformanceAndStress:
 
     def _get_memory_usage(self) -> int:
         """Get current memory usage in bytes."""
-        import psutil
         import os
+
+        import psutil
 
         try:
             process = psutil.Process(os.getpid())
@@ -436,7 +435,6 @@ class TestPerformanceAndStress:
 
     def test_data_throughput_performance(self):
         """Test data processing throughput performance."""
-        from pc_controller.src.data.data_aggregator import FileReceiverServer
 
         # Mock data for throughput testing
         test_data_size = 1024 * 1024  # 1MB
