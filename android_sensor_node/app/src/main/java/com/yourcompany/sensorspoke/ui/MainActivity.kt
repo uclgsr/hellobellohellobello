@@ -36,6 +36,8 @@ import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
 import com.yourcompany.sensorspoke.service.RecordingService
 import com.yourcompany.sensorspoke.ui.adapters.MainPagerAdapter
 import com.yourcompany.sensorspoke.ui.dialogs.QuickStartDialog
+import com.yourcompany.sensorspoke.ui.navigation.NavigationController
+import com.yourcompany.sensorspoke.ui.navigation.ThermalNavigationState
 import com.yourcompany.sensorspoke.utils.UserExperience
 import kotlinx.coroutines.launch
 import java.io.File
@@ -50,6 +52,9 @@ class MainActivity : AppCompatActivity() {
     private var btnStopRecording: Button? = null
     private var statusText: TextView? = null
     private var rootLayout: ViewGroup? = null
+
+    // Enhanced navigation controller from IRCamera architecture
+    private var navigationController: NavigationController? = null
 
     // User experience enhancements
     private lateinit var preferences: SharedPreferences
@@ -179,6 +184,11 @@ class MainActivity : AppCompatActivity() {
                 resetFirstLaunchFlag()
                 true
             }
+            R.id.action_thermal_settings -> {
+                // Navigate to thermal settings using enhanced navigation
+                navigationController?.navigateToThermalCamera(ThermalNavigationState.SETTINGS)
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -187,12 +197,25 @@ class MainActivity : AppCompatActivity() {
         val adapter = MainPagerAdapter(this)
         viewPager?.adapter = adapter
 
+        // Initialize enhanced navigation controller
+        viewPager?.let { vp ->
+            navigationController = NavigationController(this, vp)
+        }
+
         // Connect TabLayout with ViewPager2
         tabLayout?.let { tabLayout ->
             viewPager?.let { viewPager ->
                 TabLayoutMediator(tabLayout, viewPager) { tab, position ->
                     tab.text = MainPagerAdapter.TAB_TITLES[position]
                 }.attach()
+                
+                // Register page change callback for enhanced navigation tracking
+                viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                    override fun onPageSelected(position: Int) {
+                        super.onPageSelected(position)
+                        navigationController?.updateCurrentTab(position)
+                    }
+                })
             }
         }
     }

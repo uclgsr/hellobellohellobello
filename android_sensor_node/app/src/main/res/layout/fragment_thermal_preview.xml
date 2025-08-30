@@ -8,13 +8,29 @@
     <ImageView
         android:id="@+id/thermalImageView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_centerInParent="true"
+        android:layout_height="0dp"
+        android:layout_above="@+id/statusOverlay"
+        android:layout_centerHorizontal="true"
         android:scaleType="centerInside"
         android:contentDescription="Thermal Camera Preview" />
 
+    <!-- Enhanced Controls ScrollView (initially hidden) -->
+    <ScrollView
+        android:id="@+id/controlsScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_above="@+id/statusOverlay"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="16dp"
+        android:background="#AA000000"
+        android:padding="8dp"
+        android:visibility="gone"
+        android:scrollbars="vertical" />
+
     <!-- Status overlay -->
     <LinearLayout
+        android:id="@+id/statusOverlay"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
@@ -45,6 +61,30 @@
             android:text="Frames: 0"
             android:textColor="#CCFFFFFF"
             android:textSize="12sp" />
+
+        <!-- Enhanced status indicators -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Long press: Settings"
+                android:textColor="#AAFFFFFF"
+                android:textSize="10sp"
+                android:layout_marginEnd="16dp" />
+                
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tap: Cycle palette"
+                android:textColor="#AAFFFFFF"
+                android:textSize="10sp" />
+                
+        </LinearLayout>
 
     </LinearLayout>
 
