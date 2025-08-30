@@ -73,7 +73,10 @@ class TC001SensorIntegrationManager(
                 // Initialize core components
                 tc001Connector = TC001Connector(context)
                 
-                tc001DataManager = TC001DataManager(context)
+                tc001DataManager = TC001DataManager(context).apply {
+                    // Connect the data manager to the connector for real hardware access
+                    setTC001Connector(tc001Connector!!)
+                }
                 
                 tc001UIController = TC001UIController()
 

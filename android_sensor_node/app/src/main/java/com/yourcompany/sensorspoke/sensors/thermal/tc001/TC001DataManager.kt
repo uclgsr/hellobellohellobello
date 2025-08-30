@@ -1,6 +1,7 @@
 package com.yourcompany.sensorspoke.sensors.thermal.tc001
 
 import android.content.Context
+import android.hardware.usb.UsbDeviceConnection
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -51,6 +52,14 @@ class TC001DataManager(
     // Processing scope
     private val processingScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var isProcessing = false
+    private var tc001Connector: TC001Connector? = null
+
+    /**
+     * Set TC001 connector for real data acquisition
+     */
+    fun setTC001Connector(connector: TC001Connector) {
+        tc001Connector = connector
+    }
 
     /**
      * Start thermal data processing
@@ -65,7 +74,12 @@ class TC001DataManager(
         Log.i(TAG, "Starting TC001 thermal data processing")
 
         processingScope.launch {
-            simulateThermalDataStream()
+            if (tc001Connector?.isConnected() == true) {
+                startRealThermalDataStream()
+            } else {
+                Log.w(TAG, "TC001 not connected, falling back to simulated data")
+                simulateThermalDataStream()
+            }
         }
     }
 
@@ -78,7 +92,56 @@ class TC001DataManager(
     }
 
     /**
-     * Simulate thermal data stream from TC001
+     * Process real thermal data from TC001 hardware
+     */
+    private suspend fun startRealThermalDataStream() {
+        val deviceConnection = tc001Connector?.getDeviceConnection()
+        if (deviceConnection == null) {
+            Log.e(TAG, "No valid USB connection for TC001")
+            return
+        }
+
+        val transferBuffer = ByteArray(THERMAL_FRAME_SIZE)
+        
+        while (isProcessing && processingScope.isActive) {
+            try {
+                // Read thermal data from TC001 via USB bulk transfer
+                val bytesRead = deviceConnection.bulkTransfer(
+                    null, // endpoint would be determined from device configuration
+                    transferBuffer,
+                    transferBuffer.size,
+                    1000 // timeout
+                )
+
+                if (bytesRead > 0) {
+                    // Process real thermal frame
+                    val thermalData = transferBuffer.copyOf(bytesRead)
+                    _thermalFrame.postValue(thermalData)
+
+                    // Process thermal data for temperature analysis
+                    val tempData = analyzeThermalFrame(thermalData)
+                    _temperatureData.postValue(tempData)
+
+                    // Generate processed image with current palette
+                    val processedImg = applyThermalPalette(thermalData, _currentPalette.value!!)
+                    _processedImage.postValue(processedImg)
+
+                    // Generate thermal bitmap for UI display
+                    val thermalBitmap = generateThermalBitmap(processedImg)
+                    _thermalBitmap.postValue(thermalBitmap)
+                } else {
+                    Log.w(TAG, "No thermal data received from TC001")
+                    delay(100) // Brief delay before retry
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading real thermal data", e)
+                delay(1000) // Retry after error
+            }
+        }
+    }
+
+    /**
+     * Simulate thermal data stream from TC001 (fallback when hardware not available)
      * This would be replaced with actual TC001 SDK integration
      */
     private suspend fun simulateThermalDataStream() {
