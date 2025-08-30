@@ -553,9 +553,8 @@ class GUIManager(QMainWindow):
             self._network.broadcast_transfer_files(
                 host, port, getattr(self, "_session_id", "")
             )
-            self._log(
-                f"Initiated file transfer to {host}:{port} for session {getattr(self, '_session_id', '')}"
-            )
+            session_id = getattr(self, '_session_id', '')
+            self._log(f"Initiated file transfer to {host}:{port} for session {session_id}")
         except Exception as exc:
             self._log(f"Failed to initiate file transfer: {exc}")
 

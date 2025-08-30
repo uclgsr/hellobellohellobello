@@ -307,7 +307,9 @@ class SessionMetadataManager:
 
             # Convert back to dataclasses
             data["devices"] = [DeviceInfo(**device_data) for device_data in data.get("devices", [])]
-            data["sensor_configs"] = [SensorConfig(**config_data) for config_data in data.get("sensor_configs", [])]
+            data["sensor_configs"] = [
+                SensorConfig(**config_data) for config_data in data.get("sensor_configs", [])
+            ]
 
             metadata = SessionMetadata(**data)
             self._sessions[session_id] = metadata
@@ -347,7 +349,10 @@ class SessionMetadataManager:
                 "min_temp_celsius": "Minimum temperature in frame (Celsius)",
                 "max_temp_celsius": "Maximum temperature in frame (Celsius)",
                 # Add flattened pixel values for thermal data
-                **{f"v{i}": f"Temperature value at pixel {i}" for i in range(0, 49152, 1000)[:50]}  # 256x192 = 49152 pixels, sample every 1000
+                **{
+                    f"v{i}": f"Temperature value at pixel {i}"
+                    for i in range(0, 49152, 1000)[:50]  # 256x192 = 49152 pixels, sample every 1000
+                }
             },
         }
 

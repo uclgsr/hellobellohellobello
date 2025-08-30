@@ -194,7 +194,9 @@ class CalibrationDialog(QDialog):
 
         # Start calibration in background thread
         self._log_progress(f"Found {len(image_files)} images for calibration")
-        self._log_progress(f"Board size: {board_size[0]}x{board_size[1]}, square size: {square_size}m")
+        self._log_progress(
+            f"Board size: {board_size[0]}x{board_size[1]}, square size: {square_size}m"
+        )
 
         self.calibrate_button.setEnabled(False)
         self.progress_bar.setVisible(True)
@@ -229,7 +231,9 @@ class CalibrationDialog(QDialog):
         self._log_progress(f"Image Size: {result.image_size[0]}x{result.image_size[1]}")
         self._log_progress("Camera Matrix:")
         for i in range(3):
-            row_str = "  [" + ", ".join(f"{result.camera_matrix[i, j]:8.3f}" for j in range(3)) + "]"
+            row_str = "  [" + ", ".join(
+                f"{result.camera_matrix[i, j]:8.3f}" for j in range(3)
+            ) + "]"
             self._log_progress(row_str)
         self._log_progress(f"Distortion Coefficients: {result.dist_coeffs.flatten()}")
 

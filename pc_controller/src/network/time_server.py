@@ -87,7 +87,7 @@ class TimeSyncServer:
             except Exception:
                 pass
         self._transport = transport
-        self._protocol = protocol[assignment]
+        self._protocol = protocol
 
     async def stop(self) -> None:
         if self._transport is not None:

@@ -19,9 +19,9 @@ import asyncio
 import sys
 import threading
 
-from gui.gui_manager import GUIManager
-from network.network_controller import NetworkController
-from network.time_server import TimeSyncServer
+from .gui.gui_manager import GUIManager
+from .network.network_controller import NetworkController
+from .network.time_server import TimeSyncServer
 from PyQt6.QtWidgets import QApplication
 
 
