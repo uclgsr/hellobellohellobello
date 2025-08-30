@@ -24,14 +24,13 @@ except ImportError:
     try:
         from ..config import get as cfg_get
     except ImportError:
-        import os
         import sys
-        
+
         # Try to add the project root to Python path
         project_root = Path(__file__).parents[3]
         if str(project_root) not in sys.path:
             sys.path.insert(0, str(project_root))
-            
+
         try:
             from pc_controller.src.config import get as cfg_get
         except ImportError:
@@ -133,10 +132,10 @@ class SessionManager:
 
     def start_session(self, name: str) -> str:
         """Convenience method to create a session and immediately start recording.
-        
+
         Args:
             name: Session name
-            
+
         Returns:
             Session ID
         """

@@ -289,7 +289,7 @@ class WebcamInterface:
             frame = np.stack([img, np.flipud(img), img], axis=2)
             if cv2 is not None:
                 try:
-                    ts = time.strftime("%H:%M:%S") + f".{int((dt%1)*1000):03d}"
+                    ts = time.strftime("%H:%M:%S") + f".{int((dt % 1) * 1000):03d}"
                     cv2.putText(
                         frame,
                         ts,

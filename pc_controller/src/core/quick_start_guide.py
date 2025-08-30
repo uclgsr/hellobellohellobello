@@ -384,13 +384,13 @@ class QuickStartGuide(QDialog):
         """Open the camera calibration dialog."""
         try:
             from pc_controller.src.gui.calibration_dialog import CalibrationDialog
-            
+
             dialog = CalibrationDialog(self)
             dialog.exec()
-            
+
         except ImportError as e:
             from PyQt6.QtWidgets import QMessageBox
-            
+
             QMessageBox.warning(
                 self,
                 "Feature Unavailable",
@@ -400,7 +400,7 @@ class QuickStartGuide(QDialog):
             )
         except Exception as e:
             from PyQt6.QtWidgets import QMessageBox
-            
+
             QMessageBox.critical(
                 self,
                 "Calibration Error",
