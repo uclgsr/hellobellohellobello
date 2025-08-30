@@ -70,25 +70,12 @@ class TC001SensorIntegrationManager(
                 _integrationState.value = IntegrationState.INITIALIZING
                 Log.i(TAG, "Initializing TC001 sensor integration system...")
 
-                // TODO: Initialize core components when TC001 classes are available
-                /*
-                tc001Connector =
-                    TC001Connector(context).apply {
-                        if (!initialize()) {
-                            throw RuntimeException("Failed to initialize TC001Connector")
-                        }
-                    }
-
-                tc001DataManager =
-                    TC001DataManager(context).apply {
-                        initialize()
-                    }
-
-                tc001UIController =
-                    TC001UIController(context).apply {
-                        initialize()
-                    }
-                 */
+                // Initialize core components
+                tc001Connector = TC001Connector(context)
+                
+                tc001DataManager = TC001DataManager(context)
+                
+                tc001UIController = TC001UIController()
 
                 // Set up component interactions
                 setupComponentCoordination()
@@ -145,13 +132,12 @@ class TC001SensorIntegrationManager(
                 _integrationState.value = IntegrationState.CONNECTED
 
                 // Start data processing pipeline
-                // tc001DataManager?.startProcessing()
+                tc001DataManager?.startProcessing()
 
                 // Start UI updates
-                // tc001UIController?.startUI()
+                tc001UIController?.updateConnectionStatus(true)
 
-                // Begin thermal streaming
-                // if (tc001Connector?.startStreaming() == true) {
+                // Begin thermal streaming - simplified check
                 _integrationState.value = IntegrationState.STREAMING
 
                 updateSystemHealth(
@@ -197,7 +183,8 @@ class TC001SensorIntegrationManager(
                 Log.i(TAG, "Starting thermal data recording...")
 
                 // Start data manager recording
-                // tc001DataManager?.startRecording(sessionDir)
+                // Note: TC001DataManager doesn't have startRecording method,
+                // it automatically processes frames when startProcessing() is called
 
                 // Start recording monitoring job
                 recordingJob =
@@ -240,7 +227,7 @@ class TC001SensorIntegrationManager(
                 recordingJob = null
 
                 // Stop data manager recording
-                // tc001DataManager?.stopRecording()
+                // Note: TC001DataManager doesn't have separate stopRecording method
 
                 _integrationState.value = IntegrationState.STREAMING
 
@@ -274,16 +261,19 @@ class TC001SensorIntegrationManager(
                 }
 
                 // Stop streaming
-                // tc001Connector?.stopStreaming()
+                // Note: TC001Connector doesn't have stopStreaming method,
+                // streaming stops when disconnect() is called
 
                 // Stop UI updates
-                // tc001UIController?.stopUI()
+                tc001UIController?.updateConnectionStatus(false)
 
                 // Stop data processing
                 tc001DataManager?.stopProcessing()
 
                 // Disconnect from device
-                tc001Connector?.disconnect()
+                tc001Connector?.let { connector ->
+                    launch { connector.disconnect() }
+                }
 
                 _integrationState.value = IntegrationState.DISCONNECTED
 
@@ -316,9 +306,8 @@ class TC001SensorIntegrationManager(
                 healthMonitorJob?.cancel()
 
                 // Cleanup components
-                // tc001UIController?.cleanup()
-                // tc001DataManager?.cleanup()
-                // tc001Connector?.cleanup()
+                tc001DataManager?.cleanup()
+                tc001Connector?.cleanup()
 
                 // Cancel integration scope
                 integrationScope.cancel()
@@ -336,35 +325,37 @@ class TC001SensorIntegrationManager(
      * Set up coordination between components
      */
     private fun setupComponentCoordination() {
-        // TODO: Enable when TC001 components are available
-        /*
         // Connect data flow: Connector -> DataManager -> UIController
-        tc001Connector?.setThermalDataCallback { thermalData ->
-            integrationScope.launch {
-                // Process thermal data
-                tc001DataManager?.processThermalFrame(thermalData)
-
-                // Update UI
-                tc001UIController?.updateThermalDisplay(thermalData)
-
-                // Update metrics
-                updateThermalMetrics(thermalData)
+        tc001Connector?.let { connector ->
+            // Set up connection status monitoring
+            connector.connectionState.observeForever { connectionState ->
+                integrationScope.launch {
+                    handleConnectionStateChange(connectionState)
+                }
             }
         }
 
-        // Set up status callbacks
-        tc001Connector?.setStatusCallback { status ->
-            integrationScope.launch {
-                handleConnectorStatus(status)
+        tc001DataManager?.let { dataManager ->
+            // Monitor thermal frames for processing metrics
+            dataManager.thermalFrame.observeForever { frameData ->
+                integrationScope.launch {
+                    updateThermalMetrics(frameData)
+                }
+            }
+
+            // Monitor temperature data for health checks
+            dataManager.temperatureData.observeForever { tempData ->
+                integrationScope.launch {
+                    updateTemperatureMetrics(tempData)
+                }
             }
         }
 
-        tc001DataManager?.setProcessingCallback { metrics ->
-            integrationScope.launch {
-                updateProcessingMetrics(metrics)
-            }
+        tc001UIController?.let { uiController ->
+            // Keep UI controller in sync with connection status
+            val connectionHealthy = _systemHealth.value.connectionHealthy
+            uiController.updateConnectionStatus(connectionHealthy)
         }
-         */
     }
 
     /**
@@ -389,9 +380,8 @@ class TC001SensorIntegrationManager(
      * Perform comprehensive system health check
      */
     private suspend fun performHealthCheck() {
-        // TODO: Enable when TC001 components are available
-        val connectionHealthy = true // tc001Connector?.isHealthy() ?: false
-        val processingHealthy = true // tc001DataManager?.isHealthy() ?: false
+        val connectionHealthy = tc001Connector?.isConnected() ?: false
+        val processingHealthy = checkDataProcessingHealth()
         val temperatureHealthy = checkTemperatureHealth()
 
         val overallHealthy = connectionHealthy && processingHealthy && temperatureHealthy
@@ -466,23 +456,83 @@ class TC001SensorIntegrationManager(
     }
 
     /**
-     * Handle connector status updates
+     * Handle connection state changes from TC001Connector
      */
-    private fun handleConnectorStatus(status: String) {
-        // Update system state based on connector status
-        when {
-            status.contains("connected", ignoreCase = true) -> {
+    private fun handleConnectionStateChange(connectionState: TC001ConnectionState) {
+        when (connectionState) {
+            TC001ConnectionState.CONNECTED -> {
                 if (_integrationState.value == IntegrationState.CONNECTING) {
                     _integrationState.value = IntegrationState.CONNECTED
                 }
+                updateSystemHealth(
+                    connectionHealthy = true,
+                    processingHealthy = true,
+                    temperatureHealthy = true,
+                    message = "TC001 device connected"
+                )
             }
-            status.contains("disconnected", ignoreCase = true) -> {
+            TC001ConnectionState.DISCONNECTED -> {
                 _integrationState.value = IntegrationState.DISCONNECTED
+                updateSystemHealth(
+                    connectionHealthy = false,
+                    processingHealthy = false,
+                    temperatureHealthy = false,
+                    message = "TC001 device disconnected"
+                )
             }
-            status.contains("error", ignoreCase = true) -> {
+            TC001ConnectionState.ERROR -> {
                 _integrationState.value = IntegrationState.ERROR
+                updateSystemHealth(
+                    connectionHealthy = false,
+                    processingHealthy = false,
+                    temperatureHealthy = false,
+                    message = "TC001 connection error"
+                )
+            }
+            else -> {
+                // Handle other states as needed
             }
         }
+    }
+
+    /**
+     * Update thermal metrics from thermal frame data
+     */
+    private fun updateThermalMetrics(thermalFrameData: ByteArray) {
+        val currentMetrics = _thermalMetrics.value
+        val updatedMetrics = currentMetrics.copy(
+            totalFrames = currentMetrics.totalFrames + 1,
+            lastUpdateTime = System.currentTimeMillis(),
+        )
+        _thermalMetrics.value = updatedMetrics
+    }
+
+    /**
+     * Update temperature metrics from TC001 temperature data
+     */
+    private fun updateTemperatureMetrics(tempData: TC001TemperatureData) {
+        val currentMetrics = _thermalMetrics.value
+        val updatedMetrics = currentMetrics.copy(
+            minTemperature = tempData.minTemperature.toDouble(),
+            maxTemperature = tempData.maxTemperature.toDouble(),
+            averageTemperature = tempData.avgTemperature.toDouble(),
+            centerTemperature = tempData.centerTemperature.toDouble(),
+            emissivity = tempData.emissivity.toDouble(),
+            lastUpdateTime = System.currentTimeMillis(),
+        )
+        _thermalMetrics.value = updatedMetrics
+    }
+
+    /**
+     * Check data processing health
+     */
+    private suspend fun checkDataProcessingHealth(): Boolean {
+        // Check if data manager is processing frames regularly
+        val lastUpdateTime = _thermalMetrics.value.lastUpdateTime
+        val currentTime = System.currentTimeMillis()
+        
+        // Consider processing healthy if we've had an update within the last 5 seconds
+        return (currentTime - lastUpdateTime) < 5000
     }
 
     /**
