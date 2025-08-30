@@ -21,76 +21,76 @@ import com.yourcompany.sensorspoke.R
  * adapted from IRCamera's ConnectionGuideView
  */
 class TC001ConnectionGuideView
-    @JvmOverloads
-    constructor(
-        context: Context,
-        attrs: AttributeSet? = null,
-        defStyleAttr: Int = 0,
-    ) : LinearLayout(context, attrs, defStyleAttr) {
-        private var iconRes: Int = 0
-        private var contentStr: String = ""
-        private var iconShow: Boolean = false
-        private lateinit var guideIcon: ImageView
-        private lateinit var contentText: TextView
+@JvmOverloads
+constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0,
+) : LinearLayout(context, attrs, defStyleAttr) {
+    private var iconRes: Int = 0
+    private var contentStr: String = ""
+    private var iconShow: Boolean = false
+    private lateinit var guideIcon: ImageView
+    private lateinit var contentText: TextView
 
-        init {
-            attrs?.let {
-                val ta: TypedArray = context.obtainStyledAttributes(attrs, R.styleable.TC001ConnectionGuideView)
-                iconRes = ta.getResourceId(R.styleable.TC001ConnectionGuideView_guide_icon, 0)
-                contentStr = ta.getString(R.styleable.TC001ConnectionGuideView_guide_text) ?: ""
-                iconShow = ta.getBoolean(R.styleable.TC001ConnectionGuideView_guide_icon_show, false)
-                ta.recycle()
-            }
-            initView()
+    init {
+        attrs?.let {
+            val ta: TypedArray = context.obtainStyledAttributes(attrs, R.styleable.TC001ConnectionGuideView)
+            iconRes = ta.getResourceId(R.styleable.TC001ConnectionGuideView_guide_icon, 0)
+            contentStr = ta.getString(R.styleable.TC001ConnectionGuideView_guide_text) ?: ""
+            iconShow = ta.getBoolean(R.styleable.TC001ConnectionGuideView_guide_icon_show, false)
+            ta.recycle()
         }
+        initView()
+    }
 
-        private fun initView() {
-            inflate(context, R.layout.ui_tc001_connection_guide, this)
-            contentText = findViewById(R.id.tv_content)
-            guideIcon = findViewById(R.id.iv_icon)
+    private fun initView() {
+        inflate(context, R.layout.ui_tc001_connection_guide, this)
+        contentText = findViewById(R.id.tv_content)
+        guideIcon = findViewById(R.id.iv_icon)
 
-            if (iconRes != 0) {
-                guideIcon.setImageResource(iconRes)
-            }
-            contentText.text = contentStr
-            guideIcon.visibility = if (iconShow) View.VISIBLE else View.GONE
+        if (iconRes != 0) {
+            guideIcon.setImageResource(iconRes)
         }
+        contentText.text = contentStr
+        guideIcon.visibility = if (iconShow) View.VISIBLE else View.GONE
+    }
 
-        fun setText(text: CharSequence?) {
-            if (::contentText.isInitialized && !TextUtils.isEmpty(text)) {
-                contentText.text = text
-                contentText.movementMethod = LinkMovementMethod.getInstance()
-            }
-        }
-
-        fun getText(): String =
-            if (::contentText.isInitialized) {
-                contentText.text.toString()
-            } else {
-                ""
-            }
-
-        fun setHighlightColor(color: Int) {
-            if (::contentText.isInitialized) {
-                contentText.highlightColor = color
-            }
-        }
-
-        fun addConnectionIcon(content: String) {
-            if (!::contentText.isInitialized) return
-
-            var mContent = "$content  " // Add space for image replacement
-            val spannableString = SpannableString(mContent)
-
-            // Use a simple arrow icon for connection indication
-            val drawable = context.getDrawable(R.drawable.ic_right_arrow)
-            drawable?.setBounds(0, 0, drawable.minimumWidth, drawable.minimumHeight)
-            spannableString.setSpan(
-                ImageSpan(drawable!!),
-                mContent.length - 1,
-                mContent.length,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-            )
-            contentText.text = spannableString
+    fun setText(text: CharSequence?) {
+        if (::contentText.isInitialized && !TextUtils.isEmpty(text)) {
+            contentText.text = text
+            contentText.movementMethod = LinkMovementMethod.getInstance()
         }
     }
+
+    fun getText(): String =
+        if (::contentText.isInitialized) {
+            contentText.text.toString()
+        } else {
+            ""
+        }
+
+    fun setHighlightColor(color: Int) {
+        if (::contentText.isInitialized) {
+            contentText.highlightColor = color
+        }
+    }
+
+    fun addConnectionIcon(content: String) {
+        if (!::contentText.isInitialized) return
+
+        var mContent = "$content  " // Add space for image replacement
+        val spannableString = SpannableString(mContent)
+
+        // Use a simple arrow icon for connection indication
+        val drawable = context.getDrawable(R.drawable.ic_right_arrow)
+        drawable?.setBounds(0, 0, drawable.minimumWidth, drawable.minimumHeight)
+        spannableString.setSpan(
+            ImageSpan(drawable!!),
+            mContent.length - 1,
+            mContent.length,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+        )
+        contentText.text = spannableString
+    }
+}

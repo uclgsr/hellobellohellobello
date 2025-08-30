@@ -394,7 +394,7 @@ class Shimmer3BLEAndroid(
                     (packet[offset].toInt() and 0xFF) or
                         ((packet[offset + 1].toInt() and 0xFF) shl 8) or
                         ((packet[offset + 2].toInt() and 0xFF) shl 16)
-                ).toLong()
+                    ).toLong()
             offset += TIMESTAMP_BYTES
 
             // Extract GSR data (2 bytes, little-endian, 12-bit ADC)
@@ -402,7 +402,7 @@ class Shimmer3BLEAndroid(
                 (
                     (packet[offset].toInt() and 0xFF) or
                         ((packet[offset + 1].toInt() and 0xFF) shl 8)
-                ) and 0x0FFF // Mask to 12-bit
+                    ) and 0x0FFF // Mask to 12-bit
             offset += GSR_BYTES
 
             // Extract PPG data (2 bytes, little-endian)
@@ -410,7 +410,7 @@ class Shimmer3BLEAndroid(
                 (
                     (packet[offset].toInt() and 0xFF) or
                         ((packet[offset + 1].toInt() and 0xFF) shl 8)
-                ) and 0x0FFF
+                    ) and 0x0FFF
             offset += PPG_BYTES
 
             // Create ObjectCluster with parsed data

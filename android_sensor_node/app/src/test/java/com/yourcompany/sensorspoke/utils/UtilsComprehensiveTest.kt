@@ -1,6 +1,5 @@
 package com.yourcompany.sensorspoke.utils
 
-import com.yourcompany.sensorspoke.utils.TimeManager
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

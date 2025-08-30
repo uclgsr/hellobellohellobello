@@ -266,6 +266,7 @@ class ThermalCameraRecorder(
                             "Center=${String.format("%.1f", thermalFrame.centerTemperature)}°C",
                     )
                 }
+                Unit // Explicit Unit return for withContext
             } catch (e: Exception) {
                 Log.e(TAG, "Error processing thermal frame: ${e.message}", e)
             }

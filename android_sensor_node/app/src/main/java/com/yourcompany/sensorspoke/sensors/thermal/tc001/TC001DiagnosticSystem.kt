@@ -143,18 +143,18 @@ class TC001DiagnosticSystem(
                 name = "Hardware Connectivity",
                 result = testResult,
                 message =
-                    if (testResult == TC001DiagnosticTestResult.PASS) {
-                        "TC001 device detected successfully"
-                    } else {
-                        "No TC001 device found"
-                    },
+                if (testResult == TC001DiagnosticTestResult.PASS) {
+                    "TC001 device detected successfully"
+                } else {
+                    "No TC001 device found"
+                },
                 details = "USB devices scanned: ${deviceList.size}, TC001 devices: ${tc001Devices.size}",
                 recommendation =
-                    if (testResult == TC001DiagnosticTestResult.FAIL) {
-                        "Connect TC001 device via USB and check cable connection"
-                    } else {
-                        "Hardware connectivity is functioning properly"
-                    },
+                if (testResult == TC001DiagnosticTestResult.FAIL) {
+                    "Connect TC001 device via USB and check cable connection"
+                } else {
+                    "Hardware connectivity is functioning properly"
+                },
             )
         } catch (e: Exception) {
             TC001DiagnosticTest(
@@ -196,11 +196,11 @@ class TC001DiagnosticSystem(
                 message = "USB speed: ${String.format("%.1f", speedMbps)} Mbps",
                 details = "Transfer time: ${String.format("%.1f", transferTimeMs)} ms for $testDataSize bytes",
                 recommendation =
-                    if (testResult == TC001DiagnosticTestResult.PASS) {
-                        "USB communication is optimal"
-                    } else {
-                        "Use USB 3.0+ port for optimal performance"
-                    },
+                if (testResult == TC001DiagnosticTestResult.PASS) {
+                    "USB communication is optimal"
+                } else {
+                    "Use USB 3.0+ port for optimal performance"
+                },
             )
         } catch (e: Exception) {
             TC001DiagnosticTest(
@@ -246,12 +246,12 @@ class TC001DiagnosticSystem(
                 message = "Processing: ${String.format("%.1f", processingTime)} ms, Memory: ${String.format("%.1f", memoryUsageMB)} MB",
                 details = "Available memory: ${String.format("%.1f", memoryAvailableMB)} MB",
                 recommendation =
-                    when (testResult) {
-                        TC001DiagnosticTestResult.PASS -> "System performance is excellent"
-                        TC001DiagnosticTestResult.WARNING -> "Close background apps for optimal performance"
-                        TC001DiagnosticTestResult.FAIL -> "Insufficient system resources for thermal processing"
-                        else -> "System performance needs attention"
-                    },
+                when (testResult) {
+                    TC001DiagnosticTestResult.PASS -> "System performance is excellent"
+                    TC001DiagnosticTestResult.WARNING -> "Close background apps for optimal performance"
+                    TC001DiagnosticTestResult.FAIL -> "Insufficient system resources for thermal processing"
+                    else -> "System performance needs attention"
+                },
             )
         } catch (e: Exception) {
             TC001DiagnosticTest(
@@ -301,12 +301,12 @@ class TC001DiagnosticSystem(
                 message = "Memory release efficiency: ${String.format("%.1f", releaseEfficiency)}%",
                 details = "Allocated: ${String.format("%.1f", allocatedMB)} MB, Released: ${String.format("%.1f", releasedMB)} MB",
                 recommendation =
-                    when (testResult) {
-                        TC001DiagnosticTestResult.PASS -> "Memory management is functioning well"
-                        TC001DiagnosticTestResult.WARNING -> "Monitor memory usage during long sessions"
-                        TC001DiagnosticTestResult.FAIL -> "Memory leaks detected - restart application"
-                        else -> "Memory management needs attention"
-                    },
+                when (testResult) {
+                    TC001DiagnosticTestResult.PASS -> "Memory management is functioning well"
+                    TC001DiagnosticTestResult.WARNING -> "Monitor memory usage during long sessions"
+                    TC001DiagnosticTestResult.FAIL -> "Memory leaks detected - restart application"
+                    else -> "Memory management needs attention"
+                },
             )
         } catch (e: Exception) {
             TC001DiagnosticTest(
@@ -366,12 +366,12 @@ class TC001DiagnosticSystem(
                     minTemp,
                 )}°C, Max: ${String.format("%.1f", maxTemp)}°C, Avg: ${String.format("%.1f", avgTemp)}°C",
                 recommendation =
-                    when (testResult) {
-                        TC001DiagnosticTestResult.PASS -> "Thermal processing performance is excellent"
-                        TC001DiagnosticTestResult.WARNING -> "Thermal processing is adequate but could be optimized"
-                        TC001DiagnosticTestResult.FAIL -> "Thermal processing is too slow - check system resources"
-                        else -> "Thermal processing needs optimization"
-                    },
+                when (testResult) {
+                    TC001DiagnosticTestResult.PASS -> "Thermal processing performance is excellent"
+                    TC001DiagnosticTestResult.WARNING -> "Thermal processing is adequate but could be optimized"
+                    TC001DiagnosticTestResult.FAIL -> "Thermal processing is too slow - check system resources"
+                    else -> "Thermal processing needs optimization"
+                },
             )
         } catch (e: Exception) {
             TC001DiagnosticTest(
@@ -423,12 +423,12 @@ class TC001DiagnosticSystem(
                 message = "Data pipeline success rate: ${String.format("%.1f", successRate)}%",
                 details = "Processed: $processedFrames/$testFrames frames",
                 recommendation =
-                    when (testResult) {
-                        TC001DiagnosticTestResult.PASS -> "Data pipeline is functioning optimally"
-                        TC001DiagnosticTestResult.WARNING -> "Minor data processing issues detected"
-                        TC001DiagnosticTestResult.FAIL -> "Data pipeline has significant issues"
-                        else -> "Data pipeline needs investigation"
-                    },
+                when (testResult) {
+                    TC001DiagnosticTestResult.PASS -> "Data pipeline is functioning optimally"
+                    TC001DiagnosticTestResult.WARNING -> "Minor data processing issues detected"
+                    TC001DiagnosticTestResult.FAIL -> "Data pipeline has significant issues"
+                    else -> "Data pipeline needs investigation"
+                },
             )
         } catch (e: Exception) {
             TC001DiagnosticTest(
@@ -488,12 +488,12 @@ class TC001DiagnosticSystem(
                 message = "Component integration: ${String.format("%.1f", successRate)}%",
                 details = "Successful components: $successfulComponents/$totalComponents",
                 recommendation =
-                    when (testResult) {
-                        TC001DiagnosticTestResult.PASS -> "All TC001 components are properly integrated"
-                        TC001DiagnosticTestResult.WARNING -> "Some integration issues detected"
-                        TC001DiagnosticTestResult.FAIL -> "Major component integration problems"
-                        else -> "Component integration needs review"
-                    },
+                when (testResult) {
+                    TC001DiagnosticTestResult.PASS -> "All TC001 components are properly integrated"
+                    TC001DiagnosticTestResult.WARNING -> "Some integration issues detected"
+                    TC001DiagnosticTestResult.FAIL -> "Major component integration problems"
+                    else -> "Component integration needs review"
+                },
             )
         } catch (e: Exception) {
             TC001DiagnosticTest(

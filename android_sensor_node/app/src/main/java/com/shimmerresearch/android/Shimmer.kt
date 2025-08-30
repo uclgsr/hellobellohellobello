@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 abstract class Shimmer(
     protected val context: Context,
-    protected val bluetoothAddress: String,
+    private val bluetoothAddressParam: String,
     protected val handler: Handler,
 ) {
     companion object {
@@ -54,7 +54,7 @@ abstract class Shimmer(
     protected var mIsConnected = false
     protected var mIsStreaming = false
     protected var mIsInitialized = false
-    protected val mBluetoothAddress = bluetoothAddress
+    protected val mBluetoothAddress = bluetoothAddressParam
 
     // Configuration
     protected var mSamplingRate = 128.0 // Default 128Hz

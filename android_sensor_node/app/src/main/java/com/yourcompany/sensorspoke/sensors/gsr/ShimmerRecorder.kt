@@ -187,7 +187,7 @@ class ShimmerGSRIntegrationManager(
                             Shimmer.SENSOR_GSR or
                                 Shimmer.SENSOR_INT_A13 or
                                 Shimmer.SENSOR_TIMESTAMP
-                        ).toLong()
+                            ).toLong()
 
                     device.setEnabledSensors(sensorConfig)
 
@@ -762,7 +762,7 @@ class ShimmerRecorder(
                             (
                                 2000 + 500 * kotlin.math.sin(simulationSampleCount * 0.1) +
                                     Random.nextDouble(-50.0, 50.0)
-                            ).toInt().coerceIn(0, 4095)
+                                ).toInt().coerceIn(0, 4095)
 
                         // Create GSR data point
                         val gsrData =
