@@ -2,11 +2,12 @@ package com.yourcompany.sensorspoke.sensors
 
 import com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
-import org.mockito.Mockito.*
 import org.mockito.MockitoAnnotations
 import java.io.File
 import java.nio.file.Files
@@ -14,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertFailsWith
 
 class SensorRecorderComprehensiveTest {
-
     @Mock
     private lateinit var mockContext: android.content.Context
 
@@ -68,133 +68,140 @@ class SensorRecorderComprehensiveTest {
     }
 
     @Test
-    fun `sensor recorder basic lifecycle`() = runTest {
-        val recorder = TestSensorRecorder()
+    fun `sensor recorder basic lifecycle`() =
+        runTest {
+            val recorder = TestSensorRecorder()
 
-        // Initial state
-        assertFalse(recorder.isStarted)
-        assertNull(recorder.sessionDirectory)
-        assertFalse(recorder.stopCalled)
+            // Initial state
+            assertFalse(recorder.isStarted)
+            assertNull(recorder.sessionDirectory)
+            assertFalse(recorder.stopCalled)
 
-        // Start recording
-        recorder.start(sessionDir)
-        assertTrue(recorder.isStarted)
-        assertEquals(sessionDir, recorder.sessionDirectory)
-        assertEquals(1, recorder.startCallCount.get())
-
-        // Stop recording
-        recorder.stop()
-        assertFalse(recorder.isStarted)
-        assertTrue(recorder.stopCalled)
-        assertEquals(1, recorder.stopCallCount.get())
-    }
-
-    @Test
-    fun `sensor recorder multiple start calls`() = runTest {
-        val recorder = TestSensorRecorder()
-
-        // Multiple start calls
-        recorder.start(sessionDir)
-        recorder.start(sessionDir)
-        recorder.start(sessionDir)
-
-        assertEquals(3, recorder.startCallCount.get())
-        assertTrue(recorder.isStarted)
-        assertEquals(sessionDir, recorder.sessionDirectory)
-    }
-
-    @Test
-    fun `sensor recorder multiple stop calls`() = runTest {
-        val recorder = TestSensorRecorder()
-
-        recorder.start(sessionDir)
-
-        // Multiple stop calls
-        recorder.stop()
-        recorder.stop()
-        recorder.stop()
-
-        assertEquals(3, recorder.stopCallCount.get())
-        assertFalse(recorder.isStarted)
-        assertTrue(recorder.stopCalled)
-    }
-
-    @Test
-    fun `sensor recorder start failure handling`() = runTest {
-        val recorder = TestSensorRecorder()
-        recorder.shouldFailOnStart = true
-
-        assertFailsWith<RuntimeException> {
+            // Start recording
             recorder.start(sessionDir)
-        }
+            assertTrue(recorder.isStarted)
+            assertEquals(sessionDir, recorder.sessionDirectory)
+            assertEquals(1, recorder.startCallCount.get())
 
-        // State should remain consistent after failure
-        assertFalse(recorder.isStarted)
-        assertNull(recorder.sessionDirectory)
-        assertEquals(1, recorder.startCallCount.get())
-    }
-
-    @Test
-    fun `sensor recorder stop failure handling`() = runTest {
-        val recorder = TestSensorRecorder()
-        recorder.start(sessionDir)
-
-        recorder.shouldFailOnStop = true
-
-        assertFailsWith<RuntimeException> {
+            // Stop recording
             recorder.stop()
+            assertFalse(recorder.isStarted)
+            assertTrue(recorder.stopCalled)
+            assertEquals(1, recorder.stopCallCount.get())
         }
 
-        // Stop attempt should be recorded even on failure
-        assertEquals(1, recorder.stopCallCount.get())
-    }
+    @Test
+    fun `sensor recorder multiple start calls`() =
+        runTest {
+            val recorder = TestSensorRecorder()
+
+            // Multiple start calls
+            recorder.start(sessionDir)
+            recorder.start(sessionDir)
+            recorder.start(sessionDir)
+
+            assertEquals(3, recorder.startCallCount.get())
+            assertTrue(recorder.isStarted)
+            assertEquals(sessionDir, recorder.sessionDirectory)
+        }
 
     @Test
-    fun `sensor recorder different session directories`() = runTest {
-        val recorder = TestSensorRecorder()
+    fun `sensor recorder multiple stop calls`() =
+        runTest {
+            val recorder = TestSensorRecorder()
 
-        val sessionDir1 = File(tempDir, "session1").apply { mkdirs() }
-        val sessionDir2 = File(tempDir, "session2").apply { mkdirs() }
+            recorder.start(sessionDir)
 
-        // Start with first directory
-        recorder.start(sessionDir1)
-        assertEquals(sessionDir1, recorder.sessionDirectory)
+            // Multiple stop calls
+            recorder.stop()
+            recorder.stop()
+            recorder.stop()
 
-        // Start with different directory (simulating session change)
-        recorder.start(sessionDir2)
-        assertEquals(sessionDir2, recorder.sessionDirectory)
-    }
-
-    @Test
-    fun `sensor recorder with non-existent session directory`() = runTest {
-        val recorder = TestSensorRecorder()
-        val nonExistentDir = File(tempDir, "non_existent")
-
-        // Should handle non-existent directory gracefully
-        recorder.start(nonExistentDir)
-
-        assertTrue(recorder.isStarted)
-        assertEquals(nonExistentDir, recorder.sessionDirectory)
-    }
+            assertEquals(3, recorder.stopCallCount.get())
+            assertFalse(recorder.isStarted)
+            assertTrue(recorder.stopCalled)
+        }
 
     @Test
-    fun `sensor recorder concurrent operations simulation`() = runTest {
-        val recorder = TestSensorRecorder()
+    fun `sensor recorder start failure handling`() =
+        runTest {
+            val recorder = TestSensorRecorder()
+            recorder.shouldFailOnStart = true
 
-        // Simulate concurrent start/stop operations
-        recorder.start(sessionDir)
-        recorder.stop()
-        recorder.start(sessionDir)
-        recorder.stop()
+            assertFailsWith<RuntimeException> {
+                recorder.start(sessionDir)
+            }
 
-        assertEquals(2, recorder.startCallCount.get())
-        assertEquals(2, recorder.stopCallCount.get())
-        assertFalse(recorder.isStarted)
-    }
+            // State should remain consistent after failure
+            assertFalse(recorder.isStarted)
+            assertNull(recorder.sessionDirectory)
+            assertEquals(1, recorder.startCallCount.get())
+        }
+
+    @Test
+    fun `sensor recorder stop failure handling`() =
+        runTest {
+            val recorder = TestSensorRecorder()
+            recorder.start(sessionDir)
+
+            recorder.shouldFailOnStop = true
+
+            assertFailsWith<RuntimeException> {
+                recorder.stop()
+            }
+
+            // Stop attempt should be recorded even on failure
+            assertEquals(1, recorder.stopCallCount.get())
+        }
+
+    @Test
+    fun `sensor recorder different session directories`() =
+        runTest {
+            val recorder = TestSensorRecorder()
+
+            val sessionDir1 = File(tempDir, "session1").apply { mkdirs() }
+            val sessionDir2 = File(tempDir, "session2").apply { mkdirs() }
+
+            // Start with first directory
+            recorder.start(sessionDir1)
+            assertEquals(sessionDir1, recorder.sessionDirectory)
+
+            // Start with different directory (simulating session change)
+            recorder.start(sessionDir2)
+            assertEquals(sessionDir2, recorder.sessionDirectory)
+        }
+
+    @Test
+    fun `sensor recorder with non-existent session directory`() =
+        runTest {
+            val recorder = TestSensorRecorder()
+            val nonExistentDir = File(tempDir, "non_existent")
+
+            // Should handle non-existent directory gracefully
+            recorder.start(nonExistentDir)
+
+            assertTrue(recorder.isStarted)
+            assertEquals(nonExistentDir, recorder.sessionDirectory)
+        }
+
+    @Test
+    fun `sensor recorder concurrent operations simulation`() =
+        runTest {
+            val recorder = TestSensorRecorder()
+
+            // Simulate concurrent start/stop operations
+            recorder.start(sessionDir)
+            recorder.stop()
+            recorder.start(sessionDir)
+            recorder.stop()
+
+            assertEquals(2, recorder.startCallCount.get())
+            assertEquals(2, recorder.stopCallCount.get())
+            assertFalse(recorder.isStarted)
+        }
 }
 
 class ShimmerRecorderComprehensiveTest {
-
     @Mock
     private lateinit var mockContext: android.content.Context
 
@@ -215,94 +222,100 @@ class ShimmerRecorderComprehensiveTest {
     }
 
     @Test
-    fun `shimmer recorder start creates necessary files and directories`() = runTest {
-        val recorder = ShimmerRecorder(mockContext)
-
-        try {
-            recorder.start(sessionDir)
-
-            // Verify session directory exists
-            assertTrue("Session directory should exist", sessionDir.exists())
-            assertTrue("Session directory should be a directory", sessionDir.isDirectory)
-
-            // Note: In a real test environment without actual Shimmer hardware,
-            // we would expect graceful handling of missing hardware
-
-        } catch (e: Exception) {
-            // Expected in test environment without actual Shimmer device
-            // The test verifies the interface and basic structure
-        } finally {
-            try {
-                recorder.stop()
-            } catch (e: Exception) {
-                // Expected without real hardware
-            }
-        }
-    }
-
-    @Test
-    fun `shimmer recorder stop without start handles gracefully`() = runTest {
-        val recorder = ShimmerRecorder(mockContext)
-
-        // Should handle stop without start gracefully
-        try {
-            recorder.stop()
-            // If no exception, test passes
-        } catch (e: Exception) {
-            // Some implementations might throw, verify it's handled appropriately
-            assertTrue("Exception should be handled gracefully", e.message != null)
-        }
-    }
-
-    @Test
-    fun `shimmer recorder multiple start stop cycles`() = runTest {
-        val recorder = ShimmerRecorder(mockContext)
-
-        repeat(3) { cycle ->
-            val cycleSessionDir = File(tempDir, "cycle_$cycle").apply { mkdirs() }
+    fun `shimmer recorder start creates necessary files and directories`() =
+        runTest {
+            val recorder = ShimmerRecorder(mockContext)
 
             try {
-                recorder.start(cycleSessionDir)
-                // Brief "recording" period
-                recorder.stop()
+                recorder.start(sessionDir)
+
+                // Verify session directory exists
+                assertTrue("Session directory should exist", sessionDir.exists())
+                assertTrue("Session directory should be a directory", sessionDir.isDirectory)
+
+                // Note: In a real test environment without actual Shimmer hardware,
+                // we would expect graceful handling of missing hardware
             } catch (e: Exception) {
-                // Expected without real hardware - verify graceful handling
+                // Expected in test environment without actual Shimmer device
+                // The test verifies the interface and basic structure
+            } finally {
+                try {
+                    recorder.stop()
+                } catch (e: Exception) {
+                    // Expected without real hardware
+                }
             }
         }
-    }
 
     @Test
-    fun `shimmer recorder with invalid session directory`() = runTest {
-        val recorder = ShimmerRecorder(mockContext)
+    fun `shimmer recorder stop without start handles gracefully`() =
+        runTest {
+            val recorder = ShimmerRecorder(mockContext)
 
-        // Use a file as directory (invalid)
-        val invalidDir = File(tempDir, "invalid_file.txt")
-        invalidDir.createNewFile()
-
-        try {
-            recorder.start(invalidDir)
-            // Should handle invalid directory gracefully
-        } catch (e: Exception) {
-            // Expected - should provide meaningful error
-            assertTrue("Error message should be descriptive",
-                e.message?.contains("directory") == true ||
-                e.message?.contains("file") == true)
-        } finally {
+            // Should handle stop without start gracefully
             try {
                 recorder.stop()
+                // If no exception, test passes
             } catch (e: Exception) {
-                // Expected cleanup
+                // Some implementations might throw, verify it's handled appropriately
+                assertTrue("Exception should be handled gracefully", e.message != null)
             }
         }
-    }
+
+    @Test
+    fun `shimmer recorder multiple start stop cycles`() =
+        runTest {
+            val recorder = ShimmerRecorder(mockContext)
+
+            repeat(3) { cycle ->
+                val cycleSessionDir = File(tempDir, "cycle_$cycle").apply { mkdirs() }
+
+                try {
+                    recorder.start(cycleSessionDir)
+                    // Brief "recording" period
+                    recorder.stop()
+                } catch (e: Exception) {
+                    // Expected without real hardware - verify graceful handling
+                }
+            }
+        }
+
+    @Test
+    fun `shimmer recorder with invalid session directory`() =
+        runTest {
+            val recorder = ShimmerRecorder(mockContext)
+
+            // Use a file as directory (invalid)
+            val invalidDir = File(tempDir, "invalid_file.txt")
+            invalidDir.createNewFile()
+
+            try {
+                recorder.start(invalidDir)
+                // Should handle invalid directory gracefully
+            } catch (e: Exception) {
+                // Expected - should provide meaningful error
+                assertTrue(
+                    "Error message should be descriptive",
+                    e.message?.contains("directory") == true ||
+                        e.message?.contains("file") == true,
+                )
+            } finally {
+                try {
+                    recorder.stop()
+                } catch (e: Exception) {
+                    // Expected cleanup
+                }
+            }
+        }
 }
 
 object SensorTestUtils {
-    fun createTempSessionDir(): File {
-        return Files.createTempDirectory("sensor_integration_test").toFile()
-    }
+    fun createTempSessionDir(): File = Files.createTempDirectory("sensor_integration_test").toFile()
 
-    fun verifyCsvFileStructure(file: File, expectedHeaders: List<String>) {
+    fun verifyCsvFileStructure(
+        file: File,
+        expectedHeaders: List<String>,
+    ) {
         assertTrue("CSV file should exist", file.exists())
         assertTrue("File should not be empty", file.length() > 0)
 
@@ -311,17 +324,18 @@ object SensorTestUtils {
 
         val headers = lines[0].split(",")
         expectedHeaders.forEach { expectedHeader ->
-            assertTrue("CSV should contain header: $expectedHeader",
-                headers.any { it.trim() == expectedHeader })
+            assertTrue(
+                "CSV should contain header: $expectedHeader",
+                headers.any { it.trim() == expectedHeader },
+            )
         }
     }
 
-    fun verifyTimestampFormat(timestampStr: String): Boolean {
-        return try {
+    fun verifyTimestampFormat(timestampStr: String): Boolean =
+        try {
             val timestamp = timestampStr.toLong()
             timestamp > 0
         } catch (e: NumberFormatException) {
             false
         }
-    }
 }

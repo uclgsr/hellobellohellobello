@@ -2,7 +2,6 @@ package com.yourcompany.sensorspoke.utils
 
 import android.content.Context
 import android.widget.Toast
-import androidx.annotation.StringRes
 
 /**
  * UserExperience utilities for Android Sensor Node, providing user-friendly
@@ -12,15 +11,16 @@ import androidx.annotation.StringRes
  * consistent, research-friendly messaging across both platforms.
  */
 object UserExperience {
-
     /**
      * Translates technical errors into user-friendly, actionable messages
      * with Android-specific troubleshooting guidance.
      */
     object ErrorTranslator {
-
-        fun translateNetworkError(error: String, context: String): String {
-            return when {
+        fun translateNetworkError(
+            error: String,
+            context: String,
+        ): String =
+            when {
                 error.contains("Connection refused") ->
                     "Unable to connect to PC Hub. Please check:\n• PC Hub is running\n• Both devices are on the same WiFi network\n• Firewall is not blocking the connection"
 
@@ -44,86 +44,104 @@ object UserExperience {
 
                 else -> "An error occurred: $error\n\nIf the problem persists, please check your network connection and try restarting both the PC Hub and this app."
             }
-        }
 
-        fun translateSensorError(sensorType: String, error: String): String {
-            return when (sensorType.lowercase()) {
-                "shimmer", "gsr" -> when {
-                    error.contains("not found") || error.contains("Not found") ->
-                        "GSR sensor not detected. Please check:\n• Shimmer device is powered on\n• Bluetooth is enabled\n• Device is within range (2-3 meters)\n• Try power cycling the Shimmer device"
+        fun translateSensorError(
+            sensorType: String,
+            error: String,
+        ): String =
+            when (sensorType.lowercase()) {
+                "shimmer", "gsr" ->
+                    when {
+                        error.contains("not found") || error.contains("Not found") ->
+                            "GSR sensor not detected. Please check:\n• Shimmer device is powered on\n• Bluetooth is enabled\n• Device is within range (2-3 meters)\n• Try power cycling the Shimmer device"
 
-                    error.contains("connection") || error.contains("Connection") ->
-                        "GSR sensor connection lost. Please check:\n• Shimmer device battery level\n• Bluetooth connection is stable\n• Device hasn't moved out of range"
+                        error.contains("connection") || error.contains("Connection") ->
+                            "GSR sensor connection lost. Please check:\n• Shimmer device battery level\n• Bluetooth connection is stable\n• Device hasn't moved out of range"
 
-                    else -> "GSR sensor error: Please check device connection and battery level"
-                }
+                        else -> "GSR sensor error: Please check device connection and battery level"
+                    }
 
-                "thermal" -> when {
-                    error.contains("USB") || error.contains("usb") ->
-                        "Thermal camera connection error. Please check:\n• USB cable is properly connected\n• Camera is powered on\n• Try using a different USB port or cable"
+                "thermal" ->
+                    when {
+                        error.contains("USB") || error.contains("usb") ->
+                            "Thermal camera connection error. Please check:\n• USB cable is properly connected\n• Camera is powered on\n• Try using a different USB port or cable"
 
-                    error.contains("permission") || error.contains("Permission") ->
-                        "Thermal camera access denied. Please check:\n• Camera permissions are granted\n• USB debugging is enabled\n• Allow USB camera access when prompted"
+                        error.contains("permission") || error.contains("Permission") ->
+                            "Thermal camera access denied. Please check:\n• Camera permissions are granted\n• USB debugging is enabled\n• Allow USB camera access when prompted"
 
-                    else -> "Thermal camera error: Please check USB connection and permissions"
-                }
+                        else -> "Thermal camera error: Please check USB connection and permissions"
+                    }
 
-                "rgb", "camera" -> when {
-                    error.contains("permission") || error.contains("Permission") ->
-                        "Camera permission required. Please:\n• Grant camera permission in Settings\n• Restart the app after granting permission\n• Ensure no other apps are using the camera"
+                "rgb", "camera" ->
+                    when {
+                        error.contains("permission") || error.contains("Permission") ->
+                            "Camera permission required. Please:\n• Grant camera permission in Settings\n• Restart the app after granting permission\n• Ensure no other apps are using the camera"
 
-                    error.contains("unavailable") || error.contains("Unavailable") ->
-                        "Camera not available. Please check:\n• Another app isn't using the camera\n• Camera hardware is functioning\n• Try restarting the device"
+                        error.contains("unavailable") || error.contains("Unavailable") ->
+                            "Camera not available. Please check:\n• Another app isn't using the camera\n• Camera hardware is functioning\n• Try restarting the device"
 
-                    else -> "RGB camera error: Please check camera permissions and availability"
-                }
+                        else -> "RGB camera error: Please check camera permissions and availability"
+                    }
 
                 else -> "Sensor error ($sensorType): $error"
             }
-        }
     }
 
     /**
      * Formats device and session status information for user display.
      */
     object StatusFormatter {
-
-        fun formatConnectionStatus(isConnected: Boolean, serverAddress: String? = null): String {
-            return if (isConnected) {
+        fun formatConnectionStatus(
+            isConnected: Boolean,
+            serverAddress: String? = null,
+        ): String =
+            if (isConnected) {
                 serverAddress?.let { "Connected to PC Hub: $it" } ?: "Connected to PC Hub"
             } else {
                 "Not connected to PC Hub"
             }
-        }
 
-        fun formatRecordingStatus(isRecording: Boolean, sessionId: String? = null, duration: Long = 0): String {
-            return if (isRecording) {
-                val durationText = if (duration > 0) {
-                    val minutes = duration / 60
-                    val seconds = duration % 60
-                    " (${minutes}:${seconds.toString().padStart(2, '0')})"
-                } else ""
+        fun formatRecordingStatus(
+            isRecording: Boolean,
+            sessionId: String? = null,
+            duration: Long = 0,
+        ): String =
+            if (isRecording) {
+                val durationText =
+                    if (duration > 0) {
+                        val minutes = duration / 60
+                        val seconds = duration % 60
+                        " ($minutes:${seconds.toString().padStart(2, '0')})"
+                    } else {
+                        ""
+                    }
 
                 sessionId?.let { "Recording: $it$durationText" } ?: "Recording in progress$durationText"
             } else {
                 "Ready to record"
             }
-        }
 
-        fun formatSensorStatus(sensorName: String, isConnected: Boolean, isRecording: Boolean): String {
-            val status = when {
-                isRecording -> "Recording"
-                isConnected -> "Connected"
-                else -> "Disconnected"
-            }
+        fun formatSensorStatus(
+            sensorName: String,
+            isConnected: Boolean,
+            isRecording: Boolean,
+        ): String {
+            val status =
+                when {
+                    isRecording -> "Recording"
+                    isConnected -> "Connected"
+                    else -> "Disconnected"
+                }
             return "$sensorName: $status"
         }
 
-        fun formatFileLocation(filePath: String): String {
-            return "Saved to: ${filePath.substringAfterLast("/")}"
-        }
+        fun formatFileLocation(filePath: String): String = "Saved to: ${filePath.substringAfterLast("/")}"
 
-        fun formatDataExportInfo(format: String, fileCount: Int, totalSize: Long): String {
+        fun formatDataExportInfo(
+            format: String,
+            fileCount: Int,
+            totalSize: Long,
+        ): String {
             val sizeInMB = totalSize / (1024 * 1024)
             return "Exported $fileCount files ($format format, ${sizeInMB}MB total)"
         }
@@ -133,28 +151,44 @@ object UserExperience {
      * Provides consistent messaging utilities for Android UI components.
      */
     object Messaging {
-
-        fun showUserFriendlyError(context: Context, error: String, errorContext: String = "general") {
-            val friendlyMessage = when (errorContext) {
-                "network" -> ErrorTranslator.translateNetworkError(error, errorContext)
-                "sensor" -> ErrorTranslator.translateSensorError("general", error)
-                else -> ErrorTranslator.translateNetworkError(error, errorContext)
-            }
+        fun showUserFriendlyError(
+            context: Context,
+            error: String,
+            errorContext: String = "general",
+        ) {
+            val friendlyMessage =
+                when (errorContext) {
+                    "network" -> ErrorTranslator.translateNetworkError(error, errorContext)
+                    "sensor" -> ErrorTranslator.translateSensorError("general", error)
+                    else -> ErrorTranslator.translateNetworkError(error, errorContext)
+                }
 
             Toast.makeText(context, friendlyMessage, Toast.LENGTH_LONG).show()
         }
 
-        fun showStatus(context: Context, message: String, isLong: Boolean = false) {
+        fun showStatus(
+            context: Context,
+            message: String,
+            isLong: Boolean = false,
+        ) {
             val duration = if (isLong) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
 
-        fun showSuccess(context: Context, operation: String, result: String? = null) {
+        fun showSuccess(
+            context: Context,
+            operation: String,
+            result: String? = null,
+        ) {
             val message = result?.let { "$operation: $it" } ?: "$operation completed successfully"
             Toast.makeText(context, "✓ $message", Toast.LENGTH_SHORT).show()
         }
 
-        fun showProgress(context: Context, operation: String, progress: Int? = null) {
+        fun showProgress(
+            context: Context,
+            operation: String,
+            progress: Int? = null,
+        ) {
             val progressText = progress?.let { " ($it%)" } ?: ""
             val message = "$operation in progress$progressText..."
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -165,37 +199,33 @@ object UserExperience {
      * Provides Android-specific quick start guidance and onboarding support.
      */
     object QuickStart {
-
-        fun getSetupSteps(): List<Pair<String, String>> {
-            return listOf(
+        fun getSetupSteps(): List<Pair<String, String>> =
+            listOf(
                 "1. Connect to WiFi" to "Ensure your device is connected to the same WiFi network as the PC Hub",
                 "2. Grant Permissions" to "Allow camera, microphone, and storage access when prompted",
                 "3. Connect Sensors" to "Power on Shimmer GSR sensor and connect thermal camera via USB",
                 "4. Find PC Hub" to "App will automatically discover the PC Hub on your network",
                 "5. Start Recording" to "Tap 'Start Recording' when all sensors show as connected",
-                "6. Monitor Status" to "Use the tabs to preview camera feeds and monitor sensor data"
+                "6. Monitor Status" to "Use the tabs to preview camera feeds and monitor sensor data",
             )
-        }
 
-        fun getConnectionTroubleshootingSteps(): List<String> {
-            return listOf(
+        fun getConnectionTroubleshootingSteps(): List<String> =
+            listOf(
                 "Check that PC Hub application is running",
                 "Verify both devices are on the same WiFi network",
                 "Try disabling and re-enabling WiFi on both devices",
                 "Check firewall settings on PC (allow incoming connections)",
                 "Try restarting both applications",
-                "If using enterprise WiFi, contact IT about device-to-device communication"
+                "If using enterprise WiFi, contact IT about device-to-device communication",
             )
-        }
 
-        fun getPermissionExplanations(): Map<String, String> {
-            return mapOf(
+        fun getPermissionExplanations(): Map<String, String> =
+            mapOf(
                 "camera" to "Camera access is required to record RGB video and capture synchronization frames",
                 "microphone" to "Microphone access is needed for audio recording during physiological measurements",
                 "storage" to "Storage access is required to save recorded data and transfer files to the PC Hub",
                 "bluetooth" to "Bluetooth access is needed to connect with the Shimmer GSR sensor",
-                "location" to "Location access is required for WiFi network discovery and Bluetooth sensor pairing"
+                "location" to "Location access is required for WiFi network discovery and Bluetooth sensor pairing",
             )
-        }
     }
 }

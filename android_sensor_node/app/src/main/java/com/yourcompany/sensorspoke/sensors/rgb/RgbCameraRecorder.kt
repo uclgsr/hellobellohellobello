@@ -2,7 +2,6 @@ package com.yourcompany.sensorspoke.sensors.rgb
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.hardware.camera2.*
 import android.media.Image
@@ -89,22 +88,23 @@ class RgbCameraRecorder(
         cameraProvider = provider
 
         // Build Recorder with 4K support for Samsung devices, fallback to 1080p
-        val targetQuality = if (supportsSamsungRawCapture) {
-            Log.i(TAG, "Samsung device detected - enabling 4K video recording")
-            Quality.UHD // 4K for Samsung devices with RAW capability
-        } else {
-            Quality.FHD // 1080p for other devices
-        }
+        val targetQuality =
+            if (supportsSamsungRawCapture) {
+                Log.i(TAG, "Samsung device detected - enabling 4K video recording")
+                Quality.UHD // 4K for Samsung devices with RAW capability
+            } else {
+                Quality.FHD // 1080p for other devices
+            }
 
         val recorder =
-            Recorder.Builder()
+            Recorder
+                .Builder()
                 .setQualitySelector(
                     QualitySelector.from(
                         targetQuality,
                         FallbackStrategy.higherQualityOrLowerThan(targetQuality),
                     ),
-                )
-                .build()
+                ).build()
         videoCapture = VideoCapture.withOutput(recorder)
 
         // Initialize Samsung RAW capture or fallback to CameraX
@@ -115,7 +115,8 @@ class RgbCameraRecorder(
             Log.i(TAG, "Samsung RAW not available - using CameraX fallback")
             // ImageCapture for high-res stills - standard CameraX fallback with DNG extension
             imageCapture =
-                ImageCapture.Builder()
+                ImageCapture
+                    .Builder()
                     .setTargetRotation(Surface.ROTATION_0)
                     .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                     .build()
@@ -131,7 +132,8 @@ class RgbCameraRecorder(
         // Start video recording
         val outputOpts = FileOutputOptions.Builder(videoFile).build()
         recording =
-            videoCapture!!.output
+            videoCapture!!
+                .output
                 .prepareRecording(context, outputOpts)
                 .start(ContextCompat.getMainExecutor(context)) { /* events ignored */ }
 
@@ -249,7 +251,10 @@ class RgbCameraRecorder(
                     val configs = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
                     val supportsConcurrentStreams = checkConcurrentStreamSupport(characteristics, configs)
 
-                    Log.i(TAG, "Camera $cameraId - Samsung: $isSamsung, Level3: $supportsLevel3, Full: $supportsFull, RAW: $supportsRaw, Concurrent: $supportsConcurrentStreams")
+                    Log.i(
+                        TAG,
+                        "Camera $cameraId - Samsung: $isSamsung, Level3: $supportsLevel3, Full: $supportsFull, RAW: $supportsRaw, Concurrent: $supportsConcurrentStreams",
+                    )
 
                     // Samsung devices with Level 3 or Full + RAW capability
                     if (isSamsung && (supportsLevel3 || supportsFull) && supportsRaw) {
@@ -270,7 +275,6 @@ class RgbCameraRecorder(
             if (!supportsSamsungRawCapture) {
                 Log.i(TAG, "Samsung RAW DNG capture not available - using CameraX fallback")
             }
-
         } catch (e: Exception) {
             Log.w(TAG, "Failed to initialize camera capabilities: ${e.message}")
             supportsSamsungRawCapture = false
@@ -282,7 +286,7 @@ class RgbCameraRecorder(
      */
     private fun checkConcurrentStreamSupport(
         characteristics: CameraCharacteristics,
-        configs: android.hardware.camera2.params.StreamConfigurationMap?
+        configs: android.hardware.camera2.params.StreamConfigurationMap?,
     ): Boolean {
         try {
             // Check available sizes for video and RAW
@@ -308,7 +312,6 @@ class RgbCameraRecorder(
             }
 
             return supports4K && supportsRawCapture
-
         } catch (e: Exception) {
             Log.w(TAG, "Error checking concurrent stream support: ${e.message}")
             return false
@@ -341,12 +344,13 @@ class RgbCameraRecorder(
             val supports4K = videoSizes.any { it.width >= 3840 && it.height >= 2160 }
             Log.i(TAG, "4K video concurrent support: $supports4K")
 
-            rawImageReader = ImageReader.newInstance(
-                maxRawSize.width,
-                maxRawSize.height,
-                ImageFormat.RAW_SENSOR,
-                4  // Increased buffer size for concurrent operation
-            )
+            rawImageReader =
+                ImageReader.newInstance(
+                    maxRawSize.width,
+                    maxRawSize.height,
+                    ImageFormat.RAW_SENSOR,
+                    4, // Increased buffer size for concurrent operation
+                )
 
             rawImageReader!!.setOnImageAvailableListener({ reader ->
                 handleRawImage(reader, framesDir)
@@ -354,25 +358,31 @@ class RgbCameraRecorder(
 
             // Open camera device
             val cameraOpenedDeferred = CompletableDeferred<CameraDevice>()
-            cameraManager!!.openCamera(rawCameraId!!, object : CameraDevice.StateCallback() {
-                override fun onOpened(camera: CameraDevice) {
-                    cameraOpenedDeferred.complete(camera)
-                }
+            cameraManager!!.openCamera(
+                rawCameraId!!,
+                object : CameraDevice.StateCallback() {
+                    override fun onOpened(camera: CameraDevice) {
+                        cameraOpenedDeferred.complete(camera)
+                    }
 
-                override fun onDisconnected(camera: CameraDevice) {
-                    camera.close()
-                    cameraOpenedDeferred.completeExceptionally(RuntimeException("Camera disconnected"))
-                }
+                    override fun onDisconnected(camera: CameraDevice) {
+                        camera.close()
+                        cameraOpenedDeferred.completeExceptionally(RuntimeException("Camera disconnected"))
+                    }
 
-                override fun onError(camera: CameraDevice, error: Int) {
-                    camera.close()
-                    cameraOpenedDeferred.completeExceptionally(RuntimeException("Camera error: $error"))
-                }
-            }, backgroundHandler)
+                    override fun onError(
+                        camera: CameraDevice,
+                        error: Int,
+                    ) {
+                        camera.close()
+                        cameraOpenedDeferred.completeExceptionally(RuntimeException("Camera error: $error"))
+                    }
+                },
+                backgroundHandler,
+            )
 
             cameraDevice = cameraOpenedDeferred.await()
             Log.i(TAG, "Samsung Camera2 device opened successfully for concurrent RAW+4K recording")
-
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Samsung RAW capture: ${e.message}")
             supportsSamsungRawCapture = false
@@ -382,7 +392,10 @@ class RgbCameraRecorder(
     /**
      * Handle RAW image from Samsung Camera2 API and save as DNG
      */
-    private fun handleRawImage(reader: ImageReader, framesDir: File) {
+    private fun handleRawImage(
+        reader: ImageReader,
+        framesDir: File,
+    ) {
         try {
             val image = reader.acquireLatestImage() ?: return
             val timestamp = TimeManager.nowNanos()
@@ -405,7 +418,6 @@ class RgbCameraRecorder(
                         lastPreviewNs = now
                         generatePreviewFromRaw(image)
                     }
-
                 } catch (e: Exception) {
                     Log.e(TAG, "Error processing RAW image: ${e.message}")
                 } finally {
@@ -420,7 +432,10 @@ class RgbCameraRecorder(
     /**
      * Save RAW image data as DNG file
      */
-    private fun saveRawImageAsDng(image: Image, dngFile: File) {
+    private fun saveRawImageAsDng(
+        image: Image,
+        dngFile: File,
+    ) {
         try {
             val buffer = image.planes[0].buffer
             val bytes = ByteArray(buffer.remaining())
@@ -432,7 +447,6 @@ class RgbCameraRecorder(
             }
 
             Log.d(TAG, "Saved RAW DNG: ${dngFile.name} (${bytes.size} bytes)")
-
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save DNG file: ${e.message}")
         }
@@ -464,7 +478,6 @@ class RgbCameraRecorder(
 
             baos.close()
             previewBitmap.recycle()
-
         } catch (e: Exception) {
             Log.e(TAG, "Error generating RAW preview: ${e.message}")
             // Fallback to placeholder on error
@@ -480,7 +493,7 @@ class RgbCameraRecorder(
         srcWidth: Int,
         srcHeight: Int,
         previewWidth: Int,
-        previewHeight: Int
+        previewHeight: Int,
     ): Bitmap {
         try {
             // Create a simplified preview bitmap
@@ -506,8 +519,9 @@ class RgbCameraRecorder(
 
                     if (srcIndex < srcBytes.size - 1) {
                         // Convert 16-bit RAW to 8-bit grayscale
-                        val raw16 = ((srcBytes[srcIndex + 1].toInt() and 0xFF) shl 8) or
-                                   (srcBytes[srcIndex].toInt() and 0xFF)
+                        val raw16 =
+                            ((srcBytes[srcIndex + 1].toInt() and 0xFF) shl 8) or
+                                (srcBytes[srcIndex].toInt() and 0xFF)
                         val gray = (raw16 shr 8).coerceIn(0, 255)
                         pixels[y * previewWidth + x] = (0xFF shl 24) or (gray shl 16) or (gray shl 8) or gray
                     }
@@ -516,7 +530,6 @@ class RgbCameraRecorder(
 
             bitmap.setPixels(pixels, 0, previewWidth, 0, 0, previewWidth, previewHeight)
             return bitmap
-
         } catch (e: Exception) {
             Log.w(TAG, "Failed to create RAW preview, using placeholder: ${e.message}")
             return Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.RGB_565)
@@ -588,7 +601,7 @@ class RgbCameraRecorder(
                             sessionCreatedDeferred.completeExceptionally(RuntimeException("Session configure failed"))
                         }
                     },
-                    backgroundHandler
+                    backgroundHandler,
                 )
                 captureSession = sessionCreatedDeferred.await()
             }
@@ -604,7 +617,6 @@ class RgbCameraRecorder(
             captureRequest.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
 
             captureSession?.capture(captureRequest.build(), null, backgroundHandler)
-
         } catch (e: Exception) {
             Log.e(TAG, "Error capturing RAW image: ${e.message}")
         }
@@ -675,7 +687,5 @@ class RgbCameraRecorder(
     /**
      * Creates a placeholder bitmap for DNG preview (since DNG decoding is complex)
      */
-    private fun createPlaceholderBitmap(): Bitmap {
-        return Bitmap.createBitmap(640, 480, Bitmap.Config.RGB_565)
-    }
+    private fun createPlaceholderBitmap(): Bitmap = Bitmap.createBitmap(640, 480, Bitmap.Config.RGB_565)
 }

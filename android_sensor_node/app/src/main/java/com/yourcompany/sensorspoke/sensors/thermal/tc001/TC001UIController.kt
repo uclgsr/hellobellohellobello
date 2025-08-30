@@ -1,6 +1,5 @@
 package com.yourcompany.sensorspoke.sensors.thermal.tc001
 
-import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -11,7 +10,7 @@ import kotlinx.coroutines.launch
 
 /**
  * TC001UIController - Enhanced thermal camera UI management
- * 
+ *
  * Manages thermal camera UI state and controls based on IRCamera's
  * comprehensive interface design
  */
@@ -85,7 +84,10 @@ class TC001UIController : ViewModel() {
     /**
      * Handle temperature range change
      */
-    fun onTemperatureRangeChanged(minTemp: Float, maxTemp: Float) {
+    fun onTemperatureRangeChanged(
+        minTemp: Float,
+        maxTemp: Float,
+    ) {
         viewModelScope.launch {
             if (minTemp < maxTemp) {
                 _temperatureRange.value = minTemp to maxTemp
@@ -168,9 +170,9 @@ class TC001UIController : ViewModel() {
  * TC001 connection types (adapted from IRCamera)
  */
 enum class TC001ConnectType {
-    LINE,    // TC001 via USB
-    WIFI,    // TC001 via WiFi (if supported)
-    BLE      // TC001 via Bluetooth (if supported)
+    LINE, // TC001 via USB
+    WIFI, // TC001 via WiFi (if supported)
+    BLE, // TC001 via Bluetooth (if supported)
 }
 
 /**
@@ -181,5 +183,5 @@ data class TC001DeviceStatus(
     val deviceName: String,
     val connectionType: TC001ConnectType,
     val batteryLevel: Int? = null,
-    val temperature: Float? = null
+    val temperature: Float? = null,
 )

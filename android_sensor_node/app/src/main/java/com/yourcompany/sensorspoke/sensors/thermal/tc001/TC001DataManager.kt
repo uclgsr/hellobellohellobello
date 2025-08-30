@@ -10,12 +10,13 @@ import java.nio.ByteBuffer
 
 /**
  * TC001DataManager - Enhanced thermal data processing
- * 
+ *
  * Handles real-time thermal data from TC001 camera with IRCamera-inspired
  * data processing and temperature analysis capabilities
  */
-class TC001DataManager(private val context: Context) {
-    
+class TC001DataManager(
+    private val context: Context,
+) {
     companion object {
         private const val TAG = "TC001DataManager"
         private const val THERMAL_FRAME_SIZE = 256 * 192 * 2 // 16-bit thermal data
@@ -59,10 +60,10 @@ class TC001DataManager(private val context: Context) {
             Log.w(TAG, "Processing already active")
             return
         }
-        
+
         isProcessing = true
         Log.i(TAG, "Starting TC001 thermal data processing")
-        
+
         processingScope.launch {
             simulateThermalDataStream()
         }
@@ -86,19 +87,19 @@ class TC001DataManager(private val context: Context) {
                 // Generate simulated thermal frame data
                 val thermalData = generateSimulatedThermalFrame()
                 _thermalFrame.postValue(thermalData)
-                
+
                 // Process thermal data for temperature analysis
                 val tempData = analyzeThermalFrame(thermalData)
                 _temperatureData.postValue(tempData)
-                
+
                 // Generate processed image with current palette
                 val processedImg = applyThermalPalette(thermalData, _currentPalette.value!!)
                 _processedImage.postValue(processedImg)
-                
+
                 // Generate thermal bitmap for UI display
                 val thermalBitmap = generateThermalBitmap(processedImg)
                 _thermalBitmap.postValue(thermalBitmap)
-                
+
                 delay(33) // ~30 FPS
             } catch (e: Exception) {
                 Log.e(TAG, "Error in thermal data processing", e)
@@ -113,7 +114,7 @@ class TC001DataManager(private val context: Context) {
     private fun generateSimulatedThermalFrame(): ByteArray {
         val frameData = ByteArray(THERMAL_FRAME_SIZE)
         val buffer = ByteBuffer.wrap(frameData)
-        
+
         // Generate realistic thermal gradient
         for (y in 0 until 192) {
             for (x in 0 until 256) {
@@ -121,15 +122,15 @@ class TC001DataManager(private val context: Context) {
                 val baseTemp = 25.0f + (x / 256.0f) * 30.0f // 25°C to 55°C range
                 val noise = (Math.random() * 2.0f - 1.0f) // ±1°C noise
                 val tempCelsius = baseTemp + noise
-                
+
                 // Convert to raw sensor value
                 val tempKelvin = tempCelsius + TEMPERATURE_OFFSET
                 val rawValue = (tempKelvin / TEMPERATURE_SCALE_FACTOR).toInt().coerceIn(0, 65535)
-                
+
                 buffer.putShort((rawValue and 0xFFFF).toShort())
             }
         }
-        
+
         return frameData
     }
 
@@ -147,7 +148,7 @@ class TC001DataManager(private val context: Context) {
             val rawValue = buffer.short.toInt() and 0xFFFF
             val tempKelvin = rawValue * TEMPERATURE_SCALE_FACTOR
             val tempCelsius = tempKelvin - TEMPERATURE_OFFSET
-            
+
             minTemp = minOf(minTemp, tempCelsius)
             maxTemp = maxOf(maxTemp, tempCelsius)
             sumTemp += tempCelsius
@@ -162,14 +163,17 @@ class TC001DataManager(private val context: Context) {
             maxTemperature = maxTemp,
             avgTemperature = avgTemp,
             centerTemperature = centerTemp,
-            emissivity = _emissivity.value ?: 0.95f
+            emissivity = _emissivity.value ?: 0.95f,
         )
     }
 
     /**
      * Apply thermal palette to raw thermal data
      */
-    private fun applyThermalPalette(frameData: ByteArray, palette: TopdonThermalPalette): ByteArray {
+    private fun applyThermalPalette(
+        frameData: ByteArray,
+        palette: TopdonThermalPalette,
+    ): ByteArray {
         val buffer = ByteBuffer.wrap(frameData)
         val processedData = ByteArray(256 * 192 * 3) // RGB output
         var outputIndex = 0
@@ -180,18 +184,19 @@ class TC001DataManager(private val context: Context) {
             val rawValue = buffer.short.toInt() and 0xFFFF
             val tempKelvin = rawValue * TEMPERATURE_SCALE_FACTOR
             val tempCelsius = tempKelvin - TEMPERATURE_OFFSET
-            
+
             // Normalize temperature to 0-1 range
             val normalizedTemp = ((tempCelsius - minRange) / (maxRange - minRange)).coerceIn(0f, 1f)
-            
+
             // Apply palette
-            val (r, g, b) = when (palette) {
-                TopdonThermalPalette.IRON -> applyIronPalette(normalizedTemp)
-                TopdonThermalPalette.RAINBOW -> applyRainbowPalette(normalizedTemp)
-                TopdonThermalPalette.GRAYSCALE -> applyGrayscalePalette(normalizedTemp)
-                else -> applyIronPalette(normalizedTemp)
-            }
-            
+            val (r, g, b) =
+                when (palette) {
+                    TopdonThermalPalette.IRON -> applyIronPalette(normalizedTemp)
+                    TopdonThermalPalette.RAINBOW -> applyRainbowPalette(normalizedTemp)
+                    TopdonThermalPalette.GRAYSCALE -> applyGrayscalePalette(normalizedTemp)
+                    else -> applyIronPalette(normalizedTemp)
+                }
+
             processedData[outputIndex++] = r.toByte()
             processedData[outputIndex++] = g.toByte()
             processedData[outputIndex++] = b.toByte()
@@ -232,24 +237,29 @@ class TC001DataManager(private val context: Context) {
         return Triple(gray, gray, gray)
     }
 
-    private fun hsvToRgb(h: Float, s: Float, v: Float): Triple<Int, Int, Int> {
+    private fun hsvToRgb(
+        h: Float,
+        s: Float,
+        v: Float,
+    ): Triple<Int, Int, Int> {
         val c = v * s
         val x = c * (1 - Math.abs(((h / 60f) % 2) - 1))
         val m = v - c
 
-        val (r1, g1, b1) = when {
-            h < 60 -> Triple(c, x, 0f)
-            h < 120 -> Triple(x, c, 0f)
-            h < 180 -> Triple(0f, c, x)
-            h < 240 -> Triple(0f, x, c)
-            h < 300 -> Triple(x, 0f, c)
-            else -> Triple(c, 0f, x)
-        }
+        val (r1, g1, b1) =
+            when {
+                h < 60 -> Triple(c, x, 0f)
+                h < 120 -> Triple(x, c, 0f)
+                h < 180 -> Triple(0f, c, x)
+                h < 240 -> Triple(0f, x, c)
+                h < 300 -> Triple(x, 0f, c)
+                else -> Triple(c, 0f, x)
+            }
 
         return Triple(
             ((r1 + m) * 255).toInt(),
             ((g1 + m) * 255).toInt(),
-            ((b1 + m) * 255).toInt()
+            ((b1 + m) * 255).toInt(),
         )
     }
 
@@ -258,19 +268,19 @@ class TC001DataManager(private val context: Context) {
      */
     private fun generateThermalBitmap(processedRgbData: ByteArray): android.graphics.Bitmap {
         val bitmap = android.graphics.Bitmap.createBitmap(256, 192, android.graphics.Bitmap.Config.ARGB_8888)
-        
+
         var pixelIndex = 0
         for (y in 0 until 192) {
             for (x in 0 until 256) {
                 val r = processedRgbData[pixelIndex++].toInt() and 0xFF
                 val g = processedRgbData[pixelIndex++].toInt() and 0xFF
                 val b = processedRgbData[pixelIndex++].toInt() and 0xFF
-                
+
                 val color = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
                 bitmap.setPixel(x, y, color)
             }
         }
-        
+
         return bitmap
     }
 
@@ -285,7 +295,10 @@ class TC001DataManager(private val context: Context) {
         _emissivity.value = emissivity.coerceIn(0.1f, 1.0f)
     }
 
-    fun updateTemperatureRange(minTemp: Float, maxTemp: Float) {
+    fun updateTemperatureRange(
+        minTemp: Float,
+        maxTemp: Float,
+    ) {
         if (minTemp < maxTemp) {
             _temperatureRange.value = minTemp to maxTemp
         }
@@ -309,5 +322,5 @@ data class TC001TemperatureData(
     val avgTemperature: Float,
     val centerTemperature: Float,
     val emissivity: Float,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
 )

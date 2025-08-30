@@ -13,8 +13,14 @@ import java.util.*
  * RecordingController coordinates start/stop across sensor recorders and manages
  * the lifecycle of a recording session, including session directory creation.
  */
-class RecordingController(private val context: Context?, private val sessionsRootOverride: File? = null) {
-    data class RecorderEntry(val name: String, val recorder: SensorRecorder)
+class RecordingController(
+    private val context: Context?,
+    private val sessionsRootOverride: File? = null,
+) {
+    data class RecorderEntry(
+        val name: String,
+        val recorder: SensorRecorder,
+    )
 
     enum class State { IDLE, PREPARING, RECORDING, STOPPING }
 

@@ -1,9 +1,8 @@
 package com.yourcompany.sensorspoke.ui.fragments
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,27 +18,26 @@ import androidx.recyclerview.widget.RecyclerView
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001ConnectType
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001UIController
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001Connector
 import com.yourcompany.sensorspoke.ui.MainActivity
 import com.yourcompany.sensorspoke.ui.popup.DelPopup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import android.util.Log
 
 /**
  * Enhanced MainFragment with IRCamera-style device management
- * 
+ *
  * Integrates comprehensive device discovery and management UI
  * based on IRCamera's MainFragment implementation
  */
 @SuppressLint("NotifyDataSetChanged")
-class EnhancedMainFragment : Fragment(), View.OnClickListener {
-
+class EnhancedMainFragment :
+    Fragment(),
+    View.OnClickListener {
     private lateinit var uiController: TC001UIController
     private lateinit var adapter: DeviceAdapter
-    
+
     // UI components
     private lateinit var clHasDevice: View
     private lateinit var clNoDevice: View
@@ -48,13 +46,15 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
     private lateinit var ivAdd: ImageView
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_main, container, false)
-    }
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?,
+    ): View? = inflater.inflate(R.layout.fragment_main, container, false)
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(
+        view: View,
+        savedInstanceState: Bundle?,
+    ) {
         super.onViewCreated(view, savedInstanceState)
         initView(view)
         initData()
@@ -70,7 +70,7 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
 
         // Initialize UI controller
         uiController = ViewModelProvider(this)[TC001UIController::class.java]
-        
+
         // Setup adapter with IRCamera-style callbacks
         adapter = DeviceAdapter()
         adapter.hasConnectLine = false // Will be updated via LiveData
@@ -93,11 +93,13 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
         observeUIController()
 
         // Lifecycle management
-        viewLifecycleOwner.lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onResume(owner: LifecycleOwner) {
-                uiController.refresh()
-            }
-        })
+        viewLifecycleOwner.lifecycle.addObserver(
+            object : DefaultLifecycleObserver {
+                override fun onResume(owner: LifecycleOwner) {
+                    uiController.refresh()
+                }
+            },
+        )
     }
 
     private fun initData() {
@@ -110,7 +112,7 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
             adapter.hasConnectLine = hasDevice
             refreshDeviceVisibility()
         }
-        
+
         uiController.deviceConnectionStatus.observe(viewLifecycleOwner) { status ->
             adapter.notifyDataSetChanged()
         }
@@ -129,7 +131,7 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
                 CoroutineScope(Dispatchers.Main).launch {
                     // Start thermal preview for TC001
                     (activity as? MainActivity)?.navigateToThermalPreview()
-                    
+
                     // Update UI to show connection attempt
                     uiController.updateConnectionStatus(true)
                     Log.i("EnhancedMainFragment", "Navigating to thermal preview and updating connection status")
@@ -144,7 +146,10 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
         }
     }
 
-    private fun showDeletePopup(anchorView: View, type: TC001ConnectType) {
+    private fun showDeletePopup(
+        anchorView: View,
+        type: TC001ConnectType,
+    ) {
         val popup = DelPopup(requireContext())
         popup.onDelListener = {
             // Confirm deletion with dialog
@@ -209,7 +214,6 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
      * Device adapter for TC001 devices with IRCamera styling
      */
     private inner class DeviceAdapter : RecyclerView.Adapter<DeviceAdapter.ViewHolder>() {
-        
         var hasConnectLine: Boolean = false
             set(value) {
                 field = value
@@ -219,20 +223,27 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
         var onItemClickListener: ((type: TC001ConnectType) -> Unit)? = null
         var onItemLongClickListener: ((view: View, type: TC001ConnectType) -> Unit)? = null
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            return ViewHolder(
-                LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_device_connect, parent, false)
+        override fun onCreateViewHolder(
+            parent: ViewGroup,
+            viewType: Int,
+        ): ViewHolder =
+            ViewHolder(
+                LayoutInflater
+                    .from(parent.context)
+                    .inflate(R.layout.item_device_connect, parent, false),
             )
-        }
 
         @SuppressLint("SetTextI18n")
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        override fun onBindViewHolder(
+            holder: ViewHolder,
+            position: Int,
+        ) {
             val type = getConnectType(position)
-            val hasConnect = when (type) {
-                TC001ConnectType.LINE -> hasConnectLine
-                else -> false
-            }
+            val hasConnect =
+                when (type) {
+                    TC001ConnectType.LINE -> hasConnectLine
+                    else -> false
+                }
 
             // Setup device display based on IRCamera logic
             holder.itemView.findViewById<TextView>(R.id.tv_title)?.apply {
@@ -256,15 +267,13 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
             holder.itemView.findViewById<View>(R.id.battery_view)?.isVisible = false
         }
 
-        override fun getItemCount(): Int {
-            return if (hasConnectLine) 1 else 0
-        }
+        override fun getItemCount(): Int = if (hasConnectLine) 1 else 0
 
-        private fun getConnectType(position: Int): TC001ConnectType {
-            return TC001ConnectType.LINE
-        }
+        private fun getConnectType(position: Int): TC001ConnectType = TC001ConnectType.LINE
 
-        inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        inner class ViewHolder(
+            itemView: View,
+        ) : RecyclerView.ViewHolder(itemView) {
             init {
                 itemView.findViewById<View>(R.id.iv_bg)?.setOnClickListener {
                     val position = bindingAdapterPosition
@@ -272,7 +281,7 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
                         onItemClickListener?.invoke(getConnectType(position))
                     }
                 }
-                
+
                 itemView.findViewById<View>(R.id.iv_bg)?.setOnLongClickListener { view ->
                     val position = bindingAdapterPosition
                     if (position != RecyclerView.NO_POSITION) {

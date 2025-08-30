@@ -102,7 +102,8 @@ class RecordingService : Service() {
             nm.createNotificationChannel(channel)
         }
         val notification: Notification =
-            NotificationCompat.Builder(this, channelId)
+            NotificationCompat
+                .Builder(this, channelId)
                 .setContentTitle(getString(R.string.notification_title))
                 .setContentText(getString(R.string.notification_text))
                 .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth) // placeholder icon

@@ -10,14 +10,16 @@ import kotlinx.coroutines.*
 
 /**
  * TC001Connector - Core thermal camera connection handler
- * 
+ *
  * Manages connection to Topdon TC001 thermal camera via USB with
  * enhanced device management capabilities from IRCamera
  */
-class TC001Connector(private val context: Context) {
+class TC001Connector(
+    private val context: Context,
+) {
     companion object {
         private const val TAG = "TC001Connector"
-        private const val TC001_VENDOR_ID = 0x4d54  // Topdon vendor ID
+        private const val TC001_VENDOR_ID = 0x4d54 // Topdon vendor ID
         private const val TC001_PRODUCT_ID = 0x0100 // TC001 product ID
     }
 
@@ -54,36 +56,35 @@ class TC001Connector(private val context: Context) {
     /**
      * Scan for connected TC001 devices
      */
-    private suspend fun scanForTC001Devices(usbManager: UsbManager) = withContext(Dispatchers.IO) {
-        try {
-            val deviceList = usbManager.deviceList
-            for (device in deviceList.values) {
-                if (isTC001Device(device)) {
-                    Log.i(TAG, "TC001 device found: ${device.deviceName}")
-                    withContext(Dispatchers.Main) {
-                        handleDeviceFound(device)
+    private suspend fun scanForTC001Devices(usbManager: UsbManager) =
+        withContext(Dispatchers.IO) {
+            try {
+                val deviceList = usbManager.deviceList
+                for (device in deviceList.values) {
+                    if (isTC001Device(device)) {
+                        Log.i(TAG, "TC001 device found: ${device.deviceName}")
+                        withContext(Dispatchers.Main) {
+                            handleDeviceFound(device)
+                        }
+                        return@withContext
                     }
-                    return@withContext
+                }
+
+                withContext(Dispatchers.Main) {
+                    _connectionState.value = TC001ConnectionState.NOT_FOUND
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error scanning for TC001 devices", e)
+                withContext(Dispatchers.Main) {
+                    _connectionState.value = TC001ConnectionState.ERROR
                 }
             }
-            
-            withContext(Dispatchers.Main) {
-                _connectionState.value = TC001ConnectionState.NOT_FOUND
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error scanning for TC001 devices", e)
-            withContext(Dispatchers.Main) {
-                _connectionState.value = TC001ConnectionState.ERROR
-            }
         }
-    }
 
     /**
      * Check if USB device is a TC001 thermal camera
      */
-    private fun isTC001Device(device: UsbDevice): Boolean {
-        return device.vendorId == TC001_VENDOR_ID && device.productId == TC001_PRODUCT_ID
-    }
+    private fun isTC001Device(device: UsbDevice): Boolean = device.vendorId == TC001_VENDOR_ID && device.productId == TC001_PRODUCT_ID
 
     /**
      * Handle TC001 device discovery
@@ -91,66 +92,69 @@ class TC001Connector(private val context: Context) {
     private fun handleDeviceFound(device: UsbDevice) {
         currentDevice = device
         _connectionState.value = TC001ConnectionState.FOUND
-        
-        val deviceInfo = TC001DeviceInfo(
-            deviceName = device.deviceName,
-            vendorId = device.vendorId,
-            productId = device.productId,
-            serialNumber = device.serialNumber ?: "Unknown"
-        )
+
+        val deviceInfo =
+            TC001DeviceInfo(
+                deviceName = device.deviceName,
+                vendorId = device.vendorId,
+                productId = device.productId,
+                serialNumber = device.serialNumber ?: "Unknown",
+            )
         _deviceInfo.value = deviceInfo
-        
+
         Log.i(TAG, "TC001 device info: $deviceInfo")
     }
 
     /**
      * Attempt to connect to the TC001 device
      */
-    suspend fun connect(): Boolean = withContext(Dispatchers.IO) {
-        try {
-            _connectionState.postValue(TC001ConnectionState.CONNECTING)
-            
-            currentDevice?.let { device ->
-                // Simulate connection process
-                delay(1000)
-                
-                isConnected = true
-                _connectionState.postValue(TC001ConnectionState.CONNECTED)
-                
-                Log.i(TAG, "Successfully connected to TC001 device")
-                return@withContext true
+    suspend fun connect(): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                _connectionState.postValue(TC001ConnectionState.CONNECTING)
+
+                currentDevice?.let { device ->
+                    // Simulate connection process
+                    delay(1000)
+
+                    isConnected = true
+                    _connectionState.postValue(TC001ConnectionState.CONNECTED)
+
+                    Log.i(TAG, "Successfully connected to TC001 device")
+                    return@withContext true
+                }
+
+                _connectionState.postValue(TC001ConnectionState.ERROR)
+                return@withContext false
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to connect to TC001", e)
+                _connectionState.postValue(TC001ConnectionState.ERROR)
+                return@withContext false
             }
-            
-            _connectionState.postValue(TC001ConnectionState.ERROR)
-            return@withContext false
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to connect to TC001", e)
-            _connectionState.postValue(TC001ConnectionState.ERROR)
-            return@withContext false
         }
-    }
 
     /**
      * Disconnect from TC001 device
      */
-    suspend fun disconnect() = withContext(Dispatchers.IO) {
-        try {
-            _connectionState.postValue(TC001ConnectionState.DISCONNECTING)
-            
-            // Simulate disconnection process
-            delay(500)
-            
-            isConnected = false
-            currentDevice = null
-            _connectionState.postValue(TC001ConnectionState.DISCONNECTED)
-            _deviceInfo.postValue(null)
-            
-            Log.i(TAG, "Disconnected from TC001 device")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error during TC001 disconnection", e)
-            _connectionState.postValue(TC001ConnectionState.ERROR)
+    suspend fun disconnect() =
+        withContext(Dispatchers.IO) {
+            try {
+                _connectionState.postValue(TC001ConnectionState.DISCONNECTING)
+
+                // Simulate disconnection process
+                delay(500)
+
+                isConnected = false
+                currentDevice = null
+                _connectionState.postValue(TC001ConnectionState.DISCONNECTED)
+                _deviceInfo.postValue(null)
+
+                Log.i(TAG, "Disconnected from TC001 device")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during TC001 disconnection", e)
+                _connectionState.postValue(TC001ConnectionState.ERROR)
+            }
         }
-    }
 
     /**
      * Check if TC001 is currently connected
@@ -183,7 +187,7 @@ enum class TC001ConnectionState {
     CONNECTING,
     CONNECTED,
     DISCONNECTING,
-    ERROR
+    ERROR,
 }
 
 /**
@@ -193,5 +197,5 @@ data class TC001DeviceInfo(
     val deviceName: String,
     val vendorId: Int,
     val productId: Int,
-    val serialNumber: String
+    val serialNumber: String,
 )

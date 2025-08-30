@@ -7,7 +7,6 @@ import org.junit.Test
  * Test for the file manager fragment
  */
 class FileManagerFragmentTest {
-
     @Test
     fun testFragmentCreation() {
         val fragment = FileManagerFragment.newInstance()

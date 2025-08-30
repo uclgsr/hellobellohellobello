@@ -17,7 +17,9 @@ import java.util.concurrent.atomic.AtomicReference
  * and TCP communication for the Sensor Spoke. Supports both service discovery
  * and reliable message transmission to PC Hub.
  */
-class NetworkClient(private val context: Context) {
+class NetworkClient(
+    private val context: Context,
+) {
     companion object {
         private const val TAG = "NetworkClient"
         private const val DEFAULT_TIMEOUT_MS = 10000
@@ -99,8 +101,8 @@ class NetworkClient(private val context: Context) {
     fun connect(
         host: String,
         port: Int,
-    ): Boolean {
-        return try {
+    ): Boolean =
+        try {
             disconnect() // Close any existing connection
 
             val newSocket = Socket()
@@ -120,7 +122,6 @@ class NetworkClient(private val context: Context) {
             isConnected.set(false)
             false
         }
-    }
 
     /**
      * Disconnect from the PC Hub server.
@@ -191,16 +192,16 @@ class NetworkClient(private val context: Context) {
      */
     fun isConnected(): Boolean {
         val currentSocket = socket.get()
-        return isConnected.get() && currentSocket != null &&
-            !currentSocket.isClosed && currentSocket.isConnected
+        return isConnected.get() &&
+            currentSocket != null &&
+            !currentSocket.isClosed &&
+            currentSocket.isConnected
     }
 
     /**
      * Get current server address (if connected).
      */
-    fun getServerAddress(): String? {
-        return serverAddress.get()?.let { "${it.hostString}:${it.port}" }
-    }
+    fun getServerAddress(): String? = serverAddress.get()?.let { "${it.hostString}:${it.port}" }
 
     /**
      * Mark connection as lost and trigger cleanup.
@@ -215,26 +216,24 @@ class NetworkClient(private val context: Context) {
     /**
      * Get connection status summary for debugging and user display.
      */
-    fun getConnectionStatus(): Map<String, Any> {
-        return mapOf(
+    fun getConnectionStatus(): Map<String, Any> =
+        mapOf(
             "connected" to isConnected(),
             "server_address" to (getServerAddress() ?: "none"),
             "socket_closed" to (socket.get()?.isClosed ?: true),
             "auto_reconnect" to autoReconnect,
             "timeout_ms" to connectionTimeoutMs,
         )
-    }
 
     /**
      * Get user-friendly connection status for display in UI.
      */
-    fun getUserFriendlyStatus(): String {
-        return when {
+    fun getUserFriendlyStatus(): String =
+        when {
             isConnected() -> "Connected to PC Hub: ${getServerAddress()}"
             serverAddress.get() != null -> "Disconnected (attempting to reconnect...)"
             else -> "Not connected to PC Hub"
         }
-    }
 
     // PC Discovery functionality
     private var discoveryListener: NsdManager.DiscoveryListener? = null
@@ -249,56 +248,67 @@ class NetworkClient(private val context: Context) {
     fun discoverPCHubs(
         serviceType: String = "_gsr-controller._tcp.",
         onDiscovered: (String, String, Int) -> Unit,
-        onLost: (String) -> Unit
+        onLost: (String) -> Unit,
     ) {
         stopDiscovery() // Stop any existing discovery
 
         val sanitizedType = if (serviceType.endsWith(".local.")) serviceType else "$serviceType.local."
 
-        discoveryListener = object : NsdManager.DiscoveryListener {
-            override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-                Log.e(TAG, "PC Hub discovery start failed: $errorCode")
-            }
-
-            override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
-                Log.e(TAG, "PC Hub discovery stop failed: $errorCode")
-            }
-
-            override fun onDiscoveryStarted(serviceType: String) {
-                Log.i(TAG, "PC Hub discovery started for: $serviceType")
-            }
-
-            override fun onDiscoveryStopped(serviceType: String) {
-                Log.i(TAG, "PC Hub discovery stopped for: $serviceType")
-            }
-
-            override fun onServiceFound(serviceInfo: NsdServiceInfo) {
-                Log.d(TAG, "PC Hub service found: ${serviceInfo.serviceName}")
-
-                // Resolve the service to get IP and port
-                resolveListener = object : NsdManager.ResolveListener {
-                    override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                        Log.w(TAG, "PC Hub resolve failed: $errorCode")
-                    }
-
-                    override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                        Log.i(TAG, "PC Hub resolved: ${serviceInfo.serviceName} @ ${serviceInfo.host}:${serviceInfo.port}")
-                        onDiscovered(
-                            serviceInfo.serviceName,
-                            serviceInfo.host.hostAddress ?: "unknown",
-                            serviceInfo.port
-                        )
-                    }
+        discoveryListener =
+            object : NsdManager.DiscoveryListener {
+                override fun onStartDiscoveryFailed(
+                    serviceType: String,
+                    errorCode: Int,
+                ) {
+                    Log.e(TAG, "PC Hub discovery start failed: $errorCode")
                 }
 
-                nsdManager.resolveService(serviceInfo, resolveListener)
-            }
+                override fun onStopDiscoveryFailed(
+                    serviceType: String,
+                    errorCode: Int,
+                ) {
+                    Log.e(TAG, "PC Hub discovery stop failed: $errorCode")
+                }
 
-            override fun onServiceLost(serviceInfo: NsdServiceInfo) {
-                Log.d(TAG, "PC Hub service lost: ${serviceInfo.serviceName}")
-                onLost(serviceInfo.serviceName)
+                override fun onDiscoveryStarted(serviceType: String) {
+                    Log.i(TAG, "PC Hub discovery started for: $serviceType")
+                }
+
+                override fun onDiscoveryStopped(serviceType: String) {
+                    Log.i(TAG, "PC Hub discovery stopped for: $serviceType")
+                }
+
+                override fun onServiceFound(serviceInfo: NsdServiceInfo) {
+                    Log.d(TAG, "PC Hub service found: ${serviceInfo.serviceName}")
+
+                    // Resolve the service to get IP and port
+                    resolveListener =
+                        object : NsdManager.ResolveListener {
+                            override fun onResolveFailed(
+                                serviceInfo: NsdServiceInfo,
+                                errorCode: Int,
+                            ) {
+                                Log.w(TAG, "PC Hub resolve failed: $errorCode")
+                            }
+
+                            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+                                Log.i(TAG, "PC Hub resolved: ${serviceInfo.serviceName} @ ${serviceInfo.host}:${serviceInfo.port}")
+                                onDiscovered(
+                                    serviceInfo.serviceName,
+                                    serviceInfo.host.hostAddress ?: "unknown",
+                                    serviceInfo.port,
+                                )
+                            }
+                        }
+
+                    nsdManager.resolveService(serviceInfo, resolveListener)
+                }
+
+                override fun onServiceLost(serviceInfo: NsdServiceInfo) {
+                    Log.d(TAG, "PC Hub service lost: ${serviceInfo.serviceName}")
+                    onLost(serviceInfo.serviceName)
+                }
             }
-        }
 
         nsdManager.discoverServices(sanitizedType, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
     }
@@ -327,7 +337,7 @@ class NetworkClient(private val context: Context) {
     fun autoConnectToPCHub(
         serviceType: String = "_gsr-controller._tcp.",
         onConnected: (String, String, Int) -> Unit,
-        onFailed: (String) -> Unit
+        onFailed: (String) -> Unit,
     ) {
         Log.i(TAG, "Starting automatic PC Hub connection...")
 
@@ -350,7 +360,7 @@ class NetworkClient(private val context: Context) {
             },
             onLost = { name ->
                 Log.d(TAG, "PC Hub service lost during discovery: $name")
-            }
+            },
         )
 
         // Set a timeout for discovery

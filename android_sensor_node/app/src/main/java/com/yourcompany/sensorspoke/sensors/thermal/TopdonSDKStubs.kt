@@ -19,40 +19,42 @@ import kotlinx.coroutines.*
  *
  * In production, this would integrate with the actual Topdon SDK:
  * - com.infisense.iruvc.ircmd.IRCMD for device control
- * - com.infisense.iruvc.sdkisp.LibIRParse for data parsing  
+ * - com.infisense.iruvc.sdkisp.LibIRParse for data parsing
  * - com.infisense.iruvc.sdkisp.LibIRProcess for thermal processing
  */
 
-class TopdonThermalIntegration(private val context: Context) {
+class TopdonThermalIntegration(
+    private val context: Context,
+) {
     companion object {
         private const val TAG = "TopdonThermalIntegration"
-        
+
         // Topdon TC001 USB vendor/product IDs
-        private const val TOPDON_VENDOR_ID = 0x1234  // Replace with actual Topdon vendor ID
-        private const val TC001_PRODUCT_ID = 0x5678  // Replace with actual TC001 product ID
-        
+        private const val TOPDON_VENDOR_ID = 0x1234 // Replace with actual Topdon vendor ID
+        private const val TC001_PRODUCT_ID = 0x5678 // Replace with actual TC001 product ID
+
         // TC001 specifications
         const val THERMAL_WIDTH = 256
         const val THERMAL_HEIGHT = 192
-        const val FRAME_RATE_TARGET = 25  // 25 FPS
-        
+        const val FRAME_RATE_TARGET = 25 // 25 FPS
+
         // Temperature measurement specifications
-        const val MIN_TEMPERATURE = -20.0f  // °C
-        const val MAX_TEMPERATURE = 400.0f  // °C
-        const val TEMPERATURE_ACCURACY = 2.0f  // ±2°C per spec
+        const val MIN_TEMPERATURE = -20.0f // °C
+        const val MAX_TEMPERATURE = 400.0f // °C
+        const val TEMPERATURE_ACCURACY = 2.0f // ±2°C per spec
     }
-    
+
     private var isInitialized = false
     private var isConnected = false
     private var isStreaming = false
     private var connectedDevice: UsbDevice? = null
     private var streamingJob: Job? = null
     private var frameCallback: ((TopdonThermalFrame) -> Unit)? = null
-    
+
     // Enhanced integration properties
     private val _thermalFrame = MutableLiveData<TopdonThermalFrameData>()
     val thermalFrame: LiveData<TopdonThermalFrameData> = _thermalFrame
-    
+
     // Device configuration
     private var currentWidth = THERMAL_WIDTH
     private var currentHeight = THERMAL_HEIGHT
@@ -60,18 +62,18 @@ class TopdonThermalIntegration(private val context: Context) {
     private var currentPalette = TopdonThermalPalette.IRON
     private var currentEmissivity = 0.95f
     private var temperatureRange = Pair(MIN_TEMPERATURE, MAX_TEMPERATURE)
-    
+
     /**
      * Initialize the Topdon SDK with enhanced device manager integration
      */
-    fun initialize(): TopdonResult {
-        return try {
+    fun initialize(): TopdonResult =
+        try {
             // Initialize enhanced device manager
             val deviceManager = TC001DeviceManager(context)
-            
+
             // In production: Initialize the real Topdon SDK
             // IRCMD.getInstance().initialize(context)
-            
+
             Log.i(TAG, "Topdon thermal integration initialized with enhanced device manager")
             isInitialized = true
             TopdonResult.SUCCESS
@@ -79,8 +81,7 @@ class TopdonThermalIntegration(private val context: Context) {
             Log.e(TAG, "Failed to initialize Topdon SDK: ${e.message}", e)
             TopdonResult.ERROR_UNKNOWN
         }
-    }
-    
+
     /**
      * Scan for connected Topdon thermal cameras
      */
@@ -89,37 +90,38 @@ class TopdonThermalIntegration(private val context: Context) {
             Log.w(TAG, "SDK not initialized")
             return emptyList()
         }
-        
+
         return try {
             val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
             val connectedDevices = usbManager.deviceList.values
-            
+
             val topdonDevices = mutableListOf<TopdonDeviceInfo>()
-            
+
             for (device in connectedDevices) {
                 // Check if this is a Topdon device by vendor/product ID
                 if (isTopdonDevice(device)) {
-                    val deviceInfo = TopdonDeviceInfo(
-                        width = THERMAL_WIDTH,
-                        height = THERMAL_HEIGHT,
-                        deviceType = determineDeviceType(device),
-                        firmwareVersion = getFirmwareVersion(device),
-                        serialNumber = getSerialNumber(device),
-                        isSupported = true,
-                        usbDevice = device
-                    )
+                    val deviceInfo =
+                        TopdonDeviceInfo(
+                            width = THERMAL_WIDTH,
+                            height = THERMAL_HEIGHT,
+                            deviceType = determineDeviceType(device),
+                            firmwareVersion = getFirmwareVersion(device),
+                            serialNumber = getSerialNumber(device),
+                            isSupported = true,
+                            usbDevice = device,
+                        )
                     topdonDevices.add(deviceInfo)
                     Log.i(TAG, "Found Topdon device: ${deviceInfo.deviceType} (${device.deviceName})")
                 }
             }
-            
+
             topdonDevices
         } catch (e: Exception) {
             Log.e(TAG, "Error scanning for Topdon devices: ${e.message}", e)
             emptyList()
         }
     }
-    
+
     /**
      * Connect to a specific Topdon device
      */
@@ -128,13 +130,13 @@ class TopdonThermalIntegration(private val context: Context) {
             if (!isInitialized) {
                 return TopdonResult.ERROR_CONFIGURATION_FAILED
             }
-            
+
             // In production: Use real device connection
             // IRCMD.getInstance().connectDevice(device)
-            
+
             connectedDevice = device
             isConnected = true
-            
+
             Log.i(TAG, "Connected to Topdon device: ${device.deviceName}")
             TopdonResult.SUCCESS
         } catch (e: Exception) {
@@ -142,7 +144,7 @@ class TopdonThermalIntegration(private val context: Context) {
             TopdonResult.ERROR_CONNECTION_FAILED
         }
     }
-    
+
     /**
      * Configure device settings (resolution, frame rate, etc.)
      */
@@ -150,29 +152,29 @@ class TopdonThermalIntegration(private val context: Context) {
         if (!isConnected) {
             return TopdonResult.ERROR_DEVICE_NOT_FOUND
         }
-        
+
         return try {
             // Configure resolution
             setResolution(currentWidth, currentHeight)
-            
+
             // Configure frame rate
             setFrameRate(currentFrameRate)
-            
+
             // Configure temperature measurement
             setTemperatureRange(temperatureRange.first, temperatureRange.second)
             setEmissivity(currentEmissivity)
-            
+
             // Configure thermal palette
             setThermalPalette(currentPalette)
-            
+
             // Enable advanced features
             enableAutoGainControl(true)
             enableDigitalDetailEnhancement(true)
             enableTemperatureCompensation(true)
-            
+
             // Apply configuration
             applyConfiguration()
-            
+
             Log.i(TAG, "Device configuration completed")
             TopdonResult.SUCCESS
         } catch (e: Exception) {
@@ -180,7 +182,7 @@ class TopdonThermalIntegration(private val context: Context) {
             TopdonResult.ERROR_CONFIGURATION_FAILED
         }
     }
-    
+
     /**
      * Start thermal data streaming
      */
@@ -189,18 +191,18 @@ class TopdonThermalIntegration(private val context: Context) {
             Log.e(TAG, "Cannot start streaming - device not connected")
             return false
         }
-        
+
         return try {
             frameCallback = callback
-            
+
             // In production: Start real thermal streaming
             // IRCMD.getInstance().startThermalStreaming()
-            
+
             isStreaming = true
-            
+
             // Start simulation streaming for demonstration
             startStreamingSimulation()
-            
+
             Log.i(TAG, "Thermal streaming started")
             true
         } catch (e: Exception) {
@@ -208,165 +210,174 @@ class TopdonThermalIntegration(private val context: Context) {
             false
         }
     }
-    
+
     /**
      * Stop thermal data streaming
      */
-    fun stopStreaming(): TopdonResult {
-        return try {
+    fun stopStreaming(): TopdonResult =
+        try {
             streamingJob?.cancel()
             streamingJob = null
-            
+
             // In production: Stop real streaming
             // IRCMD.getInstance().stopThermalStreaming()
-            
+
             isStreaming = false
             frameCallback = null
-            
+
             Log.i(TAG, "Thermal streaming stopped")
             TopdonResult.SUCCESS
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping streaming: ${e.message}", e)
             TopdonResult.ERROR_UNKNOWN
         }
-    }
-    
+
     /**
      * Disconnect from device
      */
-    fun disconnect(): TopdonResult {
-        return try {
+    fun disconnect(): TopdonResult =
+        try {
             if (isStreaming) {
                 stopStreaming()
             }
-            
+
             // In production: Disconnect real device
             // IRCMD.getInstance().disconnectDevice()
-            
+
             isConnected = false
             connectedDevice = null
-            
+
             Log.i(TAG, "Disconnected from Topdon device")
             TopdonResult.SUCCESS
         } catch (e: Exception) {
             Log.e(TAG, "Error during disconnect: ${e.message}", e)
             TopdonResult.ERROR_UNKNOWN
         }
-    }
-    
+
     // Configuration methods
-    fun setResolution(width: Int, height: Int): TopdonResult {
+    fun setResolution(
+        width: Int,
+        height: Int,
+    ): TopdonResult {
         currentWidth = width
         currentHeight = height
         return TopdonResult.SUCCESS
     }
-    
+
     fun setFrameRate(fps: Int): TopdonResult {
         currentFrameRate = fps
         return TopdonResult.SUCCESS
     }
-    
-    fun setTemperatureRange(min: Float, max: Float): TopdonResult {
+
+    fun setTemperatureRange(
+        min: Float,
+        max: Float,
+    ): TopdonResult {
         temperatureRange = Pair(min, max)
         return TopdonResult.SUCCESS
     }
-    
+
     fun setEmissivity(emissivity: Float): TopdonResult {
         currentEmissivity = emissivity.coerceIn(0.1f, 1.0f)
         return TopdonResult.SUCCESS
     }
-    
+
     fun setThermalPalette(palette: TopdonThermalPalette): TopdonResult {
         currentPalette = palette
         return TopdonResult.SUCCESS
     }
-    
+
     fun enableAutoGainControl(enabled: Boolean): TopdonResult = TopdonResult.SUCCESS
+
     fun enableDigitalDetailEnhancement(enabled: Boolean): TopdonResult = TopdonResult.SUCCESS
+
     fun enableTemperatureCompensation(enabled: Boolean): TopdonResult = TopdonResult.SUCCESS
+
     fun applyConfiguration(): TopdonResult = TopdonResult.SUCCESS
-    
+
     // Helper methods
     private fun isTopdonDevice(device: UsbDevice): Boolean {
         // In production: Check actual Topdon vendor/product IDs
         // return device.vendorId == TOPDON_VENDOR_ID && device.productId == TC001_PRODUCT_ID
-        
+
         // For demonstration: Accept any device that might be a thermal camera
         return device.deviceName?.contains("thermal", ignoreCase = true) == true ||
-               device.deviceName?.contains("TC001", ignoreCase = true) == true ||
-               device.deviceName?.contains("Topdon", ignoreCase = true) == true
+            device.deviceName?.contains("TC001", ignoreCase = true) == true ||
+            device.deviceName?.contains("Topdon", ignoreCase = true) == true
     }
-    
-    private fun determineDeviceType(device: UsbDevice): TopdonDeviceType {
-        return when (device.productId) {
+
+    private fun determineDeviceType(device: UsbDevice): TopdonDeviceType =
+        when (device.productId) {
             TC001_PRODUCT_ID -> TopdonDeviceType.TC001
-            else -> TopdonDeviceType.TC001  // Default to TC001
+            else -> TopdonDeviceType.TC001 // Default to TC001
         }
-    }
-    
+
     private fun getFirmwareVersion(device: UsbDevice): String {
         // In production: Query actual firmware version
-        return "1.4.2"  // Mock version
+        return "1.4.2" // Mock version
     }
-    
+
     private fun getSerialNumber(device: UsbDevice): String {
         // In production: Get actual serial number
         return device.serialNumber ?: "TC001-${System.currentTimeMillis().toString().takeLast(6)}"
     }
-    
+
     /**
      * Simulate thermal data streaming for demonstration
      */
     private fun startStreamingSimulation() {
-        streamingJob = CoroutineScope(Dispatchers.IO).launch {
-            var frameCount = 0
-            val frameInterval = 1000 / currentFrameRate  // milliseconds per frame
-            
-            while (isStreaming && isActive) {
-                try {
-                    // Generate realistic thermal frame data
-                    val thermalFrame = generateSimulatedThermalFrame(frameCount)
-                    frameCallback?.invoke(thermalFrame)
-                    
-                    // Update LiveData for UI integration
-                    val frameData = TopdonThermalFrameData(
-                        thermalBitmap = thermalFrame.generateThermalBitmap(),
-                        temperatureData = thermalFrame.temperatureData,
-                        timestamp = thermalFrame.timestamp,
-                        minTemp = thermalFrame.minTemperature,
-                        maxTemp = thermalFrame.maxTemperature,
-                        avgTemp = thermalFrame.averageTemperature,
-                        centerTemp = thermalFrame.centerTemperature
-                    )
-                    _thermalFrame.postValue(frameData)
-                    
-                    frameCount++
-                    delay(frameInterval.toLong())
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error in streaming simulation: ${e.message}")
-                    break
+        streamingJob =
+            CoroutineScope(Dispatchers.IO).launch {
+                var frameCount = 0
+                val frameInterval = 1000 / currentFrameRate // milliseconds per frame
+
+                while (isStreaming && isActive) {
+                    try {
+                        // Generate realistic thermal frame data
+                        val thermalFrame = generateSimulatedThermalFrame(frameCount)
+                        frameCallback?.invoke(thermalFrame)
+
+                        // Update LiveData for UI integration
+                        val frameData =
+                            TopdonThermalFrameData(
+                                thermalBitmap = thermalFrame.generateThermalBitmap(),
+                                temperatureData = thermalFrame.temperatureData,
+                                timestamp = thermalFrame.timestamp,
+                                minTemp = thermalFrame.minTemperature,
+                                maxTemp = thermalFrame.maxTemperature,
+                                avgTemp = thermalFrame.averageTemperature,
+                                centerTemp = thermalFrame.centerTemperature,
+                            )
+                        _thermalFrame.postValue(frameData)
+
+                        frameCount++
+                        delay(frameInterval.toLong())
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error in streaming simulation: ${e.message}")
+                        break
+                    }
                 }
             }
-        }
     }
-    
+
     private fun generateSimulatedThermalFrame(frameCount: Int): TopdonThermalFrame {
-        val thermalData = FloatArray(currentWidth * currentHeight) { index ->
-            val x = index % currentWidth
-            val y = index / currentWidth
-            
-            // Generate realistic thermal patterns
-            val centerX = currentWidth / 2f
-            val centerY = currentHeight / 2f
-            val distance = kotlin.math.sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY))
-            
-            // Base temperature with some variation
-            val baseTemp = 25.0f + kotlin.math.sin(frameCount * 0.1f) * 5.0f
-            val variation = kotlin.math.sin(distance * 0.1f + frameCount * 0.05f) * 3.0f
-            
-            (baseTemp + variation).coerceIn(MIN_TEMPERATURE, MAX_TEMPERATURE)
-        }
-        
+        val thermalData =
+            FloatArray(currentWidth * currentHeight) { index ->
+                val x = index % currentWidth
+                val y = index / currentWidth
+
+                // Generate realistic thermal patterns
+                val centerX = currentWidth / 2f
+                val centerY = currentHeight / 2f
+                val distance = kotlin.math.sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY))
+
+                // Base temperature with some variation
+                val baseTemp = 25.0f + kotlin.math.sin(frameCount * 0.1f) * 5.0f
+                val variation = kotlin.math.sin(distance * 0.1f + frameCount * 0.05f) * 3.0f
+
+                (baseTemp + variation).coerceIn(MIN_TEMPERATURE, MAX_TEMPERATURE)
+            }
+
         return TopdonThermalFrame(
             timestamp = System.nanoTime(),
             width = currentWidth,
@@ -375,9 +386,9 @@ class TopdonThermalIntegration(private val context: Context) {
             minTemperature = thermalData.minOrNull() ?: MIN_TEMPERATURE,
             maxTemperature = thermalData.maxOrNull() ?: MAX_TEMPERATURE,
             averageTemperature = thermalData.average().toFloat(),
-            centerTemperature = thermalData[currentHeight/2 * currentWidth + currentWidth/2],
+            centerTemperature = thermalData[currentHeight / 2 * currentWidth + currentWidth / 2],
             palette = currentPalette,
-            emissivity = currentEmissivity
+            emissivity = currentEmissivity,
         )
     }
 }
@@ -393,11 +404,11 @@ data class TopdonThermalFrame(
     val averageTemperature: Float,
     val centerTemperature: Float,
     val palette: TopdonThermalPalette,
-    val emissivity: Float
+    val emissivity: Float,
 ) {
     fun generateThermalBitmap(): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        
+
         for (y in 0 until height) {
             for (x in 0 until width) {
                 val temp = temperatureData[y * width + x]
@@ -405,18 +416,18 @@ data class TopdonThermalFrame(
                 bitmap.setPixel(x, y, color)
             }
         }
-        
+
         return bitmap
     }
-    
+
     private fun mapTemperatureToColor(
         temperature: Float,
         palette: TopdonThermalPalette,
         minTemp: Float,
-        maxTemp: Float
+        maxTemp: Float,
     ): Int {
         val normalized = ((temperature - minTemp) / (maxTemp - minTemp)).coerceIn(0.0f, 1.0f)
-        
+
         return when (palette) {
             TopdonThermalPalette.IRON -> {
                 // Iron palette: black -> red -> yellow -> white
@@ -446,19 +457,19 @@ enum class TopdonResult {
     ERROR_CONNECTION_FAILED,
     ERROR_CONFIGURATION_FAILED,
     ERROR_STREAMING_FAILED,
-    ERROR_UNKNOWN
+    ERROR_UNKNOWN,
 }
 
 enum class TopdonDeviceType {
     TC001,
     TC002,
-    UNKNOWN
+    UNKNOWN,
 }
 
 enum class TopdonThermalPalette {
     IRON,
     RAINBOW,
-    GRAYSCALE
+    GRAYSCALE,
 }
 
 data class TopdonDeviceInfo(
@@ -468,7 +479,7 @@ data class TopdonDeviceInfo(
     val firmwareVersion: String,
     val serialNumber: String,
     val isSupported: Boolean,
-    val usbDevice: UsbDevice?
+    val usbDevice: UsbDevice?,
 )
 
 // Enhanced frame data for better integration
@@ -479,5 +490,5 @@ data class TopdonThermalFrameData(
     val minTemp: Float,
     val maxTemp: Float,
     val avgTemp: Float,
-    val centerTemp: Float
+    val centerTemp: Float,
 )

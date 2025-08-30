@@ -7,11 +7,10 @@ import androidx.lifecycle.MutableLiveData
 import com.yourcompany.sensorspoke.controller.RecordingController
 import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
 import kotlinx.coroutines.*
-import java.io.File
 
 /**
  * TC001RecordingIntegration - Bridge between TC001 system and main recording pipeline
- * 
+ *
  * This component ensures that TC001 thermal data is properly integrated into
  * the main sensor recording system, providing:
  * - Seamless integration with RecordingController
@@ -21,127 +20,127 @@ import java.io.File
  */
 class TC001RecordingIntegration(
     private val context: Context,
-    private val recordingController: RecordingController
+    private val recordingController: RecordingController,
 ) {
-    
     companion object {
         private const val TAG = "TC001RecordingIntegration"
     }
-    
+
     private var tc001IntegrationManager: TC001IntegrationManager? = null
     private var thermalRecorder: ThermalCameraRecorder? = null
     private var integrationScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    
+
     private val _recordingStatus = MutableLiveData<TC001RecordingStatus>()
     val recordingStatus: LiveData<TC001RecordingStatus> = _recordingStatus
-    
+
     private val _thermalStats = MutableLiveData<TC001RecordingStats>()
     val thermalStats: LiveData<TC001RecordingStats> = _thermalStats
-    
+
     private var currentSessionId: String? = null
     private var framesSaved = 0
     private var dataPointsRecorded = 0
     private var sessionStartTime = 0L
-    
+
     /**
      * Initialize TC001 recording integration
      */
-    suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
-        try {
-            // Initialize TC001 integration manager
-            tc001IntegrationManager = TC001IntegrationManager(context)
-            val initResult = tc001IntegrationManager!!.initializeSystem()
-            
-            if (!initResult) {
-                Log.e(TAG, "Failed to initialize TC001 integration manager")
-                return@withContext false
+    suspend fun initialize(): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                // Initialize TC001 integration manager
+                tc001IntegrationManager = TC001IntegrationManager(context)
+                val initResult = tc001IntegrationManager!!.initializeSystem()
+
+                if (!initResult) {
+                    Log.e(TAG, "Failed to initialize TC001 integration manager")
+                    return@withContext false
+                }
+
+                // Initialize thermal recorder and register with recording controller
+                thermalRecorder = ThermalCameraRecorder(context)
+                recordingController.register("thermal_tc001", thermalRecorder!!)
+
+                // Setup integration observers
+                setupIntegrationObservers()
+
+                _recordingStatus.postValue(TC001RecordingStatus.READY)
+                Log.i(TAG, "TC001 recording integration initialized successfully")
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize TC001 recording integration", e)
+                _recordingStatus.postValue(TC001RecordingStatus.ERROR)
+                false
             }
-            
-            // Initialize thermal recorder and register with recording controller
-            thermalRecorder = ThermalCameraRecorder(context)
-            recordingController.register("thermal_tc001", thermalRecorder!!)
-            
-            // Setup integration observers
-            setupIntegrationObservers()
-            
-            _recordingStatus.postValue(TC001RecordingStatus.READY)
-            Log.i(TAG, "TC001 recording integration initialized successfully")
-            true
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize TC001 recording integration", e)
-            _recordingStatus.postValue(TC001RecordingStatus.ERROR)
-            false
         }
-    }
-    
+
     /**
      * Start TC001 recording session
      */
-    suspend fun startRecording(sessionId: String): Boolean = withContext(Dispatchers.IO) {
-        try {
-            currentSessionId = sessionId
-            sessionStartTime = System.nanoTime()
-            framesSaved = 0
-            dataPointsRecorded = 0
-            
-            // Start TC001 system
-            val startResult = tc001IntegrationManager?.startSystem() ?: false
-            if (!startResult) {
-                Log.e(TAG, "Failed to start TC001 system")
-                return@withContext false
+    suspend fun startRecording(sessionId: String): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                currentSessionId = sessionId
+                sessionStartTime = System.nanoTime()
+                framesSaved = 0
+                dataPointsRecorded = 0
+
+                // Start TC001 system
+                val startResult = tc001IntegrationManager?.startSystem() ?: false
+                if (!startResult) {
+                    Log.e(TAG, "Failed to start TC001 system")
+                    return@withContext false
+                }
+
+                // Start thermal recorder
+                thermalRecorder?.startRecording()
+
+                _recordingStatus.postValue(TC001RecordingStatus.RECORDING)
+                Log.i(TAG, "TC001 recording session started: $sessionId")
+
+                // Start data monitoring for statistics
+                startDataMonitoring()
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start TC001 recording", e)
+                _recordingStatus.postValue(TC001RecordingStatus.ERROR)
+                false
             }
-            
-            // Start thermal recorder
-            thermalRecorder?.startRecording()
-            
-            _recordingStatus.postValue(TC001RecordingStatus.RECORDING)
-            Log.i(TAG, "TC001 recording session started: $sessionId")
-            
-            // Start data monitoring for statistics
-            startDataMonitoring()
-            true
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start TC001 recording", e)
-            _recordingStatus.postValue(TC001RecordingStatus.ERROR)
-            false
         }
-    }
-    
+
     /**
      * Stop TC001 recording session
      */
-    suspend fun stopRecording(): Boolean = withContext(Dispatchers.IO) {
-        try {
-            // Stop thermal recorder
-            thermalRecorder?.stopRecording()
-            
-            // Stop TC001 system
-            tc001IntegrationManager?.stopSystem()
-            
-            // Calculate final statistics
-            val recordingDuration = (System.nanoTime() - sessionStartTime) / 1_000_000_000.0
-            val finalStats = TC001RecordingStats(
-                sessionId = currentSessionId ?: "unknown",
-                recordingDuration = recordingDuration,
-                framesSaved = framesSaved,
-                dataPointsRecorded = dataPointsRecorded,
-                averageFrameRate = framesSaved / recordingDuration
-            )
-            _thermalStats.postValue(finalStats)
-            
-            _recordingStatus.postValue(TC001RecordingStatus.COMPLETED)
-            Log.i(TAG, "TC001 recording session completed: ${finalStats.sessionId}")
-            true
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to stop TC001 recording", e)
-            _recordingStatus.postValue(TC001RecordingStatus.ERROR)
-            false
+    suspend fun stopRecording(): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                // Stop thermal recorder
+                thermalRecorder?.stopRecording()
+
+                // Stop TC001 system
+                tc001IntegrationManager?.stopSystem()
+
+                // Calculate final statistics
+                val recordingDuration = (System.nanoTime() - sessionStartTime) / 1_000_000_000.0
+                val finalStats =
+                    TC001RecordingStats(
+                        sessionId = currentSessionId ?: "unknown",
+                        recordingDuration = recordingDuration,
+                        framesSaved = framesSaved,
+                        dataPointsRecorded = dataPointsRecorded,
+                        averageFrameRate = framesSaved / recordingDuration,
+                    )
+                _thermalStats.postValue(finalStats)
+
+                _recordingStatus.postValue(TC001RecordingStatus.COMPLETED)
+                Log.i(TAG, "TC001 recording session completed: ${finalStats.sessionId}")
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to stop TC001 recording", e)
+                _recordingStatus.postValue(TC001RecordingStatus.ERROR)
+                false
+            }
         }
-    }
-    
+
     /**
      * Setup observers for TC001 integration components
      */
@@ -154,7 +153,7 @@ class TC001RecordingIntegration(
                     updateRecordingStats()
                 }
             }
-            
+
             // Monitor thermal bitmaps for frame statistics
             manager.getDataManager()?.thermalBitmap?.observeForever { bitmap ->
                 bitmap?.let {
@@ -164,7 +163,7 @@ class TC001RecordingIntegration(
             }
         }
     }
-    
+
     /**
      * Start monitoring data flow for recording statistics
      */
@@ -181,7 +180,7 @@ class TC001RecordingIntegration(
             }
         }
     }
-    
+
     /**
      * Update recording statistics
      */
@@ -189,37 +188,36 @@ class TC001RecordingIntegration(
         currentSessionId?.let { sessionId ->
             val currentTime = System.nanoTime()
             val recordingDuration = (currentTime - sessionStartTime) / 1_000_000_000.0
-            
-            val stats = TC001RecordingStats(
-                sessionId = sessionId,
-                recordingDuration = recordingDuration,
-                framesSaved = framesSaved,
-                dataPointsRecorded = dataPointsRecorded,
-                averageFrameRate = if (recordingDuration > 0) framesSaved / recordingDuration else 0.0
-            )
+
+            val stats =
+                TC001RecordingStats(
+                    sessionId = sessionId,
+                    recordingDuration = recordingDuration,
+                    framesSaved = framesSaved,
+                    dataPointsRecorded = dataPointsRecorded,
+                    averageFrameRate = if (recordingDuration > 0) framesSaved / recordingDuration else 0.0,
+                )
             _thermalStats.postValue(stats)
         }
     }
-    
+
     /**
      * Get current TC001 integration manager for external access
      */
     fun getTC001IntegrationManager(): TC001IntegrationManager? = tc001IntegrationManager
-    
+
     /**
      * Check if TC001 system is ready for recording
      */
-    fun isTC001Ready(): Boolean {
-        return tc001IntegrationManager?.isSystemReady() ?: false
-    }
-    
+    fun isTC001Ready(): Boolean = tc001IntegrationManager?.isSystemReady() ?: false
+
     /**
      * Cleanup TC001 recording integration
      */
     fun cleanup() {
         integrationScope.cancel()
         tc001IntegrationManager?.cleanup()
-        
+
         Log.i(TAG, "TC001 recording integration cleaned up")
     }
 }
@@ -232,7 +230,7 @@ enum class TC001RecordingStatus {
     READY,
     RECORDING,
     COMPLETED,
-    ERROR
+    ERROR,
 }
 
 /**
@@ -243,5 +241,5 @@ data class TC001RecordingStats(
     val recordingDuration: Double, // seconds
     val framesSaved: Int,
     val dataPointsRecorded: Int,
-    val averageFrameRate: Double
+    val averageFrameRate: Double,
 )

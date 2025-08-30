@@ -174,8 +174,8 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
+    override fun onOptionsItemSelected(item: MenuItem): Boolean =
+        when (item.itemId) {
             R.id.action_quick_start -> {
                 showQuickStartGuide()
                 true
@@ -195,7 +195,6 @@ class MainActivity : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
-    }
 
     private fun setupViewPager() {
         val adapter = MainPagerAdapter(this)
@@ -212,14 +211,16 @@ class MainActivity : AppCompatActivity() {
                 TabLayoutMediator(tabLayout, viewPager) { tab, position ->
                     tab.text = MainPagerAdapter.TAB_TITLES[position]
                 }.attach()
-                
+
                 // Register page change callback for enhanced navigation tracking
-                viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-                    override fun onPageSelected(position: Int) {
-                        super.onPageSelected(position)
-                        navigationController?.updateCurrentTab(position)
-                    }
-                })
+                viewPager.registerOnPageChangeCallback(
+                    object : ViewPager2.OnPageChangeCallback() {
+                        override fun onPageSelected(position: Int) {
+                            super.onPageSelected(position)
+                            navigationController?.updateCurrentTab(position)
+                        }
+                    },
+                )
             }
         }
     }
@@ -270,7 +271,7 @@ class MainActivity : AppCompatActivity() {
         c.register("rgb", RgbCameraRecorder(applicationContext, this))
         c.register("thermal", ThermalCameraRecorder(applicationContext))
         c.register("gsr", ShimmerRecorder(applicationContext))
-        c.register("audio", AudioRecorder(applicationContext))  // FR5: Audio recording support
+        c.register("audio", AudioRecorder(applicationContext)) // FR5: Audio recording support
         controller = c
         return c
     }
@@ -320,7 +321,8 @@ class MainActivity : AppCompatActivity() {
     private fun showQuickStartGuide() {
         QuickStartDialog.show(this) {
             // Mark first launch as complete
-            preferences.edit()
+            preferences
+                .edit()
                 .putBoolean("first_launch", false)
                 .apply()
 
@@ -330,23 +332,28 @@ class MainActivity : AppCompatActivity() {
 
     private fun showConnectionHelp() {
         val troubleshootingSteps = UserExperience.QuickStart.getConnectionTroubleshootingSteps()
-        val message = "Connection Troubleshooting:\n\n" +
-                     troubleshootingSteps.mapIndexed { index, step ->
-                         "${index + 1}. $step"
-                     }.joinToString("\n")
+        val message =
+            "Connection Troubleshooting:\n\n" +
+                troubleshootingSteps
+                    .mapIndexed { index, step ->
+                        "${index + 1}. $step"
+                    }.joinToString("\n")
 
         // Show as a Snackbar with action
         rootLayout?.let { layout ->
-            val snackbar = Snackbar.make(layout, "Connection help available", Snackbar.LENGTH_LONG)
-                .setAction("Show Help") {
-                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                }
+            val snackbar =
+                Snackbar
+                    .make(layout, "Connection help available", Snackbar.LENGTH_LONG)
+                    .setAction("Show Help") {
+                        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                    }
             snackbar.show()
         }
     }
 
     private fun resetFirstLaunchFlag() {
-        preferences.edit()
+        preferences
+            .edit()
             .putBoolean("first_launch", true)
             .apply()
         UserExperience.Messaging.showStatus(this, "Tutorial will show on next launch")
@@ -355,7 +362,7 @@ class MainActivity : AppCompatActivity() {
     private fun showFlashOverlay() {
         val parent = rootLayout ?: return
         val flashStartTime = System.nanoTime()
-        
+
         val flash =
             View(this).apply {
                 setBackgroundColor(Color.WHITE)
@@ -364,11 +371,11 @@ class MainActivity : AppCompatActivity() {
                 alpha = 1f
             }
         parent.addView(flash)
-        
+
         // Log flash display timing for synchronization validation
         Log.d("FlashSync", "Flash overlay displayed at: ${flashStartTime}ns")
-        
-        flash.postDelayed({ 
+
+        flash.postDelayed({
             parent.removeView(flash)
             val flashEndTime = System.nanoTime()
             Log.d("FlashSync", "Flash overlay removed at: ${flashEndTime}ns (duration: ${(flashEndTime - flashStartTime) / 1_000_000}ms)")
@@ -383,28 +390,28 @@ class MainActivity : AppCompatActivity() {
             if (!f.exists()) {
                 f.writeText("trigger_timestamp_ns,actual_flash_timestamp_ns,sync_delay_ms,device_id\n")
             }
-            
+
             val syncDelay = (actualFlashTime - tsNs) / 1_000_000.0 // Convert to milliseconds
-            val deviceId = android.os.Build.MODEL?.replace(" ", "_") ?: "unknown"
-            
+            val deviceId =
+                android.os.Build.MODEL
+                    ?.replace(" ", "_") ?: "unknown"
+
             f.appendText("$tsNs,$actualFlashTime,$syncDelay,$deviceId\n")
-            
+
             Log.i("FlashSync", "Flash event logged - Sync delay: ${syncDelay}ms")
-            
         } catch (e: Exception) {
             Log.e("FlashSync", "Failed to log flash event: ${e.message}", e)
         } catch (_: Exception) {
         }
     }
 
-    private fun isRunningUnderTest(): Boolean {
-        return try {
+    private fun isRunningUnderTest(): Boolean =
+        try {
             Class.forName("org.robolectric.Robolectric")
             true
         } catch (_: Throwable) {
             false
         }
-    }
 
     /**
      * Navigate to thermal camera preview - Enhanced integration method
@@ -427,14 +434,17 @@ class MainActivity : AppCompatActivity() {
     private fun initializeTC001System() {
         try {
             // Initialize TC001 logging
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initLog()
-            
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+                .initLog()
+
             // Initialize TC001 USB receivers
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initReceiver(this)
-            
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+                .initReceiver(this)
+
             // Initialize TC001 device manager
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initTC001DeviceManager(this)
-            
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+                .initTC001DeviceManager(this)
+
             Log.i("MainActivity", "TC001 thermal camera system initialized successfully")
         } catch (e: Exception) {
             Log.e("MainActivity", "Failed to initialize TC001 system", e)

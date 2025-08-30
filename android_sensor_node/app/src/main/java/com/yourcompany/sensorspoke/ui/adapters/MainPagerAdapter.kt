@@ -5,13 +5,15 @@ import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.yourcompany.sensorspoke.ui.fragments.FileManagerFragment
 import com.yourcompany.sensorspoke.ui.fragments.RgbPreviewFragment
-import com.yourcompany.sensorspoke.ui.fragments.ThermalPreviewFragment
 import com.yourcompany.sensorspoke.ui.fragments.TC001ManagementFragment
+import com.yourcompany.sensorspoke.ui.fragments.ThermalPreviewFragment
 
 /**
  * Enhanced ViewPager2 adapter for main activity tabs with TC001 management
  */
-class MainPagerAdapter(fragmentActivity: FragmentActivity) : FragmentStateAdapter(fragmentActivity) {
+class MainPagerAdapter(
+    fragmentActivity: FragmentActivity,
+) : FragmentStateAdapter(fragmentActivity) {
     companion object {
         const val TAB_RGB_PREVIEW = 0
         const val TAB_THERMAL_PREVIEW = 1
@@ -30,13 +32,12 @@ class MainPagerAdapter(fragmentActivity: FragmentActivity) : FragmentStateAdapte
 
     override fun getItemCount(): Int = TAB_COUNT
 
-    override fun createFragment(position: Int): Fragment {
-        return when (position) {
+    override fun createFragment(position: Int): Fragment =
+        when (position) {
             TAB_RGB_PREVIEW -> RgbPreviewFragment.newInstance()
             TAB_THERMAL_PREVIEW -> ThermalPreviewFragment.newInstance()
             TAB_TC001_MANAGEMENT -> TC001ManagementFragment.newInstance()
             TAB_FILE_MANAGER -> FileManagerFragment.newInstance()
             else -> throw IllegalArgumentException("Invalid tab position: $position")
         }
-    }
 }
