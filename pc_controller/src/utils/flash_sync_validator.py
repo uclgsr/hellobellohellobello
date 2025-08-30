@@ -244,7 +244,46 @@ class FlashSyncValidator(QObject if HAS_QT else object):
             print(f"Error sending flash command to {device_id}: {e}")
             return None
     
-    def _analyze_sync_results(self, devices: List[str], flash_events: List[FlashEvent]) -> SyncValidationResult:
+    def quick_sync_check(self, device_responses: Dict[str, int], trigger_time_ns: int) -> Dict[str, Any]:
+        """
+        Quick synchronization accuracy check for debugging.
+        
+        Args:
+            device_responses: Device ID -> response timestamp mapping
+            trigger_time_ns: Original trigger timestamp
+            
+        Returns:
+            Dictionary with sync analysis results
+        """
+        results = {
+            'trigger_time_ns': trigger_time_ns,
+            'device_count': len(device_responses),
+            'sync_accuracy_ms': {},
+            'max_deviation_ms': 0.0,
+            'avg_deviation_ms': 0.0,
+            'within_target': True,
+            'target_accuracy_ms': self.target_accuracy_ms
+        }
+        
+        deviations = []
+        for device_id, response_time in device_responses.items():
+            if response_time is not None:
+                deviation_ns = abs(response_time - trigger_time_ns)
+                accuracy_ms = deviation_ns / 1_000_000.0
+                results['sync_accuracy_ms'][device_id] = accuracy_ms
+                deviations.append(accuracy_ms)
+                
+                if accuracy_ms > self.target_accuracy_ms:
+                    results['within_target'] = False
+            else:
+                results['sync_accuracy_ms'][device_id] = None
+                results['within_target'] = False
+        
+        if deviations:
+            results['max_deviation_ms'] = max(deviations)
+            results['avg_deviation_ms'] = sum(deviations) / len(deviations)
+        
+        return results
         """
         Analyze flash sync test results and generate validation report.
         

@@ -354,6 +354,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun showFlashOverlay() {
         val parent = rootLayout ?: return
+        val flashStartTime = System.nanoTime()
+        
         val flash =
             View(this).apply {
                 setBackgroundColor(Color.WHITE)
@@ -362,17 +364,35 @@ class MainActivity : AppCompatActivity() {
                 alpha = 1f
             }
         parent.addView(flash)
-        flash.postDelayed({ parent.removeView(flash) }, 150)
+        
+        // Log flash display timing for synchronization validation
+        Log.d("FlashSync", "Flash overlay displayed at: ${flashStartTime}ns")
+        
+        flash.postDelayed({ 
+            parent.removeView(flash)
+            val flashEndTime = System.nanoTime()
+            Log.d("FlashSync", "Flash overlay removed at: ${flashEndTime}ns (duration: ${(flashEndTime - flashStartTime) / 1_000_000}ms)")
+        }, 150)
     }
 
     private fun logFlashEvent(tsNs: Long) {
         try {
+            val actualFlashTime = System.nanoTime()
             val dir = getExternalFilesDir(null) ?: filesDir
             val f = File(dir, "flash_sync_events.csv")
             if (!f.exists()) {
-                f.writeText("timestamp_ns\n")
+                f.writeText("trigger_timestamp_ns,actual_flash_timestamp_ns,sync_delay_ms,device_id\n")
             }
-            f.appendText("$tsNs\n")
+            
+            val syncDelay = (actualFlashTime - tsNs) / 1_000_000.0 // Convert to milliseconds
+            val deviceId = android.os.Build.MODEL?.replace(" ", "_") ?: "unknown"
+            
+            f.appendText("$tsNs,$actualFlashTime,$syncDelay,$deviceId\n")
+            
+            Log.i("FlashSync", "Flash event logged - Sync delay: ${syncDelay}ms")
+            
+        } catch (e: Exception) {
+            Log.e("FlashSync", "Failed to log flash event: ${e.message}", e)
         } catch (_: Exception) {
         }
     }
