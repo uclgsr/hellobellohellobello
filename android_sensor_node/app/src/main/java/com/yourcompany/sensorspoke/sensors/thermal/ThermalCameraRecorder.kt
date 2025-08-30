@@ -7,6 +7,15 @@ import com.yourcompany.sensorspoke.sensors.SensorRecorder
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001Connector
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DataManager
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationManager
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001PerformanceMonitor
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DataExporter
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001CalibrationManager
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DiagnosticSystem
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001ExportFormat
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001ExportResult
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DiagnosticResults
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001CalibrationCurve
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001CalibrationType
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.io.BufferedWriter
@@ -45,6 +54,12 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
     
     // Enhanced TC001 integration manager for comprehensive integration
     private var tc001IntegrationManager: TC001IntegrationManager? = null
+    
+    // Advanced TC001 components for complete thermal system
+    private var tc001PerformanceMonitor: TC001PerformanceMonitor? = null
+    private var tc001DataExporter: TC001DataExporter? = null
+    private var tc001CalibrationManager: TC001CalibrationManager? = null
+    private var tc001DiagnosticSystem: TC001DiagnosticSystem? = null
     
     private var frameCount = 0
     private val dateFormatter = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
@@ -92,8 +107,11 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     Log.i(TAG, "TC001 integration manager initialized successfully")
                     // Start the TC001 system
                     val startResult = tc001IntegrationManager!!.startSystem()
+                    
                     if (startResult) {
-                        Log.i(TAG, "TC001 system started and ready for recording")
+                        // Initialize advanced TC001 components
+                        initializeAdvancedTC001Components(sessionDirectory)
+                        Log.i(TAG, "TC001 system started and advanced components initialized")
                     }
                 } else {
                     Log.w(TAG, "TC001 integration manager initialization failed, using fallback")
@@ -343,11 +361,109 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
         return bitmap
     }
     
+    /**
+     * Initialize advanced TC001 components for comprehensive thermal processing
+     */
+    private suspend fun initializeAdvancedTC001Components(sessionDirectory: File) = withContext(Dispatchers.IO) {
+        try {
+            // Initialize performance monitoring
+            tc001PerformanceMonitor = TC001PerformanceMonitor(context)
+            tc001PerformanceMonitor!!.startMonitoring()
+            Log.i(TAG, "TC001 performance monitor initialized")
+            
+            // Initialize data exporter
+            tc001DataExporter = TC001DataExporter(context)
+            Log.i(TAG, "TC001 data exporter initialized")
+            
+            // Initialize calibration manager
+            tc001CalibrationManager = TC001CalibrationManager(context)
+            Log.i(TAG, "TC001 calibration manager initialized")
+            
+            // Initialize diagnostic system
+            tc001DiagnosticSystem = TC001DiagnosticSystem(context)
+            Log.i(TAG, "TC001 diagnostic system initialized")
+            
+            // Setup integration between advanced components
+            setupAdvancedComponentIntegration()
+            
+            Log.i(TAG, "All advanced TC001 components initialized successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initializing advanced TC001 components", e)
+        }
+    }
+    
+    /**
+     * Setup integration between advanced TC001 components
+     */
+    private fun setupAdvancedComponentIntegration() {
+        // Connect performance monitor to data manager
+        tc001IntegrationManager?.getDataManager()?.temperatureData?.observeForever { tempData ->
+            tempData?.let {
+                tc001PerformanceMonitor?.recordTemperatureReading(it.centerTemperature)
+            }
+        }
+        
+        // Connect performance monitor to thermal frame processing
+        tc001IntegrationManager?.getDataManager()?.thermalBitmap?.observeForever { bitmap ->
+            bitmap?.let {
+                tc001PerformanceMonitor?.recordFrameProcessed()
+                
+                // Record memory usage
+                val memoryUsed = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
+                tc001PerformanceMonitor?.recordMemoryUsage(memoryUsed)
+            }
+        }
+        
+        Log.i(TAG, "Advanced TC001 component integration setup completed")
+    }
+    
+    /**
+     * Export thermal session data using advanced exporter
+     */
+    suspend fun exportThermalData(exportFormat: TC001ExportFormat = TC001ExportFormat.COMPREHENSIVE): TC001ExportResult? {
+        return sessionDir?.let { dir ->
+            tc001DataExporter?.exportSession(
+                sessionId = dir.name,
+                sessionDir = dir,
+                exportFormat = exportFormat
+            )
+        }
+    }
+    
+    /**
+     * Run TC001 diagnostics
+     */
+    suspend fun runDiagnostics(): TC001DiagnosticResults? {
+        return tc001DiagnosticSystem?.runComprehensiveDiagnostics()
+    }
+    
+    /**
+     * Get current calibration status
+     */
+    fun getCalibrationStatus(): TC001CalibrationCurve? {
+        return tc001CalibrationManager?.getCurrentCalibration()
+    }
+    
+    /**
+     * Start calibration process
+     */
+    suspend fun startCalibration(type: TC001CalibrationType): Boolean {
+        return tc001CalibrationManager?.startCalibration(type) ?: false
+    }
+
     suspend fun cleanup(): Boolean {
         return withContext(Dispatchers.IO) {
             try {
                 // Ensure recording is stopped
                 stopRecording()
+                
+                // Stop and cleanup advanced components
+                tc001PerformanceMonitor?.stopMonitoring()
+                tc001PerformanceMonitor = null
+                
+                tc001DataExporter = null
+                tc001CalibrationManager = null
+                tc001DiagnosticSystem = null
                 
                 // Disconnect and cleanup TC001 integration manager
                 tc001IntegrationManager?.cleanup()
@@ -357,7 +473,7 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 topdonIntegration?.disconnect()
                 topdonIntegration = null
                 
-                Log.i(TAG, "Enhanced thermal camera recorder cleanup completed")
+                Log.i(TAG, "Enhanced thermal camera recorder with advanced TC001 components cleanup completed")
                 true
                 
             } catch (e: Exception) {

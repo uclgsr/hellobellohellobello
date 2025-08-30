@@ -24,13 +24,15 @@ class NavigationController(
     companion object {
         const val TAB_RGB_CAMERA = 0
         const val TAB_THERMAL_CAMERA = 1
-        const val TAB_FILE_MANAGER = 2
-        const val TAB_COUNT = 3
+        const val TAB_TC001_MANAGEMENT = 2
+        const val TAB_FILE_MANAGER = 3
+        const val TAB_COUNT = 4
         
         // Navigation routes for enhanced routing
         const val ROUTE_RGB_PREVIEW = "rgb_preview"
         const val ROUTE_THERMAL_PREVIEW = "thermal_preview"
         const val ROUTE_THERMAL_SETTINGS = "thermal_settings"
+        const val ROUTE_TC001_MANAGEMENT = "tc001_management"
         const val ROUTE_FILE_MANAGER = "file_manager"
     }
     
@@ -49,12 +51,20 @@ class NavigationController(
             val routeName = when (tabIndex) {
                 TAB_RGB_CAMERA -> ROUTE_RGB_PREVIEW
                 TAB_THERMAL_CAMERA -> if (route.isNotEmpty()) route else ROUTE_THERMAL_PREVIEW
+                TAB_TC001_MANAGEMENT -> ROUTE_TC001_MANAGEMENT
                 TAB_FILE_MANAGER -> ROUTE_FILE_MANAGER
                 else -> "unknown"
             }
             
             addToNavigationHistory(routeName)
         }
+    }
+    
+    /**
+     * Navigate to TC001 management interface
+     */
+    fun navigateToTC001Management() {
+        navigateToTab(TAB_TC001_MANAGEMENT, ROUTE_TC001_MANAGEMENT)
     }
     
     /**
@@ -97,6 +107,7 @@ class NavigationController(
                 when (route) {
                     ROUTE_RGB_PREVIEW -> navigateToTab(TAB_RGB_CAMERA)
                     ROUTE_THERMAL_PREVIEW -> navigateToTab(TAB_THERMAL_CAMERA)
+                    ROUTE_TC001_MANAGEMENT -> navigateToTab(TAB_TC001_MANAGEMENT)
                     ROUTE_FILE_MANAGER -> navigateToTab(TAB_FILE_MANAGER)
                 }
                 return true
