@@ -445,7 +445,7 @@ class TestPerformanceAndStress:
 
         # Simulate processing multiple data chunks
         total_bytes_processed = 0
-        for i in range(num_chunks):
+        for _ in range(num_chunks):
             # Simulate data processing
             processed_data = test_data  # In real test, would process the data
             total_bytes_processed += len(processed_data)

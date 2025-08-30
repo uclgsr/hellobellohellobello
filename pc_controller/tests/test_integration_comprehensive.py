@@ -190,7 +190,7 @@ class TestHubSpokeIntegration:
 
         # Connect to all devices
         clients = []
-        for device, port in devices:
+        for _, port in devices:
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client.connect(("localhost", port))
             clients.append(client)
@@ -301,9 +301,7 @@ class TestHubSpokeIntegration:
                 futures.append(future)
 
             # Wait for all communications to complete
-            results = []
-            for future in concurrent.futures.as_completed(futures):
-                results.append(future.result())
+            results = [future.result() for future in concurrent.futures.as_completed(futures)]
 
             # Verify all communications succeeded
             assert len(results) == num_devices
@@ -366,10 +364,10 @@ class TestMultiComponentIntegration:
             device_manager.set_status(device_id, "Recording")
 
         # Verify all devices are recording
-        recording_devices = []
-        for device_id in devices:
-            if device_manager.get_status(device_id) == "Recording":
-                recording_devices.append(device_id)
+        recording_devices = [
+            device_id for device_id in devices 
+            if device_manager.get_status(device_id) == "Recording"
+        ]
 
         assert len(recording_devices) == len(devices)
 

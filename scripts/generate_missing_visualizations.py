@@ -194,7 +194,7 @@ def create_sensor_specifications_table(output_dir):
     # Topdon TC001 specifications
     thermal_data = [
         ['Parameter', 'Specification', 'Research Relevance'],
-        ['Resolution', '256 × 192 pixels', 'Adequate facial ROI detail'],
+        ['Resolution', '256 x 192 pixels', 'Adequate facial ROI detail'],
         ['Thermal Range', '-20°C to 550°C', 'Full physiological range'],
         ['Accuracy', '±2°C or ±2%', 'Sufficient for stress detection'],
         ['Frame Rate', '25 Hz', 'Real-time thermal monitoring'],

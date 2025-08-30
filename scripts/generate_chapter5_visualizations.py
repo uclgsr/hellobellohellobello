@@ -267,7 +267,7 @@ def create_usability_metrics_plot(usability_data, output_dir):
     ax2.grid(True, alpha=0.3, axis='y')
 
     # Add success rate labels on bars
-    for i, (bar, rate) in enumerate(zip(bars, success_rates, strict=True)):
+    for bar, rate in zip(bars, success_rates, strict=True):
         ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
                 f'{rate}%', ha='center', va='bottom', fontweight='bold')
 

@@ -39,7 +39,7 @@ PC_SRC = REPO_ROOT / "pc_controller" / "src"
 if str(PC_SRC) not in sys.path:
     sys.path.insert(0, str(PC_SRC))
 
-from data.data_loader import DataLoader  # type: ignore  # noqa: E402
+from data.data_loader import DataLoader  # type: ignore
 
 try:
     import numpy as np  # type: ignore
@@ -264,7 +264,7 @@ def _dry_run(out_path: str | None) -> int:
     try:
         import matplotlib
         matplotlib.use("Agg", force=True)  # headless-safe
-        import matplotlib.pyplot as plt  # noqa: F401
+        import matplotlib.pyplot as plt
         can_plot = True
     except Exception:
         can_plot = False

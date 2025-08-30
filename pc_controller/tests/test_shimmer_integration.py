@@ -82,7 +82,7 @@ class TestRealShimmer:
             (4095, 20.0),    # Maximum ADC (12-bit)
         ]
 
-        for adc_value, expected_range in test_cases:
+        for adc_value, _ in test_cases:
             # Create a mock shimmer with conversion method
             if hasattr(shimmer, '_convert_gsr_to_microsiemens'):
                 result = shimmer._convert_gsr_to_microsiemens(adc_value)

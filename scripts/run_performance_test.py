@@ -43,11 +43,11 @@ if str(PC_SRC) not in sys.path:
     sys.path.insert(0, str(PC_SRC))
 
 # Imports after sys.path tweak
-from network.network_controller import (  # type: ignore  # noqa: E402
+from network.network_controller import (  # type: ignore
     DiscoveredDevice,
     NetworkController,
 )
-from network.protocol import (  # type: ignore  # noqa: E402
+from network.protocol import (  # type: ignore
     build_v1_ack,
     build_v1_preview_frame,
     decode_frames,

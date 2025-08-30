@@ -9,7 +9,7 @@ import pytest
 # Skip GUI tests when libraries not available
 pytest_plugins = []
 try:
-    from PyQt6.QtWidgets import QApplication  # noqa: F401
+    from PyQt6.QtWidgets import QApplication
     GUI_AVAILABLE = True
 except ImportError:
     GUI_AVAILABLE = False
