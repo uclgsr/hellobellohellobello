@@ -2,23 +2,29 @@ package com.yourcompany.sensorspoke.sensors.thermal.tc001
 
 import android.content.Context
 import android.hardware.usb.UsbDevice
-import android.hardware.usb.UsbDeviceConnection
-import android.hardware.usb.UsbManager
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.*
 import java.io.IOException
 
+// IRCamera integration - using proven classes from the topdon library
+import com.infisense.iruvc.usb.USBMonitor
+import com.infisense.iruvc.uvc.UVCCamera
+import com.infisense.iruvc.uvc.UVCBuilder
+import com.infisense.iruvc.uvc.UVCType
+import com.infisense.iruvc.utils.IFrameCallback
+import com.infisense.iruvc.utils.CommonParams
+
 /**
- * TC001Connector - Core thermal camera connection handler
+ * TC001Connector - Core thermal camera connection handler using IRCamera integration
  *
- * Manages connection to Topdon TC001 thermal camera via USB with
- * enhanced device management capabilities from IRCamera
+ * Manages connection to Topdon TC001 thermal camera using the proven IRCamera
+ * USBMonitor and IRCMD classes for reliable hardware communication
  */
 class TC001Connector(
     private val context: Context,
-) {
+) : USBMonitor.OnDeviceConnectListener {
     companion object {
         private const val TAG = "TC001Connector"
         private const val TC001_VENDOR_ID = 0x4d54 // Topdon vendor ID
@@ -34,42 +40,51 @@ class TC001Connector(
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var isConnected = false
     private var currentDevice: UsbDevice? = null
-    private var deviceConnection: UsbDeviceConnection? = null
-    private val usbManager: UsbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
+    
+    // IRCamera integration - using proven USBMonitor and UVCCamera for TC001
+    private var usbMonitor: USBMonitor? = null
+    private var uvcCamera: UVCCamera? = null
 
     init {
         _connectionState.value = TC001ConnectionState.DISCONNECTED
-        initUSBMonitoring()
+        initIRCameraUSBMonitoring()
     }
 
     /**
-     * Initialize USB monitoring for TC001 devices
+     * Initialize IRCamera USB monitoring for TC001 devices
      */
-    private fun initUSBMonitoring() {
+    private fun initIRCameraUSBMonitoring() {
         scope.launch {
             try {
-                scanForTC001Devices(usbManager)
+                // Initialize IRCamera USBMonitor - this is the proven approach
+                usbMonitor = USBMonitor(context, this@TC001Connector)
+                usbMonitor?.register()
+                
+                Log.i(TAG, "IRCamera USBMonitor initialized for TC001")
+                scanForTC001Devices()
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to initialize USB monitoring", e)
+                Log.e(TAG, "Failed to initialize IRCamera USB monitoring", e)
                 _connectionState.value = TC001ConnectionState.ERROR
             }
         }
     }
 
     /**
-     * Scan for connected TC001 devices
+     * Scan for connected TC001 devices using IRCamera USBMonitor
      */
-    private suspend fun scanForTC001Devices(usbManager: UsbManager) =
+    private suspend fun scanForTC001Devices() =
         withContext(Dispatchers.IO) {
             try {
-                val deviceList = usbManager.deviceList
-                for (device in deviceList.values) {
-                    if (isTC001Device(device)) {
-                        Log.i(TAG, "TC001 device found: ${device.deviceName}")
-                        withContext(Dispatchers.Main) {
-                            handleDeviceFound(device)
+                usbMonitor?.let { monitor ->
+                    val deviceList = monitor.deviceList
+                    for (device in deviceList) {
+                        if (isTC001Device(device)) {
+                            Log.i(TAG, "TC001 device found: ${device.deviceName}")
+                            withContext(Dispatchers.Main) {
+                                handleDeviceFound(device)
+                            }
+                            return@withContext
                         }
-                        return@withContext
                     }
                 }
 
@@ -85,9 +100,129 @@ class TC001Connector(
         }
 
     /**
+     * USBMonitor.OnDeviceConnectListener implementation for IRCamera integration
+     */
+    override fun onAttach(device: UsbDevice?) {
+        device?.let {
+            if (isTC001Device(it)) {
+                Log.i(TAG, "TC001 device attached: ${it.deviceName}")
+                handleDeviceFound(it)
+            }
+        }
+    }
+
+    override fun onDettach(device: UsbDevice?) {
+        device?.let {
+            if (isTC001Device(it) && it == currentDevice) {
+                Log.i(TAG, "TC001 device detached: ${it.deviceName}")
+                scope.launch {
+                    disconnect()
+                }
+            }
+        }
+    }
+
+    override fun onConnect(
+        device: UsbDevice?,
+        controlBlock: USBMonitor.UsbControlBlock?,
+        createNew: Boolean,
+    ) {
+        if (device != null && isTC001Device(device)) {
+            Log.i(TAG, "TC001 device connected via IRCamera USBMonitor")
+            scope.launch {
+                initializeIRCameraConnection(controlBlock)
+            }
+        }
+    }
+
+    override fun onDisconnect(
+        device: UsbDevice?,
+        controlBlock: USBMonitor.UsbControlBlock?,
+    ) {
+        if (device != null && isTC001Device(device) && device == currentDevice) {
+            Log.i(TAG, "TC001 device disconnected via IRCamera USBMonitor")
+            scope.launch {
+                handleIRCameraDisconnection()
+            }
+        }
+    }
+
+    override fun onCancel(device: UsbDevice?) {
+        Log.w(TAG, "TC001 connection cancelled: ${device?.deviceName}")
+    }
+
+    override fun onGranted(device: UsbDevice?, granted: Boolean) {
+        if (device != null && isTC001Device(device)) {
+            if (granted) {
+                Log.i(TAG, "USB permission granted for TC001: ${device.deviceName}")
+                // Permission granted, connection will proceed via onConnect
+            } else {
+                Log.w(TAG, "USB permission denied for TC001: ${device.deviceName}")
+                _connectionState.value = TC001ConnectionState.ERROR
+            }
+        }
+    }
+
+    /**
      * Check if USB device is a TC001 thermal camera
      */
     private fun isTC001Device(device: UsbDevice): Boolean = device.vendorId == TC001_VENDOR_ID && device.productId == TC001_PRODUCT_ID
+
+    /**
+     * Initialize IRCamera connection using proven UVCCamera approach
+     */
+    private suspend fun initializeIRCameraConnection(controlBlock: USBMonitor.UsbControlBlock?) =
+        withContext(Dispatchers.IO) {
+            try {
+                if (controlBlock == null) {
+                    Log.e(TAG, "Invalid USB control block for TC001")
+                    _connectionState.postValue(TC001ConnectionState.ERROR)
+                    return@withContext
+                }
+
+                // Initialize UVCCamera using IRCamera's proven approach
+                uvcCamera = UVCCamera().apply {
+                    uvcType = UVCType.USB_UVC // Use standard USB UVC type for TC001
+                }
+
+                // Open the UVC camera connection using IRCamera method
+                uvcCamera?.let { camera ->
+                    val openResult = camera.openUVCCamera(controlBlock)
+                    if (openResult == 0) { // Success
+                        isConnected = true
+                        _connectionState.postValue(TC001ConnectionState.CONNECTED)
+                        Log.i(TAG, "TC001 connected successfully using IRCamera UVCCamera")
+                    } else {
+                        Log.e(TAG, "Failed to open TC001 via IRCamera UVCCamera: $openResult")
+                        _connectionState.postValue(TC001ConnectionState.ERROR)
+                    }
+                } ?: run {
+                    Log.e(TAG, "Failed to create UVCCamera for TC001")
+                    _connectionState.postValue(TC001ConnectionState.ERROR)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception during IRCamera UVCCamera initialization", e)
+                _connectionState.postValue(TC001ConnectionState.ERROR)
+            }
+        }
+
+    /**
+     * Handle IRCamera disconnection
+     */
+    private suspend fun handleIRCameraDisconnection() =
+        withContext(Dispatchers.IO) {
+            try {
+                uvcCamera?.closeUVCCamera()
+                uvcCamera = null
+                isConnected = false
+                currentDevice = null
+                _connectionState.postValue(TC001ConnectionState.DISCONNECTED)
+                _deviceInfo.postValue(null)
+                Log.i(TAG, "TC001 disconnected via IRCamera UVCCamera")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during IRCamera disconnection", e)
+            }
+        }
 
     /**
      * Handle TC001 device discovery
@@ -106,10 +241,13 @@ class TC001Connector(
         _deviceInfo.value = deviceInfo
 
         Log.i(TAG, "TC001 device info: $deviceInfo")
+        
+        // Request connection using IRCamera USBMonitor
+        usbMonitor?.requestPermission(device)
     }
 
     /**
-     * Attempt to connect to the TC001 device
+     * Attempt to connect to the TC001 device using IRCamera approach
      */
     suspend fun connect(): Boolean =
         withContext(Dispatchers.IO) {
@@ -117,67 +255,44 @@ class TC001Connector(
                 _connectionState.postValue(TC001ConnectionState.CONNECTING)
 
                 currentDevice?.let { device ->
-                    // Request permission if needed
-                    if (!usbManager.hasPermission(device)) {
-                        Log.w(TAG, "No USB permission for TC001 device")
-                        _connectionState.postValue(TC001ConnectionState.ERROR)
-                        return@withContext false
-                    }
-
-                    // Open USB connection
-                    deviceConnection = usbManager.openDevice(device)
-                    if (deviceConnection == null) {
-                        Log.e(TAG, "Failed to open USB connection to TC001")
-                        _connectionState.postValue(TC001ConnectionState.ERROR)
-                        return@withContext false
-                    }
-
-                    // Initialize TC001 communication
-                    if (initializeThermalCamera()) {
-                        isConnected = true
-                        _connectionState.postValue(TC001ConnectionState.CONNECTED)
-                        Log.i(TAG, "Successfully connected to TC001 device")
-                        return@withContext true
-                    } else {
-                        Log.e(TAG, "Failed to initialize TC001 communication")
-                        deviceConnection?.close()
-                        deviceConnection = null
-                        _connectionState.postValue(TC001ConnectionState.ERROR)
-                        return@withContext false
-                    }
+                    // Use IRCamera USBMonitor for connection instead of manual USB
+                    usbMonitor?.openDevice(device)
+                    // Connection will be handled by onConnect callback
+                    return@withContext true
                 }
 
                 _connectionState.postValue(TC001ConnectionState.ERROR)
                 return@withContext false
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to connect to TC001", e)
-                deviceConnection?.close()
-                deviceConnection = null
+                Log.e(TAG, "Failed to connect to TC001 via IRCamera", e)
                 _connectionState.postValue(TC001ConnectionState.ERROR)
                 return@withContext false
             }
         }
 
     /**
-     * Disconnect from TC001 device
+     * Disconnect from TC001 device using IRCamera approach
      */
     suspend fun disconnect() =
         withContext(Dispatchers.IO) {
             try {
                 _connectionState.postValue(TC001ConnectionState.DISCONNECTING)
 
-                // Close USB connection properly
-                deviceConnection?.close()
-                deviceConnection = null
+                // Use IRCamera UVCCamera for proper disconnection
+                uvcCamera?.closeUVCCamera()
+                uvcCamera = null
+
+                // USBMonitor handles device connection cleanup automatically
+                Log.i(TAG, "Closing device connection via IRCamera USBMonitor")
 
                 isConnected = false
                 currentDevice = null
                 _connectionState.postValue(TC001ConnectionState.DISCONNECTED)
                 _deviceInfo.postValue(null)
 
-                Log.i(TAG, "Disconnected from TC001 device")
+                Log.i(TAG, "Disconnected from TC001 via IRCamera")
             } catch (e: Exception) {
-                Log.e(TAG, "Error during TC001 disconnection", e)
+                Log.e(TAG, "Error during TC001 IRCamera disconnection", e)
                 _connectionState.postValue(TC001ConnectionState.ERROR)
             }
         }
@@ -188,46 +303,58 @@ class TC001Connector(
     fun isConnected(): Boolean = isConnected
 
     /**
-     * Refresh device scan
+     * Refresh device scan using IRCamera USBMonitor
      */
     suspend fun refreshDeviceScan() {
-        scanForTC001Devices(usbManager)
+        usbMonitor?.let { monitor ->
+            scanForTC001Devices()
+        }
     }
 
     /**
-     * Initialize thermal camera communication
+     * Get IRCamera UVCCamera instance for thermal data operations
      */
-    private fun initializeThermalCamera(): Boolean {
+    fun getUVCCamera(): UVCCamera? = uvcCamera
+
+    /**
+     * Start thermal data streaming using IRCamera UVCCamera
+     */
+    fun startThermalStream(): Boolean {
         return try {
-            deviceConnection?.let { connection ->
-                // Send initialization commands to TC001
-                // This would typically involve sending specific USB control transfers
-                // to configure the thermal camera for data streaming
-                
-                // For TC001, we need to:
-                // 1. Set up bulk transfer endpoints
-                // 2. Configure thermal sensor parameters
-                // 3. Start thermal data stream
-                
-                Log.i(TAG, "TC001 thermal camera initialized successfully")
-                true
+            uvcCamera?.let { camera ->
+                // Use IRCamera's onStartPreview method for thermal streaming
+                val result = camera.onStartPreview()
+                result == 0 // IRCamera returns 0 for success
             } ?: false
-        } catch (e: IOException) {
-            Log.e(TAG, "Failed to initialize TC001 thermal camera", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start thermal stream via IRCamera UVCCamera", e)
             false
         }
     }
 
     /**
-     * Get USB device connection for data transfer
+     * Stop thermal data streaming using IRCamera UVCCamera
      */
-    fun getDeviceConnection(): UsbDeviceConnection? = deviceConnection
+    fun stopThermalStream(): Boolean {
+        return try {
+            uvcCamera?.let { camera ->
+                val result = camera.onStopPreview()
+                result == 0 // IRCamera returns 0 for success
+            } ?: false
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to stop thermal stream via IRCamera UVCCamera", e)
+            false
+        }
+    }
 
     /**
-     * Clean up resources
+     * Clean up IRCamera resources
      */
     fun cleanup() {
         scope.cancel()
+        uvcCamera?.closeUVCCamera()
+        usbMonitor?.unregister()
+        usbMonitor?.destroy()
     }
 }
 
