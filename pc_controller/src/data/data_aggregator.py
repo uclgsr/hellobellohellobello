@@ -20,7 +20,7 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 # TLS optional server context
 try:
-    from network.tls_utils import create_server_ssl_context  # type: ignore
+    from network.tls_utils import create_server_ssl_context
 except Exception:  # pragma: no cover - optional import guard
 
     def create_server_ssl_context():

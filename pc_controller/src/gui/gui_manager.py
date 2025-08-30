@@ -60,8 +60,8 @@ from tools.camera_calibration import calibrate_camera, save_calibration
 try:
     from core.local_interfaces import ShimmerInterface, WebcamInterface
 except Exception:  # pragma: no cover - in case of import issues during tests
-    ShimmerInterface = None  # type: ignore
-    WebcamInterface = None  # type: ignore
+    ShimmerInterface = None
+    WebcamInterface = None
 
 
 @dataclass
@@ -347,7 +347,7 @@ class GUIManager(QMainWindow):
             sig = getattr(self._network, "preview_frame", None)
             if sig is not None:
                 try:
-                    sig.connect(self._on_preview_frame)  # type: ignore[attr-defined]
+                    sig.connect(self._on_preview_frame)
                     connected = True
                 except Exception as exc:
                     self._log(f"Direct preview_frame connect failed: {exc}")
@@ -357,7 +357,7 @@ class GUIManager(QMainWindow):
                             lambda dev, data, ts: self._on_preview_frame(
                                 str(dev), bytes(data), int(ts)
                             )
-                        )  # type: ignore[attr-defined]
+                        )
                         connected = True
                     except Exception as exc:
                         self._log(f"Lambda preview_frame connect failed: {exc}")
@@ -519,12 +519,12 @@ class GUIManager(QMainWindow):
                 meta_path = os.path.join(sess_dir, "session_metadata.json")
                 offsets = {}
                 try:
-                    offsets = self._network.get_clock_offsets()  # type: ignore[attr-defined]
+                    offsets = self._network.get_clock_offsets()
                 except Exception:
                     offsets = {}
                 stats = {}
                 try:
-                    stats = self._network.get_clock_sync_stats()  # type: ignore[attr-defined]
+                    stats = self._network.get_clock_sync_stats()
                 except Exception:
                     stats = {}
                 meta = {

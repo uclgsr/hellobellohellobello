@@ -34,7 +34,7 @@ try:
     from ..config import get as cfg_get
 except Exception:
 
-    def cfg_get(key: str, default=None):  # type: ignore
+    def cfg_get(key: str, default=None):
         return default
 
 
@@ -118,8 +118,8 @@ class LSLOutletManager:
 
             # Add channel metadata
             channels = info.desc().append_child("channels")
-            for i, (name, unit) in enumerate(
-                zip(config.channel_names, config.channel_units, strict=False)
+            for _, (name, unit) in enumerate(
+                zip(config.channel_names, config.channel_units, strict=True)
             ):
                 ch = channels.append_child("channel")
                 ch.append_child_value("label", name)

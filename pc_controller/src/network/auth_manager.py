@@ -23,7 +23,7 @@ try:
     from ..config import get as cfg_get
 except Exception:
 
-    def cfg_get(key: str, default=None):  # type: ignore
+    def cfg_get(key: str, default=None):
         return default
 
 

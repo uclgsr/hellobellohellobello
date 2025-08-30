@@ -35,7 +35,7 @@ except ImportError:
             from pc_controller.src.config import get as cfg_get
         except ImportError:
             # Ultimate fallback - create a no-op config function
-            def cfg_get(key: str, default=None):  # type: ignore
+            def cfg_get(key: str, default=None):
                 """Fallback config function when config module unavailable."""
                 return default
 

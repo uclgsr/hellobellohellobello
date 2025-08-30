@@ -219,20 +219,17 @@ class SystemHealthChecker(QObject if HAS_QT else object):
 
         # Get network interfaces
         interfaces = psutil.net_if_addrs()
-        active_interfaces = []
-
-        for interface_name, addresses in interfaces.items():
-            if interface_name.startswith('lo'):  # Skip loopback
-                continue
-
-            # Check if interface has an IP address
-            for addr in addresses:
-                if addr.family == socket.AF_INET:  # IPv4
-                    active_interfaces.append({
-                        "name": interface_name,
-                        "ip": addr.address,
-                        "netmask": addr.netmask
-                    })
+        active_interfaces = [
+            {
+                "name": interface_name,
+                "ip": addr.address,
+                "netmask": addr.netmask
+            }
+            for interface_name, addresses in interfaces.items()
+            if not interface_name.startswith('lo')  # Skip loopback
+            for addr in addresses
+            if addr.family == socket.AF_INET  # IPv4
+        ]
 
         details["active_interfaces"] = active_interfaces
 

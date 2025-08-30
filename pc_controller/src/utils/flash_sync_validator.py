@@ -184,7 +184,7 @@ class FlashSyncValidator(QObject if HAS_QT else object):
             # Wait for all responses
             responses = await asyncio.gather(*tasks, return_exceptions=True)
 
-            for device_id, response in zip(devices, responses):
+            for device_id, response in zip(devices, responses, strict=True):
                 if isinstance(response, Exception):
                     print(f"Flash command failed for device {device_id}: {response}")
                     device_responses[device_id] = None
@@ -284,6 +284,8 @@ class FlashSyncValidator(QObject if HAS_QT else object):
             results['avg_deviation_ms'] = sum(deviations) / len(deviations)
 
         return results
+
+    def _analyze_sync_results(self, devices: list[str], flash_events: list[FlashEvent]) -> SyncValidationResult:
         """
         Analyze flash sync test results and generate validation report.
 
@@ -310,7 +312,7 @@ class FlashSyncValidator(QObject if HAS_QT else object):
         max_deviation = 0.0
 
         for event in flash_events:
-            for device_id, accuracy in event.sync_accuracy_ms.items():
+            for accuracy in event.sync_accuracy_ms.values():
                 if accuracy != float('inf'):
                     all_accuracies.append(accuracy)
                     max_deviation = max(max_deviation, accuracy)
@@ -526,7 +528,7 @@ class VideoBasedFlashDetector:
         if len(brightness_history) < 10:
             return []
 
-        times, brightness_values = zip(*brightness_history)
+        times, brightness_values = zip(*brightness_history, strict=True)
         brightness_array = np.array(brightness_values)
 
         # Calculate moving average for baseline

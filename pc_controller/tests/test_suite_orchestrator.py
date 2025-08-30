@@ -13,7 +13,7 @@ import subprocess
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 
 @dataclass
@@ -52,7 +52,7 @@ class SuiteExecutionReport:
 class SuiteOrganizer:
     """Organizes and categorizes tests for execution."""
 
-    TEST_CATEGORIES = {
+    TEST_CATEGORIES: ClassVar[dict[str, dict[str, Any]]] = {
         "unit": {
             "description": "Unit tests for individual components",
             "markers": [],

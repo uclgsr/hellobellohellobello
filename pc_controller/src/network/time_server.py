@@ -16,7 +16,7 @@ try:
     from ..config import get as cfg_get
 except Exception:  # pragma: no cover - optional import safety
 
-    def cfg_get(key: str, default=None):  # type: ignore
+    def cfg_get(key: str, default=None):
         return default
 
 
@@ -87,7 +87,7 @@ class TimeSyncServer:
             except Exception:
                 pass
         self._transport = transport
-        self._protocol = protocol  # type: ignore[assignment]
+        self._protocol = protocol[assignment]
 
     async def stop(self) -> None:
         if self._transport is not None:

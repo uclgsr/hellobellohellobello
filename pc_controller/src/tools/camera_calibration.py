@@ -19,11 +19,11 @@ from typing import Any
 import numpy as np
 
 try:
-    import cv2  # type: ignore
+    import cv2
 
     CV2_AVAILABLE = True
 except Exception:
-    cv2 = None  # type: ignore
+    cv2 = None
     CV2_AVAILABLE = False
 
 

@@ -142,7 +142,7 @@ class TestCalibrationWorkflow:
             else:
                 raise
         except Exception as e:
-            raise AssertionError(f"Unexpected error importing CalibrationDialog: {e}")
+            raise AssertionError(f"Unexpected error importing CalibrationDialog: {e}") from e
 
     def test_calibration_parameters_defaults(self):
         """Test that calibration has sensible default parameters."""

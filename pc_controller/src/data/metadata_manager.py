@@ -161,7 +161,10 @@ class SessionMetadataManager:
         if session_id not in self._sessions:
             return False
 
-        self._sessions[session_id].devices.append(device_info)
+        session = self._sessions[session_id]
+        if session.devices is None:
+            session.devices = []
+        session.devices.append(device_info)
         return True
 
     def add_sensor_config(self, session_id: str, sensor_config: SensorConfig) -> bool:
@@ -177,7 +180,10 @@ class SessionMetadataManager:
         if session_id not in self._sessions:
             return False
 
-        self._sessions[session_id].sensor_configs.append(sensor_config)
+        session = self._sessions[session_id]
+        if session.sensor_configs is None:
+            session.sensor_configs = []
+        session.sensor_configs.append(sensor_config)
         return True
 
     def update_time_sync_info(
@@ -197,7 +203,11 @@ class SessionMetadataManager:
         if session_id not in self._sessions:
             return False
 
-        for device in self._sessions[session_id].devices:
+        session = self._sessions[session_id]
+        if session.devices is None:
+            return False
+
+        for device in session.devices:
             if device.device_id == device_id:
                 device.time_offset_ns = offset_ns
                 device.sync_quality = quality
@@ -296,17 +306,8 @@ class SessionMetadataManager:
                 data = json.load(f)
 
             # Convert back to dataclasses
-            devices = []
-            if "devices" in data:
-                for device_data in data["devices"]:
-                    devices.append(DeviceInfo(**device_data))
-            data["devices"] = devices
-
-            sensor_configs = []
-            if "sensor_configs" in data:
-                for config_data in data["sensor_configs"]:
-                    sensor_configs.append(SensorConfig(**config_data))
-            data["sensor_configs"] = sensor_configs
+            data["devices"] = [DeviceInfo(**device_data) for device_data in data.get("devices", [])]
+            data["sensor_configs"] = [SensorConfig(**config_data) for config_data in data.get("sensor_configs", [])]
 
             metadata = SessionMetadata(**data)
             self._sessions[session_id] = metadata
