@@ -70,11 +70,13 @@
         app:layout_constraintEnd_toStartOf="@id/iv_image"
         app:layout_constraintTop_toTopOf="@+id/tv_device_state" />
 
-    <com.topdon.lib.ui.widget.BatteryView
+    <!-- Enhanced battery indicator using standard Android views -->
+    <View
         android:id="@+id/battery_view"
-        android:layout_width="wrap_content"
-        android:layout_height="12sp"
+        android:layout_width="16dp"
+        android:layout_height="8dp"
         android:layout_marginEnd="4dp"
+        android:background="@drawable/thermal_battery_indicator"
         app:layout_constraintEnd_toStartOf="@id/tv_battery"
         app:layout_constraintTop_toTopOf="@id/tv_battery"
         app:layout_constraintBottom_toBottomOf="@id/tv_battery" />

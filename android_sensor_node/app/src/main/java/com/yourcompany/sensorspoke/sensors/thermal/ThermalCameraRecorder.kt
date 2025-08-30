@@ -4,6 +4,9 @@ import android.graphics.Bitmap
 import android.content.Context
 import android.util.Log
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001Connector
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DataManager
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationManager
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.io.BufferedWriter
@@ -39,6 +42,10 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
     
     // Real Topdon integration
     private var topdonIntegration: TopdonThermalIntegration? = null
+    
+    // Enhanced TC001 integration manager for comprehensive integration
+    private var tc001IntegrationManager: TC001IntegrationManager? = null
+    
     private var frameCount = 0
     private val dateFormatter = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
     
@@ -73,9 +80,24 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     thermalImagesDir!!.mkdirs()
                 }
                 
-                // Initialize new Topdon thermal integration
+                // Initialize enhanced Topdon thermal integration with TC001 connector support
                 topdonIntegration = TopdonThermalIntegration(context)
                 val initResult = topdonIntegration!!.initialize()
+                
+                // Initialize comprehensive TC001 integration manager
+                tc001IntegrationManager = TC001IntegrationManager(context)
+                val tc001InitResult = tc001IntegrationManager!!.initializeSystem()
+                
+                if (tc001InitResult) {
+                    Log.i(TAG, "TC001 integration manager initialized successfully")
+                    // Start the TC001 system
+                    val startResult = tc001IntegrationManager!!.startSystem()
+                    if (startResult) {
+                        Log.i(TAG, "TC001 system started and ready for recording")
+                    }
+                } else {
+                    Log.w(TAG, "TC001 integration manager initialization failed, using fallback")
+                }
                 
                 if (initResult == TopdonResult.SUCCESS) {
                     // Scan for available devices
@@ -249,14 +271,26 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
     suspend fun generatePreview(): Bitmap? {
         return withContext(Dispatchers.Default) {
             try {
-                // Get latest thermal frame from integration
+                // First try to get preview from TC001 integration manager
+                val tc001DataManager = tc001IntegrationManager?.getDataManager()
+                if (tc001DataManager != null) {
+                    val liveData = tc001DataManager.thermalBitmap
+                    val latestFrame = liveData.value
+                    
+                    if (latestFrame != null) {
+                        Log.d(TAG, "Using TC001 integration manager thermal preview")
+                        return@withContext latestFrame
+                    }
+                }
+                
+                // Fallback to original topdon integration
                 val integration = topdonIntegration
                 if (integration == null) {
-                    Log.w(TAG, "Topdon integration not available for preview")
+                    Log.w(TAG, "No thermal integration available for preview")
                     return@withContext generateFallbackPreview()
                 }
                 
-                // Use the latest thermal frame bitmap
+                // Use the latest thermal frame bitmap from original integration
                 val liveData = integration.thermalFrame
                 val latestFrame = liveData.value
                 
@@ -315,11 +349,15 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 // Ensure recording is stopped
                 stopRecording()
                 
+                // Disconnect and cleanup TC001 integration manager
+                tc001IntegrationManager?.cleanup()
+                tc001IntegrationManager = null
+                
                 // Disconnect thermal camera
                 topdonIntegration?.disconnect()
                 topdonIntegration = null
                 
-                Log.i(TAG, "Thermal camera recorder cleanup completed")
+                Log.i(TAG, "Enhanced thermal camera recorder cleanup completed")
                 true
                 
             } catch (e: Exception) {

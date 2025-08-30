@@ -281,8 +281,8 @@ class ShimmerBluetoothDevice(
                 try {
                     // Generate realistic GSR and PPG data
                     val timestamp = System.nanoTime()
-                    val gsrRaw = (2048 + (Math.sin(sampleCount * 0.01) * 200 + Random.nextGaussian() * 50)).toInt().coerceIn(0, 4095)
-                    val ppgRaw = (2000 + (Math.sin(sampleCount * 0.1) * 500 + Random.nextGaussian() * 100)).toInt().coerceIn(0, 4095)
+                    val gsrRaw = (2048 + (Math.sin(sampleCount * 0.01) * 200 + Random.nextDouble(-50.0, 50.0))).toInt().coerceIn(0, 4095)
+                    val ppgRaw = (2000 + (Math.sin(sampleCount * 0.1) * 500 + Random.nextDouble(-100.0, 100.0))).toInt().coerceIn(0, 4095)
                     
                     // Create ObjectCluster with realistic data
                     val objectCluster = ObjectCluster()
@@ -290,7 +290,7 @@ class ShimmerBluetoothDevice(
                     objectCluster.addData("GSR", "CAL", convertGSRToMicrosiemens(gsrRaw), gsrRaw)
                     objectCluster.addData("PPG", "RAW", ppgRaw.toDouble(), ppgRaw)
                     objectCluster.addData("PPG", "CAL", ppgRaw.toDouble(), ppgRaw)
-                    objectCluster.addData("Timestamp", "CAL", timestamp.toDouble(), timestamp.toLong())
+                    objectCluster.addData("Timestamp", "CAL", timestamp.toDouble(), timestamp.toInt())
                     
                     // Deliver data to callback
                     dataCallback?.invoke(objectCluster)

@@ -33,6 +33,10 @@ class TC001DataManager(private val context: Context) {
     private val _temperatureData = MutableLiveData<TC001TemperatureData>()
     val temperatureData: LiveData<TC001TemperatureData> = _temperatureData
 
+    // Enhanced thermal bitmap output
+    private val _thermalBitmap = MutableLiveData<android.graphics.Bitmap>()
+    val thermalBitmap: LiveData<android.graphics.Bitmap> = _thermalBitmap
+
     // Processing parameters
     private val _currentPalette = MutableLiveData<TopdonThermalPalette>(TopdonThermalPalette.IRON)
     val currentPalette: LiveData<TopdonThermalPalette> = _currentPalette
@@ -90,6 +94,10 @@ class TC001DataManager(private val context: Context) {
                 // Generate processed image with current palette
                 val processedImg = applyThermalPalette(thermalData, _currentPalette.value!!)
                 _processedImage.postValue(processedImg)
+                
+                // Generate thermal bitmap for UI display
+                val thermalBitmap = generateThermalBitmap(processedImg)
+                _thermalBitmap.postValue(thermalBitmap)
                 
                 delay(33) // ~30 FPS
             } catch (e: Exception) {
@@ -243,6 +251,27 @@ class TC001DataManager(private val context: Context) {
             ((g1 + m) * 255).toInt(),
             ((b1 + m) * 255).toInt()
         )
+    }
+
+    /**
+     * Generate thermal bitmap from processed RGB data
+     */
+    private fun generateThermalBitmap(processedRgbData: ByteArray): android.graphics.Bitmap {
+        val bitmap = android.graphics.Bitmap.createBitmap(256, 192, android.graphics.Bitmap.Config.ARGB_8888)
+        
+        var pixelIndex = 0
+        for (y in 0 until 192) {
+            for (x in 0 until 256) {
+                val r = processedRgbData[pixelIndex++].toInt() and 0xFF
+                val g = processedRgbData[pixelIndex++].toInt() and 0xFF
+                val b = processedRgbData[pixelIndex++].toInt() and 0xFF
+                
+                val color = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+                bitmap.setPixel(x, y, color)
+            }
+        }
+        
+        return bitmap
     }
 
     /**

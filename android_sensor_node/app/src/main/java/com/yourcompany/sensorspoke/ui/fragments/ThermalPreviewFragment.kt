@@ -9,12 +9,17 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.ScrollView
+import android.widget.LinearLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.ui.components.ThermalControlsView
+import com.yourcompany.sensorspoke.ui.components.TC001SystemStatusView
 import com.yourcompany.sensorspoke.ui.navigation.ThermalNavigationState
 import com.yourcompany.sensorspoke.sensors.thermal.TopdonThermalPalette
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationManager
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationState
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001TemperatureData
 import kotlinx.coroutines.launch
 
 /**
@@ -35,10 +40,130 @@ class ThermalPreviewFragment : Fragment() {
     private var controlsScrollView: ScrollView? = null
     private var thermalControlsView: ThermalControlsView? = null
 
+    // Enhanced system status monitoring
+    private var tc001SystemStatusView: TC001SystemStatusView? = null
+
+    // Enhanced TC001 integration with comprehensive manager
+    private var tc001IntegrationManager: TC001IntegrationManager? = null
+
     private var frameCount = 0
     private var currentNavigationState = ThermalNavigationState.PREVIEW
     private var currentPalette = TopdonThermalPalette.IRON
     private var isControlsVisible = false
+
+    /**
+     * Setup TC001 system status view for comprehensive monitoring
+     */
+    private fun setupTC001SystemStatusView(view: View) {
+        tc001SystemStatusView = TC001SystemStatusView(requireContext())
+        
+        // Add to controls scroll view if available, otherwise create container
+        controlsScrollView?.let { scrollView ->
+            (scrollView.getChildAt(0) as? LinearLayout)?.addView(tc001SystemStatusView, 0)
+        } ?: run {
+            // Add to main container if scroll view not available
+            (view as? ViewGroup)?.addView(tc001SystemStatusView)
+        }
+        
+        // Initialize with default status
+        tc001SystemStatusView?.updateSystemStatus(
+            TC001IntegrationState.UNINITIALIZED, 
+            "System Initializing"
+        )
+        tc001SystemStatusView?.updateConnectionStatus(false)
+        tc001SystemStatusView?.updateDataProcessingStatus(false)
+        tc001SystemStatusView?.updateTemperatureStatus(null)
+    }
+
+    /**
+     * Initialize TC001 integration components for enhanced thermal functionality
+     */
+    private fun initializeTC001Integration() {
+        requireContext().let { context ->
+            // Initialize comprehensive TC001 integration manager
+            tc001IntegrationManager = TC001IntegrationManager(context)
+            
+            lifecycleScope.launch {
+                val initResult = tc001IntegrationManager!!.initializeSystem()
+                if (initResult) {
+                    setupTC001Observers()
+                    statusText?.text = "TC001 System Initialized"
+                    
+                    // Start the TC001 system
+                    val startResult = tc001IntegrationManager!!.startSystem()
+                    if (startResult) {
+                        statusText?.text = "TC001 System Running"
+                    }
+                } else {
+                    statusText?.text = "TC001 System Error"
+                }
+            }
+        }
+    }
+    
+    /**
+     * Setup TC001 system observers
+     */
+    private fun setupTC001Observers() {
+        tc001IntegrationManager?.let { manager ->
+            // Observe integration state
+            manager.integrationState.observe(viewLifecycleOwner) { state ->
+                updateTC001IntegrationStatus(state)
+            }
+            
+            // Observe system status
+            manager.systemStatus.observe(viewLifecycleOwner) { status ->
+                statusText?.text = status
+            }
+            
+            // Setup component-specific observers
+            manager.getDataManager()?.let { dataManager ->
+                dataManager.thermalBitmap.observe(viewLifecycleOwner) { bitmap ->
+                    bitmap?.let {
+                        thermalImageView?.setImageBitmap(it)
+                    }
+                }
+                
+                dataManager.temperatureData.observe(viewLifecycleOwner) { tempData ->
+                    tempData?.let {
+                        updateTemperatureDisplay(it)
+                        // Update system status view with temperature
+                        tc001SystemStatusView?.updateTemperatureStatus(it.centerTemperature)
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Update TC001 integration status
+     */
+    private fun updateTC001IntegrationStatus(state: TC001IntegrationState) {
+        val statusMessage = when (state) {
+            TC001IntegrationState.UNINITIALIZED -> "TC001 Uninitialized"
+            TC001IntegrationState.INITIALIZING -> "TC001 Initializing..."
+            TC001IntegrationState.INITIALIZED -> "TC001 Initialized"
+            TC001IntegrationState.STARTING -> "TC001 Starting..."
+            TC001IntegrationState.RUNNING -> "TC001 Running"
+            TC001IntegrationState.STOPPING -> "TC001 Stopping..."
+            TC001IntegrationState.CONNECTION_FAILED -> "TC001 Connection Failed"
+            TC001IntegrationState.ERROR -> "TC001 Error"
+        }
+        
+        statusText?.text = statusMessage
+        
+        // Update thermal controls based on integration state
+        val isReady = tc001IntegrationManager?.isSystemReady() ?: false
+        thermalControlsView?.updateDeviceStatus(statusMessage, isReady)
+    }
+    
+    /**
+     * Update temperature display from TC001 data
+     */
+    private fun updateTemperatureDisplay(tempData: TC001TemperatureData) {
+        thermalControlsView?.updateCurrentTemperature(tempData.centerTemperature)
+        temperatureRangeText?.text = "Range: ${String.format("%.1f", tempData.minTemperature)}°C - ${String.format("%.1f", tempData.maxTemperature)}°C"
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -62,6 +187,12 @@ class ThermalPreviewFragment : Fragment() {
         
         // Setup enhanced thermal controls
         setupThermalControls(view)
+        
+        // Initialize TC001 system status view
+        setupTC001SystemStatusView(view)
+        
+        // Initialize TC001 integration components
+        initializeTC001Integration()
         
         // Setup gesture handling for controls toggle
         setupGestureHandling()
@@ -112,27 +243,37 @@ class ThermalPreviewFragment : Fragment() {
     private fun setupThermalControls(view: View) {
         thermalControlsView = ThermalControlsView(requireContext())
         
-        // Setup control callbacks inspired by IRCamera
+        // Setup control callbacks inspired by IRCamera with TC001 integration
         thermalControlsView?.apply {
             onPaletteChanged = { palette ->
                 currentPalette = palette
                 updateThermalPalette(palette)
+                // Update TC001 data manager via integration manager
+                tc001IntegrationManager?.getDataManager()?.updatePalette(palette)
             }
             
             onEmissivityChanged = { emissivity ->
                 updateEmissivity(emissivity)
+                // Update TC001 data manager via integration manager
+                tc001IntegrationManager?.getDataManager()?.updateEmissivity(emissivity)
             }
             
             onTemperatureRangeChanged = { minTemp, maxTemp ->
                 updateTemperatureRange(minTemp, maxTemp)
+                // Update TC001 data manager via integration manager
+                tc001IntegrationManager?.getDataManager()?.updateTemperatureRange(minTemp, maxTemp)
             }
             
             onAutoGainToggled = { enabled ->
                 updateAutoGain(enabled)
+                // Update TC001 UI controller via integration manager
+                tc001IntegrationManager?.getUIController()?.onAutoGainToggled(enabled)
             }
             
             onTemperatureCompensationToggled = { enabled ->
                 updateTemperatureCompensation(enabled)
+                // Update TC001 UI controller via integration manager
+                tc001IntegrationManager?.getUIController()?.onTemperatureCompensationToggled(enabled)
             }
         }
         
@@ -317,5 +458,11 @@ class ThermalPreviewFragment : Fragment() {
         fun newInstance(): ThermalPreviewFragment {
             return ThermalPreviewFragment()
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Clean up TC001 integration manager
+        tc001IntegrationManager?.cleanup()
     }
 }

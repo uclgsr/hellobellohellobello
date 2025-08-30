@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -141,6 +142,9 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize status
         updateStatusText("Initializing...")
+
+        // Initialize TC001 thermal camera system
+        initializeTC001System()
 
         // Ensure background service for NSD + TCP server is running (skip during unit tests)
         if (!isRunningUnderTest()) {
@@ -379,6 +383,41 @@ class MainActivity : AppCompatActivity() {
             true
         } catch (_: Throwable) {
             false
+        }
+    }
+
+    /**
+     * Navigate to thermal camera preview - Enhanced integration method
+     */
+    fun navigateToThermalPreview() {
+        // Use NavigationController to navigate to thermal camera
+        navigationController?.navigateToThermalCamera(ThermalNavigationState.PREVIEW)
+    }
+
+    /**
+     * Navigate to thermal camera settings
+     */
+    fun navigateToThermalSettings() {
+        navigationController?.navigateToThermalCamera(ThermalNavigationState.SETTINGS)
+    }
+
+    /**
+     * Initialize TC001 thermal camera system
+     */
+    private fun initializeTC001System() {
+        try {
+            // Initialize TC001 logging
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initLog()
+            
+            // Initialize TC001 USB receivers
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initReceiver(this)
+            
+            // Initialize TC001 device manager
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initTC001DeviceManager(this)
+            
+            Log.i("MainActivity", "TC001 thermal camera system initialized successfully")
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to initialize TC001 system", e)
         }
     }
 }

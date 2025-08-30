@@ -151,6 +151,17 @@ class TC001UIController : ViewModel() {
             Log.i(TAG, "Refreshing device states")
         }
     }
+
+    /**
+     * Update device connection status
+     */
+    fun updateDeviceConnection(isConnected: Boolean) {
+        viewModelScope.launch {
+            _hasConnectLine.value = isConnected
+            _deviceConnectionStatus.value = if (isConnected) "online" else "offline"
+            Log.i(TAG, "Device connection updated: $isConnected")
+        }
+    }
 }
 
 /**

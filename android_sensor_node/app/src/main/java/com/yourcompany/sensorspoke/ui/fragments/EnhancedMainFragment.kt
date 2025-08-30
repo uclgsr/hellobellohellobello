@@ -19,10 +19,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001ConnectType
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001UIController
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001Connector
+import com.yourcompany.sensorspoke.ui.MainActivity
 import com.yourcompany.sensorspoke.ui.popup.DelPopup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.util.Log
 
 /**
  * Enhanced MainFragment with IRCamera-style device management
@@ -121,10 +125,14 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
     private fun handleDeviceConnection(type: TC001ConnectType) {
         when (type) {
             TC001ConnectType.LINE -> {
-                // Navigate to thermal camera interface
+                // Navigate to thermal camera interface and initiate TC001 connection
                 CoroutineScope(Dispatchers.Main).launch {
                     // Start thermal preview for TC001
                     (activity as? MainActivity)?.navigateToThermalPreview()
+                    
+                    // Update UI to show connection attempt
+                    uiController.updateConnectionStatus(true)
+                    Log.i("EnhancedMainFragment", "Navigating to thermal preview and updating connection status")
                 }
             }
             TC001ConnectType.WIFI -> {
@@ -167,6 +175,26 @@ class EnhancedMainFragment : Fragment(), View.OnClickListener {
                 // Navigate to device connection screen
                 // For now, simulate device addition
                 uiController.updateConnectionStatus(true)
+            }
+        }
+    }
+
+    /**
+     * Initialize TC001 connection when device is selected
+     * (Now simplified since ThermalPreviewFragment handles full integration)
+     */
+    private fun initializeTC001Connection() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Log.i("EnhancedMainFragment", "TC001 connection handling delegated to ThermalPreviewFragment")
+                withContext(Dispatchers.Main) {
+                    uiController.updateConnectionStatus(true)
+                }
+            } catch (e: Exception) {
+                Log.e("EnhancedMainFragment", "Error during TC001 connection delegation", e)
+                withContext(Dispatchers.Main) {
+                    uiController.updateConnectionStatus(false)
+                }
             }
         }
     }
