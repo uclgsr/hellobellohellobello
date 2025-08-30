@@ -35,16 +35,15 @@ Options:
 """
 
 import argparse
+import concurrent.futures
 import json
+import multiprocessing
+import os
 import subprocess
 import sys
 import time
-import multiprocessing
-import concurrent.futures
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-import os
 
 
 @dataclass
@@ -55,7 +54,7 @@ class TestResult:
     duration: float
     output: str = ""
     error: str = ""
-    coverage: Optional[float] = None
+    coverage: float | None = None
 
 
 class TestOrchestrator:
@@ -63,7 +62,7 @@ class TestOrchestrator:
 
     def __init__(self, args: argparse.Namespace):
         self.args = args
-        self.results: List[TestResult] = []
+        self.results: list[TestResult] = []
         self.start_time = time.time()
 
         # Paths
@@ -74,7 +73,7 @@ class TestOrchestrator:
         # Report directory
         self.report_dir = Path(".test_reports")
         self.report_dir.mkdir(exist_ok=True)
-        
+
         # Performance: Configure parallel execution
         self.max_workers = getattr(args, 'jobs', None) or multiprocessing.cpu_count()
         if args.ci:
@@ -87,7 +86,7 @@ class TestOrchestrator:
         prefix = "🔍" if level == "INFO" else "✅" if level == "SUCCESS" else "❌" if level == "ERROR" else "⚠️"
         print(f"[{timestamp}] {prefix} {message}")
 
-    def run_command(self, cmd: List[str], name: str, cwd: Optional[Path] = None,
+    def run_command(self, cmd: list[str], name: str, cwd: Path | None = None,
                    timeout: int = 300) -> TestResult:
         """Run a command and capture results."""
         self.log(f"Running {name}...")
@@ -141,22 +140,22 @@ class TestOrchestrator:
             self.log(f"{name} failed with exception: {e}", "ERROR")
             return TestResult(name, False, duration, error=str(e))
 
-    def run_commands_parallel(self, commands: List[Tuple[List[str], str]], max_workers: Optional[int] = None) -> List[TestResult]:
+    def run_commands_parallel(self, commands: list[tuple[list[str], str]], max_workers: int | None = None) -> list[TestResult]:
         """Run multiple commands in parallel for better performance."""
         if not self.use_parallel or len(commands) == 1:
             # Fall back to sequential execution
             return [self.run_command(cmd, name) for cmd, name in commands]
-        
+
         max_workers = max_workers or self.max_workers
         results = []
-        
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all commands
             future_to_command = {
                 executor.submit(self.run_command, cmd, name): (cmd, name)
                 for cmd, name in commands
             }
-            
+
             # Collect results as they complete
             for future in concurrent.futures.as_completed(future_to_command):
                 try:
@@ -166,7 +165,7 @@ class TestOrchestrator:
                     cmd, name = future_to_command[future]
                     self.log(f"Parallel execution failed for {name}: {e}", "ERROR")
                     results.append(TestResult(name, False, 0, error=str(e)))
-        
+
         return results
 
     def run_code_quality_checks(self) -> None:
@@ -444,7 +443,7 @@ def main() -> int:
                        help="Run tests in parallel (default: enabled)")
     parser.add_argument("--no-parallel", dest="parallel", action="store_false",
                        help="Disable parallel execution")
-    parser.add_argument("--jobs", "-j", type=int, 
+    parser.add_argument("--jobs", "-j", type=int,
                        default=multiprocessing.cpu_count(),
                        help="Number of parallel jobs (default: CPU count)")
 

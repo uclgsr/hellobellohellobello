@@ -206,7 +206,7 @@ def smooth_gsr(series: Series, cutoff_hz: float | None, window_sec: float | None
     if window_sec is None:
         return series
     fs = _estimate_sample_rate(t_s)
-    win = max(1, int(round(fs * float(window_sec))))
+    win = max(1, round(fs * float(window_sec)))
     if win <= 1 or win >= len(y):
         return series
     acc: list[float] = []

@@ -6,9 +6,8 @@ This script generates Mermaid diagrams for architectural and process visualizati
 as requested by the user. It creates .md files that can be rendered as diagrams.
 """
 
-import os
 from pathlib import Path
-from datetime import datetime
+
 
 def ensure_directory_exists(path):
     """Create directory if it doesn't exist."""
@@ -615,10 +614,10 @@ def main():
     print("\n📋 Generating index documentation...")
     generate_mermaid_index()
 
-    print(f"\n✅ Mermaid diagram generation complete!")
-    print(f"   📍 Location: docs/diagrams/mermaid/")
-    print(f"   🔗 View online: https://mermaid.live/")
-    print(f"   📖 Integration guide: docs/diagrams/mermaid/README.md")
+    print("\n✅ Mermaid diagram generation complete!")
+    print("   📍 Location: docs/diagrams/mermaid/")
+    print("   🔗 View online: https://mermaid.live/")
+    print("   📖 Integration guide: docs/diagrams/mermaid/README.md")
 
 if __name__ == "__main__":
     main()

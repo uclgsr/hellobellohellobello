@@ -20,11 +20,10 @@ Options:
 """
 
 import argparse
+import shutil
 import subprocess
 import sys
-import shutil
 from pathlib import Path
-from typing import List, Optional
 
 
 class DevSetup:
@@ -43,7 +42,7 @@ class DevSetup:
         """Check if a command is available."""
         return shutil.which(cmd) is not None
 
-    def run_command(self, cmd: List[str], name: str, cwd: Optional[Path] = None) -> bool:
+    def run_command(self, cmd: list[str], name: str, cwd: Path | None = None) -> bool:
         """Run a command and return success status."""
         try:
             self.log(f"Running {name}...")

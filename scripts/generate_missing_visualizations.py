@@ -7,13 +7,10 @@ thesis plan outlined in the issue requirements. It ensures all Chapter 1-6 visua
 are complete and accessible.
 """
 
-import json
-import os
 from pathlib import Path
-import matplotlib.pyplot as plt
+
 import matplotlib.patches as mpatches
-import numpy as np
-import seaborn as sns
+import matplotlib.pyplot as plt
 
 # Set up matplotlib for publication quality
 plt.style.use('seaborn-v0_8')
@@ -336,9 +333,9 @@ def validate_evidence_completeness(evidence_dir):
                 all_present = False
 
     if all_present:
-        print(f"\n🎉 All required evidence files are present!")
+        print("\n🎉 All required evidence files are present!")
     else:
-        print(f"\n⚠️  Some evidence files are missing but may be generated/simulated.")
+        print("\n⚠️  Some evidence files are missing but may be generated/simulated.")
 
     return all_present
 
@@ -380,7 +377,7 @@ def main():
         print("\n" + "="*60)
         print("🎉 Missing visualization generation completed successfully!")
 
-        print(f"\nGenerated visualization files:")
+        print("\nGenerated visualization files:")
         for chapter, chapter_dir in chapter_dirs.items():
             if list(chapter_dir.glob("*.png")):
                 print(f"\n{chapter.replace('chapter', 'Chapter ').replace('_', ' ').title()}:")

@@ -25,7 +25,7 @@ import cv2
 import numpy as np
 
 try:
-    from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+    from PyQt6.QtCore import QObject, pyqtSignal
     HAS_QT = True
 except ImportError:
     HAS_QT = False

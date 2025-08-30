@@ -4,10 +4,8 @@ Configuration validation script for the Multi-Modal Physiological Sensing Platfo
 This script validates project configuration files for consistency and correctness.
 """
 
-import json
 import sys
 from pathlib import Path
-from typing import List, Dict, Any
 
 try:
     import tomllib  # Python 3.11+
@@ -15,7 +13,7 @@ except ImportError:
     import tomli as tomllib  # Fallback for older Python
 
 
-def validate_pyproject_toml() -> List[str]:
+def validate_pyproject_toml() -> list[str]:
     """Validate pyproject.toml for consistency and required sections."""
     errors = []
 
@@ -66,7 +64,7 @@ def validate_pyproject_toml() -> List[str]:
     return errors
 
 
-def validate_pytest_ini() -> List[str]:
+def validate_pytest_ini() -> list[str]:
     """Validate pytest.ini configuration."""
     errors = []
 
@@ -94,14 +92,14 @@ def validate_pytest_ini() -> List[str]:
     return errors
 
 
-def validate_pre_commit_config() -> List[str]:
+def validate_pre_commit_config() -> list[str]:
     """Validate .pre-commit-config.yaml."""
     errors = []
 
     try:
         import yaml
 
-        with open(".pre-commit-config.yaml", "r") as f:
+        with open(".pre-commit-config.yaml") as f:
             config = yaml.safe_load(f)
 
         # Check for repos
@@ -125,7 +123,7 @@ def validate_pre_commit_config() -> List[str]:
     return errors
 
 
-def validate_requirements_consistency() -> List[str]:
+def validate_requirements_consistency() -> list[str]:
     """Validate that requirements.txt is consistent with pyproject.toml."""
     errors = []
 
@@ -172,11 +170,11 @@ def validate_requirements_consistency() -> List[str]:
 def main() -> int:
     """Main validation function."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Validate project configuration files")
     parser.add_argument("--fast", action="store_true", help="Run only essential validations")
     args = parser.parse_args()
-    
+
     print("🔍 Validating project configuration files...")
 
     all_errors = []

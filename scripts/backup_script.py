@@ -39,7 +39,7 @@ def copy_tree(src: Path, dst: Path) -> None:
             try:
                 shutil.copy2(s, d)
                 logging.info("Copied: %s -> %s", s, d)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logging.error("Failed to copy %s: %s", s, exc)
 
 

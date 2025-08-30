@@ -6,9 +6,8 @@ This script validates that all requirements from the "Missing visualisation" iss
 have been properly implemented and are accessible in the repository.
 """
 
-import json
 from pathlib import Path
-import sys
+
 
 def check_chapter_visualizations():
     """Check if all required chapter visualizations exist."""
@@ -62,7 +61,7 @@ def check_chapter_visualizations():
 
     all_complete = True
 
-    for chapter, requirements in required_visualizations.items():
+    for chapter in required_visualizations.keys():
         chapter_num = chapter.split()[1]
         print(f"\n{chapter}:")
 
@@ -82,9 +81,9 @@ def check_chapter_visualizations():
             chapter_dir = thesis_viz_dir / "chapter6_conclusions"
 
         if chapter_dir.exists():
-            print(f"  ✅ Documentation directory exists")
+            print("  ✅ Documentation directory exists")
         else:
-            print(f"  ❌ Documentation directory missing")
+            print("  ❌ Documentation directory missing")
             all_complete = False
 
         # Check generated images
@@ -130,11 +129,11 @@ def check_chapter_visualizations():
                     print(f"  ✅ {ch2_images} generated visualization(s) (found in chapter2 subdirs)")
                     total_viz = ch2_images
                 else:
-                    print(f"  ❌ No generated visualizations found")
+                    print("  ❌ No generated visualizations found")
             else:
-                print(f"  ❌ No generated visualizations found")
+                print("  ❌ No generated visualizations found")
         else:
-            print(f"  ⚠️  No generated images (documentation available)")
+            print("  ⚠️  No generated images (documentation available)")
 
     return all_complete
 
@@ -164,7 +163,7 @@ def check_evidence_files():
         ]
     }
 
-    print(f"\n📋 Chapter 5 Evidence Validation:")
+    print("\n📋 Chapter 5 Evidence Validation:")
     print("="*50)
 
     evidence_dir = Path(__file__).parent.parent / "docs" / "evidence"
@@ -203,7 +202,7 @@ def check_readme_completeness():
         'Repository validation checklist'
     ]
 
-    print(f"\n📖 README Validation:")
+    print("\n📖 README Validation:")
     print("="*50)
 
     base_dir = Path(__file__).parent.parent
@@ -225,7 +224,7 @@ def check_readme_completeness():
         print(f"   Size: {readme_size:,} bytes")
 
         # Check content completeness
-        with open(validation_readme_path, 'r') as f:
+        with open(validation_readme_path) as f:
             content = f.read().lower()
 
         print("\n   Content validation:")
@@ -243,7 +242,7 @@ def check_readme_completeness():
 def check_visualization_scripts():
     """Check if visualization generation scripts exist and work."""
 
-    print(f"\n🔧 Visualization Scripts Validation:")
+    print("\n🔧 Visualization Scripts Validation:")
     print("="*50)
 
     base_dir = Path(__file__).parent.parent
@@ -266,7 +265,7 @@ def check_visualization_scripts():
             if script_path.stat().st_size > 0:
                 print(f"   Size: {script_path.stat().st_size:,} bytes")
             else:
-                print(f"   ⚠️  Empty file")
+                print("   ⚠️  Empty file")
         else:
             print(f"❌ {script}")
             all_scripts_present = False
@@ -285,7 +284,7 @@ def main():
     readme_complete = check_readme_completeness()
     scripts_complete = check_visualization_scripts()
 
-    print(f"\n🏁 Final Validation Summary:")
+    print("\n🏁 Final Validation Summary:")
     print("="*50)
 
     results = {
@@ -302,14 +301,14 @@ def main():
         print(f"{status_icon} {component}")
 
     if all_complete:
-        print(f"\n🎉 Issue #27 SUCCESSFULLY COMPLETED!")
+        print("\n🎉 Issue #27 SUCCESSFULLY COMPLETED!")
         print("   All required visualizations, evidence, and documentation are present.")
         print("   Repository is ready for academic examination and validation.")
     else:
-        print(f"\n⚠️  Issue #27 PARTIALLY COMPLETED")
+        print("\n⚠️  Issue #27 PARTIALLY COMPLETED")
         print("   Some components may need attention.")
 
-    print(f"\n📊 Generated Visualizations Summary:")
+    print("\n📊 Generated Visualizations Summary:")
     images_dir = Path(__file__).parent.parent / "images"
     total_images = len(list(images_dir.rglob("*.png")))
     print(f"   Total PNG files generated: {total_images}")

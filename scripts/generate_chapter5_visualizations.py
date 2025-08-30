@@ -8,13 +8,12 @@ the evidence data files.
 """
 
 import json
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from pathlib import Path
-from datetime import datetime
-import matplotlib.dates as mdates
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 
 # Set up matplotlib for publication-quality plots
 plt.style.use('seaborn-v0_8')
@@ -45,7 +44,7 @@ def load_evidence_data():
     # Load endurance test data
     endurance_report_file = base_dir / "performance" / "endurance_test_report.json"
     if endurance_report_file.exists():
-        with open(endurance_report_file, 'r') as f:
+        with open(endurance_report_file) as f:
             data['endurance_report'] = json.load(f)
 
     endurance_raw_file = base_dir / "performance" / "endurance_raw_data.csv"
@@ -101,7 +100,7 @@ def create_synchronization_accuracy_plot(sync_data, output_dir):
                 dpi=300, bbox_inches='tight')
     plt.close()
 
-    print(f"✓ Generated synchronization accuracy plot")
+    print("✓ Generated synchronization accuracy plot")
     print(f"  Median accuracy: {normal_data.median():.1f}ms")
     print(f"  95th percentile: {normal_data.quantile(0.95):.1f}ms")
     print(f"  Outliers detected: {len(outlier_data)} events")
@@ -144,7 +143,7 @@ def create_synchronization_failure_plot(sync_data, output_dir):
                 'o-', linewidth=2, markersize=6, color='red', label='During WiFi Roaming')
 
         # Add normal operation baseline
-        normal_data = sync_data[sync_data['network_condition'] == 'normal']
+        sync_data[sync_data['network_condition'] == 'normal']
         plt.axhspan(-5, 5, alpha=0.2, color='green', label='Normal Range (±5ms)')
 
         plt.xlabel('Time')
@@ -388,7 +387,7 @@ def main():
         # Create comprehensive evaluation summary
         create_comprehensive_evaluation_summary(data, output_dir)
 
-        print(f"\n🎉 All Chapter 5 visualizations generated successfully!")
+        print("\n🎉 All Chapter 5 visualizations generated successfully!")
         print(f"📁 Output directory: {output_dir.resolve()}")
         print("\nGenerated files:")
         for file in sorted(output_dir.glob("*.png")):

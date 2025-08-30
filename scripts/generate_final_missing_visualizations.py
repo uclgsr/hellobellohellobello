@@ -8,12 +8,10 @@ This script generates the remaining missing visualizations identified in the tra
 3. Chapter 4: GUI Screenshots (placeholder PNGs)
 """
 
-import os
 from pathlib import Path
-import matplotlib.pyplot as plt
+
 import matplotlib.patches as mpatches
-import numpy as np
-import seaborn as sns
+import matplotlib.pyplot as plt
 
 # Set up matplotlib for publication quality
 plt.style.use('seaborn-v0_8')
@@ -119,8 +117,8 @@ def generate_chapter2_mermaid_diagrams():
         f.write(f"```mermaid\n{thermal_diagram}\n```")
 
     print("✓ Generated Chapter 2 Mermaid diagrams:")
-    print(f"  • physiology_gsr.md")
-    print(f"  • thermal_stress_cues.md")
+    print("  • physiology_gsr.md")
+    print("  • thermal_stress_cues.md")
 
 def generate_chapter3_requirements_tables():
     """Generate Chapter 3 requirements tables as PNG images."""
@@ -293,8 +291,8 @@ def generate_chapter3_requirements_tables():
     plt.close()
 
     print("✓ Generated Chapter 3 requirements tables:")
-    print(f"  • table_3_1_functional_requirements.png")
-    print(f"  • table_3_2_nonfunctional_requirements.png")
+    print("  • table_3_1_functional_requirements.png")
+    print("  • table_3_2_nonfunctional_requirements.png")
 
 def generate_chapter4_gui_screenshots():
     """Generate placeholder GUI screenshots for Chapter 4."""
@@ -401,7 +399,7 @@ def main():
     print("  • images/chapter4_implementation/session_configuration_dialog.png")
     print("  • images/chapter4_implementation/real_time_monitoring_view.png")
 
-    print(f"\n📁 Total visualization files now available in repository")
+    print("\n📁 Total visualization files now available in repository")
 
 if __name__ == "__main__":
     main()
