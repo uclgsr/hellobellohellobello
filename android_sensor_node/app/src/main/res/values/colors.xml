@@ -20,4 +20,12 @@
     <color name="primary">#2196F3</color>
     <color name="primary_variant">#1976D2</color>
     <color name="secondary">#03DAC6</color>
+
+    <!-- IRCamera colors -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="color_CCFFFFFF">#CCFFFFFF</color>
+    <color name="c_bg_white">#FF16131E</color>
+    <color name="device_connect_name">#FFFFFFFF</color>
+    <color name="device_connect_state">#FF83808C</color>
 </resources>

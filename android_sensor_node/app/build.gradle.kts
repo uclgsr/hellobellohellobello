@@ -120,6 +120,9 @@ dependencies {
     implementation(files("src/main/libs/shimmerdriver-0.11.4_beta.jar"))
     implementation(files("src/main/libs/shimmerdriverpc-0.11.4_beta.jar"))
 
+    // FastBLE for robust BLE communication with Shimmer devices
+    implementation("com.github.Jasonchenlijian:FastBle:2.4.0")
+
     // Unit testing - upgraded versions
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")

@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.*
 
 /**
@@ -47,6 +49,10 @@ class TopdonThermalIntegration(private val context: Context) {
     private var streamingJob: Job? = null
     private var frameCallback: ((TopdonThermalFrame) -> Unit)? = null
     
+    // Enhanced integration properties
+    private val _thermalFrame = MutableLiveData<TopdonThermalFrameData>()
+    val thermalFrame: LiveData<TopdonThermalFrameData> = _thermalFrame
+    
     // Device configuration
     private var currentWidth = THERMAL_WIDTH
     private var currentHeight = THERMAL_HEIGHT
@@ -56,14 +62,17 @@ class TopdonThermalIntegration(private val context: Context) {
     private var temperatureRange = Pair(MIN_TEMPERATURE, MAX_TEMPERATURE)
     
     /**
-     * Initialize the Topdon SDK and prepare for device connection
+     * Initialize the Topdon SDK with enhanced device manager integration
      */
     fun initialize(): TopdonResult {
         return try {
+            // Initialize enhanced device manager
+            val deviceManager = TC001DeviceManager(context)
+            
             // In production: Initialize the real Topdon SDK
             // IRCMD.getInstance().initialize(context)
             
-            Log.i(TAG, "Topdon thermal integration initialized")
+            Log.i(TAG, "Topdon thermal integration initialized with enhanced device manager")
             isInitialized = true
             TopdonResult.SUCCESS
         } catch (e: Exception) {
@@ -319,6 +328,18 @@ class TopdonThermalIntegration(private val context: Context) {
                     val thermalFrame = generateSimulatedThermalFrame(frameCount)
                     frameCallback?.invoke(thermalFrame)
                     
+                    // Update LiveData for UI integration
+                    val frameData = TopdonThermalFrameData(
+                        thermalBitmap = thermalFrame.generateThermalBitmap(),
+                        temperatureData = thermalFrame.temperatureData,
+                        timestamp = thermalFrame.timestamp,
+                        minTemp = thermalFrame.minTemperature,
+                        maxTemp = thermalFrame.maxTemperature,
+                        avgTemp = thermalFrame.averageTemperature,
+                        centerTemp = thermalFrame.centerTemperature
+                    )
+                    _thermalFrame.postValue(frameData)
+                    
                     frameCount++
                     delay(frameInterval.toLong())
                 } catch (e: Exception) {
@@ -448,4 +469,15 @@ data class TopdonDeviceInfo(
     val serialNumber: String,
     val isSupported: Boolean,
     val usbDevice: UsbDevice?
+)
+
+// Enhanced frame data for better integration
+data class TopdonThermalFrameData(
+    val thermalBitmap: Bitmap?,
+    val temperatureData: FloatArray?,
+    val timestamp: Long,
+    val minTemp: Float,
+    val maxTemp: Float,
+    val avgTemp: Float,
+    val centerTemp: Float
 )

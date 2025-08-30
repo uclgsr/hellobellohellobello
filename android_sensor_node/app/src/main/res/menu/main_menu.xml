@@ -3,6 +3,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_thermal_settings"
+        android:title="Thermal Settings"
+        android:icon="@android:drawable/ic_menu_manage"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_quick_start"
         android:title="@string/menu_quick_start"
         android:icon="@android:drawable/ic_menu_help"

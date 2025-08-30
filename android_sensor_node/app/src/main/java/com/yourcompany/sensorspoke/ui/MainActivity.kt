@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -36,6 +37,8 @@ import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
 import com.yourcompany.sensorspoke.service.RecordingService
 import com.yourcompany.sensorspoke.ui.adapters.MainPagerAdapter
 import com.yourcompany.sensorspoke.ui.dialogs.QuickStartDialog
+import com.yourcompany.sensorspoke.ui.navigation.NavigationController
+import com.yourcompany.sensorspoke.ui.navigation.ThermalNavigationState
 import com.yourcompany.sensorspoke.utils.UserExperience
 import kotlinx.coroutines.launch
 import java.io.File
@@ -50,6 +53,9 @@ class MainActivity : AppCompatActivity() {
     private var btnStopRecording: Button? = null
     private var statusText: TextView? = null
     private var rootLayout: ViewGroup? = null
+
+    // Enhanced navigation controller from IRCamera architecture
+    private var navigationController: NavigationController? = null
 
     // User experience enhancements
     private lateinit var preferences: SharedPreferences
@@ -137,6 +143,9 @@ class MainActivity : AppCompatActivity() {
         // Initialize status
         updateStatusText("Initializing...")
 
+        // Initialize TC001 thermal camera system
+        initializeTC001System()
+
         // Ensure background service for NSD + TCP server is running (skip during unit tests)
         if (!isRunningUnderTest()) {
             val svcIntent = Intent(this, RecordingService::class.java)
@@ -179,6 +188,11 @@ class MainActivity : AppCompatActivity() {
                 resetFirstLaunchFlag()
                 true
             }
+            R.id.action_thermal_settings -> {
+                // Navigate to thermal settings using enhanced navigation
+                navigationController?.navigateToThermalCamera(ThermalNavigationState.SETTINGS)
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -187,12 +201,25 @@ class MainActivity : AppCompatActivity() {
         val adapter = MainPagerAdapter(this)
         viewPager?.adapter = adapter
 
+        // Initialize enhanced navigation controller
+        viewPager?.let { vp ->
+            navigationController = NavigationController(this, vp)
+        }
+
         // Connect TabLayout with ViewPager2
         tabLayout?.let { tabLayout ->
             viewPager?.let { viewPager ->
                 TabLayoutMediator(tabLayout, viewPager) { tab, position ->
                     tab.text = MainPagerAdapter.TAB_TITLES[position]
                 }.attach()
+                
+                // Register page change callback for enhanced navigation tracking
+                viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                    override fun onPageSelected(position: Int) {
+                        super.onPageSelected(position)
+                        navigationController?.updateCurrentTab(position)
+                    }
+                })
             }
         }
     }
@@ -356,6 +383,41 @@ class MainActivity : AppCompatActivity() {
             true
         } catch (_: Throwable) {
             false
+        }
+    }
+
+    /**
+     * Navigate to thermal camera preview - Enhanced integration method
+     */
+    fun navigateToThermalPreview() {
+        // Use NavigationController to navigate to thermal camera
+        navigationController?.navigateToThermalCamera(ThermalNavigationState.PREVIEW)
+    }
+
+    /**
+     * Navigate to thermal camera settings
+     */
+    fun navigateToThermalSettings() {
+        navigationController?.navigateToThermalCamera(ThermalNavigationState.SETTINGS)
+    }
+
+    /**
+     * Initialize TC001 thermal camera system
+     */
+    private fun initializeTC001System() {
+        try {
+            // Initialize TC001 logging
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initLog()
+            
+            // Initialize TC001 USB receivers
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initReceiver(this)
+            
+            // Initialize TC001 device manager
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initTC001DeviceManager(this)
+            
+            Log.i("MainActivity", "TC001 thermal camera system initialized successfully")
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to initialize TC001 system", e)
         }
     }
 }

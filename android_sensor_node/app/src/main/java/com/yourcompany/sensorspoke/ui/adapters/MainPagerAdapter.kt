@@ -6,21 +6,24 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.yourcompany.sensorspoke.ui.fragments.FileManagerFragment
 import com.yourcompany.sensorspoke.ui.fragments.RgbPreviewFragment
 import com.yourcompany.sensorspoke.ui.fragments.ThermalPreviewFragment
+import com.yourcompany.sensorspoke.ui.fragments.TC001ManagementFragment
 
 /**
- * ViewPager2 adapter for main activity tabs
+ * Enhanced ViewPager2 adapter for main activity tabs with TC001 management
  */
 class MainPagerAdapter(fragmentActivity: FragmentActivity) : FragmentStateAdapter(fragmentActivity) {
     companion object {
         const val TAB_RGB_PREVIEW = 0
         const val TAB_THERMAL_PREVIEW = 1
-        const val TAB_FILE_MANAGER = 2
-        const val TAB_COUNT = 3
+        const val TAB_TC001_MANAGEMENT = 2
+        const val TAB_FILE_MANAGER = 3
+        const val TAB_COUNT = 4
 
         val TAB_TITLES =
             arrayOf(
                 "RGB Camera",
                 "Thermal Camera",
+                "TC001 Management",
                 "Files",
             )
     }
@@ -31,6 +34,7 @@ class MainPagerAdapter(fragmentActivity: FragmentActivity) : FragmentStateAdapte
         return when (position) {
             TAB_RGB_PREVIEW -> RgbPreviewFragment.newInstance()
             TAB_THERMAL_PREVIEW -> ThermalPreviewFragment.newInstance()
+            TAB_TC001_MANAGEMENT -> TC001ManagementFragment.newInstance()
             TAB_FILE_MANAGER -> FileManagerFragment.newInstance()
             else -> throw IllegalArgumentException("Invalid tab position: $position")
         }

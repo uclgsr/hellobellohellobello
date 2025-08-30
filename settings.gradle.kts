@@ -15,6 +15,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // JitPack for GitHub-based libraries like FastBLE
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
