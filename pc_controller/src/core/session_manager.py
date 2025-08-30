@@ -131,6 +131,19 @@ class SessionManager:
         self._meta.start_time_ns = time.time_ns()
         self._write_metadata()
 
+    def start_session(self, name: str) -> str:
+        """Convenience method to create a session and immediately start recording.
+        
+        Args:
+            name: Session name
+            
+        Returns:
+            Session ID
+        """
+        session_id = self.create_session(name)
+        self.start_recording()
+        return session_id
+
     def stop_recording(self) -> None:
         if not self._meta or not self._active_dir:
             return

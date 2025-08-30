@@ -19,7 +19,7 @@ import pytest
 
 
 @dataclass
-class TestResult:
+class ExecutionResult:
     """Represents the result of a test execution."""
     test_name: str
     category: str
@@ -32,7 +32,7 @@ class TestResult:
 
 
 @dataclass
-class TestSuiteReport:
+class SuiteExecutionReport:
     """Comprehensive test suite execution report."""
     timestamp: str
     total_tests: int
@@ -51,7 +51,7 @@ class TestSuiteReport:
         }
 
 
-class TestSuiteOrganizer:
+class SuiteOrganizer:
     """Organizes and categorizes tests for execution."""
 
     TEST_CATEGORIES = {
@@ -147,12 +147,12 @@ class TestSuiteOrganizer:
         }
 
 
-class TestExecutor:
+class SuiteExecutor:
     """Executes tests and generates reports."""
 
     def __init__(self, test_root: Path):
         self.test_root = Path(test_root)
-        self.organizer = TestSuiteOrganizer(test_root)
+        self.organizer = SuiteOrganizer(test_root)
 
     def execute_python_tests(
         self,
@@ -195,7 +195,7 @@ class TestExecutor:
         except subprocess.TimeoutExpired:
             duration = time.time() - start_time
             test_results = [
-                TestResult(
+                ExecutionResult(
                     test_name=f"{category}_tests",
                     category=category,
                     status="ERROR",
@@ -206,7 +206,7 @@ class TestExecutor:
         except Exception as e:
             duration = time.time() - start_time
             test_results = [
-                TestResult(
+                ExecutionResult(
                     test_name=f"{category}_tests",
                     category=category,
                     status="ERROR",
@@ -225,7 +225,7 @@ class TestExecutor:
         android_root = self.test_root / "android_sensor_node"
         if not android_root.exists():
             return [
-                TestResult(
+                ExecutionResult(
                     test_name="android_tests",
                     category="android",
                     status="SKIPPED",
@@ -254,7 +254,7 @@ class TestExecutor:
         except subprocess.TimeoutExpired:
             duration = time.time() - start_time
             test_results = [
-                TestResult(
+                ExecutionResult(
                     test_name="android_tests",
                     category="android",
                     status="ERROR",
@@ -265,7 +265,7 @@ class TestExecutor:
         except Exception as e:
             duration = time.time() - start_time
             test_results = [
-                TestResult(
+                ExecutionResult(
                     test_name="android_tests",
                     category="android",
                     status="ERROR",
@@ -306,7 +306,7 @@ class TestExecutor:
                         duration = float(part[:-1])
                         break
 
-                results.append(TestResult(
+                results.append(ExecutionResult(
                     test_name=test_name,
                     category=category,
                     status=status,
@@ -322,7 +322,7 @@ class TestExecutor:
             else:
                 status = 'PASSED'
 
-            results.append(TestResult(
+            results.append(ExecutionResult(
                 test_name=f"{category}_suite",
                 category=category,
                 status=status,
@@ -344,7 +344,7 @@ class TestExecutor:
             status = "ERROR"
             error_msg = "Unknown Android test result"
 
-        return [TestResult(
+        return [ExecutionResult(
             test_name="android_unit_tests",
             category="android",
             status=status,
@@ -391,7 +391,7 @@ class TestExecutor:
         # Generate comprehensive report
         total_duration = time.time() - start_time
 
-        report = TestSuiteReport(
+        report = SuiteExecutionReport(
             timestamp=timestamp,
             total_tests=len(all_results),
             passed=len([r for r in all_results if r.status == "PASSED"]),
@@ -417,7 +417,7 @@ class TestExecutor:
             json.dump(report.to_dict(), f, indent=2)
 
 
-class TestCoverageAnalyzer:
+class CoverageAnalyzer:
     """Analyzes test coverage and generates recommendations."""
 
     def __init__(self, test_root: Path):
@@ -513,7 +513,7 @@ def main():
     args = parser.parse_args()
 
     # Initialize executor
-    executor = TestExecutor(args.test_root)
+    executor = SuiteExecutor(args.test_root)
 
     # Execute tests
     print("Starting comprehensive test suite execution...")
@@ -542,7 +542,7 @@ def main():
     # Coverage analysis
     if args.coverage:
         print("\nCOVERAGE ANALYSIS:")
-        analyzer = TestCoverageAnalyzer(args.test_root)
+        analyzer = CoverageAnalyzer(args.test_root)
         coverage_report = analyzer.generate_coverage_report()
 
         python_coverage = coverage_report["python"].get("total_coverage", 0)

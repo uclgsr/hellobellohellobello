@@ -148,8 +148,20 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                 
                 true
                 
+            } catch (e: SecurityException) {
+                Log.e(TAG, "USB permission denied for thermal camera access", e)
+                false
+            } catch (e: java.io.IOException) {
+                Log.e(TAG, "IO error during thermal camera initialization - device may be disconnected", e)
+                false
+            } catch (e: IllegalStateException) {
+                Log.e(TAG, "Thermal camera in invalid state - may need hardware reset", e)
+                false
+            } catch (e: RuntimeException) {
+                Log.e(TAG, "Runtime error with thermal camera - SDK or driver issue: ${e.message}", e)
+                false
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to initialize thermal recorder: ${e.message}", e)
+                Log.e(TAG, "Unexpected error initializing thermal recorder: ${e.message}", e)
                 false
             }
         }
@@ -182,8 +194,17 @@ class ThermalCameraRecorder(private val context: Context) : SensorRecorder {
                     false
                 }
                 
+            } catch (e: SecurityException) {
+                Log.e(TAG, "USB permission lost during thermal recording start", e)
+                false
+            } catch (e: IllegalStateException) {
+                Log.e(TAG, "Thermal camera not properly initialized for recording", e)
+                false
+            } catch (e: java.io.IOException) {
+                Log.e(TAG, "Communication error with thermal camera during start", e)
+                false
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to start thermal recording: ${e.message}", e)
+                Log.e(TAG, "Unexpected error starting thermal recording: ${e.message}", e)
                 false
             }
         }
