@@ -2,6 +2,7 @@ package com.yourcompany.sensorspoke.sensors.coordination
 
 import android.content.Context
 import android.util.Log
+import androidx.lifecycle.LifecycleOwner
 import com.yourcompany.sensorspoke.sensors.audio.AudioRecorder
 import com.yourcompany.sensorspoke.sensors.gsr.GSRDataPoint
 import com.yourcompany.sensorspoke.sensors.gsr.ShimmerDataCallback
@@ -25,6 +26,7 @@ import java.io.FileWriter
  */
 class MultiModalSensorCoordinator(
     private val context: Context,
+    private val lifecycleOwner: LifecycleOwner,
 ) {
     companion object {
         private const val TAG = "MultiModalCoordinator"
@@ -113,7 +115,7 @@ class MultiModalSensorCoordinator(
 
                 // Initialize RGB camera recorder
                 rgbRecorder =
-                    RgbCameraRecorder(context).apply {
+                    RgbCameraRecorder(context, lifecycleOwner).apply {
                         Log.i(TAG, "RGB camera recorder initialized")
                     }
 

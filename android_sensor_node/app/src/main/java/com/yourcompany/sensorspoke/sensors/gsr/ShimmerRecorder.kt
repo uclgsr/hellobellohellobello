@@ -674,18 +674,17 @@ class ShimmerRecorder(
     private suspend fun monitorRecordingSession() {
         while (isRecording) {
             try {
-                gsrIntegrationManager?.let { manager ->
-                    if (!manager.isDeviceConnected()) {
-                        Log.d(TAG, "Waiting for Shimmer device connection...")
-                        // In a real app, this would trigger device selection UI
-                        // For now, we'll wait and potentially start simulation
-                        delay(5000)
+                val manager = gsrIntegrationManager
+                if (manager != null && !manager.isDeviceConnected()) {
+                    Log.d(TAG, "Waiting for Shimmer device connection...")
+                    // In a real app, this would trigger device selection UI
+                    // For now, we'll wait and potentially start simulation
+                    delay(5000)
 
-                        // If still no connection after 5 seconds, start simulation
-                        if (!manager.isDeviceConnected() && isRecording) {
-                            Log.i(TAG, "No Shimmer device connected, starting simulation")
-                            break
-                        }
+                    // If still no connection after 5 seconds, start simulation
+                    if (!manager.isDeviceConnected() && isRecording) {
+                        Log.i(TAG, "No Shimmer device connected, starting simulation")
+                        break
                     }
                 }
 

@@ -55,7 +55,6 @@ android {
         freeCompilerArgs +=
             listOf(
                 "-opt-in=kotlin.RequiresOptIn",
-                "-Xuse-fast-jar-fs",
             )
     }
 
@@ -79,36 +78,36 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.appcompat:appcompat:1.8.0")
-    implementation("com.google.android.material:material:1.13.0")
-    implementation("androidx.activity:activity-ktx:1.9.4")
-    implementation("androidx.fragment:fragment-ktx:1.8.6")
-    implementation("androidx.viewpager2:viewpager2:1.1.0")
-    implementation("androidx.recyclerview:recyclerview:1.4.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.0")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.9.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.0")
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.activity:activity-ktx:1.8.2")
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
+    implementation("androidx.viewpager2:viewpager2:1.0.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // CameraX for RGB recording - upgraded to latest
-    val cameraxVersion = "1.5.0"
+    // CameraX for RGB recording - using stable versions
+    val cameraxVersion = "1.3.1"
     implementation("androidx.camera:camera-core:$cameraxVersion")
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-video:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
-    // Camera2 API for advanced RAW capture capabilities
+    // Camera2 API for advanced RAW capture capabilities  
     implementation("androidx.camera:camera-extensions:$cameraxVersion")
 
     // Samsung Camera SDK for advanced features and RAW DNG capture
     // Note: Samsung Camera SDK would be added here when available
     // For now, we'll use Camera2 API with Samsung-specific optimizations
 
-    // TLS networking, background work, and encryption - latest versions
-    implementation("com.squareup.okhttp3:okhttp:4.12.0") // Already latest
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // TLS networking, background work, and encryption - stable versions
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation("androidx.work:work-runtime-ktx:2.8.1")
+    implementation("androidx.security:security-crypto:1.0.0")
 
     // Local SDKs (Topdon TC001 and Shimmer Android API)
     implementation(files("src/main/libs/topdon_1.3.7.aar"))
@@ -124,18 +123,18 @@ dependencies {
     // FastBLE for robust BLE communication with Shimmer devices
     implementation("com.github.Jasonchenlijian:FastBle:2.4.0")
 
-    // Unit testing - upgraded versions
+    // Unit testing - stable versions
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.robolectric:robolectric:4.15.0")
-    testImplementation("androidx.test:core:1.6.2")
-    testImplementation("androidx.test.ext:junit:1.2.1")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.0")
-    testImplementation("com.google.truth:truth:1.5.0")
-    testImplementation("io.mockk:mockk:1.13.14")
-    testImplementation("androidx.test:runner:1.6.3")
+    testImplementation("org.robolectric:robolectric:4.11.1")
+    testImplementation("androidx.test:core:1.5.0")
+    testImplementation("androidx.test.ext:junit:1.1.5")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("com.google.truth:truth:1.1.5")
+    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("androidx.test:runner:1.5.2")
 
     // Performance: Test orchestrator for parallel execution
-    androidTestUtil("androidx.test:orchestrator:1.5.2")
+    androidTestUtil("androidx.test:orchestrator:1.4.2")
 }
 
 // Enable detailed per-test logging for JVM unit tests
@@ -156,9 +155,9 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     }
 }
 
-// Ktlint configuration - upgraded
+// Ktlint configuration - stable version
 ktlint {
-    version.set("1.5.0")
+    version.set("0.50.0")
     android.set(true)
     outputToConsole.set(true)
     coloredOutput.set(true)

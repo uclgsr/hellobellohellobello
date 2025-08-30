@@ -2,9 +2,6 @@ package com.yourcompany.sensorspoke.sensors.thermal.tc001
 
 import android.content.Context
 import android.util.Log
-import com.yourcompany.sensorspoke.sensors.thermal.TC001Connector
-import com.yourcompany.sensorspoke.sensors.thermal.TC001DataManager
-import com.yourcompany.sensorspoke.sensors.thermal.TC001UIController
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -73,7 +70,8 @@ class TC001SensorIntegrationManager(
                 _integrationState.value = IntegrationState.INITIALIZING
                 Log.i(TAG, "Initializing TC001 sensor integration system...")
 
-                // Initialize core components
+                // TODO: Initialize core components when TC001 classes are available
+                /*
                 tc001Connector =
                     TC001Connector(context).apply {
                         if (!initialize()) {
@@ -90,6 +88,7 @@ class TC001SensorIntegrationManager(
                     TC001UIController(context).apply {
                         initialize()
                     }
+                */
 
                 // Set up component interactions
                 setupComponentCoordination()
@@ -435,7 +434,7 @@ class TC001SensorIntegrationManager(
         var lastFrameCount = 0L
         var staleFrameCount = 0
 
-        while (isActive && _integrationState.value == IntegrationState.RECORDING) {
+        while (currentCoroutineContext().isActive && _integrationState.value == IntegrationState.RECORDING) {
             try {
                 delay(1000) // Check every second
 
