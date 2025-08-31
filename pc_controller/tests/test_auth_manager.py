@@ -116,7 +116,9 @@ class TestAuthManager:
         """Test token expiration functionality."""
         # Use short token lifetime for testing
         with patch('pc_controller.src.network.auth_manager.cfg_get') as mock_cfg:
-            mock_cfg.side_effect = lambda key, default: 1 if key == "auth_token_lifetime_seconds" else default
+            mock_cfg.side_effect = (
+                lambda key, default: 1 if key == "auth_token_lifetime_seconds" else default
+            )
 
             auth = AuthManager(secret_key="test_secret")
             device_id = "device_001"

@@ -41,7 +41,9 @@ def test_store_offset(controller: NetworkController) -> None:
     assert controller._clock_offsets_ns["dev1"] == 123456789
 
 
-def test_on_service_removed_stops_stream_worker_and_emits_signal(controller: NetworkController) -> None:
+def test_on_service_removed_stops_stream_worker_and_emits_signal(
+    controller: NetworkController,
+) -> None:
     # Arrange: inject a fake worker and device
     removed_names: list[str] = []
     controller.device_removed.connect(lambda name: removed_names.append(name))

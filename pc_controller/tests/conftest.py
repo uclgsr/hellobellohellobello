@@ -105,7 +105,9 @@ def pytest_collection_modifyitems(config, items):
                 app = PyQt6.QtWidgets.QApplication.instance()
                 if app is None:
                     test_app = PyQt6.QtWidgets.QApplication([])
-                    test_app.setAttribute(test_app.ApplicationAttribute.AA_DontShowIconsInMenus, True)
+                    test_app.setAttribute(
+                        test_app.ApplicationAttribute.AA_DontShowIconsInMenus, True
+                    )
                     # Keep app alive for other tests
 
             except Exception as e:

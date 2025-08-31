@@ -13,7 +13,9 @@ with patch.dict('sys.modules', {'pylsl': MagicMock()}):
 class TestLSLOutletManager:
     """Test LSL outlet manager functionality."""
 
-    @pytest.mark.skip("LSL tests require complex module reload - not critical for core functionality")
+    @pytest.mark.skip(
+        "LSL tests require complex module reload - not critical for core functionality"
+    )
     @patch('pc_controller.src.network.lsl_integration.pylsl')
     @patch('pc_controller.src.network.lsl_integration.LSL_AVAILABLE', True)
     def test_initialization_enabled(self, mock_pylsl):
@@ -185,7 +187,10 @@ class TestLSLOutletManager:
             manager.create_thermal_outlet("device_001", 4, 4, 10.0)  # Small frame for testing
 
             # Create test frame
-            frame = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], dtype=np.float32)
+            frame = np.array(
+                [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]],
+                dtype=np.float32,
+            )
 
             result = manager.stream_thermal_frame("device_001", frame)
             assert result is True

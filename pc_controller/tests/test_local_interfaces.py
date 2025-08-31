@@ -11,6 +11,7 @@ import pytest
 
 np = pytest.importorskip("numpy")
 
+# Import after numpy availability check
 from pc_controller.src.core.local_interfaces import ShimmerInterface, WebcamInterface
 
 

@@ -54,7 +54,11 @@ def validate_pyproject_toml() -> list[str]:
         if "project" in config:
             project = config["project"]
             required_fields = ["name", "version", "description", "requires-python"]
-            errors.extend([f"Project metadata missing: {field}" for field in required_fields if field not in project])
+            errors.extend([
+                f"Project metadata missing: {field}"
+                for field in required_fields
+                if field not in project
+            ])
 
     except Exception as e:
         errors.append(f"Error reading pyproject.toml: {e}")
@@ -80,7 +84,11 @@ def validate_pytest_ini() -> list[str]:
 
         # Check for essential configurations
         required_configs = ["testpaths", "pythonpath", "timeout"]
-        errors.extend([f"pytest.ini missing {config} configuration" for config in required_configs if f"{config} =" not in content])
+        errors.extend([
+            f"pytest.ini missing {config} configuration"
+            for config in required_configs
+            if f"{config} =" not in content
+        ])
 
     except Exception as e:
         errors.append(f"Error reading pytest.ini: {e}")
@@ -107,7 +115,11 @@ def validate_pre_commit_config() -> list[str]:
         expected_repos = ["pre-commit-hooks", "black", "isort", "ruff-pre-commit", "mirrors-mypy", "bandit"]
 
         repo_urls = [repo.get("repo", "") for repo in repos]
-        errors.extend([f"Pre-commit config missing {expected} hook" for expected in expected_repos if not any(expected in url for url in repo_urls)])
+        errors.extend([
+            f"Pre-commit config missing {expected} hook"
+            for expected in expected_repos
+            if not any(expected in url for url in repo_urls)
+        ])
 
     except ImportError:
         errors.append("PyYAML not available for pre-commit config validation")

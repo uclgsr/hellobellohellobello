@@ -13,6 +13,7 @@ import pytest
 
 pd = pytest.importorskip("pandas")
 
+# Import after pandas availability check
 from pc_controller.src.data.data_loader import DataLoader
 
 

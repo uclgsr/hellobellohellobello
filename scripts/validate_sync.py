@@ -163,7 +163,8 @@ def _read_video_brightness(path: str) -> tuple[list[float], float]:
         import cv2  # type: ignore
     except Exception as exc:  # pragma: no cover - environment specific
         raise RuntimeError(
-            "OpenCV (cv2) is required to analyze videos. Install opencv-python as per pc_controller/requirements.txt."
+            "OpenCV (cv2) is required to analyze videos. "
+            "Install opencv-python as per pc_controller/requirements.txt."
         ) from exc
     cap = cv2.VideoCapture(path)
     if cap is None or not cap.isOpened():
@@ -182,7 +183,9 @@ def _read_video_brightness(path: str) -> tuple[list[float], float]:
     return means, fps
 
 
-def build_device_sessions(session_dir: str, offsets: dict[str, int]) -> tuple[list[DeviceSession], dict[str, int]]:
+def build_device_sessions(
+    session_dir: str, offsets: dict[str, int]
+) -> tuple[list[DeviceSession], dict[str, int]]:
     mapped_offsets = _map_offsets_to_devices(session_dir, offsets)
     sessions: list[DeviceSession] = []
     for name, offset in mapped_offsets.items():
@@ -192,14 +195,26 @@ def build_device_sessions(session_dir: str, offsets: dict[str, int]) -> tuple[li
         flash_csv = _find_flash_csv(dev_dir)
         video_path = _find_android_video(dev_dir)
         raw = _load_flash_csv(flash_csv) if flash_csv else []
-        sessions.append(DeviceSession(name=name, path=dev_dir, flash_csv=flash_csv, video_path=video_path,
-                                      raw_events_ns=raw, aligned_events_ns=[], offset_ns=offset, offset_sign=1))
+        sessions.append(
+            DeviceSession(
+                name=name,
+                path=dev_dir,
+                flash_csv=flash_csv,
+                video_path=video_path,
+                raw_events_ns=raw,
+                aligned_events_ns=[],
+                offset_ns=offset,
+                offset_sign=1,
+            )
+        )
     return sessions, mapped_offsets
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Flash Sync Validation")
-    parser.add_argument("--session-id", required=True, help="Session ID (folder name under base dir)")
+    parser.add_argument(
+        "--session-id", required=True, help="Session ID (folder name under base dir)"
+    )
     default_base_dir = os.path.join(os.getcwd(), "pc_controller_data")
     parser.add_argument("--base-dir", default=default_base_dir,
                         help="Base directory where sessions are stored")
@@ -306,7 +321,10 @@ def main() -> int:
     print("\nDevices and Offsets (ns):")
     for d in devices:
         video_status = 'yes' if d.video_path else 'no'
-        print(f"- {d.name}: offset={d.offset_ns} sign={d.offset_sign} events={len(d.aligned_events_ns)} video={video_status}")
+        print(
+            f"- {d.name}: offset={d.offset_ns} sign={d.offset_sign} "
+            f"events={len(d.aligned_events_ns)} video={video_status}"
+        )
     # Print detailed clock sync stats if available
     if 'clock_sync' in locals() and clock_sync:
         print("\nClock Sync Stats (from session_metadata.json):")
@@ -318,7 +336,10 @@ def main() -> int:
                 tri = int(st.get('trials', 0))
                 ts = int(st.get('timestamp_ns', 0))
                 delay_ms = dly/1e6
-                print(f"- {dev_name}: offset={off} ns, min_delay={delay_ms:.3f} ms, std_dev={sd} ns, trials={tri}, ts={ts}")
+                print(
+                    f"- {dev_name}: offset={off} ns, min_delay={delay_ms:.3f} ms, "
+                    f"std_dev={sd} ns, trials={tri}, ts={ts}"
+                )
             except Exception:
                 print(f"- {dev_name}: {st}")
     # Streams
