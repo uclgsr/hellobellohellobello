@@ -159,15 +159,15 @@ def generate_chapter3_requirements_tables():
     ax.axis('off')
 
     # Create table
-    table_data = []
-    for i in range(len(func_requirements['ID'])):
-        table_data.append([
+    table_data = [
+        [
             func_requirements['ID'][i],
             func_requirements['Requirement'][i],
             func_requirements['Description'][i][:50] + '...' if len(func_requirements['Description'][i]) > 50 else func_requirements['Description'][i],
             func_requirements['Priority'][i],
             func_requirements['Status'][i]
-        ])
+        ] for i in range(len(func_requirements['ID']))
+    ]
 
     table = ax.table(cellText=table_data,
                     colLabels=['ID', 'Requirement', 'Description', 'Priority', 'Status'],

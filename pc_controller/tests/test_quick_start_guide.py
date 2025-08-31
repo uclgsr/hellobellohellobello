@@ -9,8 +9,8 @@ import pytest
 # Skip GUI tests when libraries not available
 pytest_plugins = []
 try:
-    from PyQt6.QtWidgets import QApplication
-    GUI_AVAILABLE = True
+    import importlib.util
+    GUI_AVAILABLE = importlib.util.find_spec("PyQt6.QtWidgets") is not None
 except ImportError:
     GUI_AVAILABLE = False
 

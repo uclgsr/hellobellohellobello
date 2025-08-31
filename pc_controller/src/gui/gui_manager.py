@@ -611,7 +611,7 @@ class GUIManager(QMainWindow):
             except Exception:
                 pass
             now = time.monotonic()
-            # If first time seeing this device, count initial burst frame as a drop 
+            # If first time seeing this device, count initial burst frame as a drop
             # to coalesce bursts deterministically in tests/CI.
             if device_name not in self._remote_last_render_s:
                 drops0 = self._remote_drop_counts.get(device_name, 0) + 1

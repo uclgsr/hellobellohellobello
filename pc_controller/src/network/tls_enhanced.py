@@ -258,9 +258,9 @@ def generate_self_signed_cert(
         from cryptography.hazmat.primitives.asymmetric import rsa
         from cryptography.x509.oid import NameOID
     except ImportError:
-        logger.error(
-            "cryptography library required for certificate generation. Install with: pip install cryptography"
-        )
+        msg = "cryptography library required for certificate generation. "
+        msg += "Install with: pip install cryptography"
+        logger.error(msg)
         raise
 
     # Generate private key

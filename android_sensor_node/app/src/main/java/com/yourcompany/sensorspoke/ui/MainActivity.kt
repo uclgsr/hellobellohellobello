@@ -48,10 +48,10 @@ class MainActivity : AppCompatActivity() {
     private val vm: MainViewModel by viewModels()
 
     private var controller: RecordingController? = null
-    
+
     // Full integration: MultiModalSensorCoordinator for comprehensive sensor management
     private var multiModalCoordinator: MultiModalSensorCoordinator? = null
-    
+
     private var viewPager: ViewPager2? = null
     private var tabLayout: TabLayout? = null
     private var btnStartRecording: Button? = null
@@ -296,9 +296,9 @@ class MainActivity : AppCompatActivity() {
     private suspend fun ensureMultiModalCoordinator(): MultiModalSensorCoordinator {
         val existing = multiModalCoordinator
         if (existing != null) return existing
-        
+
         val coordinator = MultiModalSensorCoordinator(applicationContext, this)
-        
+
         // Initialize the complete multi-modal system
         val initResult = coordinator.initializeSystem()
         if (initResult) {
@@ -306,7 +306,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             Log.w("MainActivity", "MultiModalSensorCoordinator initialization failed, falling back to individual recorders")
         }
-        
+
         multiModalCoordinator = coordinator
         return coordinator
     }
@@ -317,13 +317,13 @@ class MainActivity : AppCompatActivity() {
             try {
                 // Full Integration: Use MultiModalSensorCoordinator for comprehensive sensor management
                 val coordinator = ensureMultiModalCoordinator()
-                
+
                 // Start coordinated multi-modal recording with session directory
                 val sessionDir = File(applicationContext.filesDir, "sessions")
                 if (!sessionDir.exists()) sessionDir.mkdirs()
-                
+
                 val startResult = coordinator.startRecording(sessionDir)
-                
+
                 if (startResult) {
                     UserExperience.Messaging.showSuccess(this@MainActivity, "Full multi-modal recording started")
                     updateStatusText("Full integration recording in progress")
@@ -360,7 +360,7 @@ class MainActivity : AppCompatActivity() {
                         Log.w("MainActivity", "Coordinator stop failed, trying individual controller")
                     }
                 }
-                
+
                 // Fallback to individual controller
                 controller?.stopSession()
                 UserExperience.Messaging.showSuccess(this@MainActivity, "Recording stopped")

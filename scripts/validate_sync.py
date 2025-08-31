@@ -200,8 +200,11 @@ def build_device_sessions(session_dir: str, offsets: dict[str, int]) -> tuple[li
 def main() -> int:
     parser = argparse.ArgumentParser(description="Flash Sync Validation")
     parser.add_argument("--session-id", required=True, help="Session ID (folder name under base dir)")
-    parser.add_argument("--base-dir", default=os.path.join(os.getcwd(), "pc_controller_data"), help="Base directory where sessions are stored")
-    parser.add_argument("--tolerance-ms", type=float, default=5.0, help="PASS/FAIL tolerance in milliseconds")
+    default_base_dir = os.path.join(os.getcwd(), "pc_controller_data")
+    parser.add_argument("--base-dir", default=default_base_dir,
+                        help="Base directory where sessions are stored")
+    parser.add_argument("--tolerance-ms", type=float, default=5.0,
+                        help="PASS/FAIL tolerance in milliseconds")
     args = parser.parse_args()
 
     session_dir = os.path.join(args.base_dir, args.session_id)
@@ -233,7 +236,8 @@ def main() -> int:
         if d.raw_events_ns:
             n_events = max(n_events, len(d.raw_events_ns))
     if n_events == 0:
-        print("ERROR: No flash_sync_events.csv timestamps found in device folders.", file=sys.stderr)
+        msg = "ERROR: No flash_sync_events.csv timestamps found in device folders."
+        print(msg, file=sys.stderr)
         return 2
 
     # Align event timestamps to master clock using offsets; resolve sign using first device as ref
@@ -291,7 +295,8 @@ def main() -> int:
         print("ERROR: No aligned device events; cannot compute validation.", file=sys.stderr)
         return 2
 
-    result = compute_validation_report(aligned_by_device, detections, tolerance_ms=args.tolerance_ms)
+    tolerance = args.tolerance_ms
+    result = compute_validation_report(aligned_by_device, detections, tolerance_ms=tolerance)
 
     # Print report
     print("=== Flash Sync Validation Report ===")
@@ -300,7 +305,8 @@ def main() -> int:
     # Summary of devices and offsets
     print("\nDevices and Offsets (ns):")
     for d in devices:
-        print(f"- {d.name}: offset={d.offset_ns} sign={d.offset_sign} events={len(d.aligned_events_ns)} video={'yes' if d.video_path else 'no'}")
+        video_status = 'yes' if d.video_path else 'no'
+        print(f"- {d.name}: offset={d.offset_ns} sign={d.offset_sign} events={len(d.aligned_events_ns)} video={video_status}")
     # Print detailed clock sync stats if available
     if 'clock_sync' in locals() and clock_sync:
         print("\nClock Sync Stats (from session_metadata.json):")
@@ -311,7 +317,8 @@ def main() -> int:
                 sd = int(st.get('std_dev', st.get('std_dev_ns', 0)))
                 tri = int(st.get('trials', 0))
                 ts = int(st.get('timestamp_ns', 0))
-                print(f"- {dev_name}: offset={off} ns, min_delay={dly/1e6:.3f} ms, std_dev={sd} ns, trials={tri}, ts={ts}")
+                delay_ms = dly/1e6
+                print(f"- {dev_name}: offset={off} ns, min_delay={delay_ms:.3f} ms, std_dev={sd} ns, trials={tri}, ts={ts}")
             except Exception:
                 print(f"- {dev_name}: {st}")
     # Streams

@@ -141,7 +141,9 @@ class CameraCalibrator(QObject if HAS_QT else object):
         self.emit_progress(10, f"Found {len(image_paths)} potential calibration images")
         return image_paths
 
-    def detect_checkerboard_corners(self, image_paths: list[Path]) -> tuple[list[np.ndarray], tuple[int, int]]:
+    def detect_checkerboard_corners(
+        self, image_paths: list[Path]
+    ) -> tuple[list[np.ndarray], tuple[int, int]]:
         """
         Detect checkerboard corners in calibration images.
 
@@ -184,7 +186,9 @@ class CameraCalibrator(QObject if HAS_QT else object):
                     if HAS_QT and hasattr(self, 'pattern_detected'):
                         self.pattern_detected.emit(len(corner_points))
 
-                    self.emit_progress(progress, f"Pattern detected in {img_path.name} ({len(corner_points)} total)")
+                    total_count = len(corner_points)
+                    msg = f"Pattern detected in {img_path.name} ({total_count} total)"
+                    self.emit_progress(progress, msg)
                 else:
                     self.emit_progress(progress, f"No pattern found in {img_path.name}")
 
@@ -213,7 +217,8 @@ class CameraCalibrator(QObject if HAS_QT else object):
         corner_points, image_size = self.detect_checkerboard_corners(image_paths)
 
         if len(corner_points) < 5:
-            error_msg = f"Insufficient valid calibration images ({len(corner_points)}). Need at least 5."
+            count = len(corner_points)
+            error_msg = f"Insufficient valid calibration images ({count}). Need at least 5."
             if HAS_QT and hasattr(self, 'error_occurred'):
                 self.error_occurred.emit(error_msg)
             else:

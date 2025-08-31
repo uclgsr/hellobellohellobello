@@ -170,7 +170,8 @@ class SystemHealthChecker(QObject if HAS_QT else object):
         try:
             import serial.tools.list_ports
             ports = list(serial.tools.list_ports.comports())
-            details["serial_ports"] = [{"port": p.device, "description": p.description} for p in ports]
+            port_info = [{"port": p.device, "description": p.description} for p in ports]
+            details["serial_ports"] = port_info
             if len(ports) == 0:
                 issues.append("No serial ports detected - Shimmer devices may not be connectable")
         except ImportError:
@@ -203,7 +204,10 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             issues.append("OpenCV not available for camera detection")
 
         status = "fail" if len(issues) > 2 else ("warning" if issues else "pass")
-        message = f"Hardware check: {len(issues)} issues found" if issues else "All hardware checks passed"
+        if issues:
+            message = f"Hardware check: {len(issues)} issues found"
+        else:
+            message = "All hardware checks passed"
 
         return HealthCheckResult(
             component="Hardware Connectivity",
@@ -527,20 +531,25 @@ class SystemHealthChecker(QObject if HAS_QT else object):
         recommendations = []
 
         for result in results:
-            if result.status in ["fail", "warning"] and result.details and "issues" in result.details:
+            has_issues = (result.status in ["fail", "warning"] and
+                          result.details and "issues" in result.details)
+            if has_issues:
                 for issue in result.details["issues"]:
                     if "memory" in issue.lower():
-                        recommendations.append("Consider closing unnecessary applications to free memory")
+                        msg = "Consider closing unnecessary applications to free memory"
+                        recommendations.append(msg)
                     elif "disk" in issue.lower():
                         recommendations.append("Free up disk space or add additional storage")
                     elif "network" in issue.lower():
                         recommendations.append("Check network configuration and connectivity")
                     elif "missing" in issue.lower():
-                        recommendations.append("Install missing dependencies with: pip install -r requirements.txt")
+                        msg = "Install missing dependencies with: pip install -r requirements.txt"
+                        recommendations.append(msg)
                     elif "hardware" in issue.lower():
                         recommendations.append("Check hardware connections and device drivers")
                     elif "timing" in issue.lower():
-                        recommendations.append("Consider system optimization for real-time performance")
+                        msg = "Consider system optimization for real-time performance"
+                        recommendations.append(msg)
 
         # Remove duplicates
         return list(set(recommendations))
@@ -571,7 +580,8 @@ def main():
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(description="System Health Check for Multi-Modal Physiological Sensing Platform")
+    description = "System Health Check for Multi-Modal Physiological Sensing Platform"
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--output", "-o", help="Output file for health report (JSON)")
     parser.add_argument("--quiet", "-q", action="store_true", help="Quiet mode - minimal output")
 
