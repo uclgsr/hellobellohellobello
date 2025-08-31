@@ -84,9 +84,9 @@ class TestOrchestrator:
         """Log a message with timestamp."""
         timestamp = time.strftime("%H:%M:%S")
         prefix = (
-            "🔍" if level == "INFO" else 
-            "✅" if level == "SUCCESS" else 
-            "❌" if level == "ERROR" else 
+            "🔍" if level == "INFO" else
+            "✅" if level == "SUCCESS" else
+            "❌" if level == "ERROR" else
             "⚠️"
         )
         print(f"[{timestamp}] {prefix} {message}")
@@ -146,8 +146,8 @@ class TestOrchestrator:
             return TestResult(name, False, duration, error=str(e))
 
     def run_commands_parallel(
-        self, 
-        commands: list[tuple[list[str], str]], 
+        self,
+        commands: list[tuple[list[str], str]],
         max_workers: int | None = None
     ) -> list[TestResult]:
         """Run multiple commands in parallel for better performance."""
@@ -185,8 +185,8 @@ class TestOrchestrator:
             # Ruff linting with caching
             (
                 [sys.executable, "-m", "ruff", "check", str(self.pc_controller_src),
-                 "--output-format=github", "--cache-dir=.ruff_cache"] + 
-                (["--fix"] if self.args.fix else []), 
+                 "--output-format=github", "--cache-dir=.ruff_cache"] +
+                (["--fix"] if self.args.fix else []),
                 "Ruff Linting"
             ),
 

@@ -103,11 +103,11 @@ class DevSetup:
 
         # Install commit-msg hook for conventional commits
         if not self.run_command(
-            ["pre-commit", "install", "--hook-type", "commit-msg"], 
+            ["pre-commit", "install", "--hook-type", "commit-msg"],
             "Installing commit-msg hook"
         ):
             self.log(
-                "Failed to install commit-msg hook, but pre-commit hooks are installed", 
+                "Failed to install commit-msg hook, but pre-commit hooks are installed",
                 "ERROR"
             )
 
@@ -127,13 +127,13 @@ class DevSetup:
         python_version = sys.version_info
         if python_version < (3, 11):
             self.log(
-                f"Python {python_version.major}.{python_version.minor} is too old, need 3.11+", 
+                f"Python {python_version.major}.{python_version.minor} is too old, need 3.11+",
                 "ERROR"
             )
             success = False
         else:
             self.log(
-                f"Python {python_version.major}.{python_version.minor} is compatible", 
+                f"Python {python_version.major}.{python_version.minor} is compatible",
                 "SUCCESS"
             )
 

@@ -26,8 +26,8 @@ try:
 
 except ImportError as e:
     if (
-        "libEGL" in str(e) or 
-        "cannot open shared object" in str(e) or 
+        "libEGL" in str(e) or
+        "cannot open shared object" in str(e) or
         "qt.qpa.plugin" in str(e).lower()
     ):
         pytest.skip(f"GUI libraries not available: {e}", allow_module_level=True)

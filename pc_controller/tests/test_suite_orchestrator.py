@@ -505,8 +505,8 @@ def main():
 
     parser = argparse.ArgumentParser(description="Comprehensive Test Suite Executor")
     parser.add_argument(
-        "--categories", 
-        nargs="+", 
+        "--categories",
+        nargs="+",
         choices=["unit", "integration", "system", "performance", "android"],
         help="Test categories to execute"
     )

@@ -47,7 +47,7 @@ def test_fr4_session_management_end_to_end(tmp_path: Path) -> None:
 
 
 def test_fr1_simulation_mode_generates_gsr_csv(tmp_path: Path) -> None:
-    """FR1: Run a short simulated session using SimulatedShimmer and confirm CSV with dummy GSR data.
+    """FR1: Run a short simulated session using SimulatedShimmer and confirm CSV with dummy GSR.
 
     This test uses SimulatedShimmer to generate callback samples quickly and writes them to CSV file
     within the active session directory. It does not require any hardware or Android device.
