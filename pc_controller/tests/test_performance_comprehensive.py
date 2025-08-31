@@ -72,7 +72,9 @@ class TestPerformanceAndStress:
         registration_time = time.perf_counter() - start_time
 
         # Performance assertions
-        assert registration_time < 5.0, f"Registering {num_devices} devices took {registration_time:.2f}s"
+        assert registration_time < 5.0, (
+            f"Registering {num_devices} devices took {registration_time:.2f}s"
+        )
 
         # Measure heartbeat update performance
         start_time = time.perf_counter()
@@ -89,7 +91,9 @@ class TestPerformanceAndStress:
         device_manager.check_timeouts()
         timeout_check_time = time.perf_counter() - start_time
 
-        assert timeout_check_time < 0.5, f"Checking {num_devices} timeouts took {timeout_check_time:.2f}s"
+        assert timeout_check_time < 0.5, (
+            f"Checking {num_devices} timeouts took {timeout_check_time:.2f}s"
+        )
 
         # Verify all devices are still online
         online_count = sum(1 for device_id in device_ids
@@ -216,7 +220,9 @@ class TestPerformanceAndStress:
         max_memory = max(memory_samples)
 
         # Memory should not grow excessively
-        assert memory_growth < 100 * 1024 * 1024, f"Memory grew by {memory_growth / 1024 / 1024:.1f}MB"
+        assert memory_growth < 100 * 1024 * 1024, (
+            f"Memory grew by {memory_growth / 1024 / 1024:.1f}MB"
+        )
         assert max_memory < initial_memory + 200 * 1024 * 1024, "Peak memory usage too high"
 
     def test_protocol_parsing_performance(self):

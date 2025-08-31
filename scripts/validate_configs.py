@@ -112,7 +112,9 @@ def validate_pre_commit_config() -> list[str]:
             return errors
 
         repos = config["repos"]
-        expected_repos = ["pre-commit-hooks", "black", "isort", "ruff-pre-commit", "mirrors-mypy", "bandit"]
+        expected_repos = [
+            "pre-commit-hooks", "black", "isort", "ruff-pre-commit", "mirrors-mypy", "bandit"
+        ]
 
         repo_urls = [repo.get("repo", "") for repo in repos]
         errors.extend([
@@ -163,9 +165,13 @@ def validate_requirements_consistency() -> list[str]:
             only_in_pyproject = pyproject_deps - requirements
 
             if only_in_requirements:
-                errors.append(f"Dependencies in requirements.txt but not pyproject.toml: {only_in_requirements}")
+                errors.append(
+                    f"Dependencies in requirements.txt but not pyproject.toml: {only_in_requirements}"
+                )
             if only_in_pyproject:
-                errors.append(f"Dependencies in pyproject.toml but not requirements.txt: {only_in_pyproject}")
+                errors.append(
+                    f"Dependencies in pyproject.toml but not requirements.txt: {only_in_pyproject}"
+                )
 
     except Exception as e:
         errors.append(f"Error validating requirements consistency: {e}")

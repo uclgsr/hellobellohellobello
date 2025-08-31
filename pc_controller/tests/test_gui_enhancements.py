@@ -20,7 +20,7 @@ class TestCalibrationDialog:
 
     def test_calibration_dialog_parameters(self):
         """Test calibration dialog parameter collection."""
-        # Skip GUI test in headless environment - functionality is covered by parameter validation tests
+        # Skip GUI test in headless environment - functionality covered by validation tests
         pytest.skip("GUI components require display environment")
 
 

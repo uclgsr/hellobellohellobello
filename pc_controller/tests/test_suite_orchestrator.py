@@ -274,7 +274,9 @@ class SuiteExecutor:
 
         return test_results
 
-    def _parse_pytest_output(self, output: str, category: str, total_duration: float) -> list[ExecutionResult]:
+    def _parse_pytest_output(
+        self, output: str, category: str, total_duration: float
+    ) -> list[ExecutionResult]:
         """Parse pytest output to extract test results."""
         results = []
         lines = output.split('\n')
@@ -502,11 +504,17 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Comprehensive Test Suite Executor")
-    parser.add_argument("--categories", nargs="+", choices=["unit", "integration", "system", "performance", "android"],
-                       help="Test categories to execute")
+    parser.add_argument(
+        "--categories", 
+        nargs="+", 
+        choices=["unit", "integration", "system", "performance", "android"],
+        help="Test categories to execute"
+    )
     parser.add_argument("--output", type=Path, help="Output file for test report")
     parser.add_argument("--coverage", action="store_true", help="Include coverage analysis")
-    parser.add_argument("--test-root", type=Path, default=Path.cwd(), help="Root directory of tests")
+    parser.add_argument(
+        "--test-root", type=Path, default=Path.cwd(), help="Root directory of tests"
+    )
 
     args = parser.parse_args()
 

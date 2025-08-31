@@ -33,7 +33,8 @@ def test_backoff_schedule_properties() -> None:
     sched = compute_backoff_schedule(100, 4)
     assert sched == [100, 200, 400, 800]
     assert all(isinstance(x, int) and x > 0 for x in sched)
-    assert all(b <= a * 2 for a, b in itertools.pairwise(sched))  # default factor 2.0 non-decreasing
+    # Check non-decreasing with default factor 2.0
+    assert all(b <= a * 2 for a, b in itertools.pairwise(sched))
     assert compute_backoff_schedule(100, 0) == []
     assert compute_backoff_schedule(100, -3) == []
 

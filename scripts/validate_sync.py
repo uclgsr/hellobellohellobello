@@ -5,7 +5,8 @@ Command-line tool to validate end-to-end temporal synchronization for a
 recorded session using the Hardware Validation Protocol.
 
 Usage:
-  python scripts\\validate_sync.py --session-id 20250101_120000 --base-dir ./pc_controller_data --tolerance-ms 5.0
+  python scripts\\validate_sync.py --session-id 20250101_120000 \
+    --base-dir ./pc_controller_data --tolerance-ms 5.0
 
 This script will:
 - Locate the session directory under base-dir by session_id

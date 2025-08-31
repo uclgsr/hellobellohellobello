@@ -83,7 +83,12 @@ class TestOrchestrator:
     def log(self, message: str, level: str = "INFO") -> None:
         """Log a message with timestamp."""
         timestamp = time.strftime("%H:%M:%S")
-        prefix = "🔍" if level == "INFO" else "✅" if level == "SUCCESS" else "❌" if level == "ERROR" else "⚠️"
+        prefix = (
+            "🔍" if level == "INFO" else 
+            "✅" if level == "SUCCESS" else 
+            "❌" if level == "ERROR" else 
+            "⚠️"
+        )
         print(f"[{timestamp}] {prefix} {message}")
 
     def run_command(self, cmd: list[str], name: str, cwd: Path | None = None,
@@ -140,7 +145,11 @@ class TestOrchestrator:
             self.log(f"{name} failed with exception: {e}", "ERROR")
             return TestResult(name, False, duration, error=str(e))
 
-    def run_commands_parallel(self, commands: list[tuple[list[str], str]], max_workers: int | None = None) -> list[TestResult]:
+    def run_commands_parallel(
+        self, 
+        commands: list[tuple[list[str], str]], 
+        max_workers: int | None = None
+    ) -> list[TestResult]:
         """Run multiple commands in parallel for better performance."""
         if not self.use_parallel or len(commands) == 1:
             # Fall back to sequential execution
@@ -174,8 +183,12 @@ class TestOrchestrator:
 
         checks = [
             # Ruff linting with caching
-            ([sys.executable, "-m", "ruff", "check", str(self.pc_controller_src),
-              "--output-format=github", "--cache-dir=.ruff_cache"] + (["--fix"] if self.args.fix else []), "Ruff Linting"),
+            (
+                [sys.executable, "-m", "ruff", "check", str(self.pc_controller_src),
+                 "--output-format=github", "--cache-dir=.ruff_cache"] + 
+                (["--fix"] if self.args.fix else []), 
+                "Ruff Linting"
+            ),
 
             # Black formatting check
             ([sys.executable, "-m", "black", "--check", "--diff", str(self.pc_controller_src)]

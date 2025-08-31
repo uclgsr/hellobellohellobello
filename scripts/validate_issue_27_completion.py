@@ -126,7 +126,9 @@ def check_chapter_visualizations():
                 # Special case: check if chapter 2 images exist anywhere
                 ch2_images = len(list(images_dir.glob("chapter2*/*.png")))
                 if ch2_images > 0:
-                    print(f"  ✅ {ch2_images} generated visualization(s) (found in chapter2 subdirs)")
+                    print(
+                        f"  ✅ {ch2_images} generated visualization(s) (found in chapter2 subdirs)"
+                    )
                     total_viz = ch2_images
                 else:
                     print("  ❌ No generated visualizations found")
