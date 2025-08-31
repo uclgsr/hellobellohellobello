@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -172,10 +173,8 @@ class HeartbeatManager:
         self._running = False
         if self._monitor_task:
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitor_task
-            except asyncio.CancelledError:
-                pass
         logger.info("Heartbeat monitoring stopped")
 
     async def _monitor_loop(self) -> None:

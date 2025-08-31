@@ -16,6 +16,7 @@ Note: The Android Spoke advertises service type: _gsr-controller._tcp.local.
 from __future__ import annotations
 
 import base64
+import contextlib
 import json
 import os
 import random
@@ -73,10 +74,8 @@ def _connect(host: str, port: int, timeout: float) -> socket.socket:
             return ctx.wrap_socket(s, server_hostname=server_hostname)
         return s
     except Exception:
-        try:
+        with contextlib.suppress(Exception):
             s.close()
-        except Exception:
-            pass
         raise
 
 
@@ -175,10 +174,8 @@ class ConnectionWorker(QThread):
                 self.log.emit(f"Received: {payload}")
                 self.capabilities.emit(self._device.name, payload)
             finally:
-                try:
+                with contextlib.suppress(Exception):
                     sock.close()
-                except Exception:
-                    pass
         except Exception as exc:
             self.log.emit(f"Connection error to {self._device.name}: {exc}")
 
@@ -280,7 +277,7 @@ class _BroadcastWorker(QThread):
                 )
                 if self._controller is not None:
                     self._controller._store_offset(name, int(median_off))
-                    try:
+                    with contextlib.suppress(Exception):
                         self._controller._store_sync_stats(
                             name,
                             {
@@ -291,8 +288,6 @@ class _BroadcastWorker(QThread):
                                 "timestamp_ns": int(time.time_ns()),
                             },
                         )
-                    except Exception:
-                        pass
                 self.log.emit(
                     f"Time sync {name}: median_offset={median_off}ns "
                     f"min_delay={min_delay}ns std_dev={std_dev}ns trials={used}"
@@ -375,10 +370,8 @@ class _BroadcastWorker(QThread):
                                     f"Attempt {attempt_idx}/{len(schedule)} to {name}: failed"
                                 )
                         finally:
-                            try:
+                            with contextlib.suppress(Exception):
                                 sock.close()
-                            except Exception:
-                                pass
                     except Exception as exc:
                         self.log.emit(
                             f"Attempt {attempt_idx}/{len(schedule)} to {name} "
@@ -433,11 +426,7 @@ class PreviewStreamWorker(QThread):
                 payload.get("v") == 1
                 and payload.get("type") == "event"
                 and payload.get("name") == "preview_frame"
-            ):
-                b64 = str(payload.get("jpeg_base64", ""))
-                ts = int(payload.get("ts", 0))
-            # legacy event
-            elif payload.get("type") == "preview_frame":
+            ) or payload.get("type") == "preview_frame":
                 b64 = str(payload.get("jpeg_base64", ""))
                 ts = int(payload.get("ts", 0))
             else:
@@ -478,10 +467,8 @@ class PreviewStreamWorker(QThread):
                             except Exception:
                                 continue
                 finally:
-                    try:
+                    with contextlib.suppress(Exception):
                         sock.close()
-                    except Exception:
-                        pass
                 # Socket closed; retry after short delay
                 time.sleep(1.0)
             except Exception as exc:
@@ -599,10 +586,8 @@ class NetworkController(QObject):
             worker = PreviewStreamWorker(device)
             worker.log.connect(self._emit_log)
             worker.frame.connect(self._on_preview_frame)
-            try:
+            with contextlib.suppress(Exception):
                 worker.rejoin.connect(self._on_rejoin)
-            except Exception:
-                pass
             self._stream_workers[device.name] = worker
             worker.start()
             self._emit_log(f"PreviewStreamWorker started for {device.name}")
@@ -631,10 +616,8 @@ class NetworkController(QObject):
 
     def _on_preview_frame(self, name: str, data: bytes, ts: int) -> None:
         # Re-emit for GUI consumers
-        try:
+        with contextlib.suppress(Exception):
             self.preview_frame.emit(name, data, ts)
-        except Exception:
-            pass
 
     def _store_offset(self, name: str, offset_ns: int) -> None:
         self._clock_offsets_ns[name] = offset_ns
@@ -643,10 +626,8 @@ class NetworkController(QObject):
         """Internal: store detailed sync stats for a device and trigger auto re-sync when needed."""
         self._clock_sync_stats[name] = dict(stats)
         # Evaluate auto re-sync policy
-        try:
+        with contextlib.suppress(Exception):
             self._maybe_auto_resync(name, stats)
-        except Exception:
-            pass
 
     def _maybe_auto_resync(self, name: str, stats: dict) -> None:
         """If measured delay is high, trigger a time_sync broadcast with cooldown.
@@ -666,19 +647,15 @@ class NetworkController(QObject):
             ):
                 self._auto_resync_in_flight = True
                 self._last_auto_resync_monotonic = now
-                try:
+                with contextlib.suppress(Exception):
                     self._emit_log(
                         f"High sync delay for {name}: {delay_ns/1e6:.2f} ms >= "
                         f"threshold {self._resync_delay_threshold_ns/1e6:.2f} ms — "
                         f"triggering broadcast_time_sync()"
                     )
-                except Exception:
-                    pass
                 # Launch re-sync broadcast (non-blocking)
-                try:
+                with contextlib.suppress(Exception):
                     self.broadcast_time_sync()
-                except Exception:
-                    pass
                 # Clear in-flight flag immediately; cooldown prevents rapid retriggering
                 self._auto_resync_in_flight = False
         except Exception:
@@ -730,10 +707,8 @@ class NetworkController(QObject):
             and self._active_session_id
             and sid == self._active_session_id
         ):
-            try:
+            with contextlib.suppress(Exception):
                 self._device_manager.set_status(device_name, "Recording")
-            except Exception:
-                pass
             self._emit_log(
                 f"Device {device_name} rejoined active session {sid}; status set to Recording"
             )
@@ -775,10 +750,8 @@ class NetworkController(QObject):
             receiver_host=host,
             receiver_port=port,
         )
-        try:
+        with contextlib.suppress(Exception):
             worker.log.connect(self._emit_log)
-        except Exception:
-            pass
         worker.start()
 
     def broadcast_transfer_files(self, host: str, port: int, session_id: str) -> None:

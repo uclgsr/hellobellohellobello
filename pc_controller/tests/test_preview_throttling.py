@@ -8,6 +8,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
 os.environ.setdefault("QT_QUICK_BACKEND", "software")
 
+import contextlib
+
 import pytest
 
 # Skip if PyQt6 is not available or if GUI libraries are missing
@@ -50,10 +52,8 @@ class _StubNetwork(QObject):
 
     def start(self) -> None:
         self.started = True
-        try:
+        with contextlib.suppress(Exception):
             self.log.emit("Stub network started")
-        except Exception:
-            pass
 
 
 @pytest.fixture(scope="module")

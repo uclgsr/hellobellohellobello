@@ -43,6 +43,8 @@ if str(PC_SRC) not in sys.path:
     sys.path.insert(0, str(PC_SRC))
 
 # Imports after sys.path tweak
+import contextlib
+
 from network.network_controller import (  # type: ignore
     DiscoveredDevice,
     NetworkController,
@@ -121,31 +123,23 @@ class SimulatedAndroidClient:
         # Close server socket to unblock accept
         try:
             if self._sock is not None:
-                try:
+                with contextlib.suppress(Exception):
                     self._sock.shutdown(socket.SHUT_RDWR)
-                except Exception:
-                    pass
                 self._sock.close()
         except Exception:
             pass
         # Close client sockets
         with self._lock:
             for s in list(self._connections):
-                try:
+                with contextlib.suppress(Exception):
                     s.shutdown(socket.SHUT_RDWR)
-                except Exception:
-                    pass
-                try:
+                with contextlib.suppress(Exception):
                     s.close()
-                except Exception:
-                    pass
             self._connections.clear()
         # Wait threads
         for th in list(self._stream_threads):
-            try:
+            with contextlib.suppress(Exception):
                 th.join(timeout=0.5)
-            except Exception:
-                pass
 
     def _server_loop(self) -> None:
         try:
@@ -200,10 +194,8 @@ class SimulatedAndroidClient:
         except Exception:
             cmd_conn = False
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 sock.settimeout(2.0)
-            except Exception:
-                pass
 
         if cmd_conn:
             self._command_loop(sock)
@@ -235,10 +227,8 @@ class SimulatedAndroidClient:
         except Exception as exc:
             self.stats.last_error = f"cmd loop error: {exc}"
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 sock.close()
-            except Exception:
-                pass
             with self._lock:
                 if sock in self._connections:
                     self._connections.remove(sock)
@@ -308,10 +298,8 @@ class SimulatedAndroidClient:
                 jitter = random.uniform(-interval * 0.05, interval * 0.05)
                 time.sleep(max(0.0, interval + jitter))
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 sock.close()
-            except Exception:
-                pass
             with self._lock:
                 if sock in self._connections:
                     self._connections.remove(sock)
@@ -403,16 +391,12 @@ def run_test(num_clients: int, rate_hz: int, duration_s: int) -> int:
         print("[WARN] Interrupted by user; stopping early…")
         exit_code = max(exit_code, 1)
     finally:
-        try:
+        with contextlib.suppress(Exception):
             controller.broadcast_stop_recording()
-        except Exception:
-            pass
         # Allow a moment for stop to propagate
         time.sleep(1.0)
-        try:
+        with contextlib.suppress(Exception):
             controller.shutdown()
-        except Exception:
-            pass
         for c in clients:
             c.stop()
         try:

@@ -391,10 +391,9 @@ def main():
     print("🔍 Multi-Modal Sensor Platform Code Quality Analyzer")
     print("="*60)
 
-    if args.all or args.setup:
-        if not setup_linting_tools():
-            print("❌ Failed to setup linting tools")
-            return
+    if (args.all or args.setup) and not setup_linting_tools():
+        print("❌ Failed to setup linting tools")
+        return
 
     if args.all or args.config:
         create_config_files()

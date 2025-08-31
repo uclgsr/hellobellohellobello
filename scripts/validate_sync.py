@@ -147,7 +147,7 @@ def _map_offsets_to_devices(session_dir: str, offsets: dict[str, int]) -> dict[s
             match_key = norm
         else:
             # find best candidate by longest common subsequence (simplified contains)
-            for k in norm_offset.keys():
+            for k in norm_offset:
                 if norm in k or k in norm:
                     match_key = k
                     break

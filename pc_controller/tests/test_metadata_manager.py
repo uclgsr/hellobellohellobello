@@ -237,7 +237,7 @@ class TestSessionMetadataManager:
     def test_create_csv_header(self):
         """Test creating CSV header strings."""
         gsr_header = self.manager.create_csv_header("gsr")
-        assert "timestamp_ns,gsr_microsiemens,ppg_raw" == gsr_header
+        assert gsr_header == "timestamp_ns,gsr_microsiemens,ppg_raw"
 
         rgb_header = self.manager.create_csv_header("rgb")
         assert rgb_header.startswith("timestamp_ns")

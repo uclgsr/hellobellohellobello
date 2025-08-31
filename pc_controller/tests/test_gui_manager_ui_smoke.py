@@ -1,3 +1,4 @@
+import contextlib
 import os
 import sys
 
@@ -36,10 +37,8 @@ class _StubNetwork(QObject):
 
     def start(self) -> None:
         self.started = True
-        try:
+        with contextlib.suppress(Exception):
             self.log.emit("Stub network started")
-        except Exception:
-            pass
 
 
 @pytest.fixture(scope="module")

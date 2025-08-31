@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 
 try:
@@ -82,10 +83,8 @@ class TimeSyncServer:
         # If port=0 was passed, store the actual bound port for testability
         sockname = transport.get_extra_info("sockname")
         if isinstance(sockname, tuple) and len(sockname) >= 2:
-            try:
+            with contextlib.suppress(Exception):
                 self._port = int(sockname[1])
-            except Exception:
-                pass
         self._transport = transport
         self._protocol = protocol
 

@@ -124,8 +124,8 @@ def create_synchronization_failure_plot(sync_data, output_dir):
         # Annotate failure region
         plt.annotate('WiFi Roaming Event\n67-84ms drift',
                     xy=(5, 67.3), xytext=(6.5, 60),
-                    arrowprops=dict(arrowstyle='->', color='red'),
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.7),
+                    arrowprops={'arrowstyle': '->', 'color': 'red'},
+                    bbox={'boxstyle': "round,pad=0.3", 'facecolor': "yellow", 'alpha': 0.7},
                     fontsize=10)
 
         plt.xlabel('Time (10-second intervals)')
@@ -184,7 +184,7 @@ def create_endurance_test_plots(endurance_raw, endurance_report, output_dir):
         slope = np.polyfit(hours, endurance_raw['memory_usage_mb'], 1)[0]
         ax1.text(0.02, 0.98, f'Memory growth rate: {slope:.2f} MB/hour',
                 transform=ax1.transAxes, verticalalignment='top',
-                bbox=dict(boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.7))
+                bbox={'boxstyle': "round,pad=0.3", 'facecolor': "yellow", 'alpha': 0.7})
 
     # CPU utilization plot
     ax2.plot(hours, endurance_raw['cpu_percentage'], linewidth=2, color='red', label='CPU Usage')
@@ -201,7 +201,7 @@ def create_endurance_test_plots(endurance_raw, endurance_report, output_dir):
     max_memory = endurance_raw['memory_usage_mb'].max()
     ax2.text(0.02, 0.98, f'Average CPU: {avg_cpu:.1f}%\nPeak Memory: {max_memory:.1f} MB',
             transform=ax2.transAxes, verticalalignment='top',
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgreen", alpha=0.7))
+            bbox={'boxstyle': "round,pad=0.3", 'facecolor': "lightgreen", 'alpha': 0.7})
 
     plt.tight_layout()
     plt.savefig(output_dir / "endurance_test_performance.png",

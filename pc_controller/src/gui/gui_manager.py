@@ -48,6 +48,8 @@ try:
 except Exception:  # pragma: no cover - import guard for environments without Qt backend
     pg = None
 
+import contextlib
+
 from core.quick_start_guide import QuickStartGuide
 from core.user_experience import ErrorMessageTranslator, StatusIndicator, show_file_location
 from data.data_aggregator import DataAggregator
@@ -330,12 +332,10 @@ class GUIManager(QMainWindow):
         # Periodic time re-sync timer (every 3 minutes)
         self._resync_timer = QTimer(self)
         self._resync_timer.setInterval(180000)
-        try:
+        with contextlib.suppress(Exception):
             self._resync_timer.timeout.connect(
                 lambda: self._network.broadcast_time_sync()
             )
-        except Exception:
-            pass
 
         # Wire network logs and preview frames
         self._network.device_discovered.connect(self._on_device_discovered)
@@ -486,10 +486,8 @@ class GUIManager(QMainWindow):
         except Exception as exc:
             self._log(f"Broadcast start failed: {exc}")
         # Start periodic re-sync timer
-        try:
+        with contextlib.suppress(Exception):
             self._resync_timer.start()
-        except Exception:
-            pass
         self._open_recorders(self._session_dir)
         self._recording = True
         self._log(f"Session started: {self._session_dir}")
@@ -503,10 +501,8 @@ class GUIManager(QMainWindow):
         except Exception as exc:
             self._log(f"Broadcast stop failed: {exc}")
         # Stop periodic re-sync timer
-        try:
+        with contextlib.suppress(Exception):
             self._resync_timer.stop()
-        except Exception:
-            pass
         # Close local recorders
         self._close_recorders()
         self._recording = False
@@ -604,12 +600,10 @@ class GUIManager(QMainWindow):
         self, device_name: str, jpeg_bytes: object, ts_ns: int
     ) -> None:
         try:
-            try:
+            with contextlib.suppress(Exception):
                 self._logger.info(
                     f"[DEBUG_LOG] on_preview_frame: {device_name}, " f"ts={ts_ns}"
                 )
-            except Exception:
-                pass
             now = time.monotonic()
             # If first time seeing this device, count initial burst frame as a drop
             # to coalesce bursts deterministically in tests/CI.
@@ -617,12 +611,10 @@ class GUIManager(QMainWindow):
                 drops0 = self._remote_drop_counts.get(device_name, 0) + 1
                 self._remote_drop_counts[device_name] = drops0
                 self._remote_last_render_s[device_name] = now
-                try:
+                with contextlib.suppress(Exception):
                     self._logger.info(
                         f"[DEBUG_LOG] first-drop for {device_name}: {drops0}"
                     )
-                except Exception:
-                    pass
                 return
             last = self._remote_last_render_s.get(device_name, now)
             # Enforce per-device remote throttle (stricter than local)
@@ -630,10 +622,8 @@ class GUIManager(QMainWindow):
                 drops = self._remote_drop_counts.get(device_name, 0) + 1
                 self._remote_drop_counts[device_name] = drops
                 # Debug log increment for visibility in tests
-                try:
+                with contextlib.suppress(Exception):
                     self._logger.info(f"[DEBUG_LOG] drop++ for {device_name}: {drops}")
-                except Exception:
-                    pass
                 last_log = self._remote_drop_last_log_s.get(device_name, now)
                 if (now - last_log) >= 1.0:
                     self._log(
@@ -739,10 +729,8 @@ class GUIManager(QMainWindow):
         finally:
             self._gsr_file = None
         if self._video_writer is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._video_writer.release()
-            except Exception:
-                pass
             self._video_writer = None
 
     def _write_gsr_samples(self, ts: np.ndarray, vals: np.ndarray) -> None:
@@ -883,16 +871,12 @@ class GUIManager(QMainWindow):
             self._log(f"Load session UI error: {exc}")
 
     def _on_play(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self._play_timer.start()
-        except Exception:
-            pass
 
     def _on_pause(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self._play_timer.stop()
-        except Exception:
-            pass
 
     def _on_slider_change(self, value: int) -> None:
         self._current_ms = int(value)
@@ -940,10 +924,8 @@ class GUIManager(QMainWindow):
     def _update_plot_cursor(self) -> None:
         if pg is None or self.plot is None or self.cursor is None:
             return
-        try:
+        with contextlib.suppress(Exception):
             self.cursor.setPos(float(self._current_ms) / 1000.0)
-        except Exception:
-            pass
 
     def _on_add_annotation(self) -> None:
         text = self.ann_input.text().strip()

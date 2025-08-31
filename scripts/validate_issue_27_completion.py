@@ -61,7 +61,7 @@ def check_chapter_visualizations():
 
     all_complete = True
 
-    for chapter in required_visualizations.keys():
+    for chapter in required_visualizations:
         chapter_num = chapter.split()[1]
         print(f"\n{chapter}:")
 

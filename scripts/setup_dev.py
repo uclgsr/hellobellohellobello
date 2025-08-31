@@ -258,9 +258,8 @@ class DevSetup:
 
         try:
             # Install dependencies (unless hooks-only)
-            if not self.args.hooks_only:
-                if not self.install_python_dependencies():
-                    success = False
+            if not self.args.hooks_only and not self.install_python_dependencies():
+                success = False
 
             # Install pre-commit hooks
             if not self.install_pre_commit_hooks():
@@ -270,9 +269,8 @@ class DevSetup:
             self.setup_ide_config()
 
             # Validate setup (unless reinstall mode)
-            if not self.args.reinstall:
-                if not self.validate_setup():
-                    success = False
+            if not self.args.reinstall and not self.validate_setup():
+                success = False
 
             # Test hooks
             if not self.test_pre_commit_hooks():

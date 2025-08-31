@@ -7,6 +7,7 @@ Simulation generates GSR-like sine+noise samples at shimmer_sampling_rate from c
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import math
 import threading
@@ -237,10 +238,8 @@ class SimulatedShimmer:
             phase = (phase + two_pi * 1.2 * dt) % two_pi
             cb = self._callback
             if cb:
-                try:
+                with contextlib.suppress(Exception):
                     cb(ts_ns, float(val))
-                except Exception:
-                    pass
             next_t += dt
 
 

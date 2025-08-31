@@ -6,6 +6,7 @@ organized by device and modality.
 
 from __future__ import annotations
 
+import contextlib
 import glob
 import json
 import os
@@ -62,10 +63,8 @@ def export_session_to_hdf5(
                     "timestamp_ns", data=ts_np, compression="gzip", compression_opts=4
                 )
                 # Attach basic units attribute
-                try:
+                with contextlib.suppress(Exception):
                     ts_ds.attrs["units"] = "ns"
-                except Exception:
-                    pass
                 # Robust sample rate estimation from positive diffs on sorted timestamps
                 # with trimming
                 sample_rate_hz = None
@@ -118,9 +117,7 @@ def export_session_to_hdf5(
                         ds.attrs["units"] = "microsiemens"
                     elif lname == "ppg_raw":
                         ds.attrs["units"] = "raw_counts"
-                    elif lname in ("w", "width"):
-                        ds.attrs["units"] = "pixels"
-                    elif lname in ("h", "height"):
+                    elif lname in ("w", "width") or lname in ("h", "height"):
                         ds.attrs["units"] = "pixels"
                     # attach sample rate to numeric datasets if known (numeric dtypes only)
                     if (
