@@ -1,5 +1,6 @@
 package com.shimmerresearch.android.guiUtilities
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -84,13 +85,20 @@ class ShimmerBluetoothDialog : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun selectDevice(device: BluetoothDevice) {
-        Log.i(TAG, "Selected device: ${device.name} (${device.address})")
+        val deviceName = try {
+            device.name
+        } catch (e: SecurityException) {
+            "Unknown Device"
+        }
+
+        Log.i(TAG, "Selected device: $deviceName (${device.address})")
 
         val resultIntent =
             Intent().apply {
                 putExtra(EXTRA_DEVICE_ADDRESS, device.address)
-                putExtra(EXTRA_DEVICE_NAME, device.name ?: "Unknown Device")
+                putExtra(EXTRA_DEVICE_NAME, deviceName ?: "Unknown Device")
             }
 
         setResult(Activity.RESULT_OK, resultIntent)
@@ -138,8 +146,15 @@ class DeviceListAdapter(
         private val deviceName: TextView = itemView.findViewById(R.id.textDeviceName)
         private val deviceAddress: TextView = itemView.findViewById(R.id.textDeviceAddress)
 
+        @SuppressLint("MissingPermission")
         fun bind(device: BluetoothDevice) {
-            deviceName.text = device.name ?: "Unknown Device"
+            val name = try {
+                device.name ?: "Unknown Device"
+            } catch (e: SecurityException) {
+                "Unknown Device"
+            }
+
+            deviceName.text = name
             deviceAddress.text = device.address
 
             itemView.setOnClickListener {

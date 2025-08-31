@@ -264,7 +264,6 @@ def _dry_run(out_path: str | None) -> int:
     try:
         import matplotlib
         matplotlib.use("Agg", force=True)  # headless-safe
-        import matplotlib.pyplot as plt
         can_plot = True
     except Exception:
         can_plot = False

@@ -134,7 +134,7 @@ class NavigationController(
 
             // Keep history manageable (max 10 entries)
             if (navigationHistory.size > 10) {
-                navigationHistory.removeFirst()
+                navigationHistory.removeAt(0) // Use removeAt(0) instead of removeFirst() for API compatibility
             }
         }
     }

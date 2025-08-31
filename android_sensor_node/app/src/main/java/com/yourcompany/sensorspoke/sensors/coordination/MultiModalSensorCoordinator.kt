@@ -779,7 +779,7 @@ class SensorDataBuffer {
         synchronized(gsrData) {
             gsrData.add(data)
             if (gsrData.size > maxBufferSize) {
-                gsrData.removeFirst()
+                gsrData.removeAt(0) // Use removeAt(0) instead of removeFirst() for API compatibility
             }
         }
     }

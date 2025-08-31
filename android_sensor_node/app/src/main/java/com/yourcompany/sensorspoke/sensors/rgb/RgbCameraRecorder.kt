@@ -302,8 +302,8 @@ class RgbCameraRecorder(
             Log.i(TAG, "RAW sizes available: ${rawSizes.contentToString()}")
             Log.i(TAG, "4K video support: $supports4K, RAW capture: $supportsRawCapture")
 
-            // Check mandatory stream combinations (API 24+)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            // Check mandatory stream combinations (API 29+)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                 val mandatoryConfigs = characteristics.get(CameraCharacteristics.SCALER_MANDATORY_STREAM_COMBINATIONS)
                 if (mandatoryConfigs != null) {
                     Log.i(TAG, "Mandatory stream combinations: ${mandatoryConfigs.size} configurations available")

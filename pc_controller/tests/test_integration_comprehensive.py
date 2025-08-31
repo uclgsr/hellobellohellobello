@@ -365,7 +365,7 @@ class TestMultiComponentIntegration:
 
         # Verify all devices are recording
         recording_devices = [
-            device_id for device_id in devices 
+            device_id for device_id in devices
             if device_manager.get_status(device_id) == "Recording"
         ]
 

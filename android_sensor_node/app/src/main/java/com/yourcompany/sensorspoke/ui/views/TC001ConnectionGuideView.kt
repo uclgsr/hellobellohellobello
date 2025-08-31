@@ -83,7 +83,7 @@ constructor(
         val spannableString = SpannableString(mContent)
 
         // Use a simple arrow icon for connection indication
-        val drawable = context.getDrawable(R.drawable.ic_right_arrow)
+        val drawable = androidx.appcompat.content.res.AppCompatResources.getDrawable(context, R.drawable.ic_right_arrow)
         drawable?.setBounds(0, 0, drawable.minimumWidth, drawable.minimumHeight)
         spannableString.setSpan(
             ImageSpan(drawable!!),

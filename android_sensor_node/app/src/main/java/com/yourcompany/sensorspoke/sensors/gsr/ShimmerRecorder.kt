@@ -492,9 +492,9 @@ data class GSRDataPoint(
      * Convert to CSV row format
      */
     fun toCsvRow(): String =
-        "$timestampNs,$gsrRawAdc,${String.format("%.6f", gsrMicrosiemens)}," +
-            "${String.format("%.6f", gsrCalibrated)},$ppgRawAdc," +
-            "${String.format("%.6f", ppgCalibrated)},$sampleNumber"
+        "$timestampNs,$gsrRawAdc,${String.format(java.util.Locale.ROOT, "%.6f", gsrMicrosiemens)}," +
+            "${String.format(java.util.Locale.ROOT, "%.6f", gsrCalibrated)},$ppgRawAdc," +
+            "${String.format(java.util.Locale.ROOT, "%.6f", ppgCalibrated)},$sampleNumber"
 }
 
 /**

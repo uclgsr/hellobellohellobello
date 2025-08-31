@@ -78,19 +78,19 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.11.0")
-    implementation("androidx.activity:activity-ktx:1.8.2")
-    implementation("androidx.fragment:fragment-ktx:1.6.2")
-    implementation("androidx.viewpager2:viewpager2:1.0.0")
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.activity:activity-ktx:1.9.3")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
+    implementation("androidx.viewpager2:viewpager2:1.1.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.7")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
-    // CameraX for RGB recording - using stable versions
-    val cameraxVersion = "1.3.1"
+    // CameraX for RGB recording - compatible versions with AGP 8.5.2
+    val cameraxVersion = "1.3.4"
     implementation("androidx.camera:camera-core:$cameraxVersion")
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
@@ -104,10 +104,10 @@ dependencies {
     // Note: Samsung Camera SDK would be added here when available
     // For now, we'll use Camera2 API with Samsung-specific optimizations
 
-    // TLS networking, background work, and encryption - stable versions
-    implementation("com.squareup.okhttp3:okhttp:4.11.0")
-    implementation("androidx.work:work-runtime-ktx:2.8.1")
-    implementation("androidx.security:security-crypto:1.0.0")
+    // TLS networking, background work, and encryption - compatible versions
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.security:security-crypto:1.1.0")
 
     // Local SDKs (Topdon TC001 and Shimmer Android API)
     implementation(files("src/main/libs/topdon_1.3.7.aar"))
@@ -123,18 +123,18 @@ dependencies {
     // FastBLE for robust BLE communication with Shimmer devices
     implementation("com.github.Jasonchenlijian:FastBle:2.4.0")
 
-    // Unit testing - stable versions
+    // Unit testing - compatible versions 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.robolectric:robolectric:4.11.1")
-    testImplementation("androidx.test:core:1.5.0")
-    testImplementation("androidx.test.ext:junit:1.1.5")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-    testImplementation("com.google.truth:truth:1.1.5")
-    testImplementation("io.mockk:mockk:1.13.8")
-    testImplementation("androidx.test:runner:1.5.2")
+    testImplementation("org.robolectric:robolectric:4.13")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("com.google.truth:truth:1.4.4")
+    testImplementation("io.mockk:mockk:1.13.14")
+    testImplementation("androidx.test:runner:1.6.2")
 
     // Performance: Test orchestrator for parallel execution
-    androidTestUtil("androidx.test:orchestrator:1.4.2")
+    androidTestUtil("androidx.test:orchestrator:1.5.1")
 }
 
 // Enable detailed per-test logging for JVM unit tests

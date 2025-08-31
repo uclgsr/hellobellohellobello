@@ -139,12 +139,14 @@ class TC001DataExporter(
 
                     it.write(
                         "$timestamp,${String.format(
+                            java.util.Locale.ROOT,
                             "%.2f",
                             centerTemp,
                         )},${String.format(
+                            java.util.Locale.ROOT,
                             "%.2f",
                             minTemp,
-                        )},${String.format("%.2f", maxTemp)},${String.format("%.2f", avgTemp)},$emissivity\n",
+                        )},${String.format(java.util.Locale.ROOT, "%.2f", maxTemp)},${String.format(java.util.Locale.ROOT, "%.2f", avgTemp)},$emissivity\n",
                     )
                 }
             }

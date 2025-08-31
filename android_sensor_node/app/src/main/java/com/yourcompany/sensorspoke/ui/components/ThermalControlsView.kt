@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.View
 import android.widget.*
+import androidx.appcompat.widget.SwitchCompat
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.sensors.thermal.TopdonThermalPalette
 
@@ -25,8 +26,8 @@ constructor(
     private val emissivityValue: TextView
     private val minTempInput: EditText
     private val maxTempInput: EditText
-    private val autoGainToggle: Switch
-    private val temperatureCompensationToggle: Switch
+    private val autoGainToggle: SwitchCompat
+    private val temperatureCompensationToggle: SwitchCompat
     private val currentTempDisplay: TextView
     private val tempRangeDisplay: TextView
     private val deviceStatusIndicator: View
@@ -144,7 +145,7 @@ constructor(
 
         // Auto Gain Control
         autoGainToggle =
-            Switch(context).apply {
+            SwitchCompat(context).apply {
                 text = "Auto Gain Control"
                 isChecked = true
             }
@@ -152,7 +153,7 @@ constructor(
 
         // Temperature Compensation
         temperatureCompensationToggle =
-            Switch(context).apply {
+            SwitchCompat(context).apply {
                 text = "Temperature Compensation"
                 isChecked = true
             }

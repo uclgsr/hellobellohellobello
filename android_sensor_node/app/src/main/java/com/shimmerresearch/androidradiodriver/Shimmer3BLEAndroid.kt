@@ -1,5 +1,6 @@
 package com.shimmerresearch.androidradiodriver
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
 import android.util.Log
@@ -102,13 +103,20 @@ class Shimmer3BLEAndroid(
                     Log.d(TAG, "BLE scan started: $success")
                 }
 
+                @SuppressLint("MissingPermission")
                 override fun onLeScan(bleDevice: BleDevice) {
                     val device = bleDevice.device
+                    val deviceName = try {
+                        device.name
+                    } catch (e: SecurityException) {
+                        null
+                    }
+
                     if (device.address == targetAddress ||
-                        device.name?.contains("Shimmer", ignoreCase = true) == true ||
-                        device.name?.contains("GSR", ignoreCase = true) == true
+                        deviceName?.contains("Shimmer", ignoreCase = true) == true ||
+                        deviceName?.contains("GSR", ignoreCase = true) == true
                     ) {
-                        Log.i(TAG, "Found target Shimmer device: ${device.name} (${device.address})")
+                        Log.i(TAG, "Found target Shimmer device: $deviceName (${device.address})")
                         BleManager.getInstance().cancelScan()
                         connectToDevice(bleDevice)
                     }
