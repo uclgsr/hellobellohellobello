@@ -15,18 +15,22 @@ import matplotlib.pyplot as plt
 
 # Set up matplotlib for publication quality
 plt.style.use('seaborn-v0_8')
-plt.rcParams.update({
-    'figure.dpi': 300,
-    'savefig.dpi': 300,
-    'font.size': 10,
-    'axes.titlesize': 12,
-    'axes.labelsize': 11,
-    'figure.titlesize': 14
-})
+plt.rcParams.update(
+    {
+        'figure.dpi': 300,
+        'savefig.dpi': 300,
+        'font.size': 10,
+        'axes.titlesize': 12,
+        'axes.labelsize': 11,
+        'figure.titlesize': 14,
+    }
+)
+
 
 def ensure_directory_exists(path):
     """Create directory if it doesn't exist."""
     Path(path).mkdir(parents=True, exist_ok=True)
+
 
 def generate_chapter2_mermaid_diagrams():
     """Generate Chapter 2 physiological process diagrams in Mermaid format."""
@@ -120,6 +124,7 @@ def generate_chapter2_mermaid_diagrams():
     print("  • physiology_gsr.md")
     print("  • thermal_stress_cues.md")
 
+
 def generate_chapter3_requirements_tables():
     """Generate Chapter 3 requirements tables as PNG images."""
 
@@ -137,7 +142,7 @@ def generate_chapter3_requirements_tables():
             'Device discovery and pairing',
             'Session management',
             'Data validation and integrity',
-            'Cross-platform compatibility'
+            'Cross-platform compatibility',
         ],
         'Description': [
             'Capture RGB, thermal, and GSR data simultaneously',
@@ -147,11 +152,19 @@ def generate_chapter3_requirements_tables():
             'Auto-discover Android devices via mDNS/Zeroconf',
             'Create, start, stop, and manage recording sessions',
             'Validate data integrity with checksums and timestamps',
-            'Support Android 8.0+ and Windows 10+ systems'
+            'Support Android 8.0+ and Windows 10+ systems',
         ],
         'Priority': ['High', 'High', 'Critical', 'High', 'Medium', 'High', 'High', 'Medium'],
-        'Status': ['✓ Complete', '✓ Complete', '✓ Complete', '✓ Complete',
-                  '✓ Complete', '✓ Complete', '✓ Complete', '✓ Complete']
+        'Status': [
+            '✓ Complete',
+            '✓ Complete',
+            '✓ Complete',
+            '✓ Complete',
+            '✓ Complete',
+            '✓ Complete',
+            '✓ Complete',
+            '✓ Complete',
+        ],
     }
 
     fig, ax = plt.subplots(figsize=(14, 8))
@@ -163,17 +176,24 @@ def generate_chapter3_requirements_tables():
         [
             func_requirements['ID'][i],
             func_requirements['Requirement'][i],
-            func_requirements['Description'][i][:50] + '...' if len(func_requirements['Description'][i]) > 50 else func_requirements['Description'][i],
+            (
+                func_requirements['Description'][i][:50] + '...'
+                if len(func_requirements['Description'][i]) > 50
+                else func_requirements['Description'][i]
+            ),
             func_requirements['Priority'][i],
-            func_requirements['Status'][i]
-        ] for i in range(len(func_requirements['ID']))
+            func_requirements['Status'][i],
+        ]
+        for i in range(len(func_requirements['ID']))
     ]
 
-    table = ax.table(cellText=table_data,
-                    colLabels=['ID', 'Requirement', 'Description', 'Priority', 'Status'],
-                    cellLoc='left',
-                    loc='center',
-                    colWidths=[0.08, 0.25, 0.45, 0.12, 0.15])
+    table = ax.table(
+        cellText=table_data,
+        colLabels=['ID', 'Requirement', 'Description', 'Priority', 'Status'],
+        cellLoc='left',
+        loc='center',
+        colWidths=[0.08, 0.25, 0.45, 0.12, 0.15],
+    )
 
     table.auto_set_font_size(False)
     table.set_fontsize(9)
@@ -188,16 +208,21 @@ def generate_chapter3_requirements_tables():
                 cell.set_text_props(weight='bold', color='white')
             else:
                 if j == 3:  # Priority column
-                    if 'Critical' in table_data[i-1][j]:
+                    if 'Critical' in table_data[i - 1][j]:
                         cell.set_facecolor('#ffebee')
-                    elif 'High' in table_data[i-1][j]:
+                    elif 'High' in table_data[i - 1][j]:
                         cell.set_facecolor('#fff3e0')
                 elif j == 4:  # Status column
                     cell.set_facecolor('#e8f5e8')
 
     plt.title('Table 3.1: Functional Requirements Summary', fontsize=14, fontweight='bold', pad=20)
-    plt.savefig(output_dir / "table_3_1_functional_requirements.png",
-                bbox_inches='tight', dpi=300, facecolor='white', edgecolor='none')
+    plt.savefig(
+        output_dir / "table_3_1_functional_requirements.png",
+        bbox_inches='tight',
+        dpi=300,
+        facecolor='white',
+        edgecolor='none',
+    )
     plt.close()
 
     # 2. Non-Functional Requirements Table
@@ -211,7 +236,7 @@ def generate_chapter3_requirements_tables():
             'Security',
             'Usability',
             'Maintainability',
-            'Compatibility'
+            'Compatibility',
         ],
         'Requirement': [
             'System response time <200ms',
@@ -221,7 +246,7 @@ def generate_chapter3_requirements_tables():
             'AES-256 encryption for data at rest',
             'Setup time <5 minutes for new users',
             'Modular architecture for sensor addition',
-            'Cross-platform GUI consistency'
+            'Cross-platform GUI consistency',
         ],
         'Acceptance Criteria': [
             'UI operations complete within 200ms',
@@ -231,10 +256,9 @@ def generate_chapter3_requirements_tables():
             'Local storage encrypted, TLS 1.2+ for network',
             'Timed user studies validate setup process',
             'New sensor integration <40 hours development',
-            'Identical functionality Windows/Linux'
+            'Identical functionality Windows/Linux',
         ],
-        'Status': ['✓ Met', '✓ Met', '✓ Met', '✓ Met',
-                  '✓ Met', '✓ Met', '✓ Met', '✓ Met']
+        'Status': ['✓ Met', '✓ Met', '✓ Met', '✓ Met', '✓ Met', '✓ Met', '✓ Met', '✓ Met'],
     }
 
     fig, ax = plt.subplots(figsize=(16, 10))
@@ -244,19 +268,29 @@ def generate_chapter3_requirements_tables():
     # Create table
     table_data = []
     for i in range(len(nonfunc_requirements['ID'])):
-        table_data.append([
-            nonfunc_requirements['ID'][i],
-            nonfunc_requirements['Category'][i],
-            nonfunc_requirements['Requirement'][i],
-            nonfunc_requirements['Acceptance Criteria'][i][:60] + '...' if len(nonfunc_requirements['Acceptance Criteria'][i]) > 60 else nonfunc_requirements['Acceptance Criteria'][i],
-            nonfunc_requirements['Status'][i]
-        ])
+        acceptance_criteria = nonfunc_requirements['Acceptance Criteria'][i]
+        truncated_criteria = (
+            acceptance_criteria[:60] + '...'
+            if len(acceptance_criteria) > 60
+            else acceptance_criteria
+        )
+        table_data.append(
+            [
+                nonfunc_requirements['ID'][i],
+                nonfunc_requirements['Category'][i],
+                nonfunc_requirements['Requirement'][i],
+                truncated_criteria,
+                nonfunc_requirements['Status'][i],
+            ]
+        )
 
-    table = ax.table(cellText=table_data,
-                    colLabels=['ID', 'Category', 'Requirement', 'Acceptance Criteria', 'Status'],
-                    cellLoc='left',
-                    loc='center',
-                    colWidths=[0.08, 0.15, 0.35, 0.32, 0.10])
+    table = ax.table(
+        cellText=table_data,
+        colLabels=['ID', 'Category', 'Requirement', 'Acceptance Criteria', 'Status'],
+        cellLoc='left',
+        loc='center',
+        colWidths=[0.08, 0.15, 0.35, 0.32, 0.10],
+    )
 
     table.auto_set_font_size(False)
     table.set_fontsize(8)
@@ -279,20 +313,28 @@ def generate_chapter3_requirements_tables():
                         'Security': '#ffebee',
                         'Usability': '#e3f2fd',
                         'Maintainability': '#f9fbe7',
-                        'Compatibility': '#fce4ec'
+                        'Compatibility': '#fce4ec',
                     }
-                    cell.set_facecolor(category_colors.get(table_data[i-1][j], '#f5f5f5'))
+                    cell.set_facecolor(category_colors.get(table_data[i - 1][j], '#f5f5f5'))
                 elif j == 4:  # Status column
                     cell.set_facecolor('#e8f5e8')
 
-    plt.title('Table 3.2: Non-Functional Requirements Summary', fontsize=14, fontweight='bold', pad=20)
-    plt.savefig(output_dir / "table_3_2_nonfunctional_requirements.png",
-                bbox_inches='tight', dpi=300, facecolor='white', edgecolor='none')
+    plt.title(
+        'Table 3.2: Non-Functional Requirements Summary', fontsize=14, fontweight='bold', pad=20
+    )
+    plt.savefig(
+        output_dir / "table_3_2_nonfunctional_requirements.png",
+        bbox_inches='tight',
+        dpi=300,
+        facecolor='white',
+        edgecolor='none',
+    )
     plt.close()
 
     print("✓ Generated Chapter 3 requirements tables:")
     print("  • table_3_1_functional_requirements.png")
     print("  • table_3_2_nonfunctional_requirements.png")
+
 
 def generate_chapter4_gui_screenshots():
     """Generate placeholder GUI screenshots for Chapter 4."""
@@ -305,7 +347,7 @@ def generate_chapter4_gui_screenshots():
         ("pc_controller_main_interface.png", "PC Controller - Main Dashboard Interface"),
         ("android_app_main_screen.png", "Android Sensor Node - Main Application Screen"),
         ("session_configuration_dialog.png", "Session Configuration and Device Discovery"),
-        ("real_time_monitoring_view.png", "Real-time Data Monitoring and Visualization")
+        ("real_time_monitoring_view.png", "Real-time Data Monitoring and Visualization"),
     ]
 
     for filename, title in screenshots:
@@ -313,61 +355,163 @@ def generate_chapter4_gui_screenshots():
 
         # Create a mock GUI layout
         ax.add_patch(mpatches.Rectangle((0.05, 0.85), 0.9, 0.1, facecolor='#2196F3', alpha=0.8))
-        ax.text(0.5, 0.9, title, ha='center', va='center', fontsize=16, color='white', weight='bold')
+        ax.text(
+            0.5, 0.9, title, ha='center', va='center', fontsize=16, color='white', weight='bold'
+        )
 
         # Add mock interface elements
         if "pc_controller" in filename:
             # PC Controller layout
-            ax.add_patch(mpatches.Rectangle((0.05, 0.6), 0.4, 0.2, facecolor='#f5f5f5', edgecolor='black'))
-            ax.text(0.25, 0.7, 'Device List\n\n• Android Device 1\n• Android Device 2\n• Shimmer GSR', ha='center', va='center')
+            ax.add_patch(
+                mpatches.Rectangle((0.05, 0.6), 0.4, 0.2, facecolor='#f5f5f5', edgecolor='black')
+            )
+            ax.text(
+                0.25,
+                0.7,
+                'Device List\n\n• Android Device 1\n• Android Device 2\n• Shimmer GSR',
+                ha='center',
+                va='center',
+            )
 
-            ax.add_patch(mpatches.Rectangle((0.55, 0.6), 0.4, 0.2, facecolor='#e8f5e8', edgecolor='black'))
-            ax.text(0.75, 0.7, 'Session Controls\n\n[Start Recording]\n[Stop Recording]\n[Export Data]', ha='center', va='center')
+            ax.add_patch(
+                mpatches.Rectangle((0.55, 0.6), 0.4, 0.2, facecolor='#e8f5e8', edgecolor='black')
+            )
+            ax.text(
+                0.75,
+                0.7,
+                'Session Controls\n\n[Start Recording]\n[Stop Recording]\n[Export Data]',
+                ha='center',
+                va='center',
+            )
 
-            ax.add_patch(mpatches.Rectangle((0.05, 0.1), 0.9, 0.45, facecolor='#fff', edgecolor='black'))
-            ax.text(0.5, 0.325, 'Real-time Data Visualization Area\n\n[GSR Plot] [Thermal View] [RGB Stream]\n\nTimestamp synchronization status: ✓ Active\nData collection rate: 30 FPS', ha='center', va='center')
+            ax.add_patch(
+                mpatches.Rectangle((0.05, 0.1), 0.9, 0.45, facecolor='#fff', edgecolor='black')
+            )
+            ax.text(
+                0.5,
+                0.325,
+                'Real-time Data Visualization Area\n\n[GSR Plot] [Thermal View] [RGB Stream]\n\nTimestamp synchronization status: ✓ Active\nData collection rate: 30 FPS',
+                ha='center',
+                va='center',
+            )
 
         elif "android_app" in filename:
             # Android app layout
-            ax.add_patch(mpatches.Rectangle((0.2, 0.6), 0.6, 0.2, facecolor='#4CAF50', alpha=0.3, edgecolor='black'))
-            ax.text(0.5, 0.7, 'Connection Status\n\n✓ Connected to PC Hub\n⚡ Sensors Active', ha='center', va='center')
+            ax.add_patch(
+                mpatches.Rectangle(
+                    (0.2, 0.6), 0.6, 0.2, facecolor='#4CAF50', alpha=0.3, edgecolor='black'
+                )
+            )
+            ax.text(
+                0.5,
+                0.7,
+                'Connection Status\n\n✓ Connected to PC Hub\n⚡ Sensors Active',
+                ha='center',
+                va='center',
+            )
 
-            ax.add_patch(mpatches.Rectangle((0.1, 0.3), 0.35, 0.25, facecolor='#f0f0f0', edgecolor='black'))
-            ax.text(0.275, 0.425, 'RGB Camera\n\n[Live Preview]\n\n1080p @ 30fps', ha='center', va='center')
+            ax.add_patch(
+                mpatches.Rectangle((0.1, 0.3), 0.35, 0.25, facecolor='#f0f0f0', edgecolor='black')
+            )
+            ax.text(
+                0.275,
+                0.425,
+                'RGB Camera\n\n[Live Preview]\n\n1080p @ 30fps',
+                ha='center',
+                va='center',
+            )
 
-            ax.add_patch(mpatches.Rectangle((0.55, 0.3), 0.35, 0.25, facecolor='#f0f0f0', edgecolor='black'))
-            ax.text(0.725, 0.425, 'Thermal Camera\n\n[Thermal View]\n\n160x120 @ 9fps', ha='center', va='center')
+            ax.add_patch(
+                mpatches.Rectangle((0.55, 0.3), 0.35, 0.25, facecolor='#f0f0f0', edgecolor='black')
+            )
+            ax.text(
+                0.725,
+                0.425,
+                'Thermal Camera\n\n[Thermal View]\n\n160x120 @ 9fps',
+                ha='center',
+                va='center',
+            )
 
-            ax.add_patch(mpatches.Rectangle((0.1, 0.05), 0.8, 0.2, facecolor='#fff3e0', edgecolor='black'))
-            ax.text(0.5, 0.15, 'GSR Sensor Status\n\nShimmer3 GSR+ Connected\nCurrent reading: 12.5 μS', ha='center', va='center')
+            ax.add_patch(
+                mpatches.Rectangle((0.1, 0.05), 0.8, 0.2, facecolor='#fff3e0', edgecolor='black')
+            )
+            ax.text(
+                0.5,
+                0.15,
+                'GSR Sensor Status\n\nShimmer3 GSR+ Connected\nCurrent reading: 12.5 μS',
+                ha='center',
+                va='center',
+            )
 
         elif "session_config" in filename:
             # Session configuration dialog
-            ax.add_patch(mpatches.Rectangle((0.15, 0.5), 0.7, 0.3, facecolor='#f9f9f9', edgecolor='black'))
-            ax.text(0.5, 0.65, 'Session Configuration\n\nSession Name: [Stress_Study_001]\nParticipant ID: [P001]\nDuration: [30 minutes]\n\n[Configure Sensors] [Start Session]', ha='center', va='center')
+            ax.add_patch(
+                mpatches.Rectangle((0.15, 0.5), 0.7, 0.3, facecolor='#f9f9f9', edgecolor='black')
+            )
+            ax.text(
+                0.5,
+                0.65,
+                'Session Configuration\n\nSession Name: [Stress_Study_001]\nParticipant ID: [P001]\nDuration: [30 minutes]\n\n[Configure Sensors] [Start Session]',
+                ha='center',
+                va='center',
+            )
 
-            ax.add_patch(mpatches.Rectangle((0.15, 0.2), 0.7, 0.25, facecolor='#e8f5e8', edgecolor='black'))
-            ax.text(0.5, 0.325, 'Device Discovery\n\n🔍 Scanning for devices...\n\n✓ Android-Device-1 (192.168.1.100)\n✓ Shimmer-GSR-001 (Paired)', ha='center', va='center')
+            ax.add_patch(
+                mpatches.Rectangle((0.15, 0.2), 0.7, 0.25, facecolor='#e8f5e8', edgecolor='black')
+            )
+            ax.text(
+                0.5,
+                0.325,
+                'Device Discovery\n\n🔍 Scanning for devices...\n\n'
+                '✓ Android-Device-1 (192.168.1.100)\n✓ Shimmer-GSR-001 (Paired)',
+                ha='center',
+                va='center',
+            )
 
         else:
             # Real-time monitoring view
-            ax.add_patch(mpatches.Rectangle((0.05, 0.4), 0.9, 0.4, facecolor='#f5f5f5', edgecolor='black'))
-            ax.text(0.5, 0.6, 'Real-time Multi-modal Data Monitoring\n\n[GSR Time Series] [Thermal Heat Map] [RGB Video Feed]\n\nSync Status: ✓ All sensors synchronized\nTimestamp accuracy: 2.3ms average deviation', ha='center', va='center')
+            ax.add_patch(
+                mpatches.Rectangle((0.05, 0.4), 0.9, 0.4, facecolor='#f5f5f5', edgecolor='black')
+            )
+            ax.text(
+                0.5,
+                0.6,
+                'Real-time Multi-modal Data Monitoring\n\n'
+                '[GSR Time Series] [Thermal Heat Map] [RGB Video Feed]\n\n'
+                'Sync Status: ✓ All sensors synchronized\n'
+                'Timestamp accuracy: 2.3ms average deviation',
+                ha='center',
+                va='center',
+            )
 
-            ax.add_patch(mpatches.Rectangle((0.05, 0.05), 0.9, 0.3, facecolor='#fff', edgecolor='black'))
-            ax.text(0.5, 0.2, 'Session Statistics\n\nRecording time: 15:32\nData points collected: 28,456\nStorage used: 2.1 GB\n\nNetwork status: Stable (98% packet success)', ha='center', va='center')
+            ax.add_patch(
+                mpatches.Rectangle((0.05, 0.05), 0.9, 0.3, facecolor='#fff', edgecolor='black')
+            )
+            ax.text(
+                0.5,
+                0.2,
+                'Session Statistics\n\n'
+                'Recording time: 15:32\n'
+                'Data points collected: 28,456\n'
+                'Storage used: 2.1 GB\n\n'
+                'Network status: Stable (98% packet success)',
+                ha='center',
+                va='center',
+            )
 
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         ax.axis('off')
 
-        plt.savefig(output_dir / filename,
-                    bbox_inches='tight', dpi=300, facecolor='white', edgecolor='none')
+        plt.savefig(
+            output_dir / filename, bbox_inches='tight', dpi=300, facecolor='white', edgecolor='none'
+        )
         plt.close()
 
     print("✓ Generated Chapter 4 GUI screenshots:")
     for filename, _ in screenshots:
         print(f"  • {filename}")
+
 
 def main():
     """Generate all remaining missing visualizations."""
@@ -400,6 +544,7 @@ def main():
     print("  • images/chapter4_implementation/real_time_monitoring_view.png")
 
     print("\n📁 Total visualization files now available in repository")
+
 
 if __name__ == "__main__":
     main()

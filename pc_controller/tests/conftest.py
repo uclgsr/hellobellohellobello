@@ -7,6 +7,7 @@ Also emits explicit per-test start and result markers to improve CI/console
 visibility of which test is running and its outcome.
 """
 
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -20,7 +21,6 @@ if str(REPO_ROOT) not in sys.path:
 
 # Reduce noisy OpenCV WARN logs (e.g., imread of missing files) to avoid cluttering CI output.
 # Set env before importing cv2 so the native C++ logger honors it.
-import os
 
 os.environ.setdefault("OPENCV_LOG_LEVEL", "ERROR")
 # Set Qt platform to offscreen for headless testing

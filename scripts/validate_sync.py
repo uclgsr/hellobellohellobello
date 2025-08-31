@@ -217,10 +217,12 @@ def main() -> int:
         "--session-id", required=True, help="Session ID (folder name under base dir)"
     )
     default_base_dir = os.path.join(os.getcwd(), "pc_controller_data")
-    parser.add_argument("--base-dir", default=default_base_dir,
-                        help="Base directory where sessions are stored")
-    parser.add_argument("--tolerance-ms", type=float, default=5.0,
-                        help="PASS/FAIL tolerance in milliseconds")
+    parser.add_argument(
+        "--base-dir", default=default_base_dir, help="Base directory where sessions are stored"
+    )
+    parser.add_argument(
+        "--tolerance-ms", type=float, default=5.0, help="PASS/FAIL tolerance in milliseconds"
+    )
     args = parser.parse_args()
 
     session_dir = os.path.join(args.base_dir, args.session_id)
@@ -336,7 +338,7 @@ def main() -> int:
                 sd = int(st.get('std_dev', st.get('std_dev_ns', 0)))
                 tri = int(st.get('trials', 0))
                 ts = int(st.get('timestamp_ns', 0))
-                delay_ms = dly/1e6
+                delay_ms = dly / 1e6
                 print(
                     f"- {dev_name}: offset={off} ns, min_delay={delay_ms:.3f} ms, "
                     f"std_dev={sd} ns, trials={tri}, ts={ts}"

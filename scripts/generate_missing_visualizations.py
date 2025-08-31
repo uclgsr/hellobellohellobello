@@ -14,18 +14,22 @@ import matplotlib.pyplot as plt
 
 # Set up matplotlib for publication quality
 plt.style.use('seaborn-v0_8')
-plt.rcParams.update({
-    'figure.dpi': 300,
-    'savefig.dpi': 300,
-    'font.size': 10,
-    'axes.titlesize': 12,
-    'axes.labelsize': 11,
-    'figure.titlesize': 14
-})
+plt.rcParams.update(
+    {
+        'figure.dpi': 300,
+        'savefig.dpi': 300,
+        'font.size': 10,
+        'axes.titlesize': 12,
+        'axes.labelsize': 11,
+        'figure.titlesize': 14,
+    }
+)
+
 
 def ensure_directory_exists(path):
     """Create directory if it doesn't exist."""
     Path(path).mkdir(parents=True, exist_ok=True)
+
 
 def create_table_6_1_evaluation_summary(output_dir):
     """Create Table 6.1: Evaluation of Project Objectives visualization."""
@@ -36,26 +40,21 @@ def create_table_6_1_evaluation_summary(output_dir):
             'Objective 1: Multi-Modal\nSensor Integration',
             'Objective 2: Temporal\nSynchronization <5ms',
             'Objective 3: Scalable\nHub-and-Spoke Architecture',
-            'Objective 4: Research-Grade\nData Export Pipeline'
+            'Objective 4: Research-Grade\nData Export Pipeline',
         ],
         'Planned Outcome': [
             'RGB, Thermal, GSR sensors\nintegrated with Android app',
             'NTP-like sync protocol\nachieving <5ms accuracy',
             'Support 8+ devices with\ncentral PC controller',
-            'HDF5 export with metadata\nand validation tools'
+            'HDF5 export with metadata\nand validation tools',
         ],
         'Actual Outcome': [
             'RGB: ✅ Full integration\nThermal: ⚠️ Generic UVC\nGSR: ⚠️ Simulated only',
             '✅ 2.7ms median accuracy\nacross 14 test sessions',
             '✅ 8-device tested\nwith stable performance',
-            '✅ Complete HDF5 pipeline\nwith quality validation'
+            '✅ Complete HDF5 pipeline\nwith quality validation',
         ],
-        'Status': [
-            'PARTIAL',
-            'ACHIEVED',
-            'ACHIEVED',
-            'ACHIEVED'
-        ]
+        'Status': ['PARTIAL', 'ACHIEVED', 'ACHIEVED', 'ACHIEVED'],
     }
 
     # Create figure
@@ -70,7 +69,7 @@ def create_table_6_1_evaluation_summary(output_dir):
             objectives_data['Objective'][i],
             objectives_data['Planned Outcome'][i],
             objectives_data['Actual Outcome'][i],
-            objectives_data['Status'][i]
+            objectives_data['Status'][i],
         ]
         table_data.append(row)
 
@@ -84,11 +83,13 @@ def create_table_6_1_evaluation_summary(output_dir):
         else:
             colors.append(['lightcoral', 'lightcoral', 'lightcoral', 'lightcoral'])
 
-    table = ax.table(cellText=table_data,
-                    colLabels=['Project Objective', 'Planned Outcome', 'Actual Outcome', 'Status'],
-                    cellLoc='left',
-                    loc='center',
-                    cellColours=colors)
+    table = ax.table(
+        cellText=table_data,
+        colLabels=['Project Objective', 'Planned Outcome', 'Actual Outcome', 'Status'],
+        cellLoc='left',
+        loc='center',
+        cellColours=colors,
+    )
 
     table.auto_set_font_size(False)
     table.set_fontsize(9)
@@ -102,11 +103,16 @@ def create_table_6_1_evaluation_summary(output_dir):
 
     plt.title('Table 6.1: Evaluation of Project Objectives', fontsize=14, fontweight='bold', pad=20)
 
-    plt.savefig(output_dir / "table_6_1_project_objectives_evaluation.png",
-                dpi=300, bbox_inches='tight', facecolor='white')
+    plt.savefig(
+        output_dir / "table_6_1_project_objectives_evaluation.png",
+        dpi=300,
+        bbox_inches='tight',
+        facecolor='white',
+    )
     plt.close()
 
     print("✓ Generated Table 6.1: Project Objectives Evaluation")
+
 
 def create_testing_strategy_pyramid(output_dir):
     """Create enhanced testing strategy pyramid visualization."""
@@ -115,30 +121,69 @@ def create_testing_strategy_pyramid(output_dir):
 
     # Pyramid levels (bottom to top)
     levels = [
-        {'name': 'Unit Tests', 'width': 8, 'height': 1.5, 'color': '#E3F2FD',
-         'details': '200+ tests\n89% coverage\nFast execution'},
-        {'name': 'Integration Tests', 'width': 6, 'height': 1.5, 'color': '#E8F5E8',
-         'details': 'Multi-device\nProtocol validation\nPipeline testing'},
-        {'name': 'System Tests', 'width': 4, 'height': 1.5, 'color': '#F3E5F5',
-         'details': '8-hour endurance\nPerformance metrics\nSecurity validation'},
-        {'name': 'User Acceptance', 'width': 2, 'height': 1.5, 'color': '#FFF3E0',
-         'details': 'Usability testing\nHardware validation\nWorkflow verification'}
+        {
+            'name': 'Unit Tests',
+            'width': 8,
+            'height': 1.5,
+            'color': '#E3F2FD',
+            'details': '200+ tests\n89% coverage\nFast execution',
+        },
+        {
+            'name': 'Integration Tests',
+            'width': 6,
+            'height': 1.5,
+            'color': '#E8F5E8',
+            'details': 'Multi-device\nProtocol validation\nPipeline testing',
+        },
+        {
+            'name': 'System Tests',
+            'width': 4,
+            'height': 1.5,
+            'color': '#F3E5F5',
+            'details': '8-hour endurance\nPerformance metrics\nSecurity validation',
+        },
+        {
+            'name': 'User Acceptance',
+            'width': 2,
+            'height': 1.5,
+            'color': '#FFF3E0',
+            'details': 'Usability testing\nHardware validation\nWorkflow verification',
+        },
     ]
 
     y_pos = 0
     for level in levels:
         # Draw rectangle
-        rect = mpatches.Rectangle((-level['width']/2, y_pos), level['width'], level['height'],
-                                 facecolor=level['color'], edgecolor='black', linewidth=2)
+        rect = mpatches.Rectangle(
+            (-level['width'] / 2, y_pos),
+            level['width'],
+            level['height'],
+            facecolor=level['color'],
+            edgecolor='black',
+            linewidth=2,
+        )
         ax.add_patch(rect)
 
         # Add label
-        ax.text(0, y_pos + level['height']/2, level['name'],
-               ha='center', va='center', fontsize=12, fontweight='bold')
+        ax.text(
+            0,
+            y_pos + level['height'] / 2,
+            level['name'],
+            ha='center',
+            va='center',
+            fontsize=12,
+            fontweight='bold',
+        )
 
         # Add details
-        ax.text(level['width']/2 + 0.5, y_pos + level['height']/2, level['details'],
-               ha='left', va='center', fontsize=9)
+        ax.text(
+            level['width'] / 2 + 0.5,
+            y_pos + level['height'] / 2,
+            level['details'],
+            ha='left',
+            va='center',
+            fontsize=9,
+        )
 
         y_pos += level['height'] + 0.3
 
@@ -147,14 +192,23 @@ def create_testing_strategy_pyramid(output_dir):
     ax.set_aspect('equal')
     ax.axis('off')
 
-    plt.title('Figure 5.1: Testing Strategy Pyramid\nComprehensive Quality Assurance Framework',
-              fontsize=14, fontweight='bold', pad=20)
+    plt.title(
+        'Figure 5.1: Testing Strategy Pyramid\nComprehensive Quality Assurance Framework',
+        fontsize=14,
+        fontweight='bold',
+        pad=20,
+    )
 
-    plt.savefig(output_dir / "fig_5_1_testing_strategy_pyramid.png",
-                dpi=300, bbox_inches='tight', facecolor='white')
+    plt.savefig(
+        output_dir / "fig_5_1_testing_strategy_pyramid.png",
+        dpi=300,
+        bbox_inches='tight',
+        facecolor='white',
+    )
     plt.close()
 
     print("✓ Generated Figure 5.1: Testing Strategy Pyramid")
+
 
 def create_sensor_specifications_table(output_dir):
     """Create Table 2.2: Detailed Sensor Specifications."""
@@ -170,16 +224,15 @@ def create_sensor_specifications_table(output_dir):
         ['Accuracy', '±1% of reading', 'Research-grade precision'],
         ['Connectivity', 'Bluetooth 5.0 + USB dock', 'Flexible integration'],
         ['Power', '230mAh battery (8+ hours)', 'Extended session support'],
-        ['Electrodes', 'Disposable Ag/AgCl', 'Biocompatible materials']
+        ['Electrodes', 'Disposable Ag/AgCl', 'Biocompatible materials'],
     ]
 
     ax1.axis('tight')
     ax1.axis('off')
 
-    table1 = ax1.table(cellText=shimmer_data[1:],
-                      colLabels=shimmer_data[0],
-                      cellLoc='left',
-                      loc='center')
+    table1 = ax1.table(
+        cellText=shimmer_data[1:], colLabels=shimmer_data[0], cellLoc='left', loc='center'
+    )
     table1.auto_set_font_size(False)
     table1.set_fontsize(9)
     table1.scale(1, 1.5)
@@ -200,16 +253,15 @@ def create_sensor_specifications_table(output_dir):
         ['Frame Rate', '25 Hz', 'Real-time thermal monitoring'],
         ['Spectral Range', '8-14 μm', 'Long-wave infrared (LWIR)'],
         ['Connectivity', 'USB-C (UVC compliant)', 'Android OTG compatible'],
-        ['Power', 'USB bus powered', 'No external power required']
+        ['Power', 'USB bus powered', 'No external power required'],
     ]
 
     ax2.axis('tight')
     ax2.axis('off')
 
-    table2 = ax2.table(cellText=thermal_data[1:],
-                      colLabels=thermal_data[0],
-                      cellLoc='left',
-                      loc='center')
+    table2 = ax2.table(
+        cellText=thermal_data[1:], colLabels=thermal_data[0], cellLoc='left', loc='center'
+    )
     table2.auto_set_font_size(False)
     table2.set_fontsize(9)
     table2.scale(1, 1.5)
@@ -219,16 +271,23 @@ def create_sensor_specifications_table(output_dir):
         table2[(0, i)].set_facecolor('#D32F2F')
         table2[(0, i)].set_text_props(weight='bold', color='white')
 
-    ax2.set_title('Topdon TC001 Thermal Camera Specifications', fontsize=12, fontweight='bold', pad=10)
+    ax2.set_title(
+        'Topdon TC001 Thermal Camera Specifications', fontsize=12, fontweight='bold', pad=10
+    )
 
     plt.suptitle('Table 2.2: Research Sensor Specifications', fontsize=14, fontweight='bold')
     plt.tight_layout()
 
-    plt.savefig(output_dir / "table_2_2_sensor_specifications.png",
-                dpi=300, bbox_inches='tight', facecolor='white')
+    plt.savefig(
+        output_dir / "table_2_2_sensor_specifications.png",
+        dpi=300,
+        bbox_inches='tight',
+        facecolor='white',
+    )
     plt.close()
 
     print("✓ Generated Table 2.2: Sensor Specifications")
+
 
 def create_stress_indicators_comparison(output_dir):
     """Create Table 2.1: Comparison of Stress Indicators."""
@@ -238,12 +297,54 @@ def create_stress_indicators_comparison(output_dir):
     ax.axis('off')
 
     comparison_data = [
-        ['Stress Indicator', 'Measurement Type', 'Latency', 'Accuracy', 'Invasiveness', 'Research Suitability'],
-        ['Galvanic Skin Response\n(GSR)', 'Contact-based\nelectrical', '0.5-3 seconds', 'High (±1%)', 'Low\n(electrode placement)', 'Excellent\n(gold standard)'],
-        ['Cortisol (Saliva)', 'Biochemical\nsampling', '15-30 minutes', 'Very High (±5%)', 'Medium\n(sample collection)', 'Good\n(delayed response)'],
-        ['Thermal Imaging\n(Contactless)', 'Infrared\ntemperature', '0.1-1 seconds', 'Moderate (±2°C)', 'None\n(completely contactless)', 'Promising\n(emerging method)'],
-        ['Heart Rate Variability\n(HRV)', 'ECG/PPG\nsignals', '1-5 seconds', 'High (±2%)', 'Low\n(chest strap/wearable)', 'Good\n(established method)'],
-        ['Blood Pressure', 'Pressure\ncuff', '30-60 seconds', 'High (±2mmHg)', 'Medium\n(cuff inflation)', 'Limited\n(measurement artifacts)']
+        [
+            'Stress Indicator',
+            'Measurement Type',
+            'Latency',
+            'Accuracy',
+            'Invasiveness',
+            'Research Suitability',
+        ],
+        [
+            'Galvanic Skin Response\n(GSR)',
+            'Contact-based\nelectrical',
+            '0.5-3 seconds',
+            'High (±1%)',
+            'Low\n(electrode placement)',
+            'Excellent\n(gold standard)',
+        ],
+        [
+            'Cortisol (Saliva)',
+            'Biochemical\nsampling',
+            '15-30 minutes',
+            'Very High (±5%)',
+            'Medium\n(sample collection)',
+            'Good\n(delayed response)',
+        ],
+        [
+            'Thermal Imaging\n(Contactless)',
+            'Infrared\ntemperature',
+            '0.1-1 seconds',
+            'Moderate (±2°C)',
+            'None\n(completely contactless)',
+            'Promising\n(emerging method)',
+        ],
+        [
+            'Heart Rate Variability\n(HRV)',
+            'ECG/PPG\nsignals',
+            '1-5 seconds',
+            'High (±2%)',
+            'Low\n(chest strap/wearable)',
+            'Good\n(established method)',
+        ],
+        [
+            'Blood Pressure',
+            'Pressure\ncuff',
+            '30-60 seconds',
+            'High (±2mmHg)',
+            'Medium\n(cuff inflation)',
+            'Limited\n(measurement artifacts)',
+        ],
     ]
 
     # Colors based on research suitability
@@ -259,11 +360,13 @@ def create_stress_indicators_comparison(output_dir):
         else:
             colors.append(['lightgray'] * 6)
 
-    table = ax.table(cellText=comparison_data[1:],
-                    colLabels=comparison_data[0],
-                    cellLoc='center',
-                    loc='center',
-                    cellColours=colors)
+    table = ax.table(
+        cellText=comparison_data[1:],
+        colLabels=comparison_data[0],
+        cellLoc='center',
+        loc='center',
+        cellColours=colors,
+    )
 
     table.auto_set_font_size(False)
     table.set_fontsize(8)
@@ -274,14 +377,23 @@ def create_stress_indicators_comparison(output_dir):
         table[(0, i)].set_facecolor('#2E7D32')
         table[(0, i)].set_text_props(weight='bold', color='white')
 
-    plt.title('Table 2.1: Comparison of Stress Measurement Indicators\nLatency, Accuracy, and Invasiveness Analysis',
-              fontsize=14, fontweight='bold', pad=20)
+    plt.title(
+        'Table 2.1: Comparison of Stress Measurement Indicators\nLatency, Accuracy, and Invasiveness Analysis',
+        fontsize=14,
+        fontweight='bold',
+        pad=20,
+    )
 
-    plt.savefig(output_dir / "table_2_1_stress_indicators_comparison.png",
-                dpi=300, bbox_inches='tight', facecolor='white')
+    plt.savefig(
+        output_dir / "table_2_1_stress_indicators_comparison.png",
+        dpi=300,
+        bbox_inches='tight',
+        facecolor='white',
+    )
     plt.close()
 
     print("✓ Generated Table 2.1: Stress Indicators Comparison")
+
 
 def validate_evidence_completeness(evidence_dir):
     """Validate that all required evidence files exist."""
@@ -291,30 +403,21 @@ def validate_evidence_completeness(evidence_dir):
             'junit_report_android.xml',
             'pytest_report_pc.xml',
             'coverage_report_pc.xml',
-            'pytest_report_pc.html'
+            'pytest_report_pc.html',
         ],
-        'integration_tests': [
-            'simulation_test_logs.txt',
-            'system_integration_report.json'
-        ],
+        'integration_tests': ['simulation_test_logs.txt', 'system_integration_report.json'],
         'performance': [
             'endurance_test_report.json',
             'endurance_raw_data.csv',
-            'synchronization_accuracy_data.csv'
+            'synchronization_accuracy_data.csv',
         ],
-        'stability': [
-            'pc_threading_error_logs.txt',
-            'wifi_roaming_sync_failures.csv'
-        ],
-        'usability': [
-            'setup_time_measurements.csv',
-            'user_testing_session_notes.md'
-        ],
+        'stability': ['pc_threading_error_logs.txt', 'wifi_roaming_sync_failures.csv'],
+        'usability': ['setup_time_measurements.csv', 'user_testing_session_notes.md'],
         'validation': [
             'test_environment_specifications.md',
             'data_collection_methodology.md',
-            'statistical_analysis_summary.md'
-        ]
+            'statistical_analysis_summary.md',
+        ],
     }
 
     print("\n📋 Evidence File Validation:")
@@ -339,6 +442,7 @@ def validate_evidence_completeness(evidence_dir):
 
     return all_present
 
+
 def main():
     """Generate missing visualizations and validate completeness."""
 
@@ -351,7 +455,7 @@ def main():
         'chapter2': images_dir / "chapter2_background",
         'chapter3': images_dir / "chapter3_requirements",
         'chapter5': images_dir / "chapter5_evaluation",
-        'chapter6': images_dir / "chapter6_conclusions"
+        'chapter6': images_dir / "chapter6_conclusions",
     }
 
     for chapter_dir in chapter_dirs.values():
@@ -370,11 +474,11 @@ def main():
         create_table_6_1_evaluation_summary(chapter_dirs['chapter6'])
 
         # Validate evidence completeness
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         evidence_dir = Path(__file__).parent.parent / "docs" / "evidence"
         validate_evidence_completeness(evidence_dir)
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🎉 Missing visualization generation completed successfully!")
 
         print("\nGenerated visualization files:")
@@ -391,8 +495,10 @@ def main():
     except Exception as e:
         print(f"❌ Error generating missing visualizations: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
+
 
 if __name__ == "__main__":
     exit(main())

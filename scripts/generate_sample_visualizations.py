@@ -19,6 +19,7 @@ import seaborn as sns
 plt.style.use('seaborn-v0_8')
 sns.set_palette("husl")
 
+
 def generate_sample_data():
     """Generate sample physiological data for visualization."""
 
@@ -32,20 +33,22 @@ def generate_sample_data():
     flash_times = [
         start_time + timedelta(seconds=30),
         start_time + timedelta(seconds=60),
-        start_time + timedelta(seconds=90)
+        start_time + timedelta(seconds=90),
     ]
 
     # Generate synthetic data
     rgb_data = {
         'timestamp': times_rgb,
         'frame_count': range(len(times_rgb)),
-        'quality_score': 0.95 + 0.05 * np.random.randn(len(times_rgb))
+        'quality_score': 0.95 + 0.05 * np.random.randn(len(times_rgb)),
     }
 
     thermal_data = {
         'timestamp': times_thermal,
-        'avg_temperature': 36.5 + 0.5 * np.sin(np.linspace(0, 4*np.pi, len(times_thermal))) + 0.1 * np.random.randn(len(times_thermal)),
-        'quality_score': 0.92 + 0.08 * np.random.randn(len(times_thermal))
+        'avg_temperature': 36.5
+        + 0.5 * np.sin(np.linspace(0, 4 * np.pi, len(times_thermal)))
+        + 0.1 * np.random.randn(len(times_thermal)),
+        'quality_score': 0.92 + 0.08 * np.random.randn(len(times_thermal)),
     }
 
     # GSR with realistic physiological response to stimulus
@@ -56,21 +59,26 @@ def generate_sample_data():
         # Simulate GSR response: sharp rise then gradual decay
         response_window = slice(flash_idx, min(flash_idx + 2560, len(times_gsr)))  # 20 seconds
         t_response = np.linspace(0, 20, len(range(*response_window.indices(len(times_gsr)))))
-        stimulus_response[response_window] += 3.0 * np.exp(-t_response/8) * (1 - np.exp(-t_response/0.5))
+        stimulus_response[response_window] += (
+            3.0 * np.exp(-t_response / 8) * (1 - np.exp(-t_response / 0.5))
+        )
 
     gsr_data = {
         'timestamp': times_gsr,
         'gsr_microsiemens': base_gsr + stimulus_response + 0.2 * np.random.randn(len(times_gsr)),
-        'ppg_raw': 2048 + 200 * np.sin(np.linspace(0, 60*np.pi, len(times_gsr))) + 50 * np.random.randn(len(times_gsr)),
-        'quality_score': 0.88 + 0.12 * np.random.randn(len(times_gsr))
+        'ppg_raw': 2048
+        + 200 * np.sin(np.linspace(0, 60 * np.pi, len(times_gsr)))
+        + 50 * np.random.randn(len(times_gsr)),
+        'quality_score': 0.88 + 0.12 * np.random.randn(len(times_gsr)),
     }
 
     return {
         'rgb': pd.DataFrame(rgb_data),
         'thermal': pd.DataFrame(thermal_data),
         'gsr': pd.DataFrame(gsr_data),
-        'flash_events': flash_times
+        'flash_events': flash_times,
     }
+
 
 def create_multimodal_alignment_plot(data, save_path):
     """Create multimodal timeline alignment plot with flash sync events."""
@@ -78,31 +86,54 @@ def create_multimodal_alignment_plot(data, save_path):
     fig, axes = plt.subplots(4, 1, figsize=(14, 10), sharex=True)
 
     # RGB frames
-    axes[0].scatter(data['rgb']['timestamp'], data['rgb']['frame_count'],
-                   s=20, alpha=0.7, color='blue', label='RGB Frames')
+    axes[0].scatter(
+        data['rgb']['timestamp'],
+        data['rgb']['frame_count'],
+        s=20,
+        alpha=0.7,
+        color='blue',
+        label='RGB Frames',
+    )
     axes[0].set_ylabel('Frame Count')
     axes[0].set_title('Multi-Modal Data Alignment with Flash Sync Events', fontsize=16)
     axes[0].grid(True, alpha=0.3)
     axes[0].legend()
 
     # Thermal temperature
-    axes[1].plot(data['thermal']['timestamp'], data['thermal']['avg_temperature'],
-                color='red', linewidth=1.5, label='Average Temperature')
+    axes[1].plot(
+        data['thermal']['timestamp'],
+        data['thermal']['avg_temperature'],
+        color='red',
+        linewidth=1.5,
+        label='Average Temperature',
+    )
     axes[1].set_ylabel('Temperature (°C)')
     axes[1].grid(True, alpha=0.3)
     axes[1].legend()
 
     # GSR data
-    axes[2].plot(data['gsr']['timestamp'], data['gsr']['gsr_microsiemens'],
-                color='green', linewidth=1, alpha=0.8, label='GSR Conductance')
+    axes[2].plot(
+        data['gsr']['timestamp'],
+        data['gsr']['gsr_microsiemens'],
+        color='green',
+        linewidth=1,
+        alpha=0.8,
+        label='GSR Conductance',
+    )
     axes[2].set_ylabel('GSR (µS)')
     axes[2].grid(True, alpha=0.3)
     axes[2].legend()
 
     # PPG data (downsampled for visibility)
     ppg_downsampled = data['gsr'][::32]  # Show every 32nd sample
-    axes[3].plot(ppg_downsampled['timestamp'], ppg_downsampled['ppg_raw'],
-                color='purple', linewidth=1, alpha=0.7, label='PPG Signal')
+    axes[3].plot(
+        ppg_downsampled['timestamp'],
+        ppg_downsampled['ppg_raw'],
+        color='purple',
+        linewidth=1,
+        alpha=0.7,
+        label='PPG Signal',
+    )
     axes[3].set_ylabel('PPG (ADC)')
     axes[3].set_xlabel('Time')
     axes[3].grid(True, alpha=0.3)
@@ -111,8 +142,14 @@ def create_multimodal_alignment_plot(data, save_path):
     # Add flash sync event markers
     for flash_time in data['flash_events']:
         for ax in axes:
-            ax.axvline(flash_time, color='orange', linestyle='--', linewidth=2,
-                      alpha=0.8, label='Flash Sync' if ax == axes[0] else '')
+            ax.axvline(
+                flash_time,
+                color='orange',
+                linestyle='--',
+                linewidth=2,
+                alpha=0.8,
+                label='Flash Sync' if ax == axes[0] else '',
+            )
 
     # Format x-axis
     for ax in axes:
@@ -124,6 +161,7 @@ def create_multimodal_alignment_plot(data, save_path):
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"✓ Generated multimodal alignment plot: {save_path}")
+
 
 def create_data_quality_dashboard(data, save_path):
     """Create data quality assessment dashboard."""
@@ -140,8 +178,20 @@ def create_data_quality_dashboard(data, save_path):
     gsr_quality = data['gsr']['quality_score'].rolling(window=512).mean()
 
     ax1.plot(data['rgb']['timestamp'], rgb_quality, label='RGB Quality', color='blue', linewidth=2)
-    ax1.plot(data['thermal']['timestamp'], thermal_quality, label='Thermal Quality', color='red', linewidth=2)
-    ax1.plot(data['gsr']['timestamp'][::128], gsr_quality[::128], label='GSR Quality', color='green', linewidth=2)
+    ax1.plot(
+        data['thermal']['timestamp'],
+        thermal_quality,
+        label='Thermal Quality',
+        color='red',
+        linewidth=2,
+    )
+    ax1.plot(
+        data['gsr']['timestamp'][::128],
+        gsr_quality[::128],
+        label='GSR Quality',
+        color='green',
+        linewidth=2,
+    )
 
     ax1.set_ylabel('Quality Score')
     ax1.set_title('Data Quality Assessment Dashboard', fontsize=16, pad=20)
@@ -154,24 +204,39 @@ def create_data_quality_dashboard(data, save_path):
     expected_rgb = 800
     actual_rgb = len(data['rgb'])
     rgb_completeness = [actual_rgb, expected_rgb - actual_rgb]
-    ax2.pie(rgb_completeness, labels=['Received', 'Missing'], autopct='%1.1f%%',
-            colors=['lightblue', 'lightcoral'], startangle=90)
+    ax2.pie(
+        rgb_completeness,
+        labels=['Received', 'Missing'],
+        autopct='%1.1f%%',
+        colors=['lightblue', 'lightcoral'],
+        startangle=90,
+    )
     ax2.set_title(f'RGB Completeness\n({actual_rgb}/{expected_rgb} frames)')
 
     ax3 = fig.add_subplot(gs[1, 1])
     expected_thermal = 1200
     actual_thermal = len(data['thermal'])
     thermal_completeness = [actual_thermal, expected_thermal - actual_thermal]
-    ax3.pie(thermal_completeness, labels=['Received', 'Missing'], autopct='%1.1f%%',
-            colors=['lightcoral', 'lightgray'], startangle=90)
+    ax3.pie(
+        thermal_completeness,
+        labels=['Received', 'Missing'],
+        autopct='%1.1f%%',
+        colors=['lightcoral', 'lightgray'],
+        startangle=90,
+    )
     ax3.set_title(f'Thermal Completeness\n({actual_thermal}/{expected_thermal} samples)')
 
     ax4 = fig.add_subplot(gs[1, 2])
     expected_gsr = 15360
     actual_gsr = len(data['gsr'])
     gsr_completeness = [actual_gsr, expected_gsr - actual_gsr]
-    ax4.pie(gsr_completeness, labels=['Received', 'Missing'], autopct='%1.1f%%',
-            colors=['lightgreen', 'lightgray'], startangle=90)
+    ax4.pie(
+        gsr_completeness,
+        labels=['Received', 'Missing'],
+        autopct='%1.1f%%',
+        colors=['lightgreen', 'lightgray'],
+        startangle=90,
+    )
     ax4.set_title(f'GSR Completeness\n({actual_gsr}/{expected_gsr} samples)')
 
     # 3. Inter-sample interval histograms (timing jitter analysis)
@@ -212,6 +277,7 @@ def create_data_quality_dashboard(data, save_path):
     plt.close()
     print(f"✓ Generated data quality dashboard: {save_path}")
 
+
 def create_performance_telemetry_chart(save_path):
     """Create performance monitoring telemetry charts."""
 
@@ -219,7 +285,11 @@ def create_performance_telemetry_chart(save_path):
     time_points = pd.date_range(datetime.now() - timedelta(minutes=10), periods=600, freq='1s')
 
     # Simulate performance metrics during a recording session
-    cpu_usage = 15 + 20 * np.sin(np.linspace(0, 4*np.pi, len(time_points))) + 5 * np.random.randn(len(time_points))
+    cpu_usage = (
+        15
+        + 20 * np.sin(np.linspace(0, 4 * np.pi, len(time_points)))
+        + 5 * np.random.randn(len(time_points))
+    )
     cpu_usage = np.clip(cpu_usage, 5, 80)  # Keep within realistic bounds
 
     memory_usage = 300 + 50 * np.cumsum(np.random.randn(len(time_points)) * 0.01)  # MB with drift
@@ -280,6 +350,7 @@ def create_performance_telemetry_chart(save_path):
     plt.close()
     print(f"✓ Generated performance telemetry chart: {save_path}")
 
+
 def main():
     """Generate all sample visualization artifacts."""
 
@@ -302,9 +373,15 @@ def main():
         print("\n🎉 All sample visualizations generated successfully!")
         print(f"📁 Output directory: {output_dir.resolve()}")
         print("\nGenerated files:")
-        print("  • multimodal_alignment_plot.png - Demonstrates synchronized data streams with flash events")
-        print("  • data_quality_dashboard.png - Shows data completeness, timing, and quality metrics")
-        print("  • performance_telemetry_chart.png - System performance monitoring during recording")
+        print(
+            "  • multimodal_alignment_plot.png - Demonstrates synchronized data streams with flash events"
+        )
+        print(
+            "  • data_quality_dashboard.png - Shows data completeness, timing, and quality metrics"
+        )
+        print(
+            "  • performance_telemetry_chart.png - System performance monitoring during recording"
+        )
 
     except ImportError as e:
         print(f"❌ Missing required Python package: {e}")
@@ -317,6 +394,7 @@ def main():
         return 1
 
     return 0
+
 
 if __name__ == "__main__":
     exit(main())

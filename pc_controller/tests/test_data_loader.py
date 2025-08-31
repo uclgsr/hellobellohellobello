@@ -14,7 +14,7 @@ import pytest
 pd = pytest.importorskip("pandas")
 
 # Import after pandas availability check
-from pc_controller.src.data.data_loader import DataLoader
+from pc_controller.src.data.data_loader import DataLoader  # noqa: E402
 
 
 def _write_csv(path: Path, header: str, rows: list[str]) -> None:

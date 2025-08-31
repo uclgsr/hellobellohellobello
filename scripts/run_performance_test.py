@@ -43,13 +43,13 @@ if str(PC_SRC) not in sys.path:
     sys.path.insert(0, str(PC_SRC))
 
 # Imports after sys.path tweak
-import contextlib
+import contextlib  # noqa: E402
 
-from network.network_controller import (  # type: ignore
+from network.network_controller import (  # type: ignore  # noqa: E402
     DiscoveredDevice,
     NetworkController,
 )
-from network.protocol import (  # type: ignore
+from network.protocol import (  # type: ignore  # noqa: E402
     build_v1_ack,
     build_v1_preview_frame,
     decode_frames,
@@ -219,6 +219,7 @@ class SimulatedAndroidClient:
                     line, buf = buf.split(b"\n", 1)
                     try:
                         import json as _json
+
                         msgs = [_json.loads(line.decode("utf-8", errors="replace"))]
                     except Exception:
                         msgs = []
@@ -243,11 +244,15 @@ class SimulatedAndroidClient:
             mid = int(msg.get("id", 0))
             if v == 1 and typ == "cmd":
                 if cmd == "query_capabilities":
-                    reply = build_v1_ack(mid, status="ok", capabilities={
-                        "device": self.name,
-                        "preview": True,
-                        "time_sync": True,
-                    })
+                    reply = build_v1_ack(
+                        mid,
+                        status="ok",
+                        capabilities={
+                            "device": self.name,
+                            "preview": True,
+                            "time_sync": True,
+                        },
+                    )
                     sock.sendall(encode_frame(reply))
                 elif cmd == "time_sync":
                     t1 = now_ns()
@@ -424,7 +429,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--clients", type=int, default=8, help="Number of simulated clients (>=8)")
     p.add_argument("--rate", type=int, default=30, help="Preview frames per second per client")
     p.add_argument(
-        "--duration", type=int, default=15 * 60, help="Test duration in seconds (default 900s = 15min)"
+        "--duration",
+        type=int,
+        default=15 * 60,
+        help="Test duration in seconds (default 900s = 15min)",
     )
     return p.parse_args(argv)
 
@@ -435,7 +443,9 @@ def main() -> int:
         print(f"[WARN] --clients {args.clients} < 8; adjusting to 8 to meet requirement.")
         args.clients = 8
     if args.duration < 60:
-        print("[WARN] Very short duration; consider at least several minutes for meaningful metrics.")
+        print(
+            "[WARN] Very short duration; consider at least several minutes for meaningful metrics."
+        )
     return run_test(args.clients, args.rate, args.duration)
 
 

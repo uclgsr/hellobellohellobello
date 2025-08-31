@@ -260,7 +260,10 @@ class TestCompleteRecordingWorkflows:
         # Use list comprehension for better performance and readability
         recording_devices = [
             device.device_id for device in devices
-            if device.recording and self.env.device_manager.get_status(device.device_id) == "Recording"
+            if (
+                device.recording and
+                self.env.device_manager.get_status(device.device_id) == "Recording"
+            )
         ]
 
         assert len(recording_devices) == len(devices)

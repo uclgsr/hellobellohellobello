@@ -9,6 +9,7 @@ folder, preserving timestamps (copy2). It logs progress and errors.
 Note: This is a local-copy helper. Ensure you also implement off-site
 backups per BACKUP_STRATEGY.md.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,9 +23,7 @@ def setup_logger(log_path: Path | None) -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.FileHandler(log_path) if log_path else logging.StreamHandler()
-        ],
+        handlers=[logging.FileHandler(log_path) if log_path else logging.StreamHandler()],
     )
 
 

@@ -14,7 +14,7 @@ pd = pytest.importorskip("pandas")
 h5py = pytest.importorskip("h5py")
 
 # Import after dependency availability checks
-from pc_controller.src.data.hdf5_exporter import export_session_to_hdf5
+from pc_controller.src.data.hdf5_exporter import export_session_to_hdf5  # noqa: E402
 
 
 def _write_csv(path: Path, header: str, rows: list[str]) -> None:

@@ -49,6 +49,7 @@ from pathlib import Path
 @dataclass
 class TestResult:
     """Test result data structure."""
+
     name: str
     success: bool
     duration: float
@@ -84,15 +85,15 @@ class TestOrchestrator:
         """Log a message with timestamp."""
         timestamp = time.strftime("%H:%M:%S")
         prefix = (
-            "🔍" if level == "INFO" else
-            "✅" if level == "SUCCESS" else
-            "❌" if level == "ERROR" else
-            "⚠️"
+            "🔍"
+            if level == "INFO"
+            else "✅" if level == "SUCCESS" else "❌" if level == "ERROR" else "⚠️"
         )
         print(f"[{timestamp}] {prefix} {message}")
 
-    def run_command(self, cmd: list[str], name: str, cwd: Path | None = None,
-                   timeout: int = 300) -> TestResult:
+    def run_command(
+        self, cmd: list[str], name: str, cwd: Path | None = None, timeout: int = 300
+    ) -> TestResult:
         """Run a command and capture results."""
         self.log(f"Running {name}...")
         start_time = time.time()
@@ -100,19 +101,16 @@ class TestOrchestrator:
         try:
             # Set environment for headless testing
             env = os.environ.copy()
-            env.update({
-                "QT_QPA_PLATFORM": "offscreen",
-                "OPENCV_LOG_LEVEL": "ERROR",
-                "PYTHONPATH": str(Path.cwd() / "pc_controller/src")
-            })
+            env.update(
+                {
+                    "QT_QPA_PLATFORM": "offscreen",
+                    "OPENCV_LOG_LEVEL": "ERROR",
+                    "PYTHONPATH": str(Path.cwd() / "pc_controller/src"),
+                }
+            )
 
             result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=cwd,
-                timeout=timeout,
-                env=env
+                cmd, capture_output=True, text=True, cwd=cwd, timeout=timeout, env=env
             )
 
             duration = time.time() - start_time
@@ -123,7 +121,7 @@ class TestOrchestrator:
                 success=success,
                 duration=duration,
                 output=result.stdout,
-                error=result.stderr
+                error=result.stderr,
             )
 
             if success:
@@ -146,9 +144,7 @@ class TestOrchestrator:
             return TestResult(name, False, duration, error=str(e))
 
     def run_commands_parallel(
-        self,
-        commands: list[tuple[list[str], str]],
-        max_workers: int | None = None
+        self, commands: list[tuple[list[str], str]], max_workers: int | None = None
     ) -> list[TestResult]:
         """Run multiple commands in parallel for better performance."""
         if not self.use_parallel or len(commands) == 1:
@@ -161,8 +157,7 @@ class TestOrchestrator:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all commands
             future_to_command = {
-                executor.submit(self.run_command, cmd, name): (cmd, name)
-                for cmd, name in commands
+                executor.submit(self.run_command, cmd, name): (cmd, name) for cmd, name in commands
             }
 
             # Collect results as they complete
@@ -184,25 +179,62 @@ class TestOrchestrator:
         checks = [
             # Ruff linting with caching
             (
-                [sys.executable, "-m", "ruff", "check", str(self.pc_controller_src),
-                 "--output-format=github", "--cache-dir=.ruff_cache"] +
-                (["--fix"] if self.args.fix else []),
-                "Ruff Linting"
+                [
+                    sys.executable,
+                    "-m",
+                    "ruff",
+                    "check",
+                    str(self.pc_controller_src),
+                    "--output-format=github",
+                    "--cache-dir=.ruff_cache",
+                ]
+                + (["--fix"] if self.args.fix else []),
+                "Ruff Linting",
             ),
-
             # Black formatting check
-            ([sys.executable, "-m", "black", "--check", "--diff", str(self.pc_controller_src)]
-             if not self.args.fix else
-             [sys.executable, "-m", "black", str(self.pc_controller_src)], "Black Formatting"),
-
+            (
+                (
+                    [
+                        sys.executable,
+                        "-m",
+                        "black",
+                        "--check",
+                        "--diff",
+                        str(self.pc_controller_src),
+                    ]
+                    if not self.args.fix
+                    else [sys.executable, "-m", "black", str(self.pc_controller_src)]
+                ),
+                "Black Formatting",
+            ),
             # isort import sorting
-            ([sys.executable, "-m", "isort", "--check-only", "--diff", str(self.pc_controller_src)]
-             if not self.args.fix else
-             [sys.executable, "-m", "isort", str(self.pc_controller_src)], "Import Sorting"),
-
+            (
+                (
+                    [
+                        sys.executable,
+                        "-m",
+                        "isort",
+                        "--check-only",
+                        "--diff",
+                        str(self.pc_controller_src),
+                    ]
+                    if not self.args.fix
+                    else [sys.executable, "-m", "isort", str(self.pc_controller_src)]
+                ),
+                "Import Sorting",
+            ),
             # MyPy type checking with caching
-            ([sys.executable, "-m", "mypy", str(self.pc_controller_src),
-              "--ignore-missing-imports", "--cache-dir=.mypy_cache"], "Type Checking"),
+            (
+                [
+                    sys.executable,
+                    "-m",
+                    "mypy",
+                    str(self.pc_controller_src),
+                    "--ignore-missing-imports",
+                    "--cache-dir=.mypy_cache",
+                ],
+                "Type Checking",
+            ),
         ]
 
         # Use parallel execution for performance
@@ -217,8 +249,15 @@ class TestOrchestrator:
         self.log("=== Security Scanning ===")
 
         bandit_cmd = [
-            sys.executable, "-m", "bandit", "-r", str(self.pc_controller_src),
-            "-f", "json", "-o", str(self.report_dir / "bandit-report.json")
+            sys.executable,
+            "-m",
+            "bandit",
+            "-r",
+            str(self.pc_controller_src),
+            "-f",
+            "json",
+            "-o",
+            str(self.report_dir / "bandit-report.json"),
         ]
 
         result = self.run_command(bandit_cmd, "Bandit Security Scan")
@@ -229,18 +268,26 @@ class TestOrchestrator:
         self.log("=== Python Unit Tests ===")
 
         pytest_cmd = [
-            sys.executable, "-m", "pytest", str(self.pc_controller_tests),
-            "-v", "--tb=short", "--timeout=60",
-            "-n", "auto"  # Use pytest-xdist for parallel execution
+            sys.executable,
+            "-m",
+            "pytest",
+            str(self.pc_controller_tests),
+            "-v",
+            "--tb=short",
+            "--timeout=60",
+            "-n",
+            "auto",  # Use pytest-xdist for parallel execution
         ]
 
         if self.args.coverage:
-            pytest_cmd.extend([
-                "--cov=pc_controller/src",
-                "--cov-report=xml",
-                "--cov-report=html:{}".format(self.report_dir / "coverage_html"),
-                "--cov-report=term-missing"
-            ])
+            pytest_cmd.extend(
+                [
+                    "--cov=pc_controller/src",
+                    "--cov-report=xml",
+                    "--cov-report=html:{}".format(self.report_dir / "coverage_html"),
+                    "--cov-report=term-missing",
+                ]
+            )
 
         if self.args.fast:
             pytest_cmd.extend(["-x", "-k", "not slow and not integration"])  # Skip slow tests
@@ -256,6 +303,7 @@ class TestOrchestrator:
         if self.args.coverage and "coverage.xml" in Path.cwd().iterdir():
             try:
                 import xml.etree.ElementTree as ET
+
                 tree = ET.parse("coverage.xml")
                 root = tree.getroot()
                 line_rate = float(root.attrib.get("line-rate", 0)) * 100
@@ -276,14 +324,18 @@ class TestOrchestrator:
         integration_tests = [
             "test_system_end_to_end.py",
             "test_integration_comprehensive.py",
-            "test_heartbeat_manager.py::TestHeartbeatIntegration"
+            "test_heartbeat_manager.py::TestHeartbeatIntegration",
         ]
 
         for test in integration_tests:
             cmd = [
-                sys.executable, "-m", "pytest",
+                sys.executable,
+                "-m",
+                "pytest",
                 str(self.pc_controller_tests / test),
-                "-v", "--tb=short", "--timeout=120"
+                "-v",
+                "--tb=short",
+                "--timeout=120",
             ]
 
             result = self.run_command(cmd, f"Integration: {test}", timeout=180)
@@ -353,7 +405,7 @@ class TestOrchestrator:
                 "failed": failed,
                 "success_rate": (passed / len(self.results)) * 100 if self.results else 0,
                 "total_duration": total_duration,
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             },
             "results": [
                 {
@@ -361,10 +413,10 @@ class TestOrchestrator:
                     "success": r.success,
                     "duration": r.duration,
                     "coverage": r.coverage,
-                    "error": r.error[:500] if r.error else None  # Truncate long errors
+                    "error": r.error[:500] if r.error else None,  # Truncate long errors
                 }
                 for r in self.results
-            ]
+            ],
         }
 
         json_report = self.report_dir / "test_report.json"
@@ -372,9 +424,9 @@ class TestOrchestrator:
         self.log(f"JSON report saved to {json_report}")
 
         # Console summary
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🏁 TESTING PIPELINE SUMMARY")
-        print("="*60)
+        print("=" * 60)
         print(f"Total tests: {len(self.results)}")
         print(f"Passed: {passed} ✅")
         print(f"Failed: {failed} ❌")
@@ -389,7 +441,7 @@ class TestOrchestrator:
                     if result.error and not self.args.ci:
                         print(f"     {result.error[:100]}...")
 
-        print("="*60)
+        print("=" * 60)
 
     def run_pipeline(self) -> int:
         """Run the complete testing pipeline."""
@@ -431,34 +483,34 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Multi-Modal Sensor Platform Testing Pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__
+        epilog=__doc__,
     )
 
-    parser.add_argument("--fast", action="store_true",
-                       help="Run only fast tests")
-    parser.add_argument("--coverage", action="store_true",
-                       help="Generate coverage reports")
-    parser.add_argument("--security", action="store_true",
-                       help="Include security scanning")
-    parser.add_argument("--android", action="store_true",
-                       help="Include Android tests")
-    parser.add_argument("--performance", action="store_true",
-                       help="Include performance tests")
-    parser.add_argument("--report", action="store_true",
-                       help="Generate detailed reports")
-    parser.add_argument("--ci", action="store_true",
-                       help="CI mode (quiet, optimized)")
-    parser.add_argument("--fix", action="store_true",
-                       help="Auto-fix issues where possible")
-    parser.add_argument("--all", action="store_true",
-                       help="Run all tests with all options")
-    parser.add_argument("--parallel", action="store_true", default=True,
-                       help="Run tests in parallel (default: enabled)")
-    parser.add_argument("--no-parallel", dest="parallel", action="store_false",
-                       help="Disable parallel execution")
-    parser.add_argument("--jobs", "-j", type=int,
-                       default=multiprocessing.cpu_count(),
-                       help="Number of parallel jobs (default: CPU count)")
+    parser.add_argument("--fast", action="store_true", help="Run only fast tests")
+    parser.add_argument("--coverage", action="store_true", help="Generate coverage reports")
+    parser.add_argument("--security", action="store_true", help="Include security scanning")
+    parser.add_argument("--android", action="store_true", help="Include Android tests")
+    parser.add_argument("--performance", action="store_true", help="Include performance tests")
+    parser.add_argument("--report", action="store_true", help="Generate detailed reports")
+    parser.add_argument("--ci", action="store_true", help="CI mode (quiet, optimized)")
+    parser.add_argument("--fix", action="store_true", help="Auto-fix issues where possible")
+    parser.add_argument("--all", action="store_true", help="Run all tests with all options")
+    parser.add_argument(
+        "--parallel",
+        action="store_true",
+        default=True,
+        help="Run tests in parallel (default: enabled)",
+    )
+    parser.add_argument(
+        "--no-parallel", dest="parallel", action="store_false", help="Disable parallel execution"
+    )
+    parser.add_argument(
+        "--jobs",
+        "-j",
+        type=int,
+        default=multiprocessing.cpu_count(),
+        help="Number of parallel jobs (default: CPU count)",
+    )
 
     args = parser.parse_args()
 

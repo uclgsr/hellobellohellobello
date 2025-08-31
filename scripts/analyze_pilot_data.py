@@ -39,7 +39,7 @@ PC_SRC = REPO_ROOT / "pc_controller" / "src"
 if str(PC_SRC) not in sys.path:
     sys.path.insert(0, str(PC_SRC))
 
-from data.data_loader import DataLoader  # type: ignore
+from data.data_loader import DataLoader  # type: ignore  # noqa: E402
 
 try:
     import numpy as np  # type: ignore
@@ -189,6 +189,7 @@ def smooth_gsr(series: Series, cutoff_hz: float | None, window_sec: float | None
         return series
     try:
         import scipy.signal as sig  # type: ignore
+
         use_scipy = True
     except Exception:
         use_scipy = False
@@ -237,7 +238,9 @@ def plot_combined(out_path: str, gsr: Series, thermal: Series, show: bool) -> No
     ax1.tick_params(axis='y', labelcolor='tab:blue')
 
     ax2 = ax1.twinx()
-    ax2.plot(thermal.t_s, thermal.y, color="tab:red", label="Thermal mean", linewidth=1.0, alpha=0.8)
+    ax2.plot(
+        thermal.t_s, thermal.y, color="tab:red", label="Thermal mean", linewidth=1.0, alpha=0.8
+    )
     ax2.set_ylabel("Thermal mean (raw units)", color="tab:red")
     ax2.tick_params(axis='y', labelcolor='tab:red')
 
@@ -265,6 +268,7 @@ def _dry_run(out_path: str | None) -> int:
     # Try to plot if matplotlib available; otherwise just synthesize and report success
     try:
         import matplotlib
+
         matplotlib.use("Agg", force=True)  # headless-safe
         can_plot = True
     except Exception:
@@ -300,20 +304,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=int,
         metavar=("X", "Y", "W", "H"),
         help="Thermal ROI as x y w h",
-        default=None
+        default=None,
     )
     p.add_argument("--gsr-column", default="gsr", help="Column in gsr.csv to plot/filter")
     p.add_argument(
         "--gsr-cutoff-hz",
         type=float,
         default=None,
-        help="Low-pass cutoff in Hz for GSR; if SciPy unavailable, used to derive moving-average window"
+        help="Low-pass cutoff in Hz for GSR; if SciPy unavailable, used to derive moving-average window",
     )
     p.add_argument(
         "--gsr-window-sec",
         type=float,
         default=None,
-        help="Window seconds for moving-average fallback if SciPy unavailable"
+        help="Window seconds for moving-average fallback if SciPy unavailable",
     )
     p.add_argument("--show", action="store_true", help="Display the plot window after saving")
     p.add_argument(

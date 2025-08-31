@@ -13,20 +13,18 @@ def check_chapter_visualizations():
     """Check if all required chapter visualizations exist."""
 
     required_visualizations = {
-        'Chapter 1': [
-            'Conceptual Overview Diagram'
-        ],
+        'Chapter 1': ['Conceptual Overview Diagram'],
         'Chapter 2': [
             'Physiology of Galvanic Skin Response',
             'Thermal Cues of Stress',
             'Comparison of Stress Indicators (Table)',
-            'Sensor Specifications (Table)'
+            'Sensor Specifications (Table)',
         ],
         'Chapter 3': [
             'High-Level System Architecture',
             'UML Use Case Diagram',
             'Summary of Functional Requirements (Table)',
-            'Summary of Non-Functional Requirements (Table)'
+            'Summary of Non-Functional Requirements (Table)',
         ],
         'Chapter 4': [
             'Detailed System Architecture',
@@ -35,7 +33,7 @@ def check_chapter_visualizations():
             'Protocol Sequence Diagram',
             'Data Processing Pipeline',
             'Desktop GUI Screenshots',
-            'Code Listings'
+            'Code Listings',
         ],
         'Chapter 5': [
             'Testing Strategy Overview',
@@ -43,15 +41,13 @@ def check_chapter_visualizations():
             'Synchronization Accuracy Results (Graph)',
             'Synchronization Failure Example (Graph)',
             'Endurance Test Results (Graphs)',
-            'Usability Testing Results (Table)'
+            'Usability Testing Results (Table)',
         ],
-        'Chapter 6': [
-            'Evaluation of Project Objectives (Table)'
-        ]
+        'Chapter 6': ['Evaluation of Project Objectives (Table)'],
     }
 
     print("📊 Chapter Visualization Validation:")
-    print("="*50)
+    print("=" * 50)
 
     base_dir = Path(__file__).parent.parent
 
@@ -139,6 +135,7 @@ def check_chapter_visualizations():
 
     return all_complete
 
+
 def check_evidence_files():
     """Check if all Chapter 5 evidence files exist."""
 
@@ -146,27 +143,27 @@ def check_evidence_files():
         'Unit Testing Evidence': [
             'junit_report_android.xml',
             'pytest_report_pc.xml',
-            'coverage_report_pc.xml'
+            'coverage_report_pc.xml',
         ],
         'Integration Testing Evidence': [
             'simulation_test_logs.txt',
-            'system_integration_report.json'
+            'system_integration_report.json',
         ],
         'System Performance Evaluation': [
             'endurance_test_report.json',
             'endurance_raw_data.csv',
-            'synchronization_accuracy_data.csv'
+            'synchronization_accuracy_data.csv',
         ],
         'Stability and Usability Evidence': [
             'pc_threading_error_logs.txt',
             'wifi_roaming_sync_failures.csv',
             'setup_time_measurements.csv',
-            'user_testing_session_notes.md'
-        ]
+            'user_testing_session_notes.md',
+        ],
     }
 
     print("\n📋 Chapter 5 Evidence Validation:")
-    print("="*50)
+    print("=" * 50)
 
     evidence_dir = Path(__file__).parent.parent / "docs" / "evidence"
     all_present = True
@@ -190,6 +187,7 @@ def check_evidence_files():
 
     return all_present
 
+
 def check_readme_completeness():
     """Check if README meets repository validation requirements."""
 
@@ -201,11 +199,11 @@ def check_readme_completeness():
         'Setup and build instructions (PC and Android)',
         'Running the system',
         'Validation and testing procedures',
-        'Repository validation checklist'
+        'Repository validation checklist',
     ]
 
     print("\n📖 README Validation:")
-    print("="*50)
+    print("=" * 50)
 
     base_dir = Path(__file__).parent.parent
 
@@ -241,11 +239,12 @@ def check_readme_completeness():
         print("❌ REPOSITORY_VALIDATION_README.md missing")
         return False
 
+
 def check_visualization_scripts():
     """Check if visualization generation scripts exist and work."""
 
     print("\n🔧 Visualization Scripts Validation:")
-    print("="*50)
+    print("=" * 50)
 
     base_dir = Path(__file__).parent.parent
     scripts_dir = base_dir / "scripts"
@@ -254,7 +253,7 @@ def check_visualization_scripts():
         'generate_sample_visualizations.py',
         'generate_chapter5_visualizations.py',
         'generate_missing_visualizations.py',
-        'generate_mermaid_visualizations.py'
+        'generate_mermaid_visualizations.py',
     ]
 
     all_scripts_present = True
@@ -274,11 +273,12 @@ def check_visualization_scripts():
 
     return all_scripts_present
 
+
 def main():
     """Run complete validation of issue #27 requirements."""
 
     print("🎯 Issue #27: Missing Visualisation - Completion Validation")
-    print("="*70)
+    print("=" * 70)
 
     # Run all validation checks
     viz_complete = check_chapter_visualizations()
@@ -287,13 +287,13 @@ def main():
     scripts_complete = check_visualization_scripts()
 
     print("\n🏁 Final Validation Summary:")
-    print("="*50)
+    print("=" * 50)
 
     results = {
         'Chapter Visualizations': viz_complete,
         'Evidence Files': evidence_complete,
         'README Documentation': readme_complete,
-        'Visualization Scripts': scripts_complete
+        'Visualization Scripts': scripts_complete,
     }
 
     all_complete = all(results.values())
@@ -324,6 +324,7 @@ def main():
                 print(f"   {chapter_name}: {len(png_files)} files")
 
     return 0 if all_complete else 1
+
 
 if __name__ == "__main__":
     exit(main())
