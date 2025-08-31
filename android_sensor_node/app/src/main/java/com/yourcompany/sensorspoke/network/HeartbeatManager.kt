@@ -230,21 +230,20 @@ class HeartbeatManager(
     /**
      * Get device battery level (0-100).
      */
-    private fun getBatteryLevel(): Int {
-        return try {
+    private fun getBatteryLevel(): Int =
+        try {
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
             batteryManager.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to get battery level", e)
             -1 // Unknown
         }
-    }
 
     /**
      * Check if recording is currently active.
      */
-    private fun isRecordingActive(): Boolean {
-        return try {
+    private fun isRecordingActive(): Boolean =
+        try {
             // Check if RecordingService is running
             val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
             activityManager.getRunningServices(Integer.MAX_VALUE).any { serviceInfo ->
@@ -254,13 +253,12 @@ class HeartbeatManager(
             Log.w(TAG, "Failed to check recording state", e)
             false
         }
-    }
 
     /**
      * Get available storage in MB.
      */
-    private fun getAvailableStorageMB(): Long {
-        return try {
+    private fun getAvailableStorageMB(): Long =
+        try {
             val statsFs = android.os.StatFs(context.filesDir.path)
             val availableBytes = statsFs.availableBytes
             availableBytes / (1024 * 1024) // Convert to MB
@@ -268,20 +266,17 @@ class HeartbeatManager(
             Log.w(TAG, "Failed to get storage info", e)
             -1L // Unknown
         }
-    }
 
     /**
      * Get device uptime in milliseconds.
      */
-    private fun getUptimeMs(): Long {
-        return android.os.SystemClock.elapsedRealtime()
-    }
+    private fun getUptimeMs(): Long = android.os.SystemClock.elapsedRealtime()
 
     /**
      * Create a status summary for debugging.
      */
-    fun getStatusSummary(): Map<String, Any> {
-        return mapOf(
+    fun getStatusSummary(): Map<String, Any> =
+        mapOf(
             "device_id" to deviceId,
             "is_running" to isRunning.get(),
             "is_connected" to isConnected.get(),
@@ -289,5 +284,4 @@ class HeartbeatManager(
             "time_since_last_heartbeat_ms" to getTimeSinceLastHeartbeat(),
             "heartbeat_interval_ms" to heartbeatIntervalMs,
         )
-    }
 }

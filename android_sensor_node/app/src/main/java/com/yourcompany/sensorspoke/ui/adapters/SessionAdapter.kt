@@ -19,7 +19,9 @@ class SessionAdapter(
 ) : RecyclerView.Adapter<SessionAdapter.SessionViewHolder>() {
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
 
-    class SessionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class SessionViewHolder(
+        itemView: View,
+    ) : RecyclerView.ViewHolder(itemView) {
         val sessionNameText: TextView = itemView.findViewById(R.id.sessionNameText)
         val sessionSizeText: TextView = itemView.findViewById(R.id.sessionSizeText)
         val sessionDateText: TextView = itemView.findViewById(R.id.sessionDateText)
@@ -31,7 +33,8 @@ class SessionAdapter(
         viewType: Int,
     ): SessionViewHolder {
         val view =
-            LayoutInflater.from(parent.context)
+            LayoutInflater
+                .from(parent.context)
                 .inflate(R.layout.item_session, parent, false)
         return SessionViewHolder(view)
     }
@@ -54,12 +57,11 @@ class SessionAdapter(
 
     override fun getItemCount(): Int = sessions.size
 
-    private fun formatSize(bytes: Long): String {
-        return when {
+    private fun formatSize(bytes: Long): String =
+        when {
             bytes < 1024 -> "$bytes B"
             bytes < 1024 * 1024 -> "${bytes / 1024} KB"
             bytes < 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
             else -> "${"%.1f".format(bytes / (1024.0 * 1024.0 * 1024.0))} GB"
         }
-    }
 }

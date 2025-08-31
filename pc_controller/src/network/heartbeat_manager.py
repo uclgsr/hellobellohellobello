@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -172,10 +173,8 @@ class HeartbeatManager:
         self._running = False
         if self._monitor_task:
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitor_task
-            except asyncio.CancelledError:
-                pass
         logger.info("Heartbeat monitoring stopped")
 
     async def _monitor_loop(self) -> None:
@@ -203,7 +202,8 @@ class HeartbeatManager:
                 # If device just went offline, trigger callback
                 if was_healthy and not status.is_healthy:
                     logger.warning(
-                        f"Device {device_id} went offline (missed {status.consecutive_misses} heartbeats)"
+                        f"Device {device_id} went offline "
+                        f"(missed {status.consecutive_misses} heartbeats)"
                     )
                     if device_id in self._device_offline_callbacks:
                         try:
@@ -219,9 +219,8 @@ class HeartbeatManager:
                 ) > int(self.reconnect_backoff_s * 1_000_000_000):
 
                     status.mark_reconnect_attempt()
-                    logger.info(
-                        f"Triggering reconnection for {device_id} (attempt {status.reconnection_attempts})"
-                    )
+                    attempt_num = status.reconnection_attempts
+                    logger.info(f"Triggering reconnection for {device_id} (attempt {attempt_num})")
 
                     if device_id in self._reconnect_callbacks:
                         try:

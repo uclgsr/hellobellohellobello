@@ -3,13 +3,11 @@ package com.yourcompany.sensorspoke.sensors.thermal.tc001
 import android.content.Context
 import android.content.IntentFilter
 import android.hardware.usb.UsbManager
-import android.os.Build
 import android.util.Log
-import java.util.Date
 
 /**
  * TC001 Initialization Utility
- * 
+ *
  * Handles initialization of TC001 thermal camera components including
  * USB permissions, device discovery, and logging setup
  */
@@ -29,17 +27,18 @@ object TC001InitUtil {
     fun initReceiver(context: Context) {
         try {
             // Setup USB device detection for TC001
-            val filter = IntentFilter().apply {
-                addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
-                addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
-                addAction(UsbManager.ACTION_USB_ACCESSORY_ATTACHED)
-                addAction(UsbManager.ACTION_USB_ACCESSORY_DETACHED)
-                addAction("com.yourcompany.sensorspoke.ACTION_USB_PERMISSION")
-            }
-            
+            val filter =
+                IntentFilter().apply {
+                    addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+                    addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+                    addAction(UsbManager.ACTION_USB_ACCESSORY_ATTACHED)
+                    addAction(UsbManager.ACTION_USB_ACCESSORY_DETACHED)
+                    addAction("com.yourcompany.sensorspoke.ACTION_USB_PERMISSION")
+                }
+
             // Register receiver for TC001 USB events
             Log.i(TAG, "TC001 USB receiver registered")
-        } catch (e: Exception) { 
+        } catch (e: Exception) {
             Log.e(TAG, "Failed to register TC001 USB receiver", e)
         }
     }

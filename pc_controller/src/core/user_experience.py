@@ -1,13 +1,14 @@
 """User-friendly error message utility for improved UX."""
 
 import logging
+from typing import ClassVar
 
 
 class ErrorMessageTranslator:
     """Translates technical errors into user-friendly messages with actionable advice."""
 
     # Mapping of technical errors to user-friendly messages
-    ERROR_TRANSLATIONS: dict[str, str] = {
+    ERROR_TRANSLATIONS: ClassVar[dict[str, str]] = {
         # Network errors
         "ConnectionRefusedError": "Unable to connect to device. Please check that the device is "
         "on the same WiFi network and try again.",
@@ -80,7 +81,7 @@ class ErrorMessageTranslator:
     }
 
     # Context-specific advice for common error scenarios
-    CONTEXT_ADVICE: dict[str, dict[str, str]] = {
+    CONTEXT_ADVICE: ClassVar[dict[str, dict[str, str]]] = {
         "network": {
             "troubleshooting": (
                 "Network Troubleshooting:\n"
@@ -141,7 +142,7 @@ class ErrorMessageTranslator:
         """
         error_type = type(error).__name__
         base_message = cls.ERROR_TRANSLATIONS.get(
-            error_type, f"An unexpected error occurred: {str(error)}"
+            error_type, f"An unexpected error occurred: {error!s}"
         )
 
         # Add context-specific advice if available
@@ -188,7 +189,7 @@ class ErrorMessageTranslator:
 
         # Log technical details for developers
         logger.error(
-            f"Technical error: {type(error).__name__}: {str(error)}", exc_info=True
+            f"Technical error: {type(error).__name__}: {error!s}", exc_info=True
         )
 
         # Get user-friendly message

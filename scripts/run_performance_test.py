@@ -43,6 +43,8 @@ if str(PC_SRC) not in sys.path:
     sys.path.insert(0, str(PC_SRC))
 
 # Imports after sys.path tweak
+import contextlib  # noqa: E402
+
 from network.network_controller import (  # type: ignore  # noqa: E402
     DiscoveredDevice,
     NetworkController,
@@ -121,31 +123,23 @@ class SimulatedAndroidClient:
         # Close server socket to unblock accept
         try:
             if self._sock is not None:
-                try:
+                with contextlib.suppress(Exception):
                     self._sock.shutdown(socket.SHUT_RDWR)
-                except Exception:
-                    pass
                 self._sock.close()
         except Exception:
             pass
         # Close client sockets
         with self._lock:
             for s in list(self._connections):
-                try:
+                with contextlib.suppress(Exception):
                     s.shutdown(socket.SHUT_RDWR)
-                except Exception:
-                    pass
-                try:
+                with contextlib.suppress(Exception):
                     s.close()
-                except Exception:
-                    pass
             self._connections.clear()
         # Wait threads
         for th in list(self._stream_threads):
-            try:
+            with contextlib.suppress(Exception):
                 th.join(timeout=0.5)
-            except Exception:
-                pass
 
     def _server_loop(self) -> None:
         try:
@@ -200,10 +194,8 @@ class SimulatedAndroidClient:
         except Exception:
             cmd_conn = False
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 sock.settimeout(2.0)
-            except Exception:
-                pass
 
         if cmd_conn:
             self._command_loop(sock)
@@ -227,6 +219,7 @@ class SimulatedAndroidClient:
                     line, buf = buf.split(b"\n", 1)
                     try:
                         import json as _json
+
                         msgs = [_json.loads(line.decode("utf-8", errors="replace"))]
                     except Exception:
                         msgs = []
@@ -235,10 +228,8 @@ class SimulatedAndroidClient:
         except Exception as exc:
             self.stats.last_error = f"cmd loop error: {exc}"
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 sock.close()
-            except Exception:
-                pass
             with self._lock:
                 if sock in self._connections:
                     self._connections.remove(sock)
@@ -253,11 +244,15 @@ class SimulatedAndroidClient:
             mid = int(msg.get("id", 0))
             if v == 1 and typ == "cmd":
                 if cmd == "query_capabilities":
-                    reply = build_v1_ack(mid, status="ok", capabilities={
-                        "device": self.name,
-                        "preview": True,
-                        "time_sync": True,
-                    })
+                    reply = build_v1_ack(
+                        mid,
+                        status="ok",
+                        capabilities={
+                            "device": self.name,
+                            "preview": True,
+                            "time_sync": True,
+                        },
+                    )
                     sock.sendall(encode_frame(reply))
                 elif cmd == "time_sync":
                     t1 = now_ns()
@@ -308,10 +303,8 @@ class SimulatedAndroidClient:
                 jitter = random.uniform(-interval * 0.05, interval * 0.05)
                 time.sleep(max(0.0, interval + jitter))
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 sock.close()
-            except Exception:
-                pass
             with self._lock:
                 if sock in self._connections:
                     self._connections.remove(sock)
@@ -403,16 +396,12 @@ def run_test(num_clients: int, rate_hz: int, duration_s: int) -> int:
         print("[WARN] Interrupted by user; stopping early…")
         exit_code = max(exit_code, 1)
     finally:
-        try:
+        with contextlib.suppress(Exception):
             controller.broadcast_stop_recording()
-        except Exception:
-            pass
         # Allow a moment for stop to propagate
         time.sleep(1.0)
-        try:
+        with contextlib.suppress(Exception):
             controller.shutdown()
-        except Exception:
-            pass
         for c in clients:
             c.stop()
         try:
@@ -440,7 +429,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--clients", type=int, default=8, help="Number of simulated clients (>=8)")
     p.add_argument("--rate", type=int, default=30, help="Preview frames per second per client")
     p.add_argument(
-        "--duration", type=int, default=15 * 60, help="Test duration in seconds (default 900s = 15min)"
+        "--duration",
+        type=int,
+        default=15 * 60,
+        help="Test duration in seconds (default 900s = 15min)",
     )
     return p.parse_args(argv)
 
@@ -451,7 +443,9 @@ def main() -> int:
         print(f"[WARN] --clients {args.clients} < 8; adjusting to 8 to meet requirement.")
         args.clients = 8
     if args.duration < 60:
-        print("[WARN] Very short duration; consider at least several minutes for meaningful metrics.")
+        print(
+            "[WARN] Very short duration; consider at least several minutes for meaningful metrics."
+        )
     return run_test(args.clients, args.rate, args.duration)
 
 

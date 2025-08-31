@@ -92,7 +92,9 @@ def load_gsr(session_dir: str, column: str = "gsr") -> Series:
     return Series(t_s=list(map(float, t_s)), y=list(map(float, y)))
 
 
-def _roi_mean(flat_vals: Sequence[float], w: int, h: int, roi: tuple[int, int, int, int] | None) -> float:
+def _roi_mean(
+    flat_vals: Sequence[float], w: int, h: int, roi: tuple[int, int, int, int] | None
+) -> float:
     if roi is None:
         # global mean
         return float(sum(flat_vals) / max(1, len(flat_vals)))
@@ -187,6 +189,7 @@ def smooth_gsr(series: Series, cutoff_hz: float | None, window_sec: float | None
         return series
     try:
         import scipy.signal as sig  # type: ignore
+
         use_scipy = True
     except Exception:
         use_scipy = False
@@ -206,7 +209,7 @@ def smooth_gsr(series: Series, cutoff_hz: float | None, window_sec: float | None
     if window_sec is None:
         return series
     fs = _estimate_sample_rate(t_s)
-    win = max(1, int(round(fs * float(window_sec))))
+    win = max(1, round(fs * float(window_sec)))
     if win <= 1 or win >= len(y):
         return series
     acc: list[float] = []
@@ -235,7 +238,9 @@ def plot_combined(out_path: str, gsr: Series, thermal: Series, show: bool) -> No
     ax1.tick_params(axis='y', labelcolor='tab:blue')
 
     ax2 = ax1.twinx()
-    ax2.plot(thermal.t_s, thermal.y, color="tab:red", label="Thermal mean", linewidth=1.0, alpha=0.8)
+    ax2.plot(
+        thermal.t_s, thermal.y, color="tab:red", label="Thermal mean", linewidth=1.0, alpha=0.8
+    )
     ax2.set_ylabel("Thermal mean (raw units)", color="tab:red")
     ax2.tick_params(axis='y', labelcolor='tab:red')
 
@@ -263,8 +268,8 @@ def _dry_run(out_path: str | None) -> int:
     # Try to plot if matplotlib available; otherwise just synthesize and report success
     try:
         import matplotlib
+
         matplotlib.use("Agg", force=True)  # headless-safe
-        import matplotlib.pyplot as plt  # noqa: F401
         can_plot = True
     except Exception:
         can_plot = False
@@ -288,15 +293,36 @@ def _dry_run(out_path: str | None) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="Analyze pilot session data and produce a combined GSR vs Thermal plot.")
+    p = argparse.ArgumentParser(
+        description="Analyze pilot session data and produce a combined GSR vs Thermal plot."
+    )
     p.add_argument("--session", help="Path to session directory")
     p.add_argument("--out", help="Path to output PNG file")
-    p.add_argument("--roi", nargs=4, type=int, metavar=("X", "Y", "W", "H"), help="Thermal ROI as x y w h", default=None)
+    p.add_argument(
+        "--roi",
+        nargs=4,
+        type=int,
+        metavar=("X", "Y", "W", "H"),
+        help="Thermal ROI as x y w h",
+        default=None,
+    )
     p.add_argument("--gsr-column", default="gsr", help="Column in gsr.csv to plot/filter")
-    p.add_argument("--gsr-cutoff-hz", type=float, default=None, help="Low-pass cutoff in Hz for GSR; if SciPy unavailable, used to derive moving-average window")
-    p.add_argument("--gsr-window-sec", type=float, default=None, help="Window seconds for moving-average fallback if SciPy unavailable")
+    p.add_argument(
+        "--gsr-cutoff-hz",
+        type=float,
+        default=None,
+        help="Low-pass cutoff in Hz for GSR; if SciPy unavailable, used to derive moving-average window",
+    )
+    p.add_argument(
+        "--gsr-window-sec",
+        type=float,
+        default=None,
+        help="Window seconds for moving-average fallback if SciPy unavailable",
+    )
     p.add_argument("--show", action="store_true", help="Display the plot window after saving")
-    p.add_argument("--dry-run", action="store_true", help="Run a self-check without requiring session files")
+    p.add_argument(
+        "--dry-run", action="store_true", help="Run a self-check without requiring session files"
+    )
     args = p.parse_args(argv)
 
     if args.dry_run:

@@ -9,7 +9,8 @@ import pytest
 
 PyQt6 = pytest.importorskip("PyQt6")  # Skip these tests if PyQt6 is not available
 
-from data.data_aggregator import FileReceiverServer, _ClientHeader  # type: ignore
+# Import after PyQt6 availability check
+from data.data_aggregator import FileReceiverServer, _ClientHeader  # type: ignore  # noqa: E402
 
 
 def _find_free_port() -> int:

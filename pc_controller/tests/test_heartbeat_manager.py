@@ -326,7 +326,9 @@ class TestHeartbeatIntegration:
 
         # Device should be marked offline due to no recent heartbeats
         unhealthy_devices = manager.get_unhealthy_devices()
-        assert "test_device" in unhealthy_devices, f"Expected test_device in {unhealthy_devices}, events: {events}"
+        assert "test_device" in unhealthy_devices, (
+            f"Expected test_device in {unhealthy_devices}, events: {events}"
+        )
         assert "offline:test_device" in events, f"Expected offline event in {events}"
 
         # Send a heartbeat to restore connection

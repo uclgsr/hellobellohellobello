@@ -5,7 +5,8 @@ Command-line tool to validate end-to-end temporal synchronization for a
 recorded session using the Hardware Validation Protocol.
 
 Usage:
-  python scripts\\validate_sync.py --session-id 20250101_120000 --base-dir ./pc_controller_data --tolerance-ms 5.0
+  python scripts\\validate_sync.py --session-id 20250101_120000 \
+    --base-dir ./pc_controller_data --tolerance-ms 5.0
 
 This script will:
 - Locate the session directory under base-dir by session_id
@@ -147,7 +148,7 @@ def _map_offsets_to_devices(session_dir: str, offsets: dict[str, int]) -> dict[s
             match_key = norm
         else:
             # find best candidate by longest common subsequence (simplified contains)
-            for k in norm_offset.keys():
+            for k in norm_offset:
                 if norm in k or k in norm:
                     match_key = k
                     break
@@ -163,7 +164,8 @@ def _read_video_brightness(path: str) -> tuple[list[float], float]:
         import cv2  # type: ignore
     except Exception as exc:  # pragma: no cover - environment specific
         raise RuntimeError(
-            "OpenCV (cv2) is required to analyze videos. Install opencv-python as per pc_controller/requirements.txt."
+            "OpenCV (cv2) is required to analyze videos. "
+            "Install opencv-python as per pc_controller/requirements.txt."
         ) from exc
     cap = cv2.VideoCapture(path)
     if cap is None or not cap.isOpened():
@@ -182,7 +184,9 @@ def _read_video_brightness(path: str) -> tuple[list[float], float]:
     return means, fps
 
 
-def build_device_sessions(session_dir: str, offsets: dict[str, int]) -> tuple[list[DeviceSession], dict[str, int]]:
+def build_device_sessions(
+    session_dir: str, offsets: dict[str, int]
+) -> tuple[list[DeviceSession], dict[str, int]]:
     mapped_offsets = _map_offsets_to_devices(session_dir, offsets)
     sessions: list[DeviceSession] = []
     for name, offset in mapped_offsets.items():
@@ -192,16 +196,33 @@ def build_device_sessions(session_dir: str, offsets: dict[str, int]) -> tuple[li
         flash_csv = _find_flash_csv(dev_dir)
         video_path = _find_android_video(dev_dir)
         raw = _load_flash_csv(flash_csv) if flash_csv else []
-        sessions.append(DeviceSession(name=name, path=dev_dir, flash_csv=flash_csv, video_path=video_path,
-                                      raw_events_ns=raw, aligned_events_ns=[], offset_ns=offset, offset_sign=1))
+        sessions.append(
+            DeviceSession(
+                name=name,
+                path=dev_dir,
+                flash_csv=flash_csv,
+                video_path=video_path,
+                raw_events_ns=raw,
+                aligned_events_ns=[],
+                offset_ns=offset,
+                offset_sign=1,
+            )
+        )
     return sessions, mapped_offsets
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Flash Sync Validation")
-    parser.add_argument("--session-id", required=True, help="Session ID (folder name under base dir)")
-    parser.add_argument("--base-dir", default=os.path.join(os.getcwd(), "pc_controller_data"), help="Base directory where sessions are stored")
-    parser.add_argument("--tolerance-ms", type=float, default=5.0, help="PASS/FAIL tolerance in milliseconds")
+    parser.add_argument(
+        "--session-id", required=True, help="Session ID (folder name under base dir)"
+    )
+    default_base_dir = os.path.join(os.getcwd(), "pc_controller_data")
+    parser.add_argument(
+        "--base-dir", default=default_base_dir, help="Base directory where sessions are stored"
+    )
+    parser.add_argument(
+        "--tolerance-ms", type=float, default=5.0, help="PASS/FAIL tolerance in milliseconds"
+    )
     args = parser.parse_args()
 
     session_dir = os.path.join(args.base_dir, args.session_id)
@@ -233,7 +254,8 @@ def main() -> int:
         if d.raw_events_ns:
             n_events = max(n_events, len(d.raw_events_ns))
     if n_events == 0:
-        print("ERROR: No flash_sync_events.csv timestamps found in device folders.", file=sys.stderr)
+        msg = "ERROR: No flash_sync_events.csv timestamps found in device folders."
+        print(msg, file=sys.stderr)
         return 2
 
     # Align event timestamps to master clock using offsets; resolve sign using first device as ref
@@ -291,7 +313,8 @@ def main() -> int:
         print("ERROR: No aligned device events; cannot compute validation.", file=sys.stderr)
         return 2
 
-    result = compute_validation_report(aligned_by_device, detections, tolerance_ms=args.tolerance_ms)
+    tolerance = args.tolerance_ms
+    result = compute_validation_report(aligned_by_device, detections, tolerance_ms=tolerance)
 
     # Print report
     print("=== Flash Sync Validation Report ===")
@@ -300,7 +323,11 @@ def main() -> int:
     # Summary of devices and offsets
     print("\nDevices and Offsets (ns):")
     for d in devices:
-        print(f"- {d.name}: offset={d.offset_ns} sign={d.offset_sign} events={len(d.aligned_events_ns)} video={'yes' if d.video_path else 'no'}")
+        video_status = 'yes' if d.video_path else 'no'
+        print(
+            f"- {d.name}: offset={d.offset_ns} sign={d.offset_sign} "
+            f"events={len(d.aligned_events_ns)} video={video_status}"
+        )
     # Print detailed clock sync stats if available
     if 'clock_sync' in locals() and clock_sync:
         print("\nClock Sync Stats (from session_metadata.json):")
@@ -311,7 +338,11 @@ def main() -> int:
                 sd = int(st.get('std_dev', st.get('std_dev_ns', 0)))
                 tri = int(st.get('trials', 0))
                 ts = int(st.get('timestamp_ns', 0))
-                print(f"- {dev_name}: offset={off} ns, min_delay={dly/1e6:.3f} ms, std_dev={sd} ns, trials={tri}, ts={ts}")
+                delay_ms = dly / 1e6
+                print(
+                    f"- {dev_name}: offset={off} ns, min_delay={delay_ms:.3f} ms, "
+                    f"std_dev={sd} ns, trials={tri}, ts={ts}"
+                )
             except Exception:
                 print(f"- {dev_name}: {st}")
     # Streams

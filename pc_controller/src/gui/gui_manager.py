@@ -19,21 +19,39 @@ from dataclasses import dataclass
 import numpy as np
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QAction, QImage, QPixmap
-from PyQt6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox,
-                             QDoubleSpinBox, QFileDialog, QFormLayout,
-                             QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-                             QListWidget, QMainWindow, QMessageBox,
-                             QProgressBar, QPushButton, QSpinBox, QTabWidget,
-                             QTextEdit, QToolBar, QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFormLayout,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QMainWindow,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSpinBox,
+    QTabWidget,
+    QTextEdit,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
+)
 
 try:
     import pyqtgraph as pg
 except Exception:  # pragma: no cover - import guard for environments without Qt backend
     pg = None
 
+import contextlib
+
 from core.quick_start_guide import QuickStartGuide
-from core.user_experience import (ErrorMessageTranslator, StatusIndicator,
-                                  show_file_location)
+from core.user_experience import ErrorMessageTranslator, StatusIndicator, show_file_location
 from data.data_aggregator import DataAggregator
 from data.data_loader import DataLoader
 from data.hdf5_exporter import export_session_to_hdf5
@@ -44,8 +62,8 @@ from tools.camera_calibration import calibrate_camera, save_calibration
 try:
     from core.local_interfaces import ShimmerInterface, WebcamInterface
 except Exception:  # pragma: no cover - in case of import issues during tests
-    ShimmerInterface = None  # type: ignore
-    WebcamInterface = None  # type: ignore
+    ShimmerInterface = None
+    WebcamInterface = None
 
 
 @dataclass
@@ -314,12 +332,10 @@ class GUIManager(QMainWindow):
         # Periodic time re-sync timer (every 3 minutes)
         self._resync_timer = QTimer(self)
         self._resync_timer.setInterval(180000)
-        try:
+        with contextlib.suppress(Exception):
             self._resync_timer.timeout.connect(
                 lambda: self._network.broadcast_time_sync()
             )
-        except Exception:
-            pass
 
         # Wire network logs and preview frames
         self._network.device_discovered.connect(self._on_device_discovered)
@@ -331,7 +347,7 @@ class GUIManager(QMainWindow):
             sig = getattr(self._network, "preview_frame", None)
             if sig is not None:
                 try:
-                    sig.connect(self._on_preview_frame)  # type: ignore[attr-defined]
+                    sig.connect(self._on_preview_frame)
                     connected = True
                 except Exception as exc:
                     self._log(f"Direct preview_frame connect failed: {exc}")
@@ -341,7 +357,7 @@ class GUIManager(QMainWindow):
                             lambda dev, data, ts: self._on_preview_frame(
                                 str(dev), bytes(data), int(ts)
                             )
-                        )  # type: ignore[attr-defined]
+                        )
                         connected = True
                     except Exception as exc:
                         self._log(f"Lambda preview_frame connect failed: {exc}")
@@ -361,7 +377,7 @@ class GUIManager(QMainWindow):
                 self.webcam.start()
             if self.shimmer:
                 self.shimmer.start()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._log(f"Local device start error: {exc}")
 
         self.video_timer.start()
@@ -467,13 +483,11 @@ class GUIManager(QMainWindow):
         # Broadcast start to Android spokes with session_id
         try:
             self._network.broadcast_start_recording(self._session_id)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._log(f"Broadcast start failed: {exc}")
         # Start periodic re-sync timer
-        try:
+        with contextlib.suppress(Exception):
             self._resync_timer.start()
-        except Exception:
-            pass
         self._open_recorders(self._session_dir)
         self._recording = True
         self._log(f"Session started: {self._session_dir}")
@@ -484,13 +498,11 @@ class GUIManager(QMainWindow):
         # Broadcast stop to Android spokes
         try:
             self._network.broadcast_stop_recording()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._log(f"Broadcast stop failed: {exc}")
         # Stop periodic re-sync timer
-        try:
+        with contextlib.suppress(Exception):
             self._resync_timer.stop()
-        except Exception:
-            pass
         # Close local recorders
         self._close_recorders()
         self._recording = False
@@ -503,12 +515,12 @@ class GUIManager(QMainWindow):
                 meta_path = os.path.join(sess_dir, "session_metadata.json")
                 offsets = {}
                 try:
-                    offsets = self._network.get_clock_offsets()  # type: ignore[attr-defined]
+                    offsets = self._network.get_clock_offsets()
                 except Exception:
                     offsets = {}
                 stats = {}
                 try:
-                    stats = self._network.get_clock_sync_stats()  # type: ignore[attr-defined]
+                    stats = self._network.get_clock_sync_stats()
                 except Exception:
                     stats = {}
                 meta = {
@@ -537,10 +549,9 @@ class GUIManager(QMainWindow):
             self._network.broadcast_transfer_files(
                 host, port, getattr(self, "_session_id", "")
             )
-            self._log(
-                f"Initiated file transfer to {host}:{port} for session {getattr(self, '_session_id', '')}"
-            )
-        except Exception as exc:  # noqa: BLE001
+            session_id = getattr(self, '_session_id', '')
+            self._log(f"Initiated file transfer to {host}:{port} for session {session_id}")
+        except Exception as exc:
             self._log(f"Failed to initiate file transfer: {exc}")
 
     def _on_connect_device(self) -> None:
@@ -550,7 +561,7 @@ class GUIManager(QMainWindow):
         try:
             self._network.broadcast_flash_sync()
             self._log("Flash Sync broadcast sent.")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._log(f"Flash Sync failed: {exc}")
 
     def _on_calibrate_cameras(self) -> None:
@@ -559,7 +570,7 @@ class GUIManager(QMainWindow):
             dialog = CalibrationDialog(self)
             if dialog.exec() == QDialog.DialogCode.Accepted:
                 self._run_calibration(dialog.get_parameters())
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._log(f"Calibration failed: {exc}")
 
     def _on_export_data(self) -> None:
@@ -568,7 +579,7 @@ class GUIManager(QMainWindow):
             dialog = ExportDialog(self)
             if dialog.exec() == QDialog.DialogCode.Accepted:
                 self._run_export(dialog.get_parameters())
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._log(f"Export failed: {exc}")
 
     @pyqtSlot(DiscoveredDevice)
@@ -589,24 +600,21 @@ class GUIManager(QMainWindow):
         self, device_name: str, jpeg_bytes: object, ts_ns: int
     ) -> None:
         try:
-            try:
+            with contextlib.suppress(Exception):
                 self._logger.info(
                     f"[DEBUG_LOG] on_preview_frame: {device_name}, " f"ts={ts_ns}"
                 )
-            except Exception:
-                pass
             now = time.monotonic()
-            # If first time seeing this device, count initial burst frame as a drop to coalesce bursts deterministically in tests/CI.
+            # If first time seeing this device, count initial burst frame as a drop
+            # to coalesce bursts deterministically in tests/CI.
             if device_name not in self._remote_last_render_s:
                 drops0 = self._remote_drop_counts.get(device_name, 0) + 1
                 self._remote_drop_counts[device_name] = drops0
                 self._remote_last_render_s[device_name] = now
-                try:
+                with contextlib.suppress(Exception):
                     self._logger.info(
                         f"[DEBUG_LOG] first-drop for {device_name}: {drops0}"
                     )
-                except Exception:
-                    pass
                 return
             last = self._remote_last_render_s.get(device_name, now)
             # Enforce per-device remote throttle (stricter than local)
@@ -614,10 +622,8 @@ class GUIManager(QMainWindow):
                 drops = self._remote_drop_counts.get(device_name, 0) + 1
                 self._remote_drop_counts[device_name] = drops
                 # Debug log increment for visibility in tests
-                try:
+                with contextlib.suppress(Exception):
                     self._logger.info(f"[DEBUG_LOG] drop++ for {device_name}: {drops}")
-                except Exception:
-                    pass
                 last_log = self._remote_drop_last_log_s.get(device_name, now)
                 if (now - last_log) >= 1.0:
                     self._log(
@@ -637,7 +643,7 @@ class GUIManager(QMainWindow):
                 self._add_to_grid(widget)
             widget.update_qimage(qimg)
             self._remote_last_render_s[device_name] = now
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._log(f"Preview render error for {device_name}: {exc}")
 
     @pyqtSlot(str)
@@ -671,7 +677,7 @@ class GUIManager(QMainWindow):
                 self._video_last_render_s = now
                 if self._recording:
                     self._write_video_frame(frame)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._log(f"Video update error: {exc}")
 
     def _on_gsr_timer(self) -> None:
@@ -683,7 +689,7 @@ class GUIManager(QMainWindow):
                 self.gsr_widget.append_gsr_samples(ts, vals)
                 if self._recording:
                     self._write_gsr_samples(ts, vals)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._log(f"GSR update error: {exc}")
 
     # Recording helpers
@@ -723,10 +729,8 @@ class GUIManager(QMainWindow):
         finally:
             self._gsr_file = None
         if self._video_writer is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._video_writer.release()
-            except Exception:
-                pass
             self._video_writer = None
 
     def _write_gsr_samples(self, ts: np.ndarray, vals: np.ndarray) -> None:
@@ -751,7 +755,7 @@ class GUIManager(QMainWindow):
             if (w, h) != (640, 480):
                 fb = cv2.resize(fb, (640, 480))
             self._video_writer.write(fb)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._log(f"Video write error: {exc}")
 
     # ==========================
@@ -784,7 +788,7 @@ class GUIManager(QMainWindow):
                     self.plot.addItem(self.cursor)
                     self._plot_curves.clear()
                     # Plot known columns
-                    for rel_name, _path in sess.csv_files.items():
+                    for rel_name in sess.csv_files.keys():
                         df = loader.load_csv(rel_name)
                         if df.empty:
                             continue
@@ -814,7 +818,7 @@ class GUIManager(QMainWindow):
                 vid_path = None
                 if sess.video_files:
                     # take first video file
-                    vid_path = list(sess.video_files.values())[0]
+                    vid_path = next(iter(sess.video_files.values()))
                 if vid_path is not None:
                     try:
                         import cv2
@@ -867,16 +871,12 @@ class GUIManager(QMainWindow):
             self._log(f"Load session UI error: {exc}")
 
     def _on_play(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self._play_timer.start()
-        except Exception:
-            pass
 
     def _on_pause(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self._play_timer.stop()
-        except Exception:
-            pass
 
     def _on_slider_change(self, value: int) -> None:
         self._current_ms = int(value)
@@ -924,10 +924,8 @@ class GUIManager(QMainWindow):
     def _update_plot_cursor(self) -> None:
         if pg is None or self.plot is None or self.cursor is None:
             return
-        try:
+        with contextlib.suppress(Exception):
             self.cursor.setPos(float(self._current_ms) / 1000.0)
-        except Exception:
-            pass
 
     def _on_add_annotation(self) -> None:
         text = self.ann_input.text().strip()
@@ -1626,7 +1624,7 @@ class SettingsDialog(QDialog):
         """Apply settings (without closing dialog)."""
         try:
             # This would save settings to config file
-            settings = self._get_settings_dict()
+            self._get_settings_dict()
 
             # Show confirmation
             QMessageBox.information(

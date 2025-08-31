@@ -13,7 +13,9 @@ with patch.dict('sys.modules', {'pylsl': MagicMock()}):
 class TestLSLOutletManager:
     """Test LSL outlet manager functionality."""
 
-    @pytest.mark.skip("LSL tests require complex module reload - not critical for core functionality")
+    @pytest.mark.skip(
+        "LSL tests require complex module reload - not critical for core functionality"
+    )
     @patch('pc_controller.src.network.lsl_integration.pylsl')
     @patch('pc_controller.src.network.lsl_integration.LSL_AVAILABLE', True)
     def test_initialization_enabled(self, mock_pylsl):
@@ -21,16 +23,16 @@ class TestLSLOutletManager:
         # Need to patch the cfg_get function that's actually being used
         # In case of import failure, the fallback function is used
         import pc_controller.src.network.lsl_integration as lsl_module
-        
+
         def mock_cfg_get(key: str, default=None):
             if key == "lsl_enabled":
                 return "true"
             return default
-        
+
         # Replace the cfg_get function directly
         original_cfg_get = lsl_module.cfg_get
         lsl_module.cfg_get = mock_cfg_get
-        
+
         try:
             manager = LSLOutletManager()
             assert manager.available is True
@@ -185,7 +187,10 @@ class TestLSLOutletManager:
             manager.create_thermal_outlet("device_001", 4, 4, 10.0)  # Small frame for testing
 
             # Create test frame
-            frame = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], dtype=np.float32)
+            frame = np.array(
+                [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]],
+                dtype=np.float32,
+            )
 
             result = manager.stream_thermal_frame("device_001", frame)
             assert result is True

@@ -20,11 +20,10 @@ Options:
 """
 
 import argparse
+import shutil
 import subprocess
 import sys
-import shutil
 from pathlib import Path
-from typing import List, Optional
 
 
 class DevSetup:
@@ -36,14 +35,18 @@ class DevSetup:
 
     def log(self, message: str, level: str = "INFO") -> None:
         """Log a message with appropriate prefix."""
-        prefix = "🔧" if level == "INFO" else "✅" if level == "SUCCESS" else "❌" if level == "ERROR" else "⚠️"
+        prefix = (
+            "🔧"
+            if level == "INFO"
+            else "✅" if level == "SUCCESS" else "❌" if level == "ERROR" else "⚠️"
+        )
         print(f"{prefix} {message}")
 
     def check_command(self, cmd: str) -> bool:
         """Check if a command is available."""
         return shutil.which(cmd) is not None
 
-    def run_command(self, cmd: List[str], name: str, cwd: Optional[Path] = None) -> bool:
+    def run_command(self, cmd: list[str], name: str, cwd: Path | None = None) -> bool:
         """Run a command and return success status."""
         try:
             self.log(f"Running {name}...")
@@ -65,8 +68,10 @@ class DevSetup:
         # Core requirements
         requirements_file = self.project_root / "pc_controller" / "requirements.txt"
         if requirements_file.exists():
-            if not self.run_command([sys.executable, "-m", "pip", "install", "-r", str(requirements_file)],
-                                   "Core Requirements"):
+            if not self.run_command(
+                [sys.executable, "-m", "pip", "install", "-r", str(requirements_file)],
+                "Core Requirements",
+            ):
                 return False
 
         # Development tools
@@ -83,7 +88,9 @@ class DevSetup:
         ]
 
         for tool in dev_tools:
-            if not self.run_command([sys.executable, "-m", "pip", "install", tool], f"Installing {tool}"):
+            if not self.run_command(
+                [sys.executable, "-m", "pip", "install", tool], f"Installing {tool}"
+            ):
                 self.log(f"Failed to install {tool}, but continuing...", "ERROR")
 
         return True
@@ -95,7 +102,9 @@ class DevSetup:
         # Check if pre-commit is available
         if not self.check_command("pre-commit"):
             self.log("pre-commit not found in PATH, trying to install...", "ERROR")
-            if not self.run_command([sys.executable, "-m", "pip", "install", "pre-commit"], "Installing pre-commit"):
+            if not self.run_command(
+                [sys.executable, "-m", "pip", "install", "pre-commit"], "Installing pre-commit"
+            ):
                 return False
 
         # Install hooks
@@ -103,8 +112,12 @@ class DevSetup:
             return False
 
         # Install commit-msg hook for conventional commits
-        if not self.run_command(["pre-commit", "install", "--hook-type", "commit-msg"], "Installing commit-msg hook"):
-            self.log("Failed to install commit-msg hook, but pre-commit hooks are installed", "ERROR")
+        if not self.run_command(
+            ["pre-commit", "install", "--hook-type", "commit-msg"], "Installing commit-msg hook"
+        ):
+            self.log(
+                "Failed to install commit-msg hook, but pre-commit hooks are installed", "ERROR"
+            )
 
         # Update hooks to latest versions
         if not self.run_command(["pre-commit", "autoupdate"], "Updating pre-commit hooks"):
@@ -121,10 +134,15 @@ class DevSetup:
         # Check Python version
         python_version = sys.version_info
         if python_version < (3, 11):
-            self.log(f"Python {python_version.major}.{python_version.minor} is too old, need 3.11+", "ERROR")
+            self.log(
+                f"Python {python_version.major}.{python_version.minor} is too old, need 3.11+",
+                "ERROR",
+            )
             success = False
         else:
-            self.log(f"Python {python_version.major}.{python_version.minor} is compatible", "SUCCESS")
+            self.log(
+                f"Python {python_version.major}.{python_version.minor} is compatible", "SUCCESS"
+            )
 
         # Check required tools
         required_tools = ["pre-commit", "git"]
@@ -150,7 +168,7 @@ class DevSetup:
             ".pre-commit-config.yaml",
             "pyproject.toml",
             "pytest.ini",
-            ".markdownlint.yaml"
+            ".markdownlint.yaml",
         ]
 
         for config_file in config_files:
@@ -166,7 +184,7 @@ class DevSetup:
             "pc_controller/src",
             "pc_controller/tests",
             "android_sensor_node/app",
-            "scripts"
+            "scripts",
         ]
 
         for directory in required_dirs:
@@ -217,15 +235,14 @@ class DevSetup:
                 "**/.pytest_cache": True,
                 "**/.mypy_cache": True,
                 "**/coverage.xml": True,
-                "htmlcov": True
+                "htmlcov": True,
             },
             "editor.formatOnSave": True,
-            "editor.codeActionsOnSave": {
-                "source.organizeImports": "explicit"
-            }
+            "editor.codeActionsOnSave": {"source.organizeImports": "explicit"},
         }
 
         import json
+
         with open(vscode_dir / "settings.json", "w") as f:
             json.dump(vscode_settings, f, indent=2)
 
@@ -242,7 +259,7 @@ class DevSetup:
                 "ms-vscode.test-adapter-converter",
                 "davidanson.vscode-markdownlint",
                 "redhat.vscode-yaml",
-                "streetsidesoftware.code-spell-checker"
+                "streetsidesoftware.code-spell-checker",
             ]
         }
 
@@ -259,9 +276,8 @@ class DevSetup:
 
         try:
             # Install dependencies (unless hooks-only)
-            if not self.args.hooks_only:
-                if not self.install_python_dependencies():
-                    success = False
+            if not self.args.hooks_only and not self.install_python_dependencies():
+                success = False
 
             # Install pre-commit hooks
             if not self.install_pre_commit_hooks():
@@ -271,9 +287,8 @@ class DevSetup:
             self.setup_ide_config()
 
             # Validate setup (unless reinstall mode)
-            if not self.args.reinstall:
-                if not self.validate_setup():
-                    success = False
+            if not self.args.reinstall and not self.validate_setup():
+                success = False
 
             # Test hooks
             if not self.test_pre_commit_hooks():
@@ -303,17 +318,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Multi-Modal Sensor Platform Development Environment Setup",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__
+        epilog=__doc__,
     )
 
-    parser.add_argument("--hooks-only", action="store_true",
-                       help="Only install pre-commit hooks")
-    parser.add_argument("--validate", action="store_true",
-                       help="Only validate existing setup")
-    parser.add_argument("--reinstall", action="store_true",
-                       help="Force reinstall all components")
-    parser.add_argument("--ide", action="store_true",
-                       help="Setup IDE configuration files")
+    parser.add_argument("--hooks-only", action="store_true", help="Only install pre-commit hooks")
+    parser.add_argument("--validate", action="store_true", help="Only validate existing setup")
+    parser.add_argument("--reinstall", action="store_true", help="Force reinstall all components")
+    parser.add_argument("--ide", action="store_true", help="Setup IDE configuration files")
 
     args = parser.parse_args()
 

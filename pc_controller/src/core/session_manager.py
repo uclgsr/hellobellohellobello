@@ -24,19 +24,18 @@ except ImportError:
     try:
         from ..config import get as cfg_get
     except ImportError:
-        import os
         import sys
-        
+
         # Try to add the project root to Python path
         project_root = Path(__file__).parents[3]
         if str(project_root) not in sys.path:
             sys.path.insert(0, str(project_root))
-            
+
         try:
             from pc_controller.src.config import get as cfg_get
         except ImportError:
             # Ultimate fallback - create a no-op config function
-            def cfg_get(key: str, default=None):  # type: ignore
+            def cfg_get(key: str, default=None):
                 """Fallback config function when config module unavailable."""
                 return default
 
@@ -130,6 +129,19 @@ class SessionManager:
         self._meta.state = "Recording"
         self._meta.start_time_ns = time.time_ns()
         self._write_metadata()
+
+    def start_session(self, name: str) -> str:
+        """Convenience method to create a session and immediately start recording.
+
+        Args:
+            name: Session name
+
+        Returns:
+            Session ID
+        """
+        session_id = self.create_session(name)
+        self.start_recording()
+        return session_id
 
     def stop_recording(self) -> None:
         if not self._meta or not self._active_dir:

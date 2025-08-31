@@ -31,6 +31,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.controller.RecordingController
 import com.yourcompany.sensorspoke.sensors.audio.AudioRecorder
+import com.yourcompany.sensorspoke.sensors.coordination.MultiModalSensorCoordinator
 import com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder
 import com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
 import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
@@ -47,6 +48,10 @@ class MainActivity : AppCompatActivity() {
     private val vm: MainViewModel by viewModels()
 
     private var controller: RecordingController? = null
+
+    // Full integration: MultiModalSensorCoordinator for comprehensive sensor management
+    private var multiModalCoordinator: MultiModalSensorCoordinator? = null
+
     private var viewPager: ViewPager2? = null
     private var tabLayout: TabLayout? = null
     private var btnStartRecording: Button? = null
@@ -174,8 +179,8 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
+    override fun onOptionsItemSelected(item: MenuItem): Boolean =
+        when (item.itemId) {
             R.id.action_quick_start -> {
                 showQuickStartGuide()
                 true
@@ -195,7 +200,6 @@ class MainActivity : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
-    }
 
     private fun setupViewPager() {
         val adapter = MainPagerAdapter(this)
@@ -212,14 +216,16 @@ class MainActivity : AppCompatActivity() {
                 TabLayoutMediator(tabLayout, viewPager) { tab, position ->
                     tab.text = MainPagerAdapter.TAB_TITLES[position]
                 }.attach()
-                
+
                 // Register page change callback for enhanced navigation tracking
-                viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-                    override fun onPageSelected(position: Int) {
-                        super.onPageSelected(position)
-                        navigationController?.updateCurrentTab(position)
-                    }
-                })
+                viewPager.registerOnPageChangeCallback(
+                    object : ViewPager2.OnPageChangeCallback() {
+                        override fun onPageSelected(position: Int) {
+                            super.onPageSelected(position)
+                            navigationController?.updateCurrentTab(position)
+                        }
+                    },
+                )
             }
         }
     }
@@ -262,6 +268,15 @@ class MainActivity : AppCompatActivity() {
         runCatching { unregisterReceiver(controlReceiver) }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // Cleanup MultiModalSensorCoordinator for full integration
+        lifecycleScope.launch {
+            multiModalCoordinator?.stopRecording()
+            multiModalCoordinator = null
+        }
+    }
+
     private fun ensureController(): RecordingController {
         val existing = controller
         if (existing != null) return existing
@@ -270,19 +285,57 @@ class MainActivity : AppCompatActivity() {
         c.register("rgb", RgbCameraRecorder(applicationContext, this))
         c.register("thermal", ThermalCameraRecorder(applicationContext))
         c.register("gsr", ShimmerRecorder(applicationContext))
-        c.register("audio", AudioRecorder(applicationContext))  // FR5: Audio recording support
+        c.register("audio", AudioRecorder(applicationContext)) // FR5: Audio recording support
         controller = c
         return c
+    }
+
+    /**
+     * Ensure MultiModalSensorCoordinator is initialized - Full Integration
+     */
+    private suspend fun ensureMultiModalCoordinator(): MultiModalSensorCoordinator {
+        val existing = multiModalCoordinator
+        if (existing != null) return existing
+
+        val coordinator = MultiModalSensorCoordinator(applicationContext, this)
+
+        // Initialize the complete multi-modal system
+        val initResult = coordinator.initializeSystem()
+        if (initResult) {
+            Log.i("MainActivity", "MultiModalSensorCoordinator initialized successfully - Full Integration active")
+        } else {
+            Log.w("MainActivity", "MultiModalSensorCoordinator initialization failed, falling back to individual recorders")
+        }
+
+        multiModalCoordinator = coordinator
+        return coordinator
     }
 
     private fun startRecording() {
         updateStatusText("Starting recording...")
         lifecycleScope.launch {
             try {
-                ensureController().startSession()
-                UserExperience.Messaging.showSuccess(this@MainActivity, "Recording started")
-                updateStatusText("Recording in progress")
-                updateButtonStates(isRecording = true)
+                // Full Integration: Use MultiModalSensorCoordinator for comprehensive sensor management
+                val coordinator = ensureMultiModalCoordinator()
+
+                // Start coordinated multi-modal recording with session directory
+                val sessionDir = File(applicationContext.filesDir, "sessions")
+                if (!sessionDir.exists()) sessionDir.mkdirs()
+
+                val startResult = coordinator.startRecording(sessionDir)
+
+                if (startResult) {
+                    UserExperience.Messaging.showSuccess(this@MainActivity, "Full multi-modal recording started")
+                    updateStatusText("Full integration recording in progress")
+                    updateButtonStates(isRecording = true)
+                } else {
+                    // Fallback to individual controller if coordinator fails
+                    Log.w("MainActivity", "Coordinator failed, falling back to individual recorders")
+                    ensureController().startSession()
+                    UserExperience.Messaging.showSuccess(this@MainActivity, "Recording started (fallback mode)")
+                    updateStatusText("Recording in progress (fallback)")
+                    updateButtonStates(isRecording = true)
+                }
             } catch (e: Exception) {
                 UserExperience.Messaging.showUserFriendlyError(this@MainActivity, e.message ?: "Unknown error", "recording")
                 updateStatusText("Ready to record")
@@ -294,6 +347,21 @@ class MainActivity : AppCompatActivity() {
         updateStatusText("Stopping recording...")
         lifecycleScope.launch {
             try {
+                // Full Integration: Stop coordinated recording first, then fallback if needed
+                val coordinator = multiModalCoordinator
+                if (coordinator != null) {
+                    val stopResult = coordinator.stopRecording()
+                    if (stopResult) {
+                        UserExperience.Messaging.showSuccess(this@MainActivity, "Full multi-modal recording stopped")
+                        updateStatusText("Ready to record")
+                        updateButtonStates(isRecording = false)
+                        return@launch
+                    } else {
+                        Log.w("MainActivity", "Coordinator stop failed, trying individual controller")
+                    }
+                }
+
+                // Fallback to individual controller
                 controller?.stopSession()
                 UserExperience.Messaging.showSuccess(this@MainActivity, "Recording stopped")
                 updateStatusText("Ready to record")
@@ -320,7 +388,8 @@ class MainActivity : AppCompatActivity() {
     private fun showQuickStartGuide() {
         QuickStartDialog.show(this) {
             // Mark first launch as complete
-            preferences.edit()
+            preferences
+                .edit()
                 .putBoolean("first_launch", false)
                 .apply()
 
@@ -330,23 +399,28 @@ class MainActivity : AppCompatActivity() {
 
     private fun showConnectionHelp() {
         val troubleshootingSteps = UserExperience.QuickStart.getConnectionTroubleshootingSteps()
-        val message = "Connection Troubleshooting:\n\n" +
-                     troubleshootingSteps.mapIndexed { index, step ->
-                         "${index + 1}. $step"
-                     }.joinToString("\n")
+        val message =
+            "Connection Troubleshooting:\n\n" +
+                troubleshootingSteps
+                    .mapIndexed { index, step ->
+                        "${index + 1}. $step"
+                    }.joinToString("\n")
 
         // Show as a Snackbar with action
         rootLayout?.let { layout ->
-            val snackbar = Snackbar.make(layout, "Connection help available", Snackbar.LENGTH_LONG)
-                .setAction("Show Help") {
-                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                }
+            val snackbar =
+                Snackbar
+                    .make(layout, "Connection help available", Snackbar.LENGTH_LONG)
+                    .setAction("Show Help") {
+                        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                    }
             snackbar.show()
         }
     }
 
     private fun resetFirstLaunchFlag() {
-        preferences.edit()
+        preferences
+            .edit()
             .putBoolean("first_launch", true)
             .apply()
         UserExperience.Messaging.showStatus(this, "Tutorial will show on next launch")
@@ -354,6 +428,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun showFlashOverlay() {
         val parent = rootLayout ?: return
+        val flashStartTime = System.nanoTime()
+
         val flash =
             View(this).apply {
                 setBackgroundColor(Color.WHITE)
@@ -362,29 +438,47 @@ class MainActivity : AppCompatActivity() {
                 alpha = 1f
             }
         parent.addView(flash)
-        flash.postDelayed({ parent.removeView(flash) }, 150)
+
+        // Log flash display timing for synchronization validation
+        Log.d("FlashSync", "Flash overlay displayed at: ${flashStartTime}ns")
+
+        flash.postDelayed({
+            parent.removeView(flash)
+            val flashEndTime = System.nanoTime()
+            Log.d("FlashSync", "Flash overlay removed at: ${flashEndTime}ns (duration: ${(flashEndTime - flashStartTime) / 1_000_000}ms)")
+        }, 150)
     }
 
     private fun logFlashEvent(tsNs: Long) {
         try {
+            val actualFlashTime = System.nanoTime()
             val dir = getExternalFilesDir(null) ?: filesDir
             val f = File(dir, "flash_sync_events.csv")
             if (!f.exists()) {
-                f.writeText("timestamp_ns\n")
+                f.writeText("trigger_timestamp_ns,actual_flash_timestamp_ns,sync_delay_ms,device_id\n")
             }
-            f.appendText("$tsNs\n")
+
+            val syncDelay = (actualFlashTime - tsNs) / 1_000_000.0 // Convert to milliseconds
+            val deviceId =
+                android.os.Build.MODEL
+                    ?.replace(" ", "_") ?: "unknown"
+
+            f.appendText("$tsNs,$actualFlashTime,$syncDelay,$deviceId\n")
+
+            Log.i("FlashSync", "Flash event logged - Sync delay: ${syncDelay}ms")
+        } catch (e: Exception) {
+            Log.e("FlashSync", "Failed to log flash event: ${e.message}", e)
         } catch (_: Exception) {
         }
     }
 
-    private fun isRunningUnderTest(): Boolean {
-        return try {
+    private fun isRunningUnderTest(): Boolean =
+        try {
             Class.forName("org.robolectric.Robolectric")
             true
         } catch (_: Throwable) {
             false
         }
-    }
 
     /**
      * Navigate to thermal camera preview - Enhanced integration method
@@ -407,14 +501,17 @@ class MainActivity : AppCompatActivity() {
     private fun initializeTC001System() {
         try {
             // Initialize TC001 logging
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initLog()
-            
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+                .initLog()
+
             // Initialize TC001 USB receivers
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initReceiver(this)
-            
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+                .initReceiver(this)
+
             // Initialize TC001 device manager
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil.initTC001DeviceManager(this)
-            
+            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+                .initTC001DeviceManager(this)
+
             Log.i("MainActivity", "TC001 thermal camera system initialized successfully")
         } catch (e: Exception) {
             Log.e("MainActivity", "Failed to initialize TC001 system", e)

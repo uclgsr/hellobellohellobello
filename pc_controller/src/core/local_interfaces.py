@@ -17,6 +17,8 @@ thread. No blocking operations are performed on the GUI thread.
 
 from __future__ import annotations
 
+import contextlib
+
 # Attempt to locate the native extension.
 # We support two layouts:
 # 1) pc_controller.native_backend.native_backend (compiled module as submodule)
@@ -93,10 +95,8 @@ class ShimmerInterface:
             self._thread.join(timeout=0.5)
         self._thread = None
         if self._native is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._native.stop_streaming()
-            except Exception:
-                pass
             self._native = None
 
     def get_latest_samples(self) -> tuple[np.ndarray, np.ndarray]:
@@ -232,16 +232,12 @@ class WebcamInterface:
             self._thread.join(timeout=0.5)
         self._thread = None
         if self._native is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._native.stop_capture()
-            except Exception:
-                pass
             self._native = None
         if self._cap is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._cap.release()
-            except Exception:
-                pass
             self._cap = None
 
     def get_latest_frame(self) -> np.ndarray | None:
@@ -289,7 +285,7 @@ class WebcamInterface:
             frame = np.stack([img, np.flipud(img), img], axis=2)
             if cv2 is not None:
                 try:
-                    ts = time.strftime("%H:%M:%S") + f".{int((dt%1)*1000):03d}"
+                    ts = time.strftime("%H:%M:%S") + f".{int((dt % 1) * 1000):03d}"
                     cv2.putText(
                         frame,
                         ts,

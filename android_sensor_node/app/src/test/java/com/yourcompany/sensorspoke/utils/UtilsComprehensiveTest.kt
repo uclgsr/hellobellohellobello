@@ -1,14 +1,14 @@
 package com.yourcompany.sensorspoke.utils
 
-import com.yourcompany.sensorspoke.utils.TimeManager
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertTrue
 
 class TimeManagerComprehensiveTest {
-
     private lateinit var timeManager: TimeManager
 
     @Before
@@ -37,8 +37,10 @@ class TimeManagerComprehensiveTest {
 
         // Verify timestamps are generally increasing (monotonic)
         for (i in 1 until timestamps.size) {
-            assertTrue("Timestamp $i should be >= previous",
-                timestamps[i] >= timestamps[i-1])
+            assertTrue(
+                "Timestamp $i should be >= previous",
+                timestamps[i] >= timestamps[i - 1],
+            )
         }
     }
 
@@ -62,14 +64,16 @@ class TimeManagerComprehensiveTest {
         assertTrue("Formatted timestamp should not be empty", formatted.isNotEmpty())
 
         // Should contain typical timestamp elements
-        assertTrue("Should contain date/time elements",
-            formatted.contains("-") || formatted.contains(":") || formatted.contains("T"))
+        assertTrue(
+            "Should contain date/time elements",
+            formatted.contains("-") || formatted.contains(":") || formatted.contains("T"),
+        )
     }
 
     @Test
     fun `calculateOffset computes correct time difference`() {
         val baseTime = 1000000000L // 1 second in nanoseconds
-        val offset = 500000000L    // 0.5 seconds
+        val offset = 500000000L // 0.5 seconds
 
         val result = timeManager.calculateOffset(baseTime, baseTime + offset)
         assertEquals("Offset should be calculated correctly", offset, result)
@@ -140,34 +144,38 @@ class TimeManagerComprehensiveTest {
 
         // Should be approximately 10ms (10,000,000 nanoseconds)
         assertTrue("Difference should be positive", difference > 0)
-        assertTrue("Difference should be reasonable for 10ms",
-            difference > 5_000_000 && difference < 50_000_000) // 5ms to 50ms range
+        assertTrue(
+            "Difference should be reasonable for 10ms",
+            difference > 5_000_000 && difference < 50_000_000,
+        ) // 5ms to 50ms range
     }
 
     @Test
-    fun `concurrent time access is thread safe`() = runTest {
-        val timestamps = mutableListOf<Long>()
-        val jobs = mutableListOf<kotlinx.coroutines.Job>()
+    fun `concurrent time access is thread safe`() =
+        runTest {
+            val timestamps = mutableListOf<Long>()
+            val jobs = mutableListOf<kotlinx.coroutines.Job>()
 
-        // Launch multiple concurrent coroutines
-        repeat(100) {
-            val job = kotlinx.coroutines.launch {
-                timestamps.add(timeManager.getCurrentTimeNanos())
+            // Launch multiple concurrent coroutines
+            repeat(100) {
+                val job =
+                    kotlinx.coroutines.launch {
+                        timestamps.add(timeManager.getCurrentTimeNanos())
+                    }
+                jobs.add(job)
             }
-            jobs.add(job)
+
+            // Wait for all jobs to complete
+            jobs.forEach { it.join() }
+
+            // Should have 100 timestamps
+            assertEquals("Should have 100 timestamps", 100, timestamps.size)
+
+            // All timestamps should be valid
+            timestamps.forEach { timestamp ->
+                assertTrue("Each timestamp should be positive", timestamp > 0)
+            }
         }
-
-        // Wait for all jobs to complete
-        jobs.forEach { it.join() }
-
-        // Should have 100 timestamps
-        assertEquals("Should have 100 timestamps", 100, timestamps.size)
-
-        // All timestamps should be valid
-        timestamps.forEach { timestamp ->
-            assertTrue("Each timestamp should be positive", timestamp > 0)
-        }
-    }
 
     @Test
     fun `sync offset calculation edge cases`() {
@@ -185,7 +193,6 @@ class TimeManagerComprehensiveTest {
 }
 
 class PreviewBusComprehensiveTest {
-
     private lateinit var previewBus: PreviewBus
 
     @Before
@@ -262,39 +269,45 @@ class PreviewBusComprehensiveTest {
             // Implementation-dependent: might be null or empty
         } catch (e: Exception) {
             // If implementation throws on null, that's also valid
-            assertTrue("Exception for null frame should be meaningful",
-                e.message?.contains("null") == true)
+            assertTrue(
+                "Exception for null frame should be meaningful",
+                e.message?.contains("null") == true,
+            )
         }
     }
 
     @Test
-    fun `concurrent frame publishing and retrieval`() = runTest {
-        val frames = (0..99).map { i ->
-            ByteArray(10) { (i % 256).toByte() }
+    fun `concurrent frame publishing and retrieval`() =
+        runTest {
+            val frames =
+                (0..99).map { i ->
+                    ByteArray(10) { (i % 256).toByte() }
+                }
+
+            val publishJobs =
+                frames.mapIndexed { index, frame ->
+                    kotlinx.coroutines.launch {
+                        kotlinx.coroutines.delay(index.toLong()) // Stagger publishing
+                        previewBus.publishFrame(frame)
+                    }
+                }
+
+            val retrieveJobs =
+                (0..49).map {
+                    kotlinx.coroutines.launch {
+                        kotlinx.coroutines.delay(it.toLong() * 2)
+                        previewBus.getCurrentFrame()
+                    }
+                }
+
+            // Wait for all operations to complete
+            publishJobs.forEach { it.join() }
+            retrieveJobs.forEach { it.join() }
+
+            // Final frame should be available
+            val finalFrame = previewBus.getCurrentFrame()
+            assertNotNull("Final frame should be available", finalFrame)
         }
-
-        val publishJobs = frames.mapIndexed { index, frame ->
-            kotlinx.coroutines.launch {
-                kotlinx.coroutines.delay(index.toLong()) // Stagger publishing
-                previewBus.publishFrame(frame)
-            }
-        }
-
-        val retrieveJobs = (0..49).map {
-            kotlinx.coroutines.launch {
-                kotlinx.coroutines.delay(it.toLong() * 2)
-                previewBus.getCurrentFrame()
-            }
-        }
-
-        // Wait for all operations to complete
-        publishJobs.forEach { it.join() }
-        retrieveJobs.forEach { it.join() }
-
-        // Final frame should be available
-        val finalFrame = previewBus.getCurrentFrame()
-        assertNotNull("Final frame should be available", finalFrame)
-    }
 
     @Test
     fun `frame subscribers notification`() {
@@ -316,7 +329,6 @@ class PreviewBusComprehensiveTest {
 
             assertEquals("Should receive one notification", 1, notificationCount)
             assertArrayEquals("Notified frame should match", testFrame, lastFrame)
-
         } catch (e: NoSuchMethodError) {
             // If subscribe method doesn't exist, skip this test
             kotlin.test.assertEquals("Method not implemented", "Method not implemented", "Method not implemented")

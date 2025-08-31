@@ -16,16 +16,17 @@ import com.yourcompany.sensorspoke.R
 
 /**
  * ConnectionGuideView - TC001 connection guidance UI
- * 
+ *
  * Provides visual guidance for TC001 device connection
  * adapted from IRCamera's ConnectionGuideView
  */
-class TC001ConnectionGuideView @JvmOverloads constructor(
+class TC001ConnectionGuideView
+@JvmOverloads
+constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
+    defStyleAttr: Int = 0,
 ) : LinearLayout(context, attrs, defStyleAttr) {
-
     private var iconRes: Int = 0
     private var contentStr: String = ""
     private var iconShow: Boolean = false
@@ -47,7 +48,7 @@ class TC001ConnectionGuideView @JvmOverloads constructor(
         inflate(context, R.layout.ui_tc001_connection_guide, this)
         contentText = findViewById(R.id.tv_content)
         guideIcon = findViewById(R.id.iv_icon)
-        
+
         if (iconRes != 0) {
             guideIcon.setImageResource(iconRes)
         }
@@ -62,13 +63,12 @@ class TC001ConnectionGuideView @JvmOverloads constructor(
         }
     }
 
-    fun getText(): String {
-        return if (::contentText.isInitialized) {
+    fun getText(): String =
+        if (::contentText.isInitialized) {
             contentText.text.toString()
         } else {
             ""
         }
-    }
 
     fun setHighlightColor(color: Int) {
         if (::contentText.isInitialized) {
@@ -78,18 +78,18 @@ class TC001ConnectionGuideView @JvmOverloads constructor(
 
     fun addConnectionIcon(content: String) {
         if (!::contentText.isInitialized) return
-        
+
         var mContent = "$content  " // Add space for image replacement
         val spannableString = SpannableString(mContent)
-        
+
         // Use a simple arrow icon for connection indication
-        val drawable = context.getDrawable(R.drawable.ic_right_arrow)
+        val drawable = androidx.appcompat.content.res.AppCompatResources.getDrawable(context, R.drawable.ic_right_arrow)
         drawable?.setBounds(0, 0, drawable.minimumWidth, drawable.minimumHeight)
         spannableString.setSpan(
-            ImageSpan(drawable!!), 
-            mContent.length - 1, 
-            mContent.length, 
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            ImageSpan(drawable!!),
+            mContent.length - 1,
+            mContent.length,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
         )
         contentText.text = spannableString
     }

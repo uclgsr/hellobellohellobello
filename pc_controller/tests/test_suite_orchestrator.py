@@ -13,26 +13,24 @@ import subprocess
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-import pytest
+from typing import Any, ClassVar
 
 
 @dataclass
-class TestResult:
+class ExecutionResult:
     """Represents the result of a test execution."""
     test_name: str
     category: str
     status: str  # PASSED, FAILED, SKIPPED, ERROR
     duration_seconds: float
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 @dataclass
-class TestSuiteReport:
+class SuiteExecutionReport:
     """Comprehensive test suite execution report."""
     timestamp: str
     total_tests: int
@@ -41,20 +39,20 @@ class TestSuiteReport:
     skipped: int
     errors: int
     duration_seconds: float
-    categories: Dict[str, Dict[str, int]]
-    test_results: List[TestResult]
+    categories: dict[str, dict[str, int]]
+    test_results: list[ExecutionResult]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             **asdict(self),
             "test_results": [result.to_dict() for result in self.test_results]
         }
 
 
-class TestSuiteOrganizer:
+class SuiteOrganizer:
     """Organizes and categorizes tests for execution."""
 
-    TEST_CATEGORIES = {
+    TEST_CATEGORIES: ClassVar[dict[str, dict[str, Any]]] = {
         "unit": {
             "description": "Unit tests for individual components",
             "markers": [],
@@ -92,7 +90,7 @@ class TestSuiteOrganizer:
         self.pc_tests_dir = self.test_root / "pc_controller" / "tests"
         self.android_tests_dir = self.test_root / "android_sensor_node" / "app" / "src" / "test"
 
-    def categorize_tests(self) -> Dict[str, List[Path]]:
+    def categorize_tests(self) -> dict[str, list[Path]]:
         """Categorize all tests by type."""
         categorized = {}
 
@@ -115,7 +113,7 @@ class TestSuiteOrganizer:
 
         return categorized
 
-    def _matches_category(self, test_file: Path, config: Dict[str, Any]) -> bool:
+    def _matches_category(self, test_file: Path, config: dict[str, Any]) -> bool:
         """Check if a test file matches a category configuration."""
         file_name = test_file.name.lower()
 
@@ -133,7 +131,7 @@ class TestSuiteOrganizer:
 
         return include_match and not exclude_match
 
-    def get_test_execution_plan(self, categories: Optional[List[str]] = None) -> Dict[str, List[Path]]:
+    def get_test_execution_plan(self, categories: list[str] | None = None) -> dict[str, list[Path]]:
         """Get execution plan for specified categories."""
         all_categorized = self.categorize_tests()
 
@@ -147,19 +145,19 @@ class TestSuiteOrganizer:
         }
 
 
-class TestExecutor:
+class SuiteExecutor:
     """Executes tests and generates reports."""
 
     def __init__(self, test_root: Path):
         self.test_root = Path(test_root)
-        self.organizer = TestSuiteOrganizer(test_root)
+        self.organizer = SuiteOrganizer(test_root)
 
     def execute_python_tests(
         self,
-        test_files: List[Path],
+        test_files: list[Path],
         category: str,
-        markers: Optional[List[str]] = None
-    ) -> List[TestResult]:
+        markers: list[str] | None = None
+    ) -> list[ExecutionResult]:
         """Execute Python tests using pytest."""
         if not test_files:
             return []
@@ -195,7 +193,7 @@ class TestExecutor:
         except subprocess.TimeoutExpired:
             duration = time.time() - start_time
             test_results = [
-                TestResult(
+                ExecutionResult(
                     test_name=f"{category}_tests",
                     category=category,
                     status="ERROR",
@@ -206,7 +204,7 @@ class TestExecutor:
         except Exception as e:
             duration = time.time() - start_time
             test_results = [
-                TestResult(
+                ExecutionResult(
                     test_name=f"{category}_tests",
                     category=category,
                     status="ERROR",
@@ -217,7 +215,7 @@ class TestExecutor:
 
         return test_results
 
-    def execute_android_tests(self, test_files: List[Path]) -> List[TestResult]:
+    def execute_android_tests(self, test_files: list[Path]) -> list[ExecutionResult]:
         """Execute Android tests using Gradle."""
         if not test_files:
             return []
@@ -225,7 +223,7 @@ class TestExecutor:
         android_root = self.test_root / "android_sensor_node"
         if not android_root.exists():
             return [
-                TestResult(
+                ExecutionResult(
                     test_name="android_tests",
                     category="android",
                     status="SKIPPED",
@@ -254,7 +252,7 @@ class TestExecutor:
         except subprocess.TimeoutExpired:
             duration = time.time() - start_time
             test_results = [
-                TestResult(
+                ExecutionResult(
                     test_name="android_tests",
                     category="android",
                     status="ERROR",
@@ -265,7 +263,7 @@ class TestExecutor:
         except Exception as e:
             duration = time.time() - start_time
             test_results = [
-                TestResult(
+                ExecutionResult(
                     test_name="android_tests",
                     category="android",
                     status="ERROR",
@@ -276,7 +274,9 @@ class TestExecutor:
 
         return test_results
 
-    def _parse_pytest_output(self, output: str, category: str, total_duration: float) -> List[TestResult]:
+    def _parse_pytest_output(
+        self, output: str, category: str, total_duration: float
+    ) -> list[ExecutionResult]:
         """Parse pytest output to extract test results."""
         results = []
         lines = output.split('\n')
@@ -306,7 +306,7 @@ class TestExecutor:
                         duration = float(part[:-1])
                         break
 
-                results.append(TestResult(
+                results.append(ExecutionResult(
                     test_name=test_name,
                     category=category,
                     status=status,
@@ -322,7 +322,7 @@ class TestExecutor:
             else:
                 status = 'PASSED'
 
-            results.append(TestResult(
+            results.append(ExecutionResult(
                 test_name=f"{category}_suite",
                 category=category,
                 status=status,
@@ -331,7 +331,7 @@ class TestExecutor:
 
         return results
 
-    def _parse_android_output(self, output: str, total_duration: float) -> List[TestResult]:
+    def _parse_android_output(self, output: str, total_duration: float) -> list[ExecutionResult]:
         """Parse Android test output to extract results."""
         # Simplified Android test result parsing
         if "BUILD SUCCESSFUL" in output:
@@ -344,7 +344,7 @@ class TestExecutor:
             status = "ERROR"
             error_msg = "Unknown Android test result"
 
-        return [TestResult(
+        return [ExecutionResult(
             test_name="android_unit_tests",
             category="android",
             status=status,
@@ -354,9 +354,9 @@ class TestExecutor:
 
     def execute_comprehensive_suite(
         self,
-        categories: Optional[List[str]] = None,
-        output_file: Optional[Path] = None
-    ) -> TestSuiteReport:
+        categories: list[str] | None = None,
+        output_file: Path | None = None
+    ) -> SuiteExecutionReport:
         """Execute comprehensive test suite and generate report."""
         start_time = time.time()
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -391,7 +391,7 @@ class TestExecutor:
         # Generate comprehensive report
         total_duration = time.time() - start_time
 
-        report = TestSuiteReport(
+        report = SuiteExecutionReport(
             timestamp=timestamp,
             total_tests=len(all_results),
             passed=len([r for r in all_results if r.status == "PASSED"]),
@@ -409,7 +409,7 @@ class TestExecutor:
 
         return report
 
-    def _save_report(self, report: TestSuiteReport, output_file: Path) -> None:
+    def _save_report(self, report: SuiteExecutionReport, output_file: Path) -> None:
         """Save test report to file."""
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -417,7 +417,7 @@ class TestExecutor:
             json.dump(report.to_dict(), f, indent=2)
 
 
-class TestCoverageAnalyzer:
+class CoverageAnalyzer:
     """Analyzes test coverage and generates recommendations."""
 
     def __init__(self, test_root: Path):
@@ -425,11 +425,11 @@ class TestCoverageAnalyzer:
         self.pc_src_dir = self.test_root / "pc_controller" / "src"
         self.android_src_dir = self.test_root / "android_sensor_node" / "app" / "src" / "main"
 
-    def analyze_python_coverage(self) -> Dict[str, Any]:
+    def analyze_python_coverage(self) -> dict[str, Any]:
         """Analyze Python test coverage."""
         try:
             # Run coverage analysis
-            result = subprocess.run(
+            subprocess.run(
                 ["python", "-m", "pytest", "--cov=pc_controller/src", "--cov-report=json"],
                 cwd=self.test_root,
                 capture_output=True,
@@ -454,7 +454,7 @@ class TestCoverageAnalyzer:
 
         return {"error": "Coverage analysis not available"}
 
-    def _extract_missing_lines(self, coverage_data: Dict[str, Any]) -> Dict[str, List[int]]:
+    def _extract_missing_lines(self, coverage_data: dict[str, Any]) -> dict[str, list[int]]:
         """Extract missing lines from coverage data."""
         missing = {}
 
@@ -465,7 +465,7 @@ class TestCoverageAnalyzer:
 
         return missing
 
-    def generate_coverage_report(self) -> Dict[str, Any]:
+    def generate_coverage_report(self) -> dict[str, Any]:
         """Generate comprehensive coverage report."""
         python_coverage = self.analyze_python_coverage()
 
@@ -474,7 +474,7 @@ class TestCoverageAnalyzer:
             "recommendations": self._generate_recommendations(python_coverage)
         }
 
-    def _generate_recommendations(self, python_coverage: Dict[str, Any]) -> List[str]:
+    def _generate_recommendations(self, python_coverage: dict[str, Any]) -> list[str]:
         """Generate testing recommendations based on coverage analysis."""
         recommendations = []
 
@@ -504,16 +504,22 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Comprehensive Test Suite Executor")
-    parser.add_argument("--categories", nargs="+", choices=["unit", "integration", "system", "performance", "android"],
-                       help="Test categories to execute")
+    parser.add_argument(
+        "--categories",
+        nargs="+",
+        choices=["unit", "integration", "system", "performance", "android"],
+        help="Test categories to execute"
+    )
     parser.add_argument("--output", type=Path, help="Output file for test report")
     parser.add_argument("--coverage", action="store_true", help="Include coverage analysis")
-    parser.add_argument("--test-root", type=Path, default=Path.cwd(), help="Root directory of tests")
+    parser.add_argument(
+        "--test-root", type=Path, default=Path.cwd(), help="Root directory of tests"
+    )
 
     args = parser.parse_args()
 
     # Initialize executor
-    executor = TestExecutor(args.test_root)
+    executor = SuiteExecutor(args.test_root)
 
     # Execute tests
     print("Starting comprehensive test suite execution...")
@@ -542,7 +548,7 @@ def main():
     # Coverage analysis
     if args.coverage:
         print("\nCOVERAGE ANALYSIS:")
-        analyzer = TestCoverageAnalyzer(args.test_root)
+        analyzer = CoverageAnalyzer(args.test_root)
         coverage_report = analyzer.generate_coverage_report()
 
         python_coverage = coverage_report["python"].get("total_coverage", 0)

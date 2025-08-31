@@ -14,18 +14,14 @@ def setup_linting_tools():
     print("Setting up code quality tools...")
 
     # Install linting tools
-    tools = [
-        "ruff>=0.1.0",
-        "mypy>=1.7.0",
-        "black>=23.0.0",
-        "isort>=5.12.0"
-    ]
+    tools = ["ruff>=0.1.0", "mypy>=1.7.0", "black>=23.0.0", "isort>=5.12.0"]
 
     for tool in tools:
         try:
             print(f"Installing {tool}...")
-            subprocess.run([sys.executable, "-m", "pip", "install", tool],
-                         check=True, capture_output=True)
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", tool], check=True, capture_output=True
+            )
             print(f"✅ {tool} installed successfully")
         except subprocess.CalledProcessError as e:
             print(f"❌ Failed to install {tool}: {e}")
@@ -33,11 +29,12 @@ def setup_linting_tools():
 
     return True
 
+
 def run_linting():
     """Run comprehensive linting on the codebase"""
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("Running code quality analysis...")
-    print("="*50)
+    print("=" * 50)
 
     pc_controller_src = Path("pc_controller/src")
     if not pc_controller_src.exists():
@@ -47,10 +44,11 @@ def run_linting():
     # 1. Run ruff for fast linting
     print("\n1. Running Ruff linting...")
     try:
-        result = subprocess.run([
-            sys.executable, "-m", "ruff", "check",
-            str(pc_controller_src), "--output-format=text"
-        ], capture_output=True, text=True)
+        result = subprocess.run(
+            [sys.executable, "-m", "ruff", "check", str(pc_controller_src), "--output-format=text"],
+            capture_output=True,
+            text=True,
+        )
 
         if result.returncode == 0:
             print("✅ Ruff: No issues found")
@@ -64,10 +62,11 @@ def run_linting():
     # 2. Run mypy for type checking
     print("\n2. Running MyPy type checking...")
     try:
-        result = subprocess.run([
-            sys.executable, "-m", "mypy",
-            str(pc_controller_src), "--ignore-missing-imports"
-        ], capture_output=True, text=True)
+        result = subprocess.run(
+            [sys.executable, "-m", "mypy", str(pc_controller_src), "--ignore-missing-imports"],
+            capture_output=True,
+            text=True,
+        )
 
         if result.returncode == 0:
             print("✅ MyPy: No type issues found")
@@ -81,10 +80,11 @@ def run_linting():
     # 3. Check code formatting with black
     print("\n3. Checking code formatting with Black...")
     try:
-        result = subprocess.run([
-            sys.executable, "-m", "black", "--check", "--diff",
-            str(pc_controller_src)
-        ], capture_output=True, text=True)
+        result = subprocess.run(
+            [sys.executable, "-m", "black", "--check", "--diff", str(pc_controller_src)],
+            capture_output=True,
+            text=True,
+        )
 
         if result.returncode == 0:
             print("✅ Black: Code formatting is correct")
@@ -98,10 +98,11 @@ def run_linting():
     # 4. Check import sorting with isort
     print("\n4. Checking import sorting with isort...")
     try:
-        result = subprocess.run([
-            sys.executable, "-m", "isort", "--check-only", "--diff",
-            str(pc_controller_src)
-        ], capture_output=True, text=True)
+        result = subprocess.run(
+            [sys.executable, "-m", "isort", "--check-only", "--diff", str(pc_controller_src)],
+            capture_output=True,
+            text=True,
+        )
 
         if result.returncode == 0:
             print("✅ isort: Import sorting is correct")
@@ -114,21 +115,23 @@ def run_linting():
 
     return True
 
+
 def fix_code_issues():
     """Auto-fix common code quality issues"""
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("Auto-fixing code quality issues...")
-    print("="*50)
+    print("=" * 50)
 
     pc_controller_src = Path("pc_controller/src")
 
     # 1. Auto-fix with ruff
     print("\n1. Auto-fixing with Ruff...")
     try:
-        result = subprocess.run([
-            sys.executable, "-m", "ruff", "check", "--fix",
-            str(pc_controller_src)
-        ], capture_output=True, text=True)
+        result = subprocess.run(
+            [sys.executable, "-m", "ruff", "check", "--fix", str(pc_controller_src)],
+            capture_output=True,
+            text=True,
+        )
 
         print("✅ Ruff auto-fix completed")
         if result.stdout:
@@ -141,10 +144,9 @@ def fix_code_issues():
     # 2. Auto-format with black
     print("\n2. Auto-formatting with Black...")
     try:
-        result = subprocess.run([
-            sys.executable, "-m", "black",
-            str(pc_controller_src)
-        ], capture_output=True, text=True)
+        result = subprocess.run(
+            [sys.executable, "-m", "black", str(pc_controller_src)], capture_output=True, text=True
+        )
 
         print("✅ Black auto-formatting completed")
         if "reformatted" in result.stderr:
@@ -157,10 +159,9 @@ def fix_code_issues():
     # 3. Auto-sort imports with isort
     print("\n3. Auto-sorting imports with isort...")
     try:
-        result = subprocess.run([
-            sys.executable, "-m", "isort",
-            str(pc_controller_src)
-        ], capture_output=True, text=True)
+        result = subprocess.run(
+            [sys.executable, "-m", "isort", str(pc_controller_src)], capture_output=True, text=True
+        )
 
         print("✅ isort auto-sorting completed")
         if result.stdout:
@@ -170,11 +171,12 @@ def fix_code_issues():
     except FileNotFoundError:
         print("❌ isort not available for auto-sorting")
 
+
 def create_config_files():
     """Create configuration files for linting tools"""
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("Creating configuration files...")
-    print("="*50)
+    print("=" * 50)
 
     # Create pyproject.toml for tool configuration
     pyproject_content = """[tool.ruff]
@@ -308,11 +310,12 @@ exclude = [
         f.write(ruff_content)
     print("✅ Created .ruff.toml")
 
+
 def generate_quality_report():
     """Generate a comprehensive code quality report"""
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("Generating code quality report...")
-    print("="*50)
+    print("=" * 50)
 
     pc_controller_src = Path("pc_controller/src")
 
@@ -353,7 +356,11 @@ def generate_quality_report():
         print(f"Error generating metrics: {e}")
 
     # Test coverage info
-    test_files = list(Path("pc_controller/tests").rglob("test_*.py")) if Path("pc_controller/tests").exists() else []
+    test_files = (
+        list(Path("pc_controller/tests").rglob("test_*.py"))
+        if Path("pc_controller/tests").exists()
+        else []
+    )
     print(f"  Test files: {len(test_files)}")
 
     print("\n📋 Quality Recommendations:")
@@ -370,11 +377,14 @@ def generate_quality_report():
     print("  ✅ Use 'python scripts/code_quality.py --fix' to auto-fix issues")
     print("  ✅ Run 'python scripts/code_quality.py --lint' for detailed analysis")
 
+
 def main():
     """Main function to run code quality tools"""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Code quality analyzer for Multi-Modal Sensor Platform")
+    parser = argparse.ArgumentParser(
+        description="Code quality analyzer for Multi-Modal Sensor Platform"
+    )
     parser.add_argument("--setup", action="store_true", help="Install linting tools")
     parser.add_argument("--lint", action="store_true", help="Run linting analysis")
     parser.add_argument("--fix", action="store_true", help="Auto-fix code issues")
@@ -389,12 +399,11 @@ def main():
         return
 
     print("🔍 Multi-Modal Sensor Platform Code Quality Analyzer")
-    print("="*60)
+    print("=" * 60)
 
-    if args.all or args.setup:
-        if not setup_linting_tools():
-            print("❌ Failed to setup linting tools")
-            return
+    if (args.all or args.setup) and not setup_linting_tools():
+        print("❌ Failed to setup linting tools")
+        return
 
     if args.all or args.config:
         create_config_files()
@@ -409,6 +418,7 @@ def main():
         generate_quality_report()
 
     print("\n✅ Code quality analysis complete!")
+
 
 if __name__ == "__main__":
     main()

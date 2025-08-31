@@ -8,11 +8,13 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
 os.environ.setdefault("QT_QUICK_BACKEND", "software")
 
+import contextlib
+
 import pytest
 
 # Skip if PyQt6 is not available or if GUI libraries are missing
 try:
-    PyQt6 = pytest.importorskip("PyQt6")  # noqa: N816
+    PyQt6 = pytest.importorskip("PyQt6")
     from PyQt6.QtCore import QObject, pyqtSignal
     from PyQt6.QtWidgets import QApplication
 
@@ -23,7 +25,11 @@ try:
         # Don't quit immediately, let it be managed by conftest.py
 
 except ImportError as e:
-    if "libEGL" in str(e) or "cannot open shared object" in str(e) or "qt.qpa.plugin" in str(e).lower():
+    if (
+        "libEGL" in str(e) or
+        "cannot open shared object" in str(e) or
+        "qt.qpa.plugin" in str(e).lower()
+    ):
         pytest.skip(f"GUI libraries not available: {e}", allow_module_level=True)
     else:
         raise
@@ -50,10 +56,8 @@ class _StubNetwork(QObject):
 
     def start(self) -> None:
         self.started = True
-        try:
+        with contextlib.suppress(Exception):
             self.log.emit("Stub network started")
-        except Exception:
-            pass
 
 
 @pytest.fixture(scope="module")

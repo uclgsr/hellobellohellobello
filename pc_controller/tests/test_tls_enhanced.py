@@ -139,9 +139,13 @@ class TestSecureConnectionManager:
             ca_file = Path(temp_dir) / 'ca.pem'
 
             # Create dummy cert files
-            cert_file.write_text("-----BEGIN CERTIFICATE-----\nDUMMY_CERT\n-----END CERTIFICATE-----\n")
-            key_file.write_text("-----BEGIN PRIVATE KEY-----\nDUMMY_KEY\n-----END PRIVATE KEY-----\n")
-            ca_file.write_text("-----BEGIN CERTIFICATE-----\nDUMMY_CA\n-----END CERTIFICATE-----\n")
+            cert_data = "-----BEGIN CERTIFICATE-----\nDUMMY_CERT\n-----END CERTIFICATE-----\n"
+            key_data = "-----BEGIN PRIVATE KEY-----\nDUMMY_KEY\n-----END PRIVATE KEY-----\n"
+            ca_data = "-----BEGIN CERTIFICATE-----\nDUMMY_CA\n-----END CERTIFICATE-----\n"
+
+            cert_file.write_text(cert_data)
+            key_file.write_text(key_data)
+            ca_file.write_text(ca_data)
 
             yield {
                 'cert_file': str(cert_file),

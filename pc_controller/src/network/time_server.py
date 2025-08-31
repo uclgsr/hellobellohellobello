@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 
 try:
@@ -16,7 +17,7 @@ try:
     from ..config import get as cfg_get
 except Exception:  # pragma: no cover - optional import safety
 
-    def cfg_get(key: str, default=None):  # type: ignore
+    def cfg_get(key: str, default=None):
         return default
 
 
@@ -29,12 +30,12 @@ class TimeSyncProtocol(asyncio.DatagramProtocol):
 
     def connection_made(
         self, transport: asyncio.transports.DatagramTransport
-    ) -> None:  # noqa: D401
+    ) -> None:
         self.transport = transport
 
     def datagram_received(
         self, data: bytes, addr: tuple[str, int]
-    ) -> None:  # noqa: D401
+    ) -> None:
         # Capture high-resolution monotonic timestamp immediately
         ts_ns = time.monotonic_ns()
         payload = str(ts_ns).encode("ascii")
@@ -82,12 +83,10 @@ class TimeSyncServer:
         # If port=0 was passed, store the actual bound port for testability
         sockname = transport.get_extra_info("sockname")
         if isinstance(sockname, tuple) and len(sockname) >= 2:
-            try:
+            with contextlib.suppress(Exception):
                 self._port = int(sockname[1])
-            except Exception:
-                pass
         self._transport = transport
-        self._protocol = protocol  # type: ignore[assignment]
+        self._protocol = protocol
 
     async def stop(self) -> None:
         if self._transport is not None:

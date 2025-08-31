@@ -4,12 +4,10 @@ import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.utils.UserExperience
 
 /**
@@ -21,9 +19,8 @@ import com.yourcompany.sensorspoke.utils.UserExperience
  */
 class QuickStartDialog(
     context: Context,
-    private val onComplete: () -> Unit
+    private val onComplete: () -> Unit,
 ) : Dialog(context) {
-
     private var currentStep = 0
     private val steps = UserExperience.QuickStart.getSetupSteps()
 
@@ -42,88 +39,102 @@ class QuickStartDialog(
 
     private fun setupDialog() {
         // Create the dialog layout programmatically
-        val layout = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 48, 48, 48)
-        }
+        val layout =
+            LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(48, 48, 48, 48)
+            }
 
         // Title
-        titleText = TextView(context).apply {
-            text = "Quick Start Guide"
-            textSize = 24f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(0, 0, 0, 32)
-        }
+        titleText =
+            TextView(context).apply {
+                text = "Quick Start Guide"
+                textSize = 24f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setPadding(0, 0, 0, 32)
+            }
         layout.addView(titleText)
 
         // Step indicator dots
-        stepIndicators = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, 0, 0, 24)
-        }
+        stepIndicators =
+            LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, 0, 0, 24)
+            }
 
         // Create step indicator dots
         for (i in steps.indices) {
-            val dot = View(context).apply {
-                layoutParams = LinearLayout.LayoutParams(24, 24).apply {
-                    marginEnd = 16
+            val dot =
+                View(context).apply {
+                    layoutParams =
+                        LinearLayout.LayoutParams(24, 24).apply {
+                            marginEnd = 16
+                        }
+                    background = ColorDrawable(if (i == 0) Color.parseColor("#2196F3") else Color.parseColor("#E0E0E0"))
                 }
-                background = ColorDrawable(if (i == 0) Color.parseColor("#2196F3") else Color.parseColor("#E0E0E0"))
-            }
             stepIndicators.addView(dot)
         }
         layout.addView(stepIndicators)
 
         // Step title
-        stepText = TextView(context).apply {
-            textSize = 18f
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(0, 0, 0, 16)
-        }
+        stepText =
+            TextView(context).apply {
+                textSize = 18f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setPadding(0, 0, 0, 16)
+            }
         layout.addView(stepText)
 
         // Step description
-        descriptionText = TextView(context).apply {
-            textSize = 16f
-            setPadding(0, 0, 0, 32)
-        }
+        descriptionText =
+            TextView(context).apply {
+                textSize = 16f
+                setPadding(0, 0, 0, 32)
+            }
         layout.addView(descriptionText)
 
         // Button layout
-        val buttonLayout = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-        }
-
-        prevButton = Button(context).apply {
-            text = "Previous"
-            isEnabled = false
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginEnd = 8
+        val buttonLayout =
+            LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
             }
-            setOnClickListener { previousStep() }
-        }
+
+        prevButton =
+            Button(context).apply {
+                text = "Previous"
+                isEnabled = false
+                layoutParams =
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        marginEnd = 8
+                    }
+                setOnClickListener { previousStep() }
+            }
         buttonLayout.addView(prevButton)
 
-        nextButton = Button(context).apply {
-            text = "Next"
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginStart = 8
+        nextButton =
+            Button(context).apply {
+                text = "Next"
+                layoutParams =
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        marginStart = 8
+                    }
+                setOnClickListener { nextStep() }
             }
-            setOnClickListener { nextStep() }
-        }
         buttonLayout.addView(nextButton)
 
-        finishButton = Button(context).apply {
-            text = "Get Started"
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginStart = 8
+        finishButton =
+            Button(context).apply {
+                text = "Get Started"
+                visibility = View.GONE
+                layoutParams =
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        marginStart = 8
+                    }
+                setOnClickListener {
+                    dismiss()
+                    onComplete()
+                }
             }
-            setOnClickListener {
-                dismiss()
-                onComplete()
-            }
-        }
         buttonLayout.addView(finishButton)
 
         layout.addView(buttonLayout)
@@ -145,9 +156,10 @@ class QuickStartDialog(
             // Update step indicators
             for (i in 0 until stepIndicators.childCount) {
                 val dot = stepIndicators.getChildAt(i)
-                dot.background = ColorDrawable(
-                    if (i <= currentStep) Color.parseColor("#2196F3") else Color.parseColor("#E0E0E0")
-                )
+                dot.background =
+                    ColorDrawable(
+                        if (i <= currentStep) Color.parseColor("#2196F3") else Color.parseColor("#E0E0E0"),
+                    )
             }
 
             // Update button states
@@ -181,7 +193,10 @@ class QuickStartDialog(
         /**
          * Shows the quick start dialog with a completion callback.
          */
-        fun show(context: Context, onComplete: () -> Unit) {
+        fun show(
+            context: Context,
+            onComplete: () -> Unit,
+        ) {
             QuickStartDialog(context, onComplete).show()
         }
     }

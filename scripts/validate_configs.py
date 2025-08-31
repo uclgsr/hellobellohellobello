@@ -4,10 +4,8 @@ Configuration validation script for the Multi-Modal Physiological Sensing Platfo
 This script validates project configuration files for consistency and correctness.
 """
 
-import json
 import sys
 from pathlib import Path
-from typing import List, Dict, Any
 
 try:
     import tomllib  # Python 3.11+
@@ -15,7 +13,7 @@ except ImportError:
     import tomli as tomllib  # Fallback for older Python
 
 
-def validate_pyproject_toml() -> List[str]:
+def validate_pyproject_toml() -> list[str]:
     """Validate pyproject.toml for consistency and required sections."""
     errors = []
 
@@ -56,9 +54,13 @@ def validate_pyproject_toml() -> List[str]:
         if "project" in config:
             project = config["project"]
             required_fields = ["name", "version", "description", "requires-python"]
-            for field in required_fields:
-                if field not in project:
-                    errors.append(f"Project metadata missing: {field}")
+            errors.extend(
+                [
+                    f"Project metadata missing: {field}"
+                    for field in required_fields
+                    if field not in project
+                ]
+            )
 
     except Exception as e:
         errors.append(f"Error reading pyproject.toml: {e}")
@@ -66,7 +68,7 @@ def validate_pyproject_toml() -> List[str]:
     return errors
 
 
-def validate_pytest_ini() -> List[str]:
+def validate_pytest_ini() -> list[str]:
     """Validate pytest.ini configuration."""
     errors = []
 
@@ -84,9 +86,13 @@ def validate_pytest_ini() -> List[str]:
 
         # Check for essential configurations
         required_configs = ["testpaths", "pythonpath", "timeout"]
-        for config in required_configs:
-            if f"{config} =" not in content:
-                errors.append(f"pytest.ini missing {config} configuration")
+        errors.extend(
+            [
+                f"pytest.ini missing {config} configuration"
+                for config in required_configs
+                if f"{config} =" not in content
+            ]
+        )
 
     except Exception as e:
         errors.append(f"Error reading pytest.ini: {e}")
@@ -94,14 +100,14 @@ def validate_pytest_ini() -> List[str]:
     return errors
 
 
-def validate_pre_commit_config() -> List[str]:
+def validate_pre_commit_config() -> list[str]:
     """Validate .pre-commit-config.yaml."""
     errors = []
 
     try:
         import yaml
 
-        with open(".pre-commit-config.yaml", "r") as f:
+        with open(".pre-commit-config.yaml") as f:
             config = yaml.safe_load(f)
 
         # Check for repos
@@ -110,12 +116,23 @@ def validate_pre_commit_config() -> List[str]:
             return errors
 
         repos = config["repos"]
-        expected_repos = ["pre-commit-hooks", "black", "isort", "ruff-pre-commit", "mirrors-mypy", "bandit"]
+        expected_repos = [
+            "pre-commit-hooks",
+            "black",
+            "isort",
+            "ruff-pre-commit",
+            "mirrors-mypy",
+            "bandit",
+        ]
 
         repo_urls = [repo.get("repo", "") for repo in repos]
-        for expected in expected_repos:
-            if not any(expected in url for url in repo_urls):
-                errors.append(f"Pre-commit config missing {expected} hook")
+        errors.extend(
+            [
+                f"Pre-commit config missing {expected} hook"
+                for expected in expected_repos
+                if not any(expected in url for url in repo_urls)
+            ]
+        )
 
     except ImportError:
         errors.append("PyYAML not available for pre-commit config validation")
@@ -125,7 +142,7 @@ def validate_pre_commit_config() -> List[str]:
     return errors
 
 
-def validate_requirements_consistency() -> List[str]:
+def validate_requirements_consistency() -> list[str]:
     """Validate that requirements.txt is consistent with pyproject.toml."""
     errors = []
 
@@ -159,9 +176,13 @@ def validate_requirements_consistency() -> List[str]:
             only_in_pyproject = pyproject_deps - requirements
 
             if only_in_requirements:
-                errors.append(f"Dependencies in requirements.txt but not pyproject.toml: {only_in_requirements}")
+                errors.append(
+                    f"Dependencies in requirements.txt but not pyproject.toml: {only_in_requirements}"
+                )
             if only_in_pyproject:
-                errors.append(f"Dependencies in pyproject.toml but not requirements.txt: {only_in_pyproject}")
+                errors.append(
+                    f"Dependencies in pyproject.toml but not requirements.txt: {only_in_pyproject}"
+                )
 
     except Exception as e:
         errors.append(f"Error validating requirements consistency: {e}")
@@ -172,11 +193,11 @@ def validate_requirements_consistency() -> List[str]:
 def main() -> int:
     """Main validation function."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Validate project configuration files")
     parser.add_argument("--fast", action="store_true", help="Run only essential validations")
     args = parser.parse_args()
-    
+
     print("🔍 Validating project configuration files...")
 
     all_errors = []

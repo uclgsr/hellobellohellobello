@@ -4,32 +4,30 @@ package com.shimmerresearch.driver
  * Configuration constants and sensor definitions from ShimmerAndroidAPI
  */
 object Configuration {
-    
     object Shimmer3 {
-        
         /**
          * Object cluster sensor names
          */
         object ObjectClusterSensorName {
             const val TIMESTAMP = "TimeStamp"
             const val ACCEL_LN_X = "Low Noise Accelerometer X"
-            const val ACCEL_LN_Y = "Low Noise Accelerometer Y" 
+            const val ACCEL_LN_Y = "Low Noise Accelerometer Y"
             const val ACCEL_LN_Z = "Low Noise Accelerometer Z"
             const val GSR = "GSR"
             const val GSR_CONDUCTANCE = "GSR Conductance"
             const val PPG_A13 = "PPG A13"
             const val PPG = "PPG"
         }
-        
+
         /**
          * Channel types for data formats
          */
         enum class CHANNEL_TYPE {
-            RAW,    // Raw ADC values
-            CAL,    // Calibrated values
-            UNCAL   // Uncalibrated values
+            RAW, // Raw ADC values
+            CAL, // Calibrated values
+            UNCAL, // Uncalibrated values
         }
-        
+
         /**
          * Sensor bit flags
          */
@@ -41,18 +39,18 @@ object Configuration {
             const val PPG_A13 = 0x08L
             const val TIMESTAMP = 0x01L
         }
-        
+
         /**
          * GSR range settings
          */
         object GSR_RANGE {
             const val AUTO = 0
-            const val RANGE_4_7M = 1  // 4.7MΩ - Most sensitive
-            const val RANGE_2_3M = 2  // 2.3MΩ
-            const val RANGE_1_2M = 3  // 1.2MΩ
-            const val RANGE_560K = 4  // 560kΩ - Least sensitive
+            const val RANGE_4_7M = 1 // 4.7MΩ - Most sensitive
+            const val RANGE_2_3M = 2 // 2.3MΩ
+            const val RANGE_1_2M = 3 // 1.2MΩ
+            const val RANGE_560K = 4 // 560kΩ - Least sensitive
         }
-        
+
         /**
          * Sampling rates supported by Shimmer3
          */
@@ -67,17 +65,17 @@ object Configuration {
             const val RATE_512HZ = 512.0
             const val RATE_1024HZ = 1024.0
         }
-        
+
         /**
          * Communication types
          */
         enum class COMMUNICATION_TYPE {
             BLUETOOTH,
             BLUETOOTH_LE,
-            DOCK
+            DOCK,
         }
     }
-    
+
     object Verisense {
         /**
          * Verisense sensor configurations

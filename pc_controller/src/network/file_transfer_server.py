@@ -23,6 +23,7 @@ appending the received file details.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import socket
@@ -74,10 +75,8 @@ class FileTransferServer:
         self._stop_ev.set()
         try:
             if self._sock:
-                try:
+                with contextlib.suppress(Exception):
                     self._sock.close()
-                except Exception:
-                    pass
         finally:
             if self._thread:
                 self._thread.join(timeout=1.0)
@@ -167,15 +166,13 @@ class FileTransferServer:
                                         f.write(chunk)
                                         bytes_written += len(chunk)
                             # Update session metadata
-                            try:
+                            with contextlib.suppress(Exception):
                                 self._update_metadata(
                                     session_dir,
                                     header.filename,
                                     bytes_written,
                                     header.device_id,
                                 )
-                            except Exception:
-                                pass
                     except Exception:
                         # ignore per-connection errors to keep server alive
                         continue

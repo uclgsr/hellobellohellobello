@@ -14,14 +14,12 @@ import json
 import socket
 import threading
 import time
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from pc_controller.src.core.device_manager import DeviceManager
 from pc_controller.src.core.session_manager import SessionManager
 from pc_controller.src.network.heartbeat_manager import HeartbeatManager
-from pc_controller.src.network.network_controller import NetworkController
 from pc_controller.src.network.protocol import (
     COMMAND_QUERY_CAPABILITIES,
     COMMAND_START_RECORDING,
@@ -64,7 +62,7 @@ class MockAndroidDevice:
                 try:
                     client, addr = self.socket.accept()
                     self._handle_connection(client)
-                except socket.error:
+                except OSError:
                     break
 
         self.connected = True
@@ -192,7 +190,7 @@ class TestHubSpokeIntegration:
 
         # Connect to all devices
         clients = []
-        for device, port in devices:
+        for _, port in devices:
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client.connect(("localhost", port))
             clients.append(client)
@@ -303,9 +301,7 @@ class TestHubSpokeIntegration:
                 futures.append(future)
 
             # Wait for all communications to complete
-            results = []
-            for future in concurrent.futures.as_completed(futures):
-                results.append(future.result())
+            results = [future.result() for future in concurrent.futures.as_completed(futures)]
 
             # Verify all communications succeeded
             assert len(results) == num_devices
@@ -321,28 +317,28 @@ class TestMultiComponentIntegration:
         """Test time synchronization between Hub and Spokes."""
         # Test the actual asyncio time server
         time_server = TimeSyncServer(port=12345)
-        
+
         # Start the server
         await time_server.start()
-        
+
         # Give server time to bind
         await asyncio.sleep(0.1)
-        
+
         # Create a UDP client to test the server
         transport, protocol = await asyncio.get_event_loop().create_datagram_endpoint(
             asyncio.DatagramProtocol, remote_addr=('localhost', 12345)
         )
-        
+
         try:
             # Send time sync request
             transport.sendto(b'time_sync')
-            
+
             # The server should respond with a timestamp
             await asyncio.sleep(0.1)  # Allow time for response
-            
+
             # Verify server is running (basic test)
             assert time_server.is_running()
-            
+
         finally:
             transport.close()
             await time_server.stop()
@@ -359,7 +355,7 @@ class TestMultiComponentIntegration:
             device_manager.set_status(device_id, "Connected")
 
         # Start session
-        session_id = session_manager.create_session("test_session")
+        session_manager.create_session("test_session")
         session_manager.start_recording()
         assert session_manager.is_active
 
@@ -368,10 +364,10 @@ class TestMultiComponentIntegration:
             device_manager.set_status(device_id, "Recording")
 
         # Verify all devices are recording
-        recording_devices = []
-        for device_id in devices:
-            if device_manager.get_status(device_id) == "Recording":
-                recording_devices.append(device_id)
+        recording_devices = [
+            device_id for device_id in devices
+            if device_manager.get_status(device_id) == "Recording"
+        ]
 
         assert len(recording_devices) == len(devices)
 
@@ -428,13 +424,9 @@ class TestSystemIntegration:
             assert device_manager.get_status(device_id) == "Online"
 
         # 2. Capability Exchange Phase
-        capabilities = {
-            "android-1": {"cameras": ["rgb"], "sensors": ["gsr"]},
-            "android-2": {"cameras": ["thermal"], "sensors": ["gsr"]}
-        }
 
         # 3. Session Start Phase
-        session_id = session_manager.create_session("endtoend_test")
+        session_manager.create_session("endtoend_test")
         session_manager.start_recording()
         assert session_manager.is_active
 
@@ -466,13 +458,13 @@ class TestSystemIntegration:
             device_manager.register(device_id)
             device_manager.set_status(device_id, "Recording")
 
-        session_id = session_manager.create_session("fault_tolerance_test")
+        session_manager.create_session("fault_tolerance_test")
         session_manager.start_recording()
 
         # Simulate one device failure (timeout) by advancing time
         failed_device = devices[1]
         future_time = time.time_ns() + int(2 * 1e9)  # 2 seconds in the future
-        
+
         # Update heartbeats for the devices that should stay online
         # We need to update their heartbeat to the future time minus a small margin
         # so they don't timeout
@@ -482,7 +474,7 @@ class TestSystemIntegration:
                 # Set heartbeat to just within the timeout window
                 device_info.last_heartbeat_ns = future_time - int(0.5 * 1e9)  # 0.5 seconds ago
                 device_info.status = "Recording"
-        
+
         device_manager.check_timeouts(now_ns=future_time)
 
         # Verify failed device is offline

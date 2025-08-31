@@ -1,18 +1,13 @@
 """Tests for SessionMetadataManager functionality."""
 
-import json
-import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
-
-import pytest
 
 from pc_controller.src.data.metadata_manager import (
     DeviceInfo,
     SensorConfig,
     SessionMetadata,
-    SessionMetadataManager
+    SessionMetadataManager,
 )
 
 
@@ -189,7 +184,7 @@ class TestSessionMetadataManager:
 
     def test_save_and_load_metadata(self):
         """Test saving and loading metadata to/from JSON."""
-        metadata = self.manager.create_session_metadata("participant_001", "test_session")
+        self.manager.create_session_metadata("participant_001", "test_session")
 
         # Add some data
         device = DeviceInfo(
@@ -242,7 +237,7 @@ class TestSessionMetadataManager:
     def test_create_csv_header(self):
         """Test creating CSV header strings."""
         gsr_header = self.manager.create_csv_header("gsr")
-        assert "timestamp_ns,gsr_microsiemens,ppg_raw" == gsr_header
+        assert gsr_header == "timestamp_ns,gsr_microsiemens,ppg_raw"
 
         rgb_header = self.manager.create_csv_header("rgb")
         assert rgb_header.startswith("timestamp_ns")
@@ -263,7 +258,7 @@ class TestSessionMetadataManager:
 
     def test_get_session_summary(self):
         """Test getting session summary."""
-        metadata = self.manager.create_session_metadata("participant_001", "test_session")
+        self.manager.create_session_metadata("participant_001", "test_session")
 
         # Add some data
         device = DeviceInfo(

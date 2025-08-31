@@ -13,7 +13,8 @@ import pytest
 pd = pytest.importorskip("pandas")
 h5py = pytest.importorskip("h5py")
 
-from pc_controller.src.data.hdf5_exporter import export_session_to_hdf5
+# Import after dependency availability checks
+from pc_controller.src.data.hdf5_exporter import export_session_to_hdf5  # noqa: E402
 
 
 def _write_csv(path: Path, header: str, rows: list[str]) -> None:
@@ -58,11 +59,20 @@ def test_export_session_to_hdf5_structure_and_attrs() -> None:
             "session_id": session.name,
             "clock_offsets_ns": {"Pixel_7": 1234},
             # Provide clock_sync so exporter writes /sync/stats_json
-            "clock_sync": {"Pixel_7": {"offset_ns": 1234, "min_delay_ns": 1000000, "std_dev_ns": 1000, "trials": 10}},
+            "clock_sync": {
+                "Pixel_7": {
+                    "offset_ns": 1234,
+                    "min_delay_ns": 1000000,
+                    "std_dev_ns": 1000,
+                    "trials": 10,
+                }
+            },
         }
         annotations = {"annotations": [{"ts_ms": 1000, "text": "start"}]}
 
-        written = export_session_to_hdf5(str(session), out_path, metadata=metadata, annotations=annotations)
+        written = export_session_to_hdf5(
+            str(session), out_path, metadata=metadata, annotations=annotations
+        )
         assert os.path.exists(written)
 
         with h5py.File(written, "r") as hf:
@@ -86,7 +96,9 @@ def test_export_session_to_hdf5_structure_and_attrs() -> None:
             # Sample rate attribute at group and dataset level (1 Hz for this test data)
             assert "sample_rate_hz" in gsr_grp.attrs
             assert abs(float(gsr_grp.attrs["sample_rate_hz"]) - 1.0) < 1e-6
-            assert abs(float(gsr_grp["gsr_microsiemens"].attrs.get("sample_rate_hz", -1.0)) - 1.0) < 1e-6
+            assert abs(
+                float(gsr_grp["gsr_microsiemens"].attrs.get("sample_rate_hz", -1.0)) - 1.0
+            ) < 1e-6
             ppg_grp = hf["/Pixel_7/ppg"]
             assert "ppg_raw" in ppg_grp
             assert ppg_grp["ppg_raw"].compression == "gzip"

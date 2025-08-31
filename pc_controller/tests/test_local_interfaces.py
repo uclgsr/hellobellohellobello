@@ -11,7 +11,8 @@ import pytest
 
 np = pytest.importorskip("numpy")
 
-from pc_controller.src.core.local_interfaces import ShimmerInterface, WebcamInterface
+# Import after numpy availability check
+from pc_controller.src.core.local_interfaces import ShimmerInterface, WebcamInterface  # noqa: E402
 
 
 def test_shimmer_interface_produces_samples() -> None:

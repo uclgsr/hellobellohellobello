@@ -173,13 +173,10 @@ def compute_validation_report(
     for k in range(n_events):
         times_ns: list[int] = []
         # include device aligned events (they represent the ground-truth schedule)
-        for _dev, arr in aligned_events_by_device.items():
-            if k < len(arr):
-                times_ns.append(int(arr[k]))
+        times_ns.extend(int(arr[k]) for arr in aligned_events_by_device.values() if k < len(arr))
         # include each video stream's predicted time from T0 + rel
-        for sname, det in detections_by_stream.items():
-            if k < len(det.rel_times_ns):
-                times_ns.append(int(T0_by_stream[sname] + det.rel_times_ns[k]))
+        times_ns.extend(int(T0_by_stream[sname] + det.rel_times_ns[k])
+                       for sname, det in detections_by_stream.items() if k < len(det.rel_times_ns))
         if times_ns:
             tmin = min(times_ns)
             tmax = max(times_ns)

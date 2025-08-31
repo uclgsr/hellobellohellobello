@@ -6,13 +6,13 @@ This script generates Mermaid diagrams for architectural and process visualizati
 as requested by the user. It creates .md files that can be rendered as diagrams.
 """
 
-import os
 from pathlib import Path
-from datetime import datetime
+
 
 def ensure_directory_exists(path):
     """Create directory if it doesn't exist."""
     Path(path).mkdir(parents=True, exist_ok=True)
+
 
 def generate_system_architecture_mermaid():
     """Generate Chapter 3 high-level system architecture in Mermaid format."""
@@ -89,6 +89,7 @@ graph TB
 
     return mermaid_content
 
+
 def generate_android_architecture_mermaid():
     """Generate Chapter 4 Android application architecture in Mermaid format."""
 
@@ -160,6 +161,7 @@ graph TB
 
     return mermaid_content
 
+
 def generate_protocol_sequence_mermaid():
     """Generate Chapter 4 protocol sequence diagram in Mermaid format."""
 
@@ -222,6 +224,7 @@ sequenceDiagram
 ```"""
 
     return mermaid_content
+
 
 def generate_data_processing_pipeline_mermaid():
     """Generate Chapter 4 data processing pipeline in Mermaid format."""
@@ -308,6 +311,7 @@ flowchart TD
 
     return mermaid_content
 
+
 def generate_threading_model_mermaid():
     """Generate Chapter 4 PC Controller threading model in Mermaid format."""
 
@@ -376,6 +380,7 @@ graph TB
 ```"""
 
     return mermaid_content
+
 
 def generate_use_case_diagram_mermaid():
     """Generate Chapter 3 UML use case diagram in Mermaid format."""
@@ -448,6 +453,7 @@ graph LR
 
     return mermaid_content
 
+
 def generate_conceptual_overview_mermaid():
     """Generate Chapter 1 conceptual overview diagram in Mermaid format."""
 
@@ -511,6 +517,7 @@ graph TB
 
     return mermaid_content
 
+
 def save_mermaid_files():
     """Save all Mermaid diagrams to appropriate directories."""
 
@@ -518,19 +525,17 @@ def save_mermaid_files():
 
     # Create directories
     diagrams = {
-        'chapter1_introduction': {
-            'conceptual_overview.md': generate_conceptual_overview_mermaid()
-        },
+        'chapter1_introduction': {'conceptual_overview.md': generate_conceptual_overview_mermaid()},
         'chapter3_requirements': {
             'system_architecture.md': generate_system_architecture_mermaid(),
-            'use_case_diagram.md': generate_use_case_diagram_mermaid()
+            'use_case_diagram.md': generate_use_case_diagram_mermaid(),
         },
         'chapter4_implementation': {
             'android_architecture.md': generate_android_architecture_mermaid(),
             'protocol_sequence.md': generate_protocol_sequence_mermaid(),
             'data_processing_pipeline.md': generate_data_processing_pipeline_mermaid(),
-            'threading_model.md': generate_threading_model_mermaid()
-        }
+            'threading_model.md': generate_threading_model_mermaid(),
+        },
     }
 
     for chapter, files in diagrams.items():
@@ -542,6 +547,7 @@ def save_mermaid_files():
             with open(file_path, 'w') as f:
                 f.write(content)
             print(f"✅ Generated: {file_path}")
+
 
 def generate_mermaid_index():
     """Generate an index file for all Mermaid diagrams."""
@@ -603,6 +609,7 @@ This directory contains all Mermaid diagrams for the Multi-Modal Physiological S
 
     print(f"✅ Generated Mermaid index: {index_path}")
 
+
 def main():
     """Generate all Mermaid diagrams and documentation."""
 
@@ -615,10 +622,11 @@ def main():
     print("\n📋 Generating index documentation...")
     generate_mermaid_index()
 
-    print(f"\n✅ Mermaid diagram generation complete!")
-    print(f"   📍 Location: docs/diagrams/mermaid/")
-    print(f"   🔗 View online: https://mermaid.live/")
-    print(f"   📖 Integration guide: docs/diagrams/mermaid/README.md")
+    print("\n✅ Mermaid diagram generation complete!")
+    print("   📍 Location: docs/diagrams/mermaid/")
+    print("   🔗 View online: https://mermaid.live/")
+    print("   📖 Integration guide: docs/diagrams/mermaid/README.md")
+
 
 if __name__ == "__main__":
     main()

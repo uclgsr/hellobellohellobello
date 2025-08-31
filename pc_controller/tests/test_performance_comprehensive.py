@@ -15,8 +15,6 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -74,7 +72,9 @@ class TestPerformanceAndStress:
         registration_time = time.perf_counter() - start_time
 
         # Performance assertions
-        assert registration_time < 5.0, f"Registering {num_devices} devices took {registration_time:.2f}s"
+        assert registration_time < 5.0, (
+            f"Registering {num_devices} devices took {registration_time:.2f}s"
+        )
 
         # Measure heartbeat update performance
         start_time = time.perf_counter()
@@ -91,7 +91,9 @@ class TestPerformanceAndStress:
         device_manager.check_timeouts()
         timeout_check_time = time.perf_counter() - start_time
 
-        assert timeout_check_time < 0.5, f"Checking {num_devices} timeouts took {timeout_check_time:.2f}s"
+        assert timeout_check_time < 0.5, (
+            f"Checking {num_devices} timeouts took {timeout_check_time:.2f}s"
+        )
 
         # Verify all devices are still online
         online_count = sum(1 for device_id in device_ids
@@ -218,7 +220,9 @@ class TestPerformanceAndStress:
         max_memory = max(memory_samples)
 
         # Memory should not grow excessively
-        assert memory_growth < 100 * 1024 * 1024, f"Memory grew by {memory_growth / 1024 / 1024:.1f}MB"
+        assert memory_growth < 100 * 1024 * 1024, (
+            f"Memory grew by {memory_growth / 1024 / 1024:.1f}MB"
+        )
         assert max_memory < initial_memory + 200 * 1024 * 1024, "Peak memory usage too high"
 
     def test_protocol_parsing_performance(self):
@@ -354,7 +358,7 @@ class TestPerformanceAndStress:
                     device_manager.update_heartbeat(device_id)
 
                 # Create and run a session
-                session_id = session_manager.create_session(f"stability-session-{cycle_count}")
+                session_manager.create_session(f"stability-session-{cycle_count}")
                 session_manager.start_recording()
 
                 time.sleep(0.1)  # Brief recording
@@ -424,8 +428,9 @@ class TestPerformanceAndStress:
 
     def _get_memory_usage(self) -> int:
         """Get current memory usage in bytes."""
-        import psutil
         import os
+
+        import psutil
 
         try:
             process = psutil.Process(os.getpid())
@@ -436,7 +441,6 @@ class TestPerformanceAndStress:
 
     def test_data_throughput_performance(self):
         """Test data processing throughput performance."""
-        from pc_controller.src.data.data_aggregator import FileReceiverServer
 
         # Mock data for throughput testing
         test_data_size = 1024 * 1024  # 1MB
@@ -447,7 +451,7 @@ class TestPerformanceAndStress:
 
         # Simulate processing multiple data chunks
         total_bytes_processed = 0
-        for i in range(num_chunks):
+        for _ in range(num_chunks):
             # Simulate data processing
             processed_data = test_data  # In real test, would process the data
             total_bytes_processed += len(processed_data)

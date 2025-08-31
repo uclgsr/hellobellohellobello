@@ -35,9 +35,7 @@ class FileManagerFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?,
-    ): View? {
-        return inflater.inflate(R.layout.fragment_file_manager, container, false)
-    }
+    ): View? = inflater.inflate(R.layout.fragment_file_manager, container, false)
 
     override fun onViewCreated(
         view: View,
@@ -151,16 +149,16 @@ class FileManagerFragment : Fragment() {
         }
     }
 
-    private fun calculateDirectorySize(directory: File): Long {
-        return try {
-            directory.walkTopDown()
+    private fun calculateDirectorySize(directory: File): Long =
+        try {
+            directory
+                .walkTopDown()
                 .filter { it.isFile }
                 .map { it.length() }
                 .sum()
         } catch (e: Exception) {
             0L
         }
-    }
 
     private fun updateSessionCount() {
         val count = sessionList.size
@@ -172,19 +170,22 @@ class FileManagerFragment : Fragment() {
 
     private fun onSessionClicked(session: SessionInfo) {
         // Show session details or navigate to details view
-        Toast.makeText(
-            requireContext(),
-            "Session: ${session.name}\nSize: ${session.sizeBytes / (1024 * 1024)} MB",
-            Toast.LENGTH_LONG,
-        ).show()
+        Toast
+            .makeText(
+                requireContext(),
+                "Session: ${session.name}\nSize: ${session.sizeBytes / (1024 * 1024)} MB",
+                Toast.LENGTH_LONG,
+            ).show()
     }
 
     private fun cleanupOldSessions() {
         try {
             val cutoffDate =
-                Calendar.getInstance().apply {
-                    add(Calendar.DAY_OF_MONTH, -7) // Keep sessions from last 7 days
-                }.time
+                Calendar
+                    .getInstance()
+                    .apply {
+                        add(Calendar.DAY_OF_MONTH, -7) // Keep sessions from last 7 days
+                    }.time
 
             val oldSessions = sessionList.filter { it.dateTime.before(cutoffDate) }
 
@@ -204,11 +205,12 @@ class FileManagerFragment : Fragment() {
                 }
             }
 
-            Toast.makeText(
-                requireContext(),
-                "Deleted $deletedCount old sessions",
-                Toast.LENGTH_SHORT,
-            ).show()
+            Toast
+                .makeText(
+                    requireContext(),
+                    "Deleted $deletedCount old sessions",
+                    Toast.LENGTH_SHORT,
+                ).show()
 
             loadSessions() // Refresh the list
         } catch (e: Exception) {
@@ -217,8 +219,6 @@ class FileManagerFragment : Fragment() {
     }
 
     companion object {
-        fun newInstance(): FileManagerFragment {
-            return FileManagerFragment()
-        }
+        fun newInstance(): FileManagerFragment = FileManagerFragment()
     }
 }

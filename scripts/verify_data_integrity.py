@@ -205,7 +205,7 @@ def verify(session_dir: str, default_alg: str, generate: bool) -> int:
                     ok = None
                     reason = "no expected checksum in metadata"
                 else:
-                    ok = (actual.lower() == ent.expected.lower())
+                    ok = actual.lower() == ent.expected.lower()
                     if not ok:
                         reason = f"mismatch (expected {ent.expected}, got {actual})"
             except ValueError:
@@ -237,7 +237,12 @@ def _dry_run(default_alg: str) -> int:
         digest = _digest_file(fpath, default_alg)
         meta = {
             "file_manifest": [
-                {"filename": "test.bin", "size": len(content), "checksum": digest, "alg": default_alg}
+                {
+                    "filename": "test.bin",
+                    "size": len(content),
+                    "checksum": digest,
+                    "alg": default_alg,
+                }
             ]
         }
         with open(os.path.join(tmp, "metadata.json"), "w", encoding="utf-8") as f:
@@ -251,11 +256,18 @@ def _dry_run(default_alg: str) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="Verify session data integrity against metadata checksums.")
+    description = "Verify session data integrity against metadata checksums."
+    p = argparse.ArgumentParser(description=description)
     p.add_argument("--session", help="Path to the session directory")
-    p.add_argument("--alg", default="sha256", choices=sorted(SUPPORTED_ALGS), help="Default checksum algorithm to use when metadata does not specify one")
-    p.add_argument("--generate", action="store_true", help="If no checksums found in metadata, compute and print checksums for common files (no file modifications)")
-    p.add_argument("--dry-run", action="store_true", help="Run a self-check without requiring any real data")
+    default_help = "Default checksum algorithm to use when metadata does not specify one"
+    p.add_argument("--alg", default="sha256", choices=sorted(SUPPORTED_ALGS), help=default_help)
+    generate_help = (
+        "If no checksums found in metadata, compute and print checksums "
+        "for common files (no file modifications)"
+    )
+    p.add_argument("--generate", action="store_true", help=generate_help)
+    dry_run_help = "Run a self-check without requiring any real data"
+    p.add_argument("--dry-run", action="store_true", help=dry_run_help)
     args = p.parse_args(argv)
 
     if args.dry_run:

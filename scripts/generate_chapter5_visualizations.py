@@ -8,28 +8,30 @@ the evidence data files.
 """
 
 import json
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from pathlib import Path
-from datetime import datetime
-import matplotlib.dates as mdates
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 
 # Set up matplotlib for publication-quality plots
 plt.style.use('seaborn-v0_8')
 sns.set_palette("husl")
-plt.rcParams.update({
-    'figure.dpi': 300,
-    'savefig.dpi': 300,
-    'font.size': 10,
-    'axes.titlesize': 12,
-    'axes.labelsize': 11,
-    'xtick.labelsize': 9,
-    'ytick.labelsize': 9,
-    'legend.fontsize': 9,
-    'figure.titlesize': 14
-})
+plt.rcParams.update(
+    {
+        'figure.dpi': 300,
+        'savefig.dpi': 300,
+        'font.size': 10,
+        'axes.titlesize': 12,
+        'axes.labelsize': 11,
+        'xtick.labelsize': 9,
+        'ytick.labelsize': 9,
+        'legend.fontsize': 9,
+        'figure.titlesize': 14,
+    }
+)
+
 
 def load_evidence_data():
     """Load all evidence data files."""
@@ -45,7 +47,7 @@ def load_evidence_data():
     # Load endurance test data
     endurance_report_file = base_dir / "performance" / "endurance_test_report.json"
     if endurance_report_file.exists():
-        with open(endurance_report_file, 'r') as f:
+        with open(endurance_report_file) as f:
             data['endurance_report'] = json.load(f)
 
     endurance_raw_file = base_dir / "performance" / "endurance_raw_data.csv"
@@ -63,6 +65,7 @@ def load_evidence_data():
         data['usability'] = pd.read_csv(usability_file)
 
     return data
+
 
 def create_synchronization_accuracy_plot(sync_data, output_dir):
     """Create box plot showing synchronization accuracy distribution."""
@@ -89,22 +92,26 @@ def create_synchronization_accuracy_plot(sync_data, output_dir):
     ax2.set_xlabel('Timestamp Drift (ms)')
     ax2.set_ylabel('Frequency')
     ax2.set_title('Accuracy Distribution Histogram')
-    ax2.axvline(x=normal_data.median(), color='red', linestyle='-',
-                label=f'Median: {normal_data.median():.1f}ms')
+    ax2.axvline(
+        x=normal_data.median(),
+        color='red',
+        linestyle='-',
+        label=f'Median: {normal_data.median():.1f}ms',
+    )
     ax2.axvline(x=5, color='red', linestyle='--', alpha=0.7, label='±5ms Target')
     ax2.axvline(x=-5, color='red', linestyle='--', alpha=0.7)
     ax2.grid(True, alpha=0.3)
     ax2.legend()
 
     plt.tight_layout()
-    plt.savefig(output_dir / "synchronization_accuracy_results.png",
-                dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / "synchronization_accuracy_results.png", dpi=300, bbox_inches='tight')
     plt.close()
 
-    print(f"✓ Generated synchronization accuracy plot")
+    print("✓ Generated synchronization accuracy plot")
     print(f"  Median accuracy: {normal_data.median():.1f}ms")
     print(f"  95th percentile: {normal_data.quantile(0.95):.1f}ms")
     print(f"  Outliers detected: {len(outlier_data)} events")
+
 
 def create_synchronization_failure_plot(sync_data, output_dir):
     """Create time-series plot showing WiFi roaming synchronization failures."""
@@ -123,11 +130,14 @@ def create_synchronization_failure_plot(sync_data, output_dir):
         plt.axhspan(50, 100, alpha=0.2, color='red', label='Critical Drift (>50ms)')
 
         # Annotate failure region
-        plt.annotate('WiFi Roaming Event\n67-84ms drift',
-                    xy=(5, 67.3), xytext=(6.5, 60),
-                    arrowprops=dict(arrowstyle='->', color='red'),
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.7),
-                    fontsize=10)
+        plt.annotate(
+            'WiFi Roaming Event\n67-84ms drift',
+            xy=(5, 67.3),
+            xytext=(6.5, 60),
+            arrowprops={'arrowstyle': '->', 'color': 'red'},
+            bbox={'boxstyle': "round,pad=0.3", 'facecolor': "yellow", 'alpha': 0.7},
+            fontsize=10,
+        )
 
         plt.xlabel('Time (10-second intervals)')
         plt.ylabel('Timestamp Drift (ms)')
@@ -140,11 +150,18 @@ def create_synchronization_failure_plot(sync_data, output_dir):
         roaming_events['timestamp'] = pd.to_datetime(roaming_events['timestamp'])
 
         plt.figure(figsize=(12, 6))
-        plt.plot(roaming_events['timestamp'], roaming_events['drift_ms'],
-                'o-', linewidth=2, markersize=6, color='red', label='During WiFi Roaming')
+        plt.plot(
+            roaming_events['timestamp'],
+            roaming_events['drift_ms'],
+            'o-',
+            linewidth=2,
+            markersize=6,
+            color='red',
+            label='During WiFi Roaming',
+        )
 
         # Add normal operation baseline
-        normal_data = sync_data[sync_data['network_condition'] == 'normal']
+        sync_data[sync_data['network_condition'] == 'normal']
         plt.axhspan(-5, 5, alpha=0.2, color='green', label='Normal Range (±5ms)')
 
         plt.xlabel('Time')
@@ -154,10 +171,10 @@ def create_synchronization_failure_plot(sync_data, output_dir):
         plt.legend()
         plt.tight_layout()
 
-    plt.savefig(output_dir / "synchronization_failure_example.png",
-                dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / "synchronization_failure_example.png", dpi=300, bbox_inches='tight')
     plt.close()
     print("✓ Generated synchronization failure plot")
+
 
 def create_endurance_test_plots(endurance_raw, endurance_report, output_dir):
     """Create memory usage and CPU utilization plots from 8-hour endurance test."""
@@ -170,9 +187,13 @@ def create_endurance_test_plots(endurance_raw, endurance_report, output_dir):
 
     # Memory usage plot
     endurance_raw['timestamp'] = pd.to_datetime(endurance_raw['timestamp'])
-    hours = (endurance_raw['timestamp'] - endurance_raw['timestamp'].iloc[0]).dt.total_seconds() / 3600
+    hours = (
+        endurance_raw['timestamp'] - endurance_raw['timestamp'].iloc[0]
+    ).dt.total_seconds() / 3600
 
-    ax1.plot(hours, endurance_raw['memory_usage_mb'], linewidth=2, color='blue', label='Memory Usage')
+    ax1.plot(
+        hours, endurance_raw['memory_usage_mb'], linewidth=2, color='blue', label='Memory Usage'
+    )
     ax1.fill_between(hours, endurance_raw['memory_usage_mb'], alpha=0.3, color='blue')
     ax1.set_xlabel('Time (hours)')
     ax1.set_ylabel('Memory Usage (MB)')
@@ -183,9 +204,14 @@ def create_endurance_test_plots(endurance_raw, endurance_report, output_dir):
     # Add memory leak detection line
     if len(endurance_raw) > 1:
         slope = np.polyfit(hours, endurance_raw['memory_usage_mb'], 1)[0]
-        ax1.text(0.02, 0.98, f'Memory growth rate: {slope:.2f} MB/hour',
-                transform=ax1.transAxes, verticalalignment='top',
-                bbox=dict(boxstyle="round,pad=0.3", facecolor="yellow", alpha=0.7))
+        ax1.text(
+            0.02,
+            0.98,
+            f'Memory growth rate: {slope:.2f} MB/hour',
+            transform=ax1.transAxes,
+            verticalalignment='top',
+            bbox={'boxstyle': "round,pad=0.3", 'facecolor': "yellow", 'alpha': 0.7},
+        )
 
     # CPU utilization plot
     ax2.plot(hours, endurance_raw['cpu_percentage'], linewidth=2, color='red', label='CPU Usage')
@@ -200,19 +226,24 @@ def create_endurance_test_plots(endurance_raw, endurance_report, output_dir):
     # Add performance summary
     avg_cpu = endurance_raw['cpu_percentage'].mean()
     max_memory = endurance_raw['memory_usage_mb'].max()
-    ax2.text(0.02, 0.98, f'Average CPU: {avg_cpu:.1f}%\nPeak Memory: {max_memory:.1f} MB',
-            transform=ax2.transAxes, verticalalignment='top',
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgreen", alpha=0.7))
+    ax2.text(
+        0.02,
+        0.98,
+        f'Average CPU: {avg_cpu:.1f}%\nPeak Memory: {max_memory:.1f} MB',
+        transform=ax2.transAxes,
+        verticalalignment='top',
+        bbox={'boxstyle': "round,pad=0.3", 'facecolor': "lightgreen", 'alpha': 0.7},
+    )
 
     plt.tight_layout()
-    plt.savefig(output_dir / "endurance_test_performance.png",
-                dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / "endurance_test_performance.png", dpi=300, bbox_inches='tight')
     plt.close()
 
     print("✓ Generated endurance test performance plots")
     print(f"  Test duration: {hours.iloc[-1]:.1f} hours")
     print(f"  Average CPU usage: {avg_cpu:.1f}%")
     print(f"  Peak memory: {max_memory:.1f} MB")
+
 
 def create_usability_metrics_plot(usability_data, output_dir):
     """Create usability testing results visualization."""
@@ -222,30 +253,39 @@ def create_usability_metrics_plot(usability_data, output_dir):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
     # Setup times by user experience
-    if 'user_experience' in usability_data.columns and 'setup_time_minutes' in usability_data.columns:
+    if (
+        'user_experience' in usability_data.columns
+        and 'setup_time_minutes' in usability_data.columns
+    ):
         # Group by experience level
         new_users = usability_data[usability_data['user_experience'] == 'new']['setup_time_minutes']
-        experienced_users = usability_data[usability_data['user_experience'] == 'experienced']['setup_time_minutes']
+        experienced_users = usability_data[usability_data['user_experience'] == 'experienced'][
+            'setup_time_minutes'
+        ]
 
         # Box plot comparison
-        ax1.boxplot([new_users, experienced_users],
-                   labels=['New Users', 'Experienced Users'])
+        ax1.boxplot([new_users, experienced_users], labels=['New Users', 'Experienced Users'])
         ax1.set_ylabel('Setup Time (minutes)')
         ax1.set_title('Setup Time by User Experience')
         ax1.grid(True, alpha=0.3)
 
         # Add mean annotations
-        ax1.text(1, new_users.mean() + 1, f'Mean: {new_users.mean():.1f} min',
-                ha='center', va='bottom')
-        ax1.text(2, experienced_users.mean() + 0.3, f'Mean: {experienced_users.mean():.1f} min',
-                ha='center', va='bottom')
+        ax1.text(
+            1, new_users.mean() + 1, f'Mean: {new_users.mean():.1f} min', ha='center', va='bottom'
+        )
+        ax1.text(
+            2,
+            experienced_users.mean() + 0.3,
+            f'Mean: {experienced_users.mean():.1f} min',
+            ha='center',
+            va='bottom',
+        )
     else:
         # Create synthetic data based on requirements
         new_user_times = [14.2] * 5  # From requirements: 14.2 +/- 3.1 min
-        exp_user_times = [4.1] * 5   # From requirements: 4.1 +/- 0.8 min
+        exp_user_times = [4.1] * 5  # From requirements: 4.1 +/- 0.8 min
 
-        ax1.boxplot([new_user_times, exp_user_times],
-                   labels=['New Users', 'Experienced Users'])
+        ax1.boxplot([new_user_times, exp_user_times], labels=['New Users', 'Experienced Users'])
         ax1.set_ylabel('Setup Time (minutes)')
         ax1.set_title('Setup Time by User Experience Level')
         ax1.grid(True, alpha=0.3)
@@ -254,12 +294,17 @@ def create_usability_metrics_plot(usability_data, output_dir):
         ax1.text(2, 4.1 + 0.3, 'Mean: 4.1 min', ha='center', va='bottom')
 
     # Success rates by task
-    tasks = ['Initial Setup', 'Device Connection', 'Start Recording',
-             'Monitor Session', 'Stop & Export', 'Data Analysis']
+    tasks = [
+        'Initial Setup',
+        'Device Connection',
+        'Start Recording',
+        'Monitor Session',
+        'Stop & Export',
+        'Data Analysis',
+    ]
     success_rates = [85, 92, 98, 95, 90, 78]  # From requirements
 
-    bars = ax2.bar(range(len(tasks)), success_rates, color='lightblue',
-                   edgecolor='navy', alpha=0.7)
+    bars = ax2.bar(range(len(tasks)), success_rates, color='lightblue', edgecolor='navy', alpha=0.7)
     ax2.set_ylim(70, 100)
     ax2.set_ylabel('Success Rate (%)')
     ax2.set_title('Task Success Rates')
@@ -268,16 +313,22 @@ def create_usability_metrics_plot(usability_data, output_dir):
     ax2.grid(True, alpha=0.3, axis='y')
 
     # Add success rate labels on bars
-    for i, (bar, rate) in enumerate(zip(bars, success_rates)):
-        ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                f'{rate}%', ha='center', va='bottom', fontweight='bold')
+    for bar, rate in zip(bars, success_rates, strict=True):
+        ax2.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.5,
+            f'{rate}%',
+            ha='center',
+            va='bottom',
+            fontweight='bold',
+        )
 
     plt.tight_layout()
-    plt.savefig(output_dir / "usability_testing_results.png",
-                dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / "usability_testing_results.png", dpi=300, bbox_inches='tight')
     plt.close()
 
     print("✓ Generated usability testing results plot")
+
 
 def create_comprehensive_evaluation_summary(data, output_dir):
     """Create a comprehensive evaluation summary dashboard."""
@@ -285,10 +336,16 @@ def create_comprehensive_evaluation_summary(data, output_dir):
 
     # 1. Synchronization accuracy distribution
     if 'sync_accuracy' in data:
-        normal_sync = data['sync_accuracy'][data['sync_accuracy']['drift_ms'].abs() <= 10]['drift_ms']
+        normal_sync = data['sync_accuracy'][data['sync_accuracy']['drift_ms'].abs() <= 10][
+            'drift_ms'
+        ]
         ax1.hist(normal_sync, bins=15, alpha=0.7, color='skyblue', edgecolor='black')
-        ax1.axvline(x=normal_sync.median(), color='red', linestyle='-',
-                   label=f'Median: {normal_sync.median():.1f}ms')
+        ax1.axvline(
+            x=normal_sync.median(),
+            color='red',
+            linestyle='-',
+            label=f'Median: {normal_sync.median():.1f}ms',
+        )
         ax1.axvline(x=5, color='red', linestyle='--', alpha=0.7, label='±5ms Target')
         ax1.axvline(x=-5, color='red', linestyle='--', alpha=0.7)
         ax1.set_xlabel('Timestamp Drift (ms)')
@@ -321,16 +378,23 @@ def create_comprehensive_evaluation_summary(data, output_dir):
     ax3.grid(True, alpha=0.3, axis='y')
 
     # Add value labels on bars
-    for bar, value in zip(bars, values):
-        ax3.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
-                f'{value}%', ha='center', va='bottom', fontweight='bold')
+    for bar, value in zip(bars, values, strict=True):
+        ax3.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 1,
+            f'{value}%',
+            ha='center',
+            va='bottom',
+            fontweight='bold',
+        )
 
     # 4. Error frequency analysis
     error_types = ['Network\nErrors', 'Device\nErrors', 'Data\nErrors', 'App\nCrashes']
     frequencies = [3.3, 1.3, 3.4, 0.1]  # Per 8-hour session
 
-    ax4.bar(range(len(error_types)), frequencies, color='lightcoral',
-           edgecolor='darkred', alpha=0.7)
+    ax4.bar(
+        range(len(error_types)), frequencies, color='lightcoral', edgecolor='darkred', alpha=0.7
+    )
     ax4.set_ylabel('Frequency (per 8h session)')
     ax4.set_title('D. Error Frequency Analysis')
     ax4.grid(True, alpha=0.3, axis='y')
@@ -341,11 +405,11 @@ def create_comprehensive_evaluation_summary(data, output_dir):
 
     plt.suptitle('Chapter 5: Comprehensive Evaluation Summary', fontsize=16, y=0.98)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.savefig(output_dir / "comprehensive_evaluation_summary.png",
-                dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / "comprehensive_evaluation_summary.png", dpi=300, bbox_inches='tight')
     plt.close()
 
     print("✓ Generated comprehensive evaluation summary dashboard")
+
 
 def main():
     """Generate all Chapter 5 visualization artifacts."""
@@ -378,8 +442,7 @@ def main():
 
         # Create endurance test plots (Fig 5.4)
         if 'endurance_raw' in data and 'endurance_report' in data:
-            create_endurance_test_plots(data['endurance_raw'],
-                                      data['endurance_report'], output_dir)
+            create_endurance_test_plots(data['endurance_raw'], data['endurance_report'], output_dir)
 
         # Create usability metrics plots (Table 5.3 visualization)
         if 'usability' in data:
@@ -388,7 +451,7 @@ def main():
         # Create comprehensive evaluation summary
         create_comprehensive_evaluation_summary(data, output_dir)
 
-        print(f"\n🎉 All Chapter 5 visualizations generated successfully!")
+        print("\n🎉 All Chapter 5 visualizations generated successfully!")
         print(f"📁 Output directory: {output_dir.resolve()}")
         print("\nGenerated files:")
         for file in sorted(output_dir.glob("*.png")):
@@ -399,8 +462,10 @@ def main():
     except Exception as e:
         print(f"❌ Error generating Chapter 5 visualizations: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
+
 
 if __name__ == "__main__":
     exit(main())

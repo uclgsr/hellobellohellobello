@@ -12,7 +12,9 @@ from pc_controller.src.tools.camera_calibration import (
 
 
 def test_save_load_roundtrip(tmp_path: Path):
-    camera_matrix = np.array([[1000.0, 0.0, 640.0], [0.0, 1000.0, 360.0], [0.0, 0.0, 1.0]], dtype=np.float64)
+    camera_matrix = np.array(
+        [[1000.0, 0.0, 640.0], [0.0, 1000.0, 360.0], [0.0, 0.0, 1.0]], dtype=np.float64
+    )
     dist_coeffs = np.array([0.1, -0.05, 0.001, 0.002, 0.0], dtype=np.float64)
     res = CalibrationResult(
         camera_matrix=camera_matrix,

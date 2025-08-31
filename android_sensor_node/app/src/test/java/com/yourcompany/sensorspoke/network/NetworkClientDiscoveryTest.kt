@@ -6,14 +6,14 @@ package com.yourcompany.sensorspoke.network
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
-import io.mockk.*
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.Before
 import org.junit.Test
-import org.junit.Assert.*
 import java.net.InetAddress
 
 class NetworkClientDiscoveryTest {
-
     private lateinit var mockContext: Context
     private lateinit var mockNsdManager: NsdManager
     private lateinit var networkClient: NetworkClient
@@ -43,7 +43,7 @@ class NetworkClientDiscoveryTest {
         networkClient.discoverPCHubs(
             serviceType = "_gsr-controller._tcp.",
             onDiscovered = onDiscovered,
-            onLost = onLost
+            onLost = onLost,
         )
 
         // Assert
@@ -56,9 +56,10 @@ class NetworkClientDiscoveryTest {
         val onDiscovered = mockk<(String, String, Int) -> Unit>(relaxed = true)
         val onLost = mockk<(String) -> Unit>(relaxed = true)
 
-        val serviceInfo = mockk<NsdServiceInfo> {
-            every { serviceName } returns "TestPC"
-        }
+        val serviceInfo =
+            mockk<NsdServiceInfo> {
+                every { serviceName } returns "TestPC"
+            }
 
         val slot = slot<NsdManager.DiscoveryListener>()
         every { mockNsdManager.discoverServices(any(), any(), capture(slot)) } just runs
@@ -66,7 +67,7 @@ class NetworkClientDiscoveryTest {
         // Act
         networkClient.discoverPCHubs(
             onDiscovered = onDiscovered,
-            onLost = onLost
+            onLost = onLost,
         )
 
         // Simulate service found
@@ -82,11 +83,12 @@ class NetworkClientDiscoveryTest {
         val onDiscovered = mockk<(String, String, Int) -> Unit>(relaxed = true)
         val onLost = mockk<(String) -> Unit>(relaxed = true)
 
-        val serviceInfo = mockk<NsdServiceInfo> {
-            every { serviceName } returns "TestPC"
-            every { host } returns InetAddress.getByName("192.168.1.100")
-            every { port } returns 8080
-        }
+        val serviceInfo =
+            mockk<NsdServiceInfo> {
+                every { serviceName } returns "TestPC"
+                every { host } returns InetAddress.getByName("192.168.1.100")
+                every { port } returns 8080
+            }
 
         val discoverySlot = slot<NsdManager.DiscoveryListener>()
         val resolveSlot = slot<NsdManager.ResolveListener>()
@@ -97,7 +99,7 @@ class NetworkClientDiscoveryTest {
         // Act
         networkClient.discoverPCHubs(
             onDiscovered = onDiscovered,
-            onLost = onLost
+            onLost = onLost,
         )
 
         // Simulate service found and resolved
@@ -114,9 +116,10 @@ class NetworkClientDiscoveryTest {
         val onDiscovered = mockk<(String, String, Int) -> Unit>(relaxed = true)
         val onLost = mockk<(String) -> Unit>(relaxed = true)
 
-        val serviceInfo = mockk<NsdServiceInfo> {
-            every { serviceName } returns "TestPC"
-        }
+        val serviceInfo =
+            mockk<NsdServiceInfo> {
+                every { serviceName } returns "TestPC"
+            }
 
         val slot = slot<NsdManager.DiscoveryListener>()
         every { mockNsdManager.discoverServices(any(), any(), capture(slot)) } just runs
@@ -124,7 +127,7 @@ class NetworkClientDiscoveryTest {
         // Act
         networkClient.discoverPCHubs(
             onDiscovered = onDiscovered,
-            onLost = onLost
+            onLost = onLost,
         )
 
         // Simulate service lost
@@ -146,7 +149,7 @@ class NetworkClientDiscoveryTest {
         // Start discovery
         networkClient.discoverPCHubs(
             onDiscovered = onDiscovered,
-            onLost = onLost
+            onLost = onLost,
         )
 
         // Act
@@ -162,11 +165,12 @@ class NetworkClientDiscoveryTest {
         val onConnected = mockk<(String, String, Int) -> Unit>(relaxed = true)
         val onFailed = mockk<(String) -> Unit>(relaxed = true)
 
-        val serviceInfo = mockk<NsdServiceInfo> {
-            every { serviceName } returns "TestPC"
-            every { host } returns InetAddress.getByName("192.168.1.100")
-            every { port } returns 8080
-        }
+        val serviceInfo =
+            mockk<NsdServiceInfo> {
+                every { serviceName } returns "TestPC"
+                every { host } returns InetAddress.getByName("192.168.1.100")
+                every { port } returns 8080
+            }
 
         val discoverySlot = slot<NsdManager.DiscoveryListener>()
         val resolveSlot = slot<NsdManager.ResolveListener>()
@@ -181,7 +185,7 @@ class NetworkClientDiscoveryTest {
         // Act
         networkClientSpy.autoConnectToPCHub(
             onConnected = onConnected,
-            onFailed = onFailed
+            onFailed = onFailed,
         )
 
         // Simulate service discovery and resolution
@@ -200,11 +204,12 @@ class NetworkClientDiscoveryTest {
         val onConnected = mockk<(String, String, Int) -> Unit>(relaxed = true)
         val onFailed = mockk<(String) -> Unit>(relaxed = true)
 
-        val serviceInfo = mockk<NsdServiceInfo> {
-            every { serviceName } returns "TestPC"
-            every { host } returns InetAddress.getByName("192.168.1.100")
-            every { port } returns 8080
-        }
+        val serviceInfo =
+            mockk<NsdServiceInfo> {
+                every { serviceName } returns "TestPC"
+                every { host } returns InetAddress.getByName("192.168.1.100")
+                every { port } returns 8080
+            }
 
         val discoverySlot = slot<NsdManager.DiscoveryListener>()
         val resolveSlot = slot<NsdManager.ResolveListener>()
@@ -219,7 +224,7 @@ class NetworkClientDiscoveryTest {
         // Act
         networkClientSpy.autoConnectToPCHub(
             onConnected = onConnected,
-            onFailed = onFailed
+            onFailed = onFailed,
         )
 
         // Simulate service discovery and resolution
@@ -242,7 +247,7 @@ class NetworkClientDiscoveryTest {
         networkClient.discoverPCHubs(
             serviceType = "_gsr-controller._tcp",
             onDiscovered = onDiscovered,
-            onLost = onLost
+            onLost = onLost,
         )
 
         // Assert - should add .local. suffix
