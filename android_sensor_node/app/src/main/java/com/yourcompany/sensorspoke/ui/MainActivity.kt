@@ -31,6 +31,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.controller.RecordingController
 import com.yourcompany.sensorspoke.sensors.audio.AudioRecorder
+import com.yourcompany.sensorspoke.sensors.coordination.MultiModalSensorCoordinator
 import com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder
 import com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
 import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
@@ -47,6 +48,10 @@ class MainActivity : AppCompatActivity() {
     private val vm: MainViewModel by viewModels()
 
     private var controller: RecordingController? = null
+    
+    // Full integration: MultiModalSensorCoordinator for comprehensive sensor management
+    private var multiModalCoordinator: MultiModalSensorCoordinator? = null
+    
     private var viewPager: ViewPager2? = null
     private var tabLayout: TabLayout? = null
     private var btnStartRecording: Button? = null
@@ -263,6 +268,15 @@ class MainActivity : AppCompatActivity() {
         runCatching { unregisterReceiver(controlReceiver) }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // Cleanup MultiModalSensorCoordinator for full integration
+        lifecycleScope.launch {
+            multiModalCoordinator?.stopRecording()
+            multiModalCoordinator = null
+        }
+    }
+
     private fun ensureController(): RecordingController {
         val existing = controller
         if (existing != null) return existing
@@ -276,14 +290,52 @@ class MainActivity : AppCompatActivity() {
         return c
     }
 
+    /**
+     * Ensure MultiModalSensorCoordinator is initialized - Full Integration
+     */
+    private suspend fun ensureMultiModalCoordinator(): MultiModalSensorCoordinator {
+        val existing = multiModalCoordinator
+        if (existing != null) return existing
+        
+        val coordinator = MultiModalSensorCoordinator(applicationContext, this)
+        
+        // Initialize the complete multi-modal system
+        val initResult = coordinator.initializeSystem()
+        if (initResult) {
+            Log.i("MainActivity", "MultiModalSensorCoordinator initialized successfully - Full Integration active")
+        } else {
+            Log.w("MainActivity", "MultiModalSensorCoordinator initialization failed, falling back to individual recorders")
+        }
+        
+        multiModalCoordinator = coordinator
+        return coordinator
+    }
+
     private fun startRecording() {
         updateStatusText("Starting recording...")
         lifecycleScope.launch {
             try {
-                ensureController().startSession()
-                UserExperience.Messaging.showSuccess(this@MainActivity, "Recording started")
-                updateStatusText("Recording in progress")
-                updateButtonStates(isRecording = true)
+                // Full Integration: Use MultiModalSensorCoordinator for comprehensive sensor management
+                val coordinator = ensureMultiModalCoordinator()
+                
+                // Start coordinated multi-modal recording with session directory
+                val sessionDir = File(applicationContext.filesDir, "sessions")
+                if (!sessionDir.exists()) sessionDir.mkdirs()
+                
+                val startResult = coordinator.startRecording(sessionDir)
+                
+                if (startResult) {
+                    UserExperience.Messaging.showSuccess(this@MainActivity, "Full multi-modal recording started")
+                    updateStatusText("Full integration recording in progress")
+                    updateButtonStates(isRecording = true)
+                } else {
+                    // Fallback to individual controller if coordinator fails
+                    Log.w("MainActivity", "Coordinator failed, falling back to individual recorders")
+                    ensureController().startSession()
+                    UserExperience.Messaging.showSuccess(this@MainActivity, "Recording started (fallback mode)")
+                    updateStatusText("Recording in progress (fallback)")
+                    updateButtonStates(isRecording = true)
+                }
             } catch (e: Exception) {
                 UserExperience.Messaging.showUserFriendlyError(this@MainActivity, e.message ?: "Unknown error", "recording")
                 updateStatusText("Ready to record")
@@ -295,6 +347,21 @@ class MainActivity : AppCompatActivity() {
         updateStatusText("Stopping recording...")
         lifecycleScope.launch {
             try {
+                // Full Integration: Stop coordinated recording first, then fallback if needed
+                val coordinator = multiModalCoordinator
+                if (coordinator != null) {
+                    val stopResult = coordinator.stopRecording()
+                    if (stopResult) {
+                        UserExperience.Messaging.showSuccess(this@MainActivity, "Full multi-modal recording stopped")
+                        updateStatusText("Ready to record")
+                        updateButtonStates(isRecording = false)
+                        return@launch
+                    } else {
+                        Log.w("MainActivity", "Coordinator stop failed, trying individual controller")
+                    }
+                }
+                
+                // Fallback to individual controller
                 controller?.stopSession()
                 UserExperience.Messaging.showSuccess(this@MainActivity, "Recording stopped")
                 updateStatusText("Ready to record")
