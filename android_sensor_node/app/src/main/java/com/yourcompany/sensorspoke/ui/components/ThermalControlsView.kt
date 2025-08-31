@@ -204,7 +204,7 @@ constructor(
                     fromUser: Boolean,
                 ) {
                     val emissivity = (progress + 10) / 100.0f
-                    emissivityValue.text = String.format("%.2f", emissivity)
+                    emissivityValue.text = String.format(java.util.Locale.ROOT, "%.2f", emissivity)
                     if (fromUser) {
                         onEmissivityChanged?.invoke(emissivity)
                     }
@@ -240,7 +240,7 @@ constructor(
 
             if (minTemp < maxTemp) {
                 onTemperatureRangeChanged?.invoke(minTemp, maxTemp)
-                tempRangeDisplay.text = "${String.format("%.1f", minTemp)}°C - ${String.format("%.1f", maxTemp)}°C"
+                tempRangeDisplay.text = "${String.format(java.util.Locale.ROOT, "%.1f", minTemp)}°C - ${String.format(java.util.Locale.ROOT, "%.1f", maxTemp)}°C"
             }
         } catch (e: Exception) {
             // Handle silently
@@ -248,7 +248,7 @@ constructor(
     }
 
     fun updateCurrentTemperature(temp: Float) {
-        currentTempDisplay.text = "Current: ${String.format("%.1f", temp)}°C"
+        currentTempDisplay.text = "Current: ${String.format(java.util.Locale.ROOT, "%.1f", temp)}°C"
     }
 
     fun updateDeviceStatus(

@@ -434,9 +434,9 @@ class TC001ManagementFragment : Fragment() {
      * Update performance metrics display
      */
     private fun updatePerformanceDisplay(metrics: TC001PerformanceMetrics) {
-        frameRateText?.text = "Frame Rate: ${String.format("%.1f", metrics.frameRate)} FPS"
-        memoryUsageText?.text = "Memory: ${String.format("%.1f", metrics.memoryUsageMB)} MB"
-        temperatureDisplayText?.text = "Temperature: ${String.format("%.1f", metrics.avgTemperature)}°C"
+        frameRateText?.text = "Frame Rate: ${String.format(java.util.Locale.ROOT, "%.1f", metrics.frameRate)} FPS"
+        memoryUsageText?.text = "Memory: ${String.format(java.util.Locale.ROOT, "%.1f", metrics.memoryUsageMB)} MB"
+        temperatureDisplayText?.text = "Temperature: ${String.format(java.util.Locale.ROOT, "%.1f", metrics.avgTemperature)}°C"
     }
 
     /**

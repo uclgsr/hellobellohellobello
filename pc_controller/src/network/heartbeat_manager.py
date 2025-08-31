@@ -203,7 +203,8 @@ class HeartbeatManager:
                 # If device just went offline, trigger callback
                 if was_healthy and not status.is_healthy:
                     logger.warning(
-                        f"Device {device_id} went offline (missed {status.consecutive_misses} heartbeats)"
+                        f"Device {device_id} went offline "
+                        f"(missed {status.consecutive_misses} heartbeats)"
                     )
                     if device_id in self._device_offline_callbacks:
                         try:
