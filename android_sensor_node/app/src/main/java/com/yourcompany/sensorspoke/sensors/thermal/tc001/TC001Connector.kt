@@ -6,15 +6,10 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.*
-import java.io.IOException
-
 // IRCamera integration - using proven classes from the topdon library
 import com.infisense.iruvc.usb.USBMonitor
 import com.infisense.iruvc.uvc.UVCCamera
-import com.infisense.iruvc.uvc.UVCBuilder
 import com.infisense.iruvc.uvc.UVCType
-import com.infisense.iruvc.utils.IFrameCallback
-import com.infisense.iruvc.utils.CommonParams
 
 /**
  * TC001Connector - Core thermal camera connection handler using IRCamera integration
@@ -40,7 +35,7 @@ class TC001Connector(
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var isConnected = false
     private var currentDevice: UsbDevice? = null
-    
+
     // IRCamera integration - using proven USBMonitor and UVCCamera for TC001
     private var usbMonitor: USBMonitor? = null
     private var uvcCamera: UVCCamera? = null
@@ -59,7 +54,7 @@ class TC001Connector(
                 // Initialize IRCamera USBMonitor - this is the proven approach
                 usbMonitor = USBMonitor(context, this@TC001Connector)
                 usbMonitor?.register()
-                
+
                 Log.i(TAG, "IRCamera USBMonitor initialized for TC001")
                 scanForTC001Devices()
             } catch (e: Exception) {
@@ -241,7 +236,7 @@ class TC001Connector(
         _deviceInfo.value = deviceInfo
 
         Log.i(TAG, "TC001 device info: $deviceInfo")
-        
+
         // Request connection using IRCamera USBMonitor
         usbMonitor?.requestPermission(device)
     }

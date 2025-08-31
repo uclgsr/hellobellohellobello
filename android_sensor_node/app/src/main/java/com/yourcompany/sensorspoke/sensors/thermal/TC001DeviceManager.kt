@@ -27,9 +27,9 @@ class TC001DeviceManager(
         private const val CONNECTION_TIMEOUT_MS = 10000L // 10 seconds
         private const val MAX_RECONNECTION_ATTEMPTS = 3
 
-        // Enhanced TC001 device identification
-        private const val TOPDON_VENDOR_ID = 0x1234 // Replace with actual Topdon vendor ID
-        private const val TC001_PRODUCT_ID = 0x5678 // Replace with actual TC001 product ID
+        // Enhanced TC001 device identification - Real IRCamera values
+        private const val TOPDON_VENDOR_ID = 0x4d54 // Actual Topdon vendor ID from IRCamera
+        private const val TC001_PRODUCT_ID = 0x0100 // Actual TC001 product ID from IRCamera
 
         // TC001 Enhanced specifications for IRCamera integration
         const val THERMAL_WIDTH_MAX = 256

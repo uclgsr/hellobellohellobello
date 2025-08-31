@@ -72,12 +72,12 @@ class TC001SensorIntegrationManager(
 
                 // Initialize core components
                 tc001Connector = TC001Connector(context)
-                
+
                 tc001DataManager = TC001DataManager(context).apply {
                     // Connect the data manager to the connector for real hardware access
                     setTC001Connector(tc001Connector!!)
                 }
-                
+
                 tc001UIController = TC001UIController()
 
                 // Set up component interactions
@@ -471,7 +471,7 @@ class TC001SensorIntegrationManager(
                     connectionHealthy = true,
                     processingHealthy = true,
                     temperatureHealthy = true,
-                    message = "TC001 device connected"
+                    message = "TC001 device connected",
                 )
             }
             TC001ConnectionState.DISCONNECTED -> {
@@ -480,7 +480,7 @@ class TC001SensorIntegrationManager(
                     connectionHealthy = false,
                     processingHealthy = false,
                     temperatureHealthy = false,
-                    message = "TC001 device disconnected"
+                    message = "TC001 device disconnected",
                 )
             }
             TC001ConnectionState.ERROR -> {
@@ -489,7 +489,7 @@ class TC001SensorIntegrationManager(
                     connectionHealthy = false,
                     processingHealthy = false,
                     temperatureHealthy = false,
-                    message = "TC001 connection error"
+                    message = "TC001 connection error",
                 )
             }
             else -> {
@@ -533,7 +533,7 @@ class TC001SensorIntegrationManager(
         // Check if data manager is processing frames regularly
         val lastUpdateTime = _thermalMetrics.value.lastUpdateTime
         val currentTime = System.currentTimeMillis()
-        
+
         // Consider processing healthy if we've had an update within the last 5 seconds
         return (currentTime - lastUpdateTime) < 5000
     }

@@ -19,13 +19,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001ConnectType
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001UIController
+import com.yourcompany.sensorspoke.ui.MainActivity
+import com.yourcompany.sensorspoke.ui.popup.DelPopup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import com.yourcompany.sensorspoke.ui.MainActivity
-import com.yourcompany.sensorspoke.ui.popup.DelPopup
 import kotlinx.coroutines.withContext
 
 /**
@@ -38,11 +37,11 @@ import kotlinx.coroutines.withContext
 class EnhancedMainFragment :
     Fragment(),
     View.OnClickListener {
-    
+
     companion object {
         private const val TAG = "EnhancedMainFragment"
     }
-    
+
     private lateinit var uiController: TC001UIController
     private lateinit var adapter: DeviceAdapter
 
@@ -200,16 +199,16 @@ class EnhancedMainFragment :
             try {
                 // Show connecting indicator
                 uiController.updateConnectionStatus(false)
-                
+
                 // Trigger actual device scanning
                 // This would typically open a device selection dialog or fragment
                 Log.i(TAG, "Starting device connection process")
-                
+
                 // For demonstration, we'll simulate the proper connection workflow
                 // In production, this would show available TC001 devices for selection
                 val connected = attemptDeviceConnection()
                 uiController.updateConnectionStatus(connected)
-                
+
                 if (connected) {
                     Log.i(TAG, "Device connection successful")
                 } else {
@@ -231,11 +230,11 @@ class EnhancedMainFragment :
             try {
                 // Simulate device discovery process
                 delay(1000)
-                
+
                 // Check for TC001 devices
                 // In production, this would use UsbManager to scan for real devices
                 val deviceAvailable = checkForAvailableDevices()
-                
+
                 if (deviceAvailable) {
                     // Attempt connection to discovered device
                     delay(500)

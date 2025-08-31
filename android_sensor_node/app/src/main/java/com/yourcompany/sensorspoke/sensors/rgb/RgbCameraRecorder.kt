@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
-import android.graphics.Rect
 import android.hardware.camera2.*
 import android.media.Image
 import android.media.ImageReader
@@ -703,19 +702,19 @@ class RgbCameraRecorder(
                 inSampleSize = 4 // Reduce size for preview
                 inPreferredConfig = Bitmap.Config.RGB_565
             }
-            
+
             // Try direct decoding first (works for some DNG files)
             BitmapFactory.decodeFile(dngFile.absolutePath, options)?.let { bitmap ->
                 return bitmap
             }
-            
+
             // If direct decoding fails, read raw bytes and process manually
             val fileBytes = dngFile.readBytes()
             if (fileBytes.size < 1000) {
                 Log.w(TAG, "DNG file too small: ${fileBytes.size} bytes")
                 return null
             }
-            
+
             // For demonstration, create a preview pattern based on file content
             // In production, this would use proper DNG/RAW decoding libraries
             processRawDNGBytes(fileBytes)
@@ -724,7 +723,7 @@ class RgbCameraRecorder(
             null
         }
     }
-    
+
     /**
      * Process raw DNG bytes for preview (simplified approach)
      */
@@ -732,30 +731,30 @@ class RgbCameraRecorder(
         val width = 640
         val height = 480
         val rgbArray = IntArray(width * height)
-        
+
         // Skip header bytes and sample the raw data
         val dataOffset = minOf(1024, fileBytes.size / 4) // Skip typical header
-        
+
         for (i in rgbArray.indices) {
             val byteIndex = dataOffset + (i * 2) % (fileBytes.size - dataOffset - 1)
-            
+
             // Sample raw sensor data (assuming 16-bit values)
             val rawValue = if (byteIndex + 1 < fileBytes.size) {
-                ((fileBytes[byteIndex + 1].toInt() and 0xFF) shl 8) or 
-                (fileBytes[byteIndex].toInt() and 0xFF)
+                ((fileBytes[byteIndex + 1].toInt() and 0xFF) shl 8) or
+                    (fileBytes[byteIndex].toInt() and 0xFF)
             } else {
                 0
             }
-            
+
             // Convert to 8-bit and apply simple demosaic
             val normalizedValue = (rawValue shr 8).coerceIn(0, 255)
             val x = i % width
             val y = i / width
             val (r, g, b) = demosaicPixel(x, y, normalizedValue)
-            
+
             rgbArray[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
         }
-        
+
         return Bitmap.createBitmap(rgbArray, width, height, Bitmap.Config.ARGB_8888)
     }
 
@@ -767,7 +766,7 @@ class RgbCameraRecorder(
         return when {
             // Red pixel positions (even row, even col)
             y % 2 == 0 && x % 2 == 0 -> Triple(rawValue, rawValue / 2, rawValue / 4)
-            // Green pixel positions  
+            // Green pixel positions
             (y % 2 == 0 && x % 2 == 1) || (y % 2 == 1 && x % 2 == 0) -> Triple(rawValue / 3, rawValue, rawValue / 3)
             // Blue pixel positions (odd row, odd col)
             else -> Triple(rawValue / 4, rawValue / 2, rawValue)
@@ -781,7 +780,7 @@ class RgbCameraRecorder(
         val width = 640
         val height = 480
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
-        
+
         // Create a simple gradient pattern instead of solid color
         val pixels = IntArray(width * height)
         for (y in 0 until height) {
@@ -790,7 +789,7 @@ class RgbCameraRecorder(
                 pixels[y * width + x] = (intensity shl 16) or (intensity shl 8) or intensity
             }
         }
-        
+
         bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
         return bitmap
     }

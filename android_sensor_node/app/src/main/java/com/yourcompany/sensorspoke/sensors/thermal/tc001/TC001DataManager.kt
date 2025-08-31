@@ -10,9 +10,6 @@ import java.nio.ByteBuffer
 
 // IRCamera integration - using proven data processing classes
 import com.infisense.iruvc.sdkisp.LibIRParse
-import com.infisense.iruvc.sdkisp.LibIRProcess
-import com.infisense.iruvc.sdkisp.LibIRTemp
-import com.infisense.iruvc.uvc.UVCCamera
 import com.infisense.iruvc.utils.IFrameCallback
 
 /**
@@ -100,7 +97,7 @@ class TC001DataManager(
      */
     fun setTC001Connector(connector: TC001Connector) {
         tc001Connector = connector
-        
+
         // Set this as frame callback for IRCamera UVCCamera
         connector.getUVCCamera()?.setFrameCallback(this)
     }
@@ -150,9 +147,9 @@ class TC001DataManager(
             Log.e(TAG, "Failed to start thermal stream via IRCamera UVCCamera")
             return
         }
-        
+
         Log.i(TAG, "IRCamera thermal stream started - frames will be received via onFrame callback")
-        
+
         // Keep processing active while frames come in via onFrame callback
         while (isProcessing && processingScope.isActive) {
             delay(1000) // Just keep the coroutine alive, real data comes via callback
@@ -167,7 +164,7 @@ class TC001DataManager(
             // Simplified approach using IRCamera LibIRParse for basic processing
             // Since inner classes are not accessible, use format conversion as indicator
             val outputBuffer = ByteArray(256 * 192)
-            
+
             // Use IRCamera's Y14 to Y8 conversion to validate data
             val convertResult = if (frameData.size >= 256 * 192 * 2) {
                 val charArray = CharArray(frameData.size / 2)
@@ -176,27 +173,27 @@ class TC001DataManager(
                     val byte2 = frameData[i * 2 + 1].toInt() and 0xFF
                     charArray[i] = ((byte2 shl 8) or byte1).toChar()
                 }
-                
+
                 LibIRParse.convertArrayY14ToY8(charArray, charArray.size, outputBuffer)
             } else {
                 -1
             }
-            
+
             if (convertResult == 0) {
                 // Basic temperature analysis from converted data
                 var minTemp = Float.MAX_VALUE
                 var maxTemp = Float.MIN_VALUE
                 var sumTemp = 0.0f
-                
+
                 for (value in outputBuffer) {
                     val temp = 20f + (value.toInt() and 0xFF) / 255f * 30f // 20-50°C range
                     minTemp = minOf(minTemp, temp)
                     maxTemp = maxOf(maxTemp, temp)
                     sumTemp += temp
                 }
-                
+
                 val avgTemp = sumTemp / outputBuffer.size
-                
+
                 TC001TemperatureData(
                     minTemperature = minTemp,
                     maxTemperature = maxTemp,
@@ -234,7 +231,7 @@ class TC001DataManager(
         return try {
             // Use IRCamera LibIRParse for proven format conversion
             val outputBuffer = ByteArray(256 * 192 * 3) // RGB output
-            
+
             // Convert Y14 thermal data to RGB using IRCamera's proven method
             val convertResult = if (frameData.size >= 256 * 192 * 2) {
                 // Convert byte array to char array for Y14 format
@@ -244,12 +241,12 @@ class TC001DataManager(
                     val byte2 = frameData[i * 2 + 1].toInt() and 0xFF
                     charArray[i] = ((byte2 shl 8) or byte1).toChar()
                 }
-                
+
                 LibIRParse.convertArrayY14ToRGB(charArray, charArray.size, outputBuffer)
             } else {
                 -1 // Invalid data size
             }
-            
+
             if (convertResult == 0) {
                 outputBuffer
             } else {
@@ -290,7 +287,7 @@ class TC001DataManager(
             try {
                 // Generate simulated thermal frame data
                 val thermalData = generateSimulatedThermalFrame()
-                
+
                 // Process through IRCamera callback interface like real hardware would
                 onFrame(thermalData)
 
@@ -335,7 +332,7 @@ class TC001DataManager(
         return try {
             // Use IRCamera's proven bitmap generation
             val bitmap = android.graphics.Bitmap.createBitmap(256, 192, android.graphics.Bitmap.Config.ARGB_8888)
-            
+
             // IRCamera processed data is typically RGB format
             var pixelIndex = 0
             for (y in 0 until 192) {
@@ -518,7 +515,7 @@ class TC001DataManager(
     fun cleanup() {
         isProcessing = false
         processingScope.cancel()
-        
+
         // IRCamera LibIRParse and LibIRProcess are static utility classes - no cleanup needed
         Log.i(TAG, "TC001DataManager cleanup completed")
     }
