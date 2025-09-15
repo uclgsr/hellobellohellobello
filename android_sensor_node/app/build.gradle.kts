@@ -109,16 +109,25 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("androidx.security:security-crypto:1.1.0")
 
-    // Local SDKs (Topdon TC001 and Shimmer Android API)
-    implementation(files("src/main/libs/topdon_1.3.7.aar"))
-    implementation(files("src/main/libs/libusbdualsdk_1.3.4_2406271906_standard.aar"))
-    implementation(files("src/main/libs/opengl_1.3.2_standard.aar"))
-    implementation(files("src/main/libs/suplib-release.aar"))
+    // Local SDKs (Topdon TC001 and Shimmer Android API) - from libs directory
+    implementation(files("libs/topdon.aar"))
+    implementation(files("libs/libAC020sdk_USB_IR_1.1.1_2408291439.aar"))
+    implementation(files("libs/libusbdualsdk_1.3.4_2406271906_standard.aar")) // existing
+    implementation(files("libs/opengl_1.3.2_standard.aar")) // existing
+    implementation(files("libs/suplib-release.aar")) // existing
+    implementation(files("libs/libcommon_1.2.0_24052117.aar"))
+    implementation(files("libs/libirutils_1.2.0_2409241055.aar"))
+    implementation(files("libs/lms_international-3.90.009.0.aar"))
+    implementation(files("libs/abtest-1.0.1.aar"))
+    implementation(files("libs/auth-number-2.13.2.1.aar"))
+    implementation(files("libs/logger-2.2.1-release.aar"))
+    implementation(files("libs/main-2.2.1-release.aar"))
 
-    implementation(files("src/main/libs/shimmerandroidinstrumentdriver-3.2.3_beta.aar"))
-    implementation(files("src/main/libs/shimmerbluetoothmanager-0.11.4_beta.jar"))
-    implementation(files("src/main/libs/shimmerdriver-0.11.4_beta.jar"))
-    implementation(files("src/main/libs/shimmerdriverpc-0.11.4_beta.jar"))
+    // Shimmer Android API - updated to new versions from IRCamera (no duplicates)
+    implementation(files("libs/shimmerandroidinstrumentdriver-3.2.4_beta.aar"))
+    implementation(files("libs/shimmerbluetoothmanager-0.11.5_beta.jar"))
+    implementation(files("libs/shimmerdriver-0.11.5_beta.jar"))
+    implementation(files("libs/shimmerdriverpc-0.11.5_beta.jar"))
 
     // FastBLE for robust BLE communication with Shimmer devices
     implementation("com.github.Jasonchenlijian:FastBle:2.4.0")
