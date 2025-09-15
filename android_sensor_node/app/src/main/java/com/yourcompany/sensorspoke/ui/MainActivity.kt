@@ -233,6 +233,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupButtons() {
         btnStartRecording?.setOnClickListener {
+            // Enhanced UI feedback during permission checks
+            updateStatusText("Checking permissions...")
+            btnStartRecording?.isEnabled = false
+            
             if (permissionManager.areAllPermissionsGranted()) {
                 startRecording()
             } else {
@@ -245,8 +249,92 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnStopRecording?.setOnClickListener {
+            // Enhanced UI feedback during stop operation
+            updateStatusText("Stopping recording...")
+            btnStopRecording?.isEnabled = false
             stopRecording()
         }
+    }
+    
+    /**
+     * Enhanced status text updates with visual indicators.
+     */
+    private fun updateStatusText(message: String) {
+        statusText?.text = message
+        
+        // Add color coding based on status
+        when {
+            message.contains("error", ignoreCase = true) || 
+            message.contains("failed", ignoreCase = true) -> {
+                statusText?.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+            }
+            message.contains("recording", ignoreCase = true) -> {
+                statusText?.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_light))
+            }
+            message.contains("ready", ignoreCase = true) ||
+            message.contains("connected", ignoreCase = true) ||
+            message.contains("success", ignoreCase = true) -> {
+                statusText?.setTextColor(ContextCompat.getColor(this, android.R.color.holo_green_dark))
+            }
+            message.contains("checking", ignoreCase = true) ||
+            message.contains("starting", ignoreCase = true) ||
+            message.contains("stopping", ignoreCase = true) -> {
+                statusText?.setTextColor(ContextCompat.getColor(this, android.R.color.holo_blue_dark))
+            }
+            else -> {
+                statusText?.setTextColor(ContextCompat.getColor(this, android.R.color.primary_text_light))
+            }
+        }
+        
+        Log.i(TAG, "Status: $message")
+    }
+    
+    /**
+     * Enhanced button state management.
+     */
+    private fun updateButtonStates(isRecording: Boolean) {
+        btnStartRecording?.apply {
+            isEnabled = !isRecording && permissionManager.areAllPermissionsGranted()
+            text = if (isRecording) "Recording..." else "Start Recording"
+            setBackgroundColor(
+                if (isRecording) 
+                    ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
+                else 
+                    ContextCompat.getColor(this@MainActivity, android.R.color.holo_green_light)
+            )
+        }
+        
+        btnStopRecording?.apply {
+            isEnabled = isRecording
+            setBackgroundColor(
+                if (isRecording)
+                    ContextCompat.getColor(this@MainActivity, android.R.color.holo_red_light)
+                else
+                    ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
+            )
+        }
+    }
+    
+    /**
+     * Enhanced connection status indicator.
+     */
+    private fun updateConnectionStatus(connected: Boolean, serverInfo: String = "") {
+        val statusMessage = if (connected) {
+            "Connected to PC Hub${if (serverInfo.isNotEmpty()) " ($serverInfo)" else ""}"
+        } else {
+            "Not connected to PC Hub"
+        }
+        
+        // Update status in a dedicated connection indicator (if available)
+        updateStatusText(statusMessage)
+        
+        // Update UI colors/states based on connection
+        rootLayout?.setBackgroundColor(
+            if (connected)
+                ContextCompat.getColor(this, android.R.color.background_light)
+            else
+                ContextCompat.getColor(this, android.R.color.background_dark)
+        )
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -374,20 +462,11 @@ class MainActivity : AppCompatActivity() {
                 updateButtonStates(isRecording = false)
             } catch (e: Exception) {
                 UserExperience.Messaging.showUserFriendlyError(this@MainActivity, e.message ?: "Unknown error", "recording")
+                updateStatusText("Error stopping recording")
+                // Re-enable buttons on error
+                btnStartRecording?.isEnabled = true
+                btnStopRecording?.isEnabled = true
             }
-        }
-    }
-
-    private fun updateStatusText(status: String) {
-        runOnUiThread {
-            statusText?.text = status
-        }
-    }
-
-    private fun updateButtonStates(isRecording: Boolean) {
-        runOnUiThread {
-            btnStartRecording?.isEnabled = !isRecording
-            btnStopRecording?.isEnabled = isRecording
         }
     }
 

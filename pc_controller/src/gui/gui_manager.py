@@ -78,6 +78,8 @@ class DeviceWidget(QWidget):
     Two modes:
     - video: displays frames in a QLabel
     - gsr: displays a scrolling waveform using PyQtGraph
+    
+    Enhanced with connection status indicators and progress tracking.
     """
 
     def __init__(self, kind: str, title: str, parent: QWidget | None = None) -> None:
@@ -86,14 +88,35 @@ class DeviceWidget(QWidget):
         self.title = title
         self.setObjectName(f"DeviceWidget::{kind}::{title}")
         layout = QVBoxLayout(self)
+        
+        # Enhanced header with status indicator
+        header_layout = QHBoxLayout()
         self.header = QLabel(title, self)
-        self.header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.header)
+        self.header.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        header_layout.addWidget(self.header)
+        
+        # Connection status indicator
+        self.status_indicator = QLabel("●", self)
+        self.status_indicator.setStyleSheet("color: gray; font-weight: bold;")
+        self.status_indicator.setToolTip("Device Status: Disconnected")
+        header_layout.addWidget(self.status_indicator)
+        
+        # Add stretch to push status to right
+        header_layout.addStretch()
+        
+        # Progress bar for recording status  
+        self.progress_bar = QProgressBar(self)
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setMaximumHeight(8)
+        
+        layout.addLayout(header_layout)
+        layout.addWidget(self.progress_bar)
 
         if kind == "video":
             self.view = QLabel(self)
             self.view.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.view.setMinimumSize(320, 180)
+            self.view.setStyleSheet("border: 1px solid gray; background-color: #f0f0f0;")
             layout.addWidget(self.view)
         elif kind == "gsr":
             if pg is None:
@@ -113,6 +136,33 @@ class DeviceWidget(QWidget):
             self._values: deque[float] = deque(maxlen=self._buf_max)
         else:
             raise ValueError(f"Unsupported DeviceWidget kind: {kind}")
+    
+    def set_connection_status(self, connected: bool) -> None:
+        """Update the visual connection status indicator."""
+        if connected:
+            self.status_indicator.setStyleSheet("color: green; font-weight: bold;")
+            self.status_indicator.setToolTip("Device Status: Connected")
+        else:
+            self.status_indicator.setStyleSheet("color: gray; font-weight: bold;")
+            self.status_indicator.setToolTip("Device Status: Disconnected")
+    
+    def set_recording_status(self, recording: bool, progress: int = 0) -> None:
+        """Update recording status with optional progress indication."""
+        if recording:
+            self.progress_bar.setVisible(True)
+            self.progress_bar.setValue(progress)
+            self.status_indicator.setStyleSheet("color: red; font-weight: bold;")
+            self.status_indicator.setToolTip("Device Status: Recording")
+        else:
+            self.progress_bar.setVisible(False)
+            # Restore connection status color
+            self.set_connection_status(True)  # Assume connected if we can stop recording
+    
+    def set_error_status(self, error_msg: str = "") -> None:
+        """Set device to error status with optional error message."""
+        self.status_indicator.setStyleSheet("color: orange; font-weight: bold;")
+        tooltip = f"Device Status: Error - {error_msg}" if error_msg else "Device Status: Error"
+        self.status_indicator.setToolTip(tooltip)
 
     def update_video_frame(self, frame_bgr: np.ndarray) -> None:
         if self.kind != "video":
@@ -181,11 +231,81 @@ class GUIManager(QMainWindow):
         self.tabs = QTabWidget(self)
         self.setCentralWidget(self.tabs)
 
-        # Dashboard tab with dynamic grid
+        # Dashboard tab with dynamic grid and device discovery panel
         self.dashboard = QWidget(self)
-        self.grid = QGridLayout(self.dashboard)
+        dashboard_layout = QHBoxLayout(self.dashboard)
+        
+        # Left panel: Device grid
+        left_panel = QWidget(self)
+        self.grid = QGridLayout(left_panel)
         self.grid.setContentsMargins(8, 8, 8, 8)
         self.grid.setSpacing(8)
+        dashboard_layout.addWidget(left_panel, stretch=3)
+        
+        # Right panel: Device discovery and connection management
+        right_panel = QWidget(self)
+        right_panel.setMaximumWidth(300)
+        right_panel.setMinimumWidth(250)
+        right_layout = QVBoxLayout(right_panel)
+        
+        # Discovery section
+        discovery_label = QLabel("Device Discovery", right_panel)
+        discovery_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        right_layout.addWidget(discovery_label)
+        
+        # Discovery controls
+        discovery_controls = QHBoxLayout()
+        self.btn_refresh_devices = QPushButton("Refresh", right_panel)
+        self.btn_refresh_devices.clicked.connect(self._refresh_device_discovery)
+        discovery_controls.addWidget(self.btn_refresh_devices)
+        
+        self.discovery_status = QLabel("Scanning...", right_panel)
+        self.discovery_status.setStyleSheet("color: blue;")
+        discovery_controls.addWidget(self.discovery_status)
+        discovery_controls.addStretch()
+        right_layout.addLayout(discovery_controls)
+        
+        # Discovered devices list
+        self.discovered_devices = QListWidget(right_panel)
+        self.discovered_devices.setMaximumHeight(150)
+        right_layout.addWidget(self.discovered_devices)
+        
+        # Connection controls
+        connection_controls = QHBoxLayout()
+        self.btn_connect_device = QPushButton("Connect", right_panel)
+        self.btn_connect_device.clicked.connect(self._connect_selected_device)
+        self.btn_connect_device.setEnabled(False)
+        connection_controls.addWidget(self.btn_connect_device)
+        
+        self.btn_disconnect_device = QPushButton("Disconnect", right_panel)
+        self.btn_disconnect_device.clicked.connect(self._disconnect_selected_device)
+        self.btn_disconnect_device.setEnabled(False)
+        connection_controls.addWidget(self.btn_disconnect_device)
+        right_layout.addLayout(connection_controls)
+        
+        # Connected devices section
+        connected_label = QLabel("Connected Devices", right_panel)
+        connected_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        right_layout.addWidget(connected_label)
+        
+        self.connected_devices = QListWidget(right_panel)
+        self.connected_devices.setMaximumHeight(120)
+        right_layout.addWidget(self.connected_devices)
+        
+        # Session status section
+        session_label = QLabel("Session Status", right_panel)
+        session_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        right_layout.addWidget(session_label)
+        
+        self.session_status = QTextEdit(right_panel)
+        self.session_status.setReadOnly(True)
+        self.session_status.setMaximumHeight(100)
+        self.session_status.setStyleSheet("background-color: #f8f8f8; font-family: monospace; font-size: 10px;")
+        right_layout.addWidget(self.session_status)
+        
+        right_layout.addStretch()
+        dashboard_layout.addWidget(right_panel, stretch=1)
+        
         self.tabs.addTab(self.dashboard, "Dashboard")
 
         # Logs tab
@@ -585,15 +705,41 @@ class GUIManager(QMainWindow):
     @pyqtSlot(DiscoveredDevice)
     def _on_device_discovered(self, device: DiscoveredDevice) -> None:
         self._log(f"Discovered: {device.name} @ {device.address}:{device.port}")
+        
+        # Add to discovered devices list
+        device_item = f"{device.name} ({device.address}:{device.port})"
+        self.discovered_devices.addItem(device_item)
+        self.btn_connect_device.setEnabled(True)
+        
+        # Update discovery status
+        self._update_discovery_status()
+        
         # Create a remote video widget per device if not exists
         if device.name not in self._remote_widgets:
             widget = DeviceWidget("video", f"Remote: {device.name}", self)
+            widget.set_connection_status(False)  # Initially disconnected
             self._remote_widgets[device.name] = widget
             self._add_to_grid(widget)
 
     @pyqtSlot(str)
     def _on_device_removed(self, name: str) -> None:
         self._log(f"Removed: {name}")
+        
+        # Remove from discovered devices list
+        for i in range(self.discovered_devices.count()):
+            item = self.discovered_devices.item(i)
+            if item and name in item.text():
+                self.discovered_devices.takeItem(i)
+                break
+        
+        # Update connection status in widget
+        if name in self._remote_widgets:
+            self._remote_widgets[name].set_connection_status(False)
+        
+        # Update UI states
+        if self.discovered_devices.count() == 0:
+            self.btn_connect_device.setEnabled(False)
+        self._update_discovery_status()
 
     @pyqtSlot(str, object, int)
     def _on_preview_frame(
@@ -757,6 +903,95 @@ class GUIManager(QMainWindow):
             self._video_writer.write(fb)
         except Exception as exc:
             self._log(f"Video write error: {exc}")
+
+    # ==========================
+    # Device Discovery and Connection Management  
+    # ==========================
+    def _refresh_device_discovery(self) -> None:
+        """Manually refresh device discovery."""
+        try:
+            self.discovery_status.setText("Scanning...")
+            self.discovery_status.setStyleSheet("color: blue;")
+            self.discovered_devices.clear()
+            self._network.start_discovery()
+            self._log("Device discovery refreshed")
+            # Auto-update status after discovery timeout
+            QTimer.singleShot(3000, self._update_discovery_status)
+        except Exception as exc:
+            self._log(f"Discovery refresh failed: {exc}")
+            self.discovery_status.setText("Error")
+            self.discovery_status.setStyleSheet("color: red;")
+    
+    def _update_discovery_status(self) -> None:
+        """Update discovery status based on found devices."""
+        device_count = self.discovered_devices.count()
+        if device_count == 0:
+            self.discovery_status.setText("No devices found")
+            self.discovery_status.setStyleSheet("color: orange;")
+        else:
+            self.discovery_status.setText(f"Found {device_count} device(s)")
+            self.discovery_status.setStyleSheet("color: green;")
+    
+    def _connect_selected_device(self) -> None:
+        """Connect to the selected discovered device."""
+        current_item = self.discovered_devices.currentItem()
+        if not current_item:
+            QMessageBox.warning(self, "No Selection", "Please select a device to connect.")
+            return
+        
+        device_text = current_item.text()
+        try:
+            # Extract device info from the list item text
+            # Format should be "Device Name (IP:Port)"
+            device_name = device_text.split(" (")[0]
+            addr_port = device_text.split(" (")[1].rstrip(")")
+            address, port_str = addr_port.split(":")
+            port = int(port_str)
+            
+            self._log(f"Connecting to {device_name} at {address}:{port}...")
+            self._network.connect_to_device(address, port, device_name)
+            
+            # Add to connected devices list
+            connected_item = f"{device_name} - Connecting..."
+            self.connected_devices.addItem(connected_item)
+            self.btn_disconnect_device.setEnabled(True)
+            
+        except Exception as exc:
+            self._log(f"Connection failed: {exc}")
+            QMessageBox.critical(self, "Connection Failed", f"Failed to connect: {exc}")
+    
+    def _disconnect_selected_device(self) -> None:
+        """Disconnect from the selected connected device."""
+        current_item = self.connected_devices.currentItem()
+        if not current_item:
+            QMessageBox.warning(self, "No Selection", "Please select a device to disconnect.")
+            return
+        
+        device_text = current_item.text()
+        device_name = device_text.split(" - ")[0]
+        
+        try:
+            self._log(f"Disconnecting from {device_name}...")
+            self._network.disconnect_device(device_name)
+            
+            # Remove from connected devices list
+            row = self.connected_devices.row(current_item)
+            self.connected_devices.takeItem(row)
+            
+            if self.connected_devices.count() == 0:
+                self.btn_disconnect_device.setEnabled(False)
+                
+        except Exception as exc:
+            self._log(f"Disconnection failed: {exc}")
+    
+    def _update_session_status(self, message: str) -> None:
+        """Update the session status display."""
+        timestamp = time.strftime("%H:%M:%S")
+        self.session_status.append(f"[{timestamp}] {message}")
+        # Auto-scroll to bottom
+        cursor = self.session_status.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        self.session_status.setTextCursor(cursor)
 
     # ==========================
     # Playback & Annotation API

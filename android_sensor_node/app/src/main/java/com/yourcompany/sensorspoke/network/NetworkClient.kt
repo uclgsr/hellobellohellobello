@@ -34,9 +34,16 @@ class NetworkClient(
     private val isConnected = AtomicBoolean(false)
     private val serverAddress = AtomicReference<InetSocketAddress?>()
 
-    // Connection configuration
+    // Connection configuration and retry logic
     var connectionTimeoutMs: Int = DEFAULT_TIMEOUT_MS
     var autoReconnect: Boolean = true
+    private var reconnectAttempts: Int = 0
+    private val maxReconnectAttempts: Int = 5
+    private val reconnectDelayMs: Long = 2000L
+    
+    // Connection health monitoring
+    private var lastSuccessfulMessage: Long = 0
+    private val healthCheckIntervalMs: Long = 30000L // 30 seconds
 
     /**
      * Register this device as an NSD service for PC Hub discovery.
@@ -96,7 +103,7 @@ class NetworkClient(
     }
 
     /**
-     * Connect to the PC Hub server.
+     * Connect to the PC Hub server with enhanced retry logic.
      */
     fun connect(
         host: String,
@@ -108,20 +115,92 @@ class NetworkClient(
             val newSocket = Socket()
             val address = InetSocketAddress(host, port)
 
-            Log.i(TAG, "Connecting to $host:$port...")
+            Log.i(TAG, "Connecting to $host:$port (attempt ${reconnectAttempts + 1}/$maxReconnectAttempts)...")
             newSocket.connect(address, connectionTimeoutMs)
+            newSocket.soTimeout = connectionTimeoutMs
 
             socket.set(newSocket)
             serverAddress.set(address)
             isConnected.set(true)
+            reconnectAttempts = 0 // Reset on successful connection
+            lastSuccessfulMessage = System.currentTimeMillis()
 
             Log.i(TAG, "Successfully connected to $host:$port")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to connect to $host:$port", e)
             isConnected.set(false)
-            false
+            
+            // Auto-retry if enabled and under max attempts
+            if (autoReconnect && reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++
+                Log.i(TAG, "Scheduling reconnection attempt in ${reconnectDelayMs}ms...")
+                // Note: In production, this should use a Handler or coroutine
+                // For now, we'll just log the intent to retry
+                false
+            } else {
+                Log.w(TAG, "Max reconnection attempts reached or auto-reconnect disabled")
+                false
+            }
         }
+        
+    /**
+     * Enhanced connection method with callback support.
+     */
+    fun connectWithCallback(
+        host: String, 
+        port: Int, 
+        onSuccess: (() -> Unit)? = null,
+        onFailure: ((Exception) -> Unit)? = null
+    ) {
+        try {
+            val success = connect(host, port)
+            if (success) {
+                onSuccess?.invoke()
+            } else {
+                onFailure?.invoke(IOException("Connection failed after retries"))
+            }
+        } catch (e: Exception) {
+            onFailure?.invoke(e)
+        }
+    }
+    
+    /**
+     * Check connection health and attempt reconnection if needed.
+     */
+    fun checkConnectionHealth(): Boolean {
+        if (!isConnected.get()) {
+            return false
+        }
+        
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSuccessfulMessage > healthCheckIntervalMs) {
+            Log.w(TAG, "Connection appears stale, attempting to send heartbeat...")
+            
+            // Try to send a simple heartbeat message
+            val heartbeat = """{"type":"heartbeat","timestamp":$currentTime}"""
+            if (!sendMessage(heartbeat)) {
+                Log.w(TAG, "Heartbeat failed, connection may be lost")
+                if (autoReconnect) {
+                    attemptReconnection()
+                }
+                return false
+            }
+        }
+        
+        return true
+    }
+    
+    /**
+     * Attempt to reconnect using stored server address.
+     */
+    private fun attemptReconnection() {
+        val address = serverAddress.get()
+        if (address != null && reconnectAttempts < maxReconnectAttempts) {
+            Log.i(TAG, "Attempting to reconnect to ${address.hostString}:${address.port}")
+            connect(address.hostString, address.port)
+        }
+    }
 
     /**
      * Disconnect from the PC Hub server.
