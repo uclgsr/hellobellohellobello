@@ -1,12 +1,16 @@
 package com.yourcompany.sensorspoke.sensors.gsr
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.shimmerresearch.android.Shimmer
 import com.shimmerresearch.android.guiUtilities.ShimmerBluetoothDialog
 import com.shimmerresearch.androidradiodriver.Shimmer3BLEAndroid
@@ -573,6 +577,13 @@ class ShimmerRecorder(
     override suspend fun start(sessionDir: File) {
         if (!sessionDir.exists()) sessionDir.mkdirs()
 
+        // Check Bluetooth permissions before attempting connection
+        if (!hasBluetoothPermissions()) {
+            Log.w(TAG, "Bluetooth permissions not granted - starting in simulation mode")
+            startSimulationRecording(sessionDir)
+            return
+        }
+
         // Initialize CSV file
         csvFile = File(sessionDir, "gsr_data.csv")
         csvWriter = BufferedWriter(FileWriter(csvFile!!))
@@ -608,7 +619,7 @@ class ShimmerRecorder(
 
             // Fall back to simulation mode for testing
             Log.w(TAG, "Starting GSR simulation mode")
-            startSimulationMode()
+            startSimulationRecording(sessionDir)
         }
     }
 
@@ -800,6 +811,56 @@ class ShimmerRecorder(
             deviceInfo = gsrIntegrationManager?.getSelectedDeviceInfo(),
             outputFile = csvFile?.absolutePath,
         )
+
+    /**
+     * Check if all required Bluetooth permissions are granted
+     */
+    private fun hasBluetoothPermissions(): Boolean {
+        val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        } else {
+            arrayOf(
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        }
+        
+        return requiredPermissions.all { permission ->
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    /**
+     * Start simulation recording with proper CSV file initialization
+     */
+    private suspend fun startSimulationRecording(sessionDir: File) {
+        try {
+            // Initialize CSV file if not already done
+            if (csvFile == null) {
+                csvFile = File(sessionDir, "gsr_data.csv")
+                csvWriter = BufferedWriter(FileWriter(csvFile!!))
+                
+                // Write CSV header
+                csvWriter!!.write("${ShimmerGSRIntegrationManager.CSV_HEADER}\n")
+                csvWriter!!.flush()
+            }
+            
+            isRecording = true
+            Log.i(TAG, "Starting GSR simulation recording to ${csvFile?.absolutePath}")
+            
+            // Start simulation mode
+            startSimulationMode()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start simulation recording: ${e.message}", e)
+            throw e
+        }
+    }
 }
 
 /**

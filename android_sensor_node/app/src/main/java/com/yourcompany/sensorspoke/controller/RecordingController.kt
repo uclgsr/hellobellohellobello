@@ -2,6 +2,7 @@ package com.yourcompany.sensorspoke.controller
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,6 +13,9 @@ import java.util.*
 /**
  * RecordingController coordinates start/stop across sensor recorders and manages
  * the lifecycle of a recording session, including session directory creation.
+ * 
+ * Provides synchronized session management with common timestamp reference
+ * for multi-modal data alignment.
  */
 class RecordingController(
     private val context: Context?,
@@ -32,6 +36,10 @@ class RecordingController(
 
     private val recorders = mutableListOf<RecorderEntry>()
     private var sessionRootDir: File? = null
+    
+    // Synchronized session timing for multi-modal alignment
+    private var sessionStartTimestampNs: Long = 0L
+    private var sessionStartTimestampMs: Long = 0L
 
     /**
      * Register a recorder under a unique name; its data will be stored under sessionDir/<name>.
@@ -46,7 +54,7 @@ class RecordingController(
 
     /**
      * Starts a new session with an optional provided sessionId. When null, a new id is generated.
-     * Creates the session directory tree and starts all registered recorders.
+     * Creates the session directory tree and starts all registered recorders with synchronized timing.
      */
     suspend fun startSession(sessionId: String? = null) {
         if (_state.value != State.IDLE) return
@@ -56,19 +64,34 @@ class RecordingController(
             val root = ensureSessionsRoot()
             val sessionDir = File(root, id)
             if (!sessionDir.exists()) sessionDir.mkdirs()
+            
+            // Capture synchronized session start timestamps
+            sessionStartTimestampNs = System.nanoTime()
+            sessionStartTimestampMs = System.currentTimeMillis()
+            
+            Log.i("RecordingController", "Starting session: $id with ${recorders.size} recorders")
+            Log.i("RecordingController", "Session start timestamp: ${sessionStartTimestampMs}ms / ${sessionStartTimestampNs}ns")
+            
+            // Create session metadata file
+            createSessionMetadata(sessionDir, id)
+            
             // Create per-recorder subdirs first
             for (entry in recorders) {
                 File(sessionDir, entry.name).mkdirs()
             }
-            // Start all recorders
+            // Start all recorders with synchronized timing
             for (entry in recorders) {
                 val sub = File(sessionDir, entry.name)
+                Log.d("RecordingController", "Starting ${entry.name} recorder")
                 entry.recorder.start(sub)
             }
             sessionRootDir = sessionDir
             _currentSessionId.value = id
             _state.value = State.RECORDING
+            
+            Log.i("RecordingController", "Session $id started successfully with all recorders")
         } catch (t: Throwable) {
+            Log.e("RecordingController", "Failed to start session: ${t.message}", t)
             // Best-effort cleanup: stop any started recorders
             safeStopAll()
             _currentSessionId.value = null
@@ -80,14 +103,42 @@ class RecordingController(
 
     /**
      * Stops the current session and all recorders, leaving files on disk.
+     * Updates session metadata with completion information.
      */
     suspend fun stopSession() {
         if (_state.value != State.RECORDING) return
         _state.value = State.STOPPING
+        
+        val sessionId = _currentSessionId.value
+        val sessionDir = sessionRootDir
+        val sessionEndTimestampNs = System.nanoTime()
+        val sessionEndTimestampMs = System.currentTimeMillis()
+        val sessionDurationMs = sessionEndTimestampMs - sessionStartTimestampMs
+        
+        Log.i("RecordingController", "Stopping session: $sessionId")
+        Log.i("RecordingController", "Session duration: ${sessionDurationMs}ms")
+        
         try {
+            val stopResults = mutableMapOf<String, Boolean>()
+            
             for (entry in recorders) {
-                runCatching { entry.recorder.stop() }
+                val result = runCatching { 
+                    entry.recorder.stop()
+                    true
+                }.getOrElse { e ->
+                    Log.e("RecordingController", "Error stopping ${entry.name} recorder: ${e.message}", e)
+                    false
+                }
+                stopResults[entry.name] = result
             }
+            
+            // Update session metadata with completion info
+            if (sessionDir != null && sessionId != null) {
+                updateSessionMetadata(sessionDir, sessionId, sessionEndTimestampMs, sessionEndTimestampNs, sessionDurationMs, stopResults)
+            }
+            
+            Log.i("RecordingController", "Session $sessionId stopped. Results: $stopResults")
+            
         } finally {
             _state.value = State.IDLE
             _currentSessionId.value = null
@@ -125,4 +176,98 @@ class RecordingController(
             runCatching { entry.recorder.stop() }
         }
     }
+
+    /**
+     * Create session metadata file with synchronized timing information
+     */
+    private fun createSessionMetadata(sessionDir: File, sessionId: String) {
+        try {
+            val metadataFile = File(sessionDir, "session_metadata.json")
+            val metadata = """
+                {
+                    "session_id": "$sessionId",
+                    "start_timestamp_ms": $sessionStartTimestampMs,
+                    "start_timestamp_ns": $sessionStartTimestampNs,
+                    "device_model": "${Build.MODEL}",
+                    "device_manufacturer": "${Build.MANUFACTURER}",
+                    "android_version": "${Build.VERSION.RELEASE}",
+                    "app_version": "1.0.0",
+                    "recorders": [${recorders.joinToString(",") { "\"${it.name}\"" }}],
+                    "session_status": "STARTED",
+                    "created_at": "${java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date(sessionStartTimestampMs))}"
+                }
+            """.trimIndent()
+            
+            metadataFile.writeText(metadata, Charsets.UTF_8)
+            Log.d("RecordingController", "Session metadata created: ${metadataFile.absolutePath}")
+        } catch (e: Exception) {
+            Log.e("RecordingController", "Failed to create session metadata: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Update session metadata file with completion information
+     */
+    private fun updateSessionMetadata(
+        sessionDir: File, 
+        sessionId: String, 
+        endTimestampMs: Long, 
+        endTimestampNs: Long, 
+        durationMs: Long,
+        stopResults: Map<String, Boolean>
+    ) {
+        try {
+            val metadataFile = File(sessionDir, "session_metadata.json")
+            val allRecordersSuccess = stopResults.values.all { it }
+            val failedRecorders = stopResults.filterNot { it.value }.keys.toList()
+            
+            val metadata = """
+                {
+                    "session_id": "$sessionId",
+                    "start_timestamp_ms": $sessionStartTimestampMs,
+                    "start_timestamp_ns": $sessionStartTimestampNs,
+                    "end_timestamp_ms": $endTimestampMs,
+                    "end_timestamp_ns": $endTimestampNs,
+                    "duration_ms": $durationMs,
+                    "device_model": "${Build.MODEL}",
+                    "device_manufacturer": "${Build.MANUFACTURER}",
+                    "android_version": "${Build.VERSION.RELEASE}",
+                    "app_version": "1.0.0",
+                    "recorders": [${recorders.joinToString(",") { "\"${it.name}\"" }}],
+                    "session_status": "${if (allRecordersSuccess) "COMPLETED" else "COMPLETED_WITH_ERRORS"}",
+                    "failed_recorders": [${failedRecorders.joinToString(",") { "\"$it\"" }}],
+                    "recorder_results": {${stopResults.entries.joinToString(",") { "\"${it.key}\": ${it.value}" }}},
+                    "created_at": "${java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date(sessionStartTimestampMs))}",
+                    "completed_at": "${java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date(endTimestampMs))}"
+                }
+            """.trimIndent()
+            
+            metadataFile.writeText(metadata, Charsets.UTF_8)
+            Log.d("RecordingController", "Session metadata updated: ${metadataFile.absolutePath}")
+        } catch (e: Exception) {
+            Log.e("RecordingController", "Failed to update session metadata: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Get session timing information for external use
+     */
+    fun getSessionTiming(): SessionTiming? {
+        return if (sessionStartTimestampNs > 0L) {
+            SessionTiming(
+                startTimestampNs = sessionStartTimestampNs,
+                startTimestampMs = sessionStartTimestampMs,
+                sessionId = _currentSessionId.value
+            )
+        } else null
+    }
+
+    /**
+     * Session timing information for multi-modal data alignment
+     */
+    data class SessionTiming(
+        val startTimestampNs: Long,
+        val startTimestampMs: Long,
+        val sessionId: String?
+    )
 }
