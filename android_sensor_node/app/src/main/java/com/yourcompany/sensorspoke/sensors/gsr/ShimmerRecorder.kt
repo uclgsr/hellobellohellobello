@@ -74,8 +74,8 @@ class LoggingOnlyShimmerManager(
     private var loggingCallback: ShimmerLoggingCallback? = null
     
     // Connection and logging state
-    private var isConnected = false
-    private var isLogging = false
+    @Volatile private var isConnected = false
+    @Volatile private var isLogging = false
     private var selectedDeviceAddress: String? = null
     private var selectedDeviceName: String? = null
     private var loggingConfig = DEFAULT_CONFIG
