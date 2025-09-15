@@ -46,6 +46,10 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
+    companion object {
+        private const val TAG = "MainActivity"
+    }
+    
     private val vm: MainViewModel by viewModels()
 
     private var controller: RecordingController? = null

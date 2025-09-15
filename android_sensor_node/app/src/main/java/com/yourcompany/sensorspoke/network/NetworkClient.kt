@@ -3,6 +3,8 @@ package com.yourcompany.sensorspoke.network
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import java.io.IOException
 import java.io.OutputStream
@@ -44,6 +46,10 @@ class NetworkClient(
     // Connection health monitoring
     private var lastSuccessfulMessage: Long = 0
     private val healthCheckIntervalMs: Long = 30000L // 30 seconds
+    
+    // Handler for retry scheduling
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var retryRunnable: Runnable? = null
 
     /**
      * Register this device as an NSD service for PC Hub discovery.
@@ -134,9 +140,18 @@ class NetworkClient(
             // Auto-retry if enabled and under max attempts
             if (autoReconnect && reconnectAttempts < maxReconnectAttempts) {
                 reconnectAttempts++
-                Log.i(TAG, "Scheduling reconnection attempt in ${reconnectDelayMs}ms...")
-                // Note: In production, this should use a Handler or coroutine
-                // For now, we'll just log the intent to retry
+                val delayMs = reconnectDelayMs * reconnectAttempts // Exponential backoff
+                Log.i(TAG, "Scheduling reconnection attempt ${reconnectAttempts}/$maxReconnectAttempts in ${delayMs}ms...")
+                
+                // Cancel any existing retry
+                retryRunnable?.let { mainHandler.removeCallbacks(it) }
+                
+                // Schedule actual retry attempt
+                retryRunnable = Runnable {
+                    Log.i(TAG, "Executing scheduled reconnection attempt to $host:$port")
+                    connect(host, port)
+                }
+                mainHandler.postDelayed(retryRunnable!!, delayMs)
                 false
             } else {
                 Log.w(TAG, "Max reconnection attempts reached or auto-reconnect disabled")
@@ -196,9 +211,46 @@ class NetworkClient(
      */
     private fun attemptReconnection() {
         val address = serverAddress.get()
-        if (address != null && reconnectAttempts < maxReconnectAttempts) {
+        if (address != null && reconnectAttempts < maxReconnectAttempts && autoReconnect) {
             Log.i(TAG, "Attempting to reconnect to ${address.hostString}:${address.port}")
-            connect(address.hostString, address.port)
+            
+            // Use the same retry logic as the main connect method
+            val delayMs = reconnectDelayMs * (reconnectAttempts + 1)
+            reconnectAttempts++
+            
+            // Cancel any existing retry
+            retryRunnable?.let { mainHandler.removeCallbacks(it) }
+            
+            // Schedule reconnection attempt
+            retryRunnable = Runnable {
+                Log.i(TAG, "Executing scheduled reconnection to ${address.hostString}:${address.port}")
+                val success = try {
+                    val newSocket = Socket()
+                    newSocket.connect(address, connectionTimeoutMs)
+                    newSocket.soTimeout = connectionTimeoutMs
+                    
+                    socket.set(newSocket)
+                    isConnected.set(true)
+                    reconnectAttempts = 0 // Reset on success
+                    lastSuccessfulMessage = System.currentTimeMillis()
+                    
+                    Log.i(TAG, "Reconnection successful to ${address.hostString}:${address.port}")
+                    true
+                } catch (e: Exception) {
+                    Log.e(TAG, "Reconnection failed to ${address.hostString}:${address.port}", e)
+                    false
+                }
+                
+                // If reconnection failed and we can still retry, schedule another attempt
+                if (!success && reconnectAttempts < maxReconnectAttempts && autoReconnect) {
+                    attemptReconnection()
+                }
+            }
+            
+            mainHandler.postDelayed(retryRunnable!!, delayMs)
+            Log.i(TAG, "Scheduled reconnection attempt ${reconnectAttempts}/$maxReconnectAttempts in ${delayMs}ms")
+        } else {
+            Log.w(TAG, "Cannot reconnect: address=${address != null}, attempts=$reconnectAttempts/$maxReconnectAttempts, autoReconnect=$autoReconnect")
         }
     }
 
@@ -207,6 +259,13 @@ class NetworkClient(
      */
     fun disconnect() {
         isConnected.set(false)
+        
+        // Cancel any pending retry attempts
+        retryRunnable?.let { 
+            mainHandler.removeCallbacks(it)
+            retryRunnable = null
+        }
+        
         socket.getAndSet(null)?.let { s ->
             try {
                 if (!s.isClosed) {
@@ -240,6 +299,9 @@ class NetworkClient(
             outputStream.write('\n'.code)
             outputStream.flush()
 
+            // Update last successful message timestamp
+            lastSuccessfulMessage = System.currentTimeMillis()
+            
             Log.d(TAG, "Message sent successfully: ${message.take(100)}...")
             true
         } catch (e: IOException) {
@@ -283,12 +345,16 @@ class NetworkClient(
     fun getServerAddress(): String? = serverAddress.get()?.let { "${it.hostString}:${it.port}" }
 
     /**
-     * Mark connection as lost and trigger cleanup.
+     * Mark connection as lost and trigger cleanup and reconnection.
      */
     private fun markConnectionLost() {
         if (isConnected.getAndSet(false)) {
             Log.w(TAG, "Connection marked as lost")
-            // Don't close socket immediately - let reconnect logic handle it
+            // Trigger reconnection if auto-reconnect is enabled
+            if (autoReconnect) {
+                Log.i(TAG, "Auto-reconnect enabled, attempting to reconnect...")
+                attemptReconnection()
+            }
         }
     }
 
@@ -302,6 +368,9 @@ class NetworkClient(
             "socket_closed" to (socket.get()?.isClosed ?: true),
             "auto_reconnect" to autoReconnect,
             "timeout_ms" to connectionTimeoutMs,
+            "reconnect_attempts" to reconnectAttempts,
+            "max_reconnect_attempts" to maxReconnectAttempts,
+            "retry_scheduled" to (retryRunnable != null)
         )
 
     /**
@@ -310,9 +379,36 @@ class NetworkClient(
     fun getUserFriendlyStatus(): String =
         when {
             isConnected() -> "Connected to PC Hub: ${getServerAddress()}"
-            serverAddress.get() != null -> "Disconnected (attempting to reconnect...)"
+            retryRunnable != null -> "Reconnecting to PC Hub (attempt $reconnectAttempts/$maxReconnectAttempts)..."
+            serverAddress.get() != null && autoReconnect -> "Disconnected (will retry connection)"
+            serverAddress.get() != null -> "Disconnected from PC Hub"
             else -> "Not connected to PC Hub"
         }
+
+    /**
+     * Clean up resources and cancel any pending operations.
+     * Should be called when the NetworkClient is no longer needed.
+     */
+    fun cleanup() {
+        Log.i(TAG, "Cleaning up NetworkClient resources...")
+        
+        // Stop discovery
+        stopDiscovery()
+        
+        // Unregister service
+        unregister()
+        
+        // Cancel retry operations
+        retryRunnable?.let { 
+            mainHandler.removeCallbacks(it)
+            retryRunnable = null
+        }
+        
+        // Disconnect
+        disconnect()
+        
+        Log.i(TAG, "NetworkClient cleanup completed")
+    }
 
     // PC Discovery functionality
     private var discoveryListener: NsdManager.DiscoveryListener? = null
