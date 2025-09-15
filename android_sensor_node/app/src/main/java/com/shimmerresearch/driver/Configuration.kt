@@ -22,7 +22,7 @@ object Configuration {
         /**
          * Channel types for data formats
          */
-        enum class CHANNEL_TYPE {
+        enum class ChannelType {
             RAW, // Raw ADC values
             CAL, // Calibrated values
             UNCAL, // Uncalibrated values
@@ -43,7 +43,7 @@ object Configuration {
         /**
          * GSR range settings
          */
-        object GSR_RANGE {
+        object GsrRange {
             const val AUTO = 0
             const val RANGE_4_7M = 1 // 4.7MΩ - Most sensitive
             const val RANGE_2_3M = 2 // 2.3MΩ
@@ -54,7 +54,7 @@ object Configuration {
         /**
          * Sampling rates supported by Shimmer3
          */
-        object SAMPLING_RATE {
+        object SamplingRate {
             const val RATE_1HZ = 1.0
             const val RATE_10HZ = 10.24
             const val RATE_51HZ = 51.2
@@ -69,7 +69,7 @@ object Configuration {
         /**
          * Communication types
          */
-        enum class COMMUNICATION_TYPE {
+        enum class CommunicationType {
             BLUETOOTH,
             BLUETOOTH_LE,
             DOCK,

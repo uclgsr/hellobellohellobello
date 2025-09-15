@@ -14,8 +14,12 @@ import com.shimmerresearch.bluetooth.ShimmerBluetooth
 import com.shimmerresearch.driver.Configuration
 import com.shimmerresearch.driver.ObjectCluster
 import com.shimmerresearch.exceptions.ShimmerException
-import kotlinx.coroutines.*
-import java.util.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.sin
 import kotlin.random.Random
@@ -81,7 +85,7 @@ class Shimmer3BLEAndroid(
             scanAndConnect(bluetoothAddress, deviceName)
         } catch (e: Exception) {
             Log.e(TAG, "Error initiating connection: ${e.message}", e)
-            processStateChange(ShimmerBluetooth.BT_STATE.DISCONNECTED)
+            processStateChange(ShimmerBluetooth.BtState.DISCONNECTED)
         }
     }
 
@@ -95,7 +99,7 @@ class Shimmer3BLEAndroid(
         }
 
         mIsScanning = true
-        processStateChange(ShimmerBluetooth.BT_STATE.CONNECTING)
+        processStateChange(ShimmerBluetooth.BtState.CONNECTING)
 
         BleManager.getInstance().scan(
             object : BleScanCallback() {
@@ -131,7 +135,7 @@ class Shimmer3BLEAndroid(
                     if (mBleDevice == null) {
                         Log.w(TAG, "No Shimmer device found, starting simulation mode")
                         startSimulationMode()
-                        processStateChange(ShimmerBluetooth.BT_STATE.CONNECTED)
+                        processStateChange(ShimmerBluetooth.BtState.CONNECTED)
                         sendToastMessage("Connected to Shimmer device (simulation)")
                     }
                 }
@@ -154,12 +158,12 @@ class Shimmer3BLEAndroid(
                     exception: BleException,
                 ) {
                     Log.e(TAG, "BLE connection failed: ${exception.description}")
-                    processStateChange(ShimmerBluetooth.BT_STATE.DISCONNECTED)
+                    processStateChange(ShimmerBluetooth.BtState.DISCONNECTED)
 
                     // Fall back to simulation mode
                     Log.i(TAG, "Falling back to simulation mode")
                     startSimulationMode()
-                    processStateChange(ShimmerBluetooth.BT_STATE.CONNECTED)
+                    processStateChange(ShimmerBluetooth.BtState.CONNECTED)
                     sendToastMessage("Connected to Shimmer device (simulation)")
                 }
 
@@ -172,7 +176,7 @@ class Shimmer3BLEAndroid(
                     mBleDevice = bleDevice
                     mIsConnected = true
 
-                    processStateChange(ShimmerBluetooth.BT_STATE.CONNECTED)
+                    processStateChange(ShimmerBluetooth.BtState.CONNECTED)
                     sendToastMessage("Connected to ${bleDevice.name}")
 
                     // Initialize device configuration
@@ -193,7 +197,7 @@ class Shimmer3BLEAndroid(
                     mIsStreaming = false
                     mBleDevice = null
 
-                    processStateChange(ShimmerBluetooth.BT_STATE.DISCONNECTED)
+                    processStateChange(ShimmerBluetooth.BtState.DISCONNECTED)
                     stopDataProcessing()
                 }
             },
@@ -270,7 +274,7 @@ class Shimmer3BLEAndroid(
                         ) {
                             Log.d(TAG, "Start streaming command sent successfully")
                             mIsStreaming = true
-                            processStateChange(ShimmerBluetooth.BT_STATE.STREAMING)
+                            processStateChange(ShimmerBluetooth.BtState.STREAMING)
                             processNotificationMessage(NOTIFICATION_SHIMMER_START_STREAMING)
                             startDataProcessing()
                         }
@@ -283,7 +287,7 @@ class Shimmer3BLEAndroid(
             } ?: run {
                 // No real device, use simulation
                 mIsStreaming = true
-                processStateChange(ShimmerBluetooth.BT_STATE.STREAMING)
+                processStateChange(ShimmerBluetooth.BtState.STREAMING)
                 processNotificationMessage(NOTIFICATION_SHIMMER_START_STREAMING)
                 sendToastMessage("Started streaming (simulation)")
             }
@@ -332,7 +336,7 @@ class Shimmer3BLEAndroid(
     private fun finalizeStopStreaming() {
         mIsStreaming = false
         stopDataProcessing()
-        processStateChange(ShimmerBluetooth.BT_STATE.CONNECTED)
+        processStateChange(ShimmerBluetooth.BtState.CONNECTED)
         processNotificationMessage(NOTIFICATION_SHIMMER_STOP_STREAMING)
     }
 
@@ -428,7 +432,7 @@ class Shimmer3BLEAndroid(
             val timestampCal = timestamp.toDouble()
             objectCluster.addData(
                 Configuration.Shimmer3.ObjectClusterSensorName.TIMESTAMP,
-                Configuration.Shimmer3.CHANNEL_TYPE.CAL
+                Configuration.Shimmer3.ChannelType.CAL
                     .toString(),
                 "mS",
                 timestampCal,
@@ -496,7 +500,7 @@ class Shimmer3BLEAndroid(
 
                         objectCluster.addData(
                             Configuration.Shimmer3.ObjectClusterSensorName.TIMESTAMP,
-                            Configuration.Shimmer3.CHANNEL_TYPE.CAL
+                            Configuration.Shimmer3.ChannelType.CAL
                                 .toString(),
                             "mS",
                             timestamp,

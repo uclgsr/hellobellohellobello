@@ -1,20 +1,20 @@
 package com.yourcompany.sensorspoke.controller
 
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mock
-import org.mockito.MockitoAnnotations
 import java.io.File
 import java.nio.file.Files
-import kotlin.test.assertFailsWith
 
 class RecordingControllerComprehensiveTest {
-    @Mock
     private lateinit var mockContext: android.content.Context
 
     private lateinit var tempDir: File
@@ -59,7 +59,7 @@ class RecordingControllerComprehensiveTest {
 
     @Before
     fun setup() {
-        MockitoAnnotations.openMocks(this)
+        mockContext = mockk<android.content.Context>(relaxed = true)
         tempDir = Files.createTempDirectory("recording_controller_test").toFile()
         sessionsRoot = File(tempDir, "sessions").apply { mkdirs() }
         recordingController = RecordingController(context = mockContext, sessionsRootOverride = sessionsRoot)
@@ -172,8 +172,8 @@ class RecordingControllerComprehensiveTest {
             assertEquals(RecordingController.State.RECORDING, recordingController.state.value)
 
             // Attempting to start another session should fail
-            assertFailsWith<IllegalStateException> {
-                recordingController.startSession("second_session")
+            assertThrows(IllegalStateException::class.java) {
+                runTest { recordingController.startSession("second_session") }
             }
 
             // First session should still be active

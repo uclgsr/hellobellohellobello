@@ -21,6 +21,7 @@ import com.yourcompany.sensorspoke.ui.components.TC001SystemStatusView
 import com.yourcompany.sensorspoke.ui.components.ThermalControlsView
 import com.yourcompany.sensorspoke.ui.navigation.ThermalNavigationState
 import kotlinx.coroutines.launch
+import kotlin.math.sqrt
 
 /**
  * Enhanced ThermalPreviewFragment with IRCamera-style architecture

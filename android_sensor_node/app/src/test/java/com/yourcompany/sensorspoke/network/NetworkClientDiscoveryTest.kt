@@ -7,7 +7,11 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.slot
+import io.mockk.spyk
 import io.mockk.verify
 import org.junit.Before
 import org.junit.Test

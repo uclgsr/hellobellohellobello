@@ -5,11 +5,15 @@ import android.hardware.usb.UsbDevice
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import kotlinx.coroutines.*
-// IRCamera integration - using proven classes from the topdon library
 import com.infisense.iruvc.usb.USBMonitor
 import com.infisense.iruvc.uvc.UVCCamera
 import com.infisense.iruvc.uvc.UVCType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * TC001Connector - Core thermal camera connection handler using IRCamera integration

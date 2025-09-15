@@ -1,5 +1,6 @@
 package com.yourcompany.sensorspoke
 
+import org.junit.Assert.fail
 import org.junit.Assume
 import org.junit.Test
 import java.io.File

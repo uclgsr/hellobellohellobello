@@ -15,7 +15,12 @@ import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.network.FileTransferManager
 import com.yourcompany.sensorspoke.network.NetworkClient
 import com.yourcompany.sensorspoke.utils.PreviewBus
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedInputStream
@@ -24,7 +29,7 @@ import java.io.ByteArrayOutputStream
 import java.io.OutputStreamWriter
 import java.net.ServerSocket
 import java.net.Socket
-import java.util.*
+import java.util.Collections
 
 /**
  * Foreground service that advertises an NSD (Zeroconf) service and hosts a
@@ -41,7 +46,7 @@ class RecordingService : Service() {
         const val EXTRA_FLASH_TS_NS = "flash_ts_ns"
     }
 
-    private val scope = CoroutineScope(Dispatchers.IO + Job())
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var serverSocket: ServerSocket? = null
     private var serverPort: Int = 0
     private lateinit var networkClient: NetworkClient

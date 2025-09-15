@@ -484,6 +484,10 @@ class NetworkController(QObject):
     log = pyqtSignal(str)
     device_capabilities = pyqtSignal(str, dict)  # name, payload
     preview_frame = pyqtSignal(str, bytes, int)  # device name, jpeg bytes, ts
+    # Enhanced connection status signals
+    device_connected = pyqtSignal(str, bool)  # name, success
+    device_disconnected = pyqtSignal(str)  # name
+    connection_error = pyqtSignal(str, str)  # name, error_message
 
     def __init__(self) -> None:
         super().__init__()
@@ -495,6 +499,13 @@ class NetworkController(QObject):
         self._stream_workers: dict[str, PreviewStreamWorker] = {}
         self._clock_offsets_ns: dict[str, int] = {}
         self._clock_sync_stats: dict[str, dict] = {}
+        
+        # Connection state tracking
+        self._connected_devices: set[str] = set()
+        self._connection_attempts: dict[str, int] = {}
+        self._max_connection_retries = 3
+        self._connection_retry_delay = 2.0
+        
         # Auto re-sync policy (Priority 2 extension)
         try:
             self._resync_delay_threshold_ns: int = int(
@@ -662,7 +673,127 @@ class NetworkController(QObject):
             pass
 
     # Public API
-    def connect_to_device(self, name: str, address: str, port: int) -> None:
+    def start_discovery(self) -> None:
+        """Start or restart device discovery."""
+        try:
+            if self._browser is not None:
+                self._browser.cancel()
+                self._browser = None
+            
+            self._browser = ServiceBrowser(
+                self._zeroconf, SERVICE_TYPE, self._listener
+            )
+            self._emit_log("Device discovery started")
+        except Exception as exc:
+            self._emit_log(f"Failed to start discovery: {exc}")
+    
+    def connect_to_device(self, address: str, port: int, name: str = "") -> None:
+        """Enhanced connection with retry logic and status tracking."""
+        device_name = name or f"{address}:{port}"
+        
+        # Reset attempt counter for new connections
+        self._connection_attempts[device_name] = 0
+        
+        try:
+            device = DiscoveredDevice(name=device_name, address=address, port=port)
+            self._attempt_connection(device)
+        except Exception as exc:
+            self.connection_error.emit(device_name, str(exc))
+            self._emit_log(f"Connection to {device_name} failed: {exc}")
+    
+    def _attempt_connection(self, device: DiscoveredDevice) -> None:
+        """Attempt connection with retry logic."""
+        attempts = self._connection_attempts.get(device.name, 0)
+        
+        if attempts >= self._max_connection_retries:
+            error_msg = f"Max retries ({self._max_connection_retries}) exceeded"
+            self.connection_error.emit(device.name, error_msg)
+            self._emit_log(f"Connection to {device.name} failed: {error_msg}")
+            return
+        
+        self._connection_attempts[device.name] = attempts + 1
+        
+        try:
+            worker = ConnectionWorker(device, timeout=10.0)  # Longer timeout for stability
+            worker.log.connect(self._emit_log)
+            worker.capabilities.connect(self._on_capabilities)
+            worker.finished.connect(lambda: self._on_connection_finished(device))
+            self._workers[device.name] = worker
+            worker.start()
+            
+            self._emit_log(f"Connection attempt {attempts + 1} for {device.name}")
+            
+        except Exception as exc:
+            # Retry after delay if we haven't exceeded max attempts
+            if attempts < self._max_connection_retries - 1:
+                QTimer.singleShot(
+                    int(self._connection_retry_delay * 1000),
+                    lambda: self._attempt_connection(device)
+                )
+            else:
+                self.connection_error.emit(device.name, str(exc))
+            self._emit_log(f"Connection attempt {attempts + 1} failed for {device.name}: {exc}")
+    
+    def _on_connection_finished(self, device: DiscoveredDevice) -> None:
+        """Handle connection completion (success or failure)."""
+        if device.name in self._workers:
+            worker = self._workers[device.name]
+            if worker.isFinished():
+                # Check if connection was successful by presence of capabilities
+                success = device.name in self._clock_offsets_ns or device.name in self._connected_devices
+                if success:
+                    self._connected_devices.add(device.name)
+                    self.device_connected.emit(device.name, True)
+                    self._emit_log(f"Successfully connected to {device.name}")
+                    
+                    # Start preview stream worker
+                    self._start_preview_stream(device)
+                else:
+                    # Retry if we haven't exceeded max attempts
+                    attempts = self._connection_attempts.get(device.name, 0)
+                    if attempts < self._max_connection_retries:
+                        QTimer.singleShot(
+                            int(self._connection_retry_delay * 1000),
+                            lambda: self._attempt_connection(device)
+                        )
+                    else:
+                        self.device_connected.emit(device.name, False)
+    
+    def disconnect_device(self, name: str) -> None:
+        """Disconnect from a specific device."""
+        try:
+            # Stop connection worker
+            if name in self._workers:
+                worker = self._workers.pop(name)
+                worker.stop() if hasattr(worker, 'stop') else None
+                worker.wait(2000) if hasattr(worker, 'wait') else None
+            
+            # Stop preview stream worker
+            if name in self._stream_workers:
+                stream_worker = self._stream_workers.pop(name)
+                stream_worker.stop()
+                stream_worker.wait(2000)
+            
+            # Clean up connection state
+            self._connected_devices.discard(name)
+            self._connection_attempts.pop(name, None)
+            
+            self.device_disconnected.emit(name)
+            self._emit_log(f"Disconnected from {name}")
+            
+        except Exception as exc:
+            self._emit_log(f"Error disconnecting from {name}: {exc}")
+    
+    def get_connection_status(self, name: str) -> bool:
+        """Check if a device is currently connected."""
+        return name in self._connected_devices
+    
+    def get_connected_devices(self) -> list[str]:
+        """Get list of currently connected device names."""
+        return list(self._connected_devices)
+    
+    def connect_to_device_legacy(self, name: str, address: str, port: int) -> None:
+        """Legacy connection method for backward compatibility."""
         device = DiscoveredDevice(name=name, address=address, port=port)
         worker = ConnectionWorker(device)
         worker.log.connect(self._emit_log)

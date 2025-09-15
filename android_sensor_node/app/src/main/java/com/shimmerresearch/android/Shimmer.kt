@@ -7,7 +7,10 @@ import android.util.Log
 import com.shimmerresearch.bluetooth.ShimmerBluetooth
 import com.shimmerresearch.driver.ObjectCluster
 import com.shimmerresearch.exceptions.ShimmerException
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -169,7 +172,7 @@ abstract class Shimmer(
     /**
      * Process state change
      */
-    protected open fun processStateChange(state: ShimmerBluetooth.BT_STATE) {
+    protected open fun processStateChange(state: ShimmerBluetooth.BtState) {
         val objectCluster = ObjectCluster()
         objectCluster.mState = state
         objectCluster.setBluetoothAddress(mBluetoothAddress)

@@ -5,12 +5,26 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.yourcompany.sensorspoke.R
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.*
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001CalibrationManager
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001CalibrationType
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DataExporter
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DiagnosticSystem
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DiagnosticTestResult
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001ExportFormat
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001HealthStatus
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationManager
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationState
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001PerformanceMetrics
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001PerformanceMonitor
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001SystemHealth
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /**
  * TC001ManagementFragment - Comprehensive thermal system management interface

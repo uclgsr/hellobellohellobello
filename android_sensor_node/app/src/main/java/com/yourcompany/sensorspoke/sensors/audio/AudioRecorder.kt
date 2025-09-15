@@ -4,7 +4,13 @@ import android.content.Context
 import android.media.MediaRecorder
 import android.util.Log
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 
@@ -159,28 +165,42 @@ class AudioRecorder(
 
                 // Create comprehensive error report
                 val errorReportFile = File(sessionDir!!, "audio_recording_error.json")
-                val errorReport =
-                    buildString {
-                        append("{\n")
-                        append("  \"error_type\": \"AUDIO_RECORDING_FAILURE\",\n")
-                        append("  \"timestamp\": ${System.currentTimeMillis()},\n")
-                        append("  \"error_message\": \"${error.message?.replace("\"", "\\\"")}\",\n")
-                        append("  \"error_class\": \"${error.javaClass.simpleName}\",\n")
-                        append("  \"attempted_file\": \"${audioFile?.name}\",\n")
-                        append("  \"session_directory\": \"${sessionDir?.name}\",\n")
-                        append("  \"recovery_attempted\": true,\n")
-                        append("  \"alternative_methods_tried\": [\n")
-                        append("    \"MediaRecorder_retry\",\n")
-                        append("    \"AudioRecord_fallback\",\n")
-                        append("    \"AAC_format_fallback\"\n")
-                        append("  ],\n")
-                        append("  \"system_info\": {\n")
-                        append("    \"android_version\": ${android.os.Build.VERSION.SDK_INT},\n")
-                        append("    \"device_model\": \"${android.os.Build.MODEL}\",\n")
-                        append("    \"manufacturer\": \"${android.os.Build.MANUFACTURER}\"\n")
-                        append("  }\n")
-                        append("}\n")
+
+                // Create error report using safe JSON construction
+                val errorReport = try {
+                    val alternativeMethodsArray = JSONArray()
+                        .put("MediaRecorder_retry")
+                        .put("AudioRecord_fallback")
+                        .put("AAC_format_fallback")
+
+                    val systemInfo = JSONObject()
+                        .put("android_version", android.os.Build.VERSION.SDK_INT)
+                        .put("device_model", android.os.Build.MODEL ?: "unknown")
+                        .put("manufacturer", android.os.Build.MANUFACTURER ?: "unknown")
+
+                    JSONObject()
+                        .put("error_type", "AUDIO_RECORDING_FAILURE")
+                        .put("timestamp", System.currentTimeMillis())
+                        .put("error_message", error.message ?: "Unknown error")
+                        .put("error_class", error.javaClass.simpleName)
+                        .put("attempted_file", audioFile?.name ?: "unknown")
+                        .put("session_directory", sessionDir?.name ?: "unknown")
+                        .put("recovery_attempted", true)
+                        .put("alternative_methods_tried", alternativeMethodsArray)
+                        .put("system_info", systemInfo)
+                        .toString(2) // Pretty print with 2-space indent
+                } catch (jsonError: Exception) {
+                    Log.e(TAG, "Failed to create error report JSON", jsonError)
+                    // Fallback to simple text report
+                    """
+                    {
+                        "error_type": "AUDIO_RECORDING_FAILURE",
+                        "timestamp": ${System.currentTimeMillis()},
+                        "error_message": "JSON creation failed: ${jsonError.message}",
+                        "original_error": "${error.message ?: "Unknown error"}"
                     }
+                    """.trimIndent()
+                }
 
                 errorReportFile.writeText(errorReport)
 

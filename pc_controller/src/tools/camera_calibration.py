@@ -59,14 +59,17 @@ class CalibrationResult:
 
     @staticmethod
     def from_json_dict(data: dict[str, Any]) -> CalibrationResult:
-        return CalibrationResult(
-            camera_matrix=np.array(data["camera_matrix"], dtype=np.float64),
-            dist_coeffs=np.array(data["dist_coeffs"], dtype=np.float64),
-            rms_error=float(data["rms_error"]),
-            image_size=(int(data["image_size"][0]), int(data["image_size"][1])),
-            board_size=(int(data["board_size"][0]), int(data["board_size"][1])),
-            square_size=float(data["square_size"]),
-        )
+        try:
+            return CalibrationResult(
+                camera_matrix=np.array(data["camera_matrix"], dtype=np.float64),
+                dist_coeffs=np.array(data["dist_coeffs"], dtype=np.float64),
+                rms_error=float(data["rms_error"]),
+                image_size=(int(data["image_size"][0]), int(data["image_size"][1])),
+                board_size=(int(data["board_size"][0]), int(data["board_size"][1])),
+                square_size=float(data["square_size"]),
+            )
+        except (ValueError, TypeError, KeyError) as e:
+            raise ValueError(f"Invalid calibration data format: {e}") from e
 
 
 def _prepare_object_points(

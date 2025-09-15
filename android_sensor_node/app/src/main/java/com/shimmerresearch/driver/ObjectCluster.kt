@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class ObjectCluster {
     // State information
-    var mState: ShimmerBluetooth.BT_STATE = ShimmerBluetooth.BT_STATE.DISCONNECTED
+    var mState: ShimmerBluetooth.BtState = ShimmerBluetooth.BtState.DISCONNECTED
     private var mBluetoothAddress: String = ""
 
     // Data storage: sensorName -> formatType -> FormatCluster
