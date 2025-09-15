@@ -6,6 +6,9 @@ import android.net.nsd.NsdServiceInfo
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.IOException
 import java.io.OutputStream
@@ -149,7 +152,7 @@ class NetworkClient(
 
                 // Schedule actual retry attempt
                 retryRunnable = Runnable {
-                    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    GlobalScope.launch(Dispatchers.IO) {
                         Log.i(TAG, "Executing scheduled reconnection attempt to $host:$port")
                         connect(host, port)
                     }
