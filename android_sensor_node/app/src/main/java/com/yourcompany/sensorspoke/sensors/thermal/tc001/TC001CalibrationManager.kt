@@ -4,12 +4,15 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.*
-import kotlin.math.*
+import java.text.SimpleDateFormat
+import java.util.Locale
+import kotlin.math.abs
 
 /**
  * TC001CalibrationManager - Advanced thermal calibration system

@@ -15,7 +15,10 @@ import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.network.FileTransferManager
 import com.yourcompany.sensorspoke.network.NetworkClient
 import com.yourcompany.sensorspoke.utils.PreviewBus
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedInputStream
@@ -24,7 +27,7 @@ import java.io.ByteArrayOutputStream
 import java.io.OutputStreamWriter
 import java.net.ServerSocket
 import java.net.Socket
-import java.util.*
+import java.util.Collections
 
 /**
  * Foreground service that advertises an NSD (Zeroconf) service and hosts a

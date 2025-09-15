@@ -3,7 +3,11 @@ package com.yourcompany.sensorspoke.ui.components
 import android.content.Context
 import android.util.AttributeSet
 import android.view.View
-import android.widget.*
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.Spinner
+import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.sensors.thermal.TopdonThermalPalette

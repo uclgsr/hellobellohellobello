@@ -14,8 +14,9 @@ import com.shimmerresearch.bluetooth.ShimmerBluetooth
 import com.shimmerresearch.driver.Configuration
 import com.shimmerresearch.driver.ObjectCluster
 import com.shimmerresearch.exceptions.ShimmerException
-import kotlinx.coroutines.*
-import java.util.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.sin
 import kotlin.random.Random

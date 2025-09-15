@@ -7,13 +7,14 @@ import android.hardware.usb.UsbManager
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import kotlinx.coroutines.*
-
-// IRCamera integration - using actual proven classes from topdon library
 import com.infisense.iruvc.usb.USBMonitor
 import com.infisense.iruvc.uvc.UVCCamera
 import com.infisense.iruvc.uvc.UVCType
 import com.infisense.iruvc.utils.IFrameCallback
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * PRODUCTION-READY: IRCamera-Based Topdon TC001 Integration

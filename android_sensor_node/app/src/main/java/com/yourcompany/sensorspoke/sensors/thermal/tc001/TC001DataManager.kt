@@ -5,7 +5,9 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.yourcompany.sensorspoke.sensors.thermal.TopdonThermalPalette
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import java.nio.ByteBuffer
 
 // IRCamera integration - using proven data processing classes

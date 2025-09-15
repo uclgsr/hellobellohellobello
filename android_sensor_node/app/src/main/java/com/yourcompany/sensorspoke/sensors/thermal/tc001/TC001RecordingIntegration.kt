@@ -6,7 +6,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.yourcompany.sensorspoke.controller.RecordingController
 import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * TC001RecordingIntegration - Bridge between TC001 system and main recording pipeline
