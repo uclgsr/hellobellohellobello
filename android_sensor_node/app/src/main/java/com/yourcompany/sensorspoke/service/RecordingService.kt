@@ -17,7 +17,6 @@ import com.yourcompany.sensorspoke.network.NetworkClient
 import com.yourcompany.sensorspoke.utils.PreviewBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
