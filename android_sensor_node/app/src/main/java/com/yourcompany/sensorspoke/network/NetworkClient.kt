@@ -6,6 +6,7 @@ import android.net.nsd.NsdServiceInfo
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import org.json.JSONObject
 import java.io.IOException
 import java.io.OutputStream
 import java.net.InetSocketAddress
@@ -194,9 +195,18 @@ class NetworkClient(
         if (currentTime - lastSuccessfulMessage > healthCheckIntervalMs) {
             Log.w(TAG, "Connection appears stale, attempting to send heartbeat...")
             
-            // Try to send a simple heartbeat message
-            val heartbeat = """{"type":"heartbeat","timestamp":$currentTime}"""
-            if (!sendMessage(heartbeat)) {
+            // Try to send a simple heartbeat message using safe JSON construction
+            val heartbeatJson = try {
+                JSONObject()
+                    .put("type", "heartbeat")
+                    .put("timestamp", currentTime)
+                    .toString()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create heartbeat JSON", e)
+                return false
+            }
+            
+            if (!sendMessage(heartbeatJson)) {
                 Log.w(TAG, "Heartbeat failed, connection may be lost")
                 if (autoReconnect) {
                     attemptReconnection()

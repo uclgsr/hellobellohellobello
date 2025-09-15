@@ -6,6 +6,8 @@ import android.util.Log
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -197,20 +199,38 @@ class RecordingController(
     private fun createSessionMetadata(sessionDir: File, sessionId: String) {
         try {
             val metadataFile = File(sessionDir, "session_metadata.json")
-            val metadata = """
+            
+            // Create metadata using safe JSON construction
+            val metadata = try {
+                val recordersArray = JSONArray()
+                recorders.forEach { recordersArray.put(it.name) }
+                
+                val dateFormatter = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
+                
+                JSONObject()
+                    .put("session_id", sessionId)
+                    .put("start_timestamp_ms", sessionStartTimestampMs)
+                    .put("start_timestamp_ns", sessionStartTimestampNs)
+                    .put("device_model", Build.MODEL ?: "unknown")
+                    .put("device_manufacturer", Build.MANUFACTURER ?: "unknown")
+                    .put("android_version", Build.VERSION.RELEASE ?: "unknown")
+                    .put("app_version", "1.0.0")
+                    .put("recorders", recordersArray)
+                    .put("session_status", "STARTED")
+                    .put("created_at", dateFormatter.format(java.util.Date(sessionStartTimestampMs)))
+                    .toString(2) // Pretty print with 2-space indent
+            } catch (jsonError: Exception) {
+                Log.e("RecordingController", "Failed to create session metadata JSON", jsonError)
+                // Fallback to basic metadata
+                """
                 {
                     "session_id": "$sessionId",
                     "start_timestamp_ms": $sessionStartTimestampMs,
-                    "start_timestamp_ns": $sessionStartTimestampNs,
-                    "device_model": "${Build.MODEL}",
-                    "device_manufacturer": "${Build.MANUFACTURER}",
-                    "android_version": "${Build.VERSION.RELEASE}",
-                    "app_version": "1.0.0",
-                    "recorders": [${recorders.joinToString(",") { "\"${it.name}\"" }}],
                     "session_status": "STARTED",
-                    "created_at": "${java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date(sessionStartTimestampMs))}"
+                    "error": "JSON creation failed: ${jsonError.message}"
                 }
-            """.trimIndent()
+                """.trimIndent()
+            }
             
             metadataFile.writeText(metadata, Charsets.UTF_8)
             Log.d("RecordingController", "Session metadata created: ${metadataFile.absolutePath}")
@@ -235,26 +255,50 @@ class RecordingController(
             val allRecordersSuccess = stopResults.values.all { it }
             val failedRecorders = stopResults.filterNot { it.value }.keys.toList()
             
-            val metadata = """
+            // Create completion metadata using safe JSON construction
+            val metadata = try {
+                val recordersArray = JSONArray()
+                recorders.forEach { recordersArray.put(it.name) }
+                
+                val failedRecordersArray = JSONArray()
+                failedRecorders.forEach { failedRecordersArray.put(it) }
+                
+                val recorderResultsObject = JSONObject()
+                stopResults.forEach { (key, value) -> recorderResultsObject.put(key, value) }
+                
+                val dateFormatter = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
+                
+                JSONObject()
+                    .put("session_id", sessionId)
+                    .put("start_timestamp_ms", sessionStartTimestampMs)
+                    .put("start_timestamp_ns", sessionStartTimestampNs)
+                    .put("end_timestamp_ms", endTimestampMs)
+                    .put("end_timestamp_ns", endTimestampNs)
+                    .put("duration_ms", durationMs)
+                    .put("device_model", Build.MODEL ?: "unknown")
+                    .put("device_manufacturer", Build.MANUFACTURER ?: "unknown")
+                    .put("android_version", Build.VERSION.RELEASE ?: "unknown")
+                    .put("app_version", "1.0.0")
+                    .put("recorders", recordersArray)
+                    .put("session_status", if (allRecordersSuccess) "COMPLETED" else "COMPLETED_WITH_ERRORS")
+                    .put("failed_recorders", failedRecordersArray)
+                    .put("recorder_results", recorderResultsObject)
+                    .put("created_at", dateFormatter.format(java.util.Date(sessionStartTimestampMs)))
+                    .put("completed_at", dateFormatter.format(java.util.Date(endTimestampMs)))
+                    .toString(2) // Pretty print with 2-space indent
+            } catch (jsonError: Exception) {
+                Log.e("RecordingController", "Failed to create completion metadata JSON", jsonError)
+                // Fallback to basic metadata
+                """
                 {
                     "session_id": "$sessionId",
-                    "start_timestamp_ms": $sessionStartTimestampMs,
-                    "start_timestamp_ns": $sessionStartTimestampNs,
                     "end_timestamp_ms": $endTimestampMs,
-                    "end_timestamp_ns": $endTimestampNs,
                     "duration_ms": $durationMs,
-                    "device_model": "${Build.MODEL}",
-                    "device_manufacturer": "${Build.MANUFACTURER}",
-                    "android_version": "${Build.VERSION.RELEASE}",
-                    "app_version": "1.0.0",
-                    "recorders": [${recorders.joinToString(",") { "\"${it.name}\"" }}],
                     "session_status": "${if (allRecordersSuccess) "COMPLETED" else "COMPLETED_WITH_ERRORS"}",
-                    "failed_recorders": [${failedRecorders.joinToString(",") { "\"$it\"" }}],
-                    "recorder_results": {${stopResults.entries.joinToString(",") { "\"${it.key}\": ${it.value}" }}},
-                    "created_at": "${java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date(sessionStartTimestampMs))}",
-                    "completed_at": "${java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date(endTimestampMs))}"
+                    "error": "JSON creation failed: ${jsonError.message}"
                 }
-            """.trimIndent()
+                """.trimIndent()
+            }
             
             metadataFile.writeText(metadata, Charsets.UTF_8)
             Log.d("RecordingController", "Session metadata updated: ${metadataFile.absolutePath}")
