@@ -148,8 +148,10 @@ class NetworkClient(
                 
                 // Schedule actual retry attempt
                 retryRunnable = Runnable {
-                    Log.i(TAG, "Executing scheduled reconnection attempt to $host:$port")
-                    connect(host, port)
+                    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        Log.i(TAG, "Executing scheduled reconnection attempt to $host:$port")
+                        connect(host, port)
+                    }
                 }
                 mainHandler.postDelayed(retryRunnable!!, delayMs)
                 false
