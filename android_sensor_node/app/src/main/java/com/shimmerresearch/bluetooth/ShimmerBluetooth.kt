@@ -21,7 +21,7 @@ interface ShimmerBluetooth {
     /**
      * Bluetooth connection states matching official ShimmerAndroidAPI
      */
-    enum class BT_STATE {
+    enum class BtState {
         DISCONNECTED,
         CONNECTING,
         CONNECTED,

@@ -42,15 +42,15 @@ abstract class BasicProcessWithCallBack {
  * Callback object for state and data communication
  */
 class CallbackObject {
-    var mState: com.shimmerresearch.bluetooth.ShimmerBluetooth.BT_STATE =
-        com.shimmerresearch.bluetooth.ShimmerBluetooth.BT_STATE.DISCONNECTED
+    var mState: com.shimmerresearch.bluetooth.ShimmerBluetooth.BtState =
+        com.shimmerresearch.bluetooth.ShimmerBluetooth.BtState.DISCONNECTED
     var mBluetoothAddress: String = ""
     var mIndicator: Int = 0
     var mPayload: Any? = null
 
     constructor()
 
-    constructor(state: com.shimmerresearch.bluetooth.ShimmerBluetooth.BT_STATE, address: String) {
+    constructor(state: com.shimmerresearch.bluetooth.ShimmerBluetooth.BtState, address: String) {
         mState = state
         mBluetoothAddress = address
     }

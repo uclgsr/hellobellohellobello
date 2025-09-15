@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**

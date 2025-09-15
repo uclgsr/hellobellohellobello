@@ -172,7 +172,7 @@ abstract class Shimmer(
     /**
      * Process state change
      */
-    protected open fun processStateChange(state: ShimmerBluetooth.BT_STATE) {
+    protected open fun processStateChange(state: ShimmerBluetooth.BtState) {
         val objectCluster = ObjectCluster()
         objectCluster.mState = state
         objectCluster.setBluetoothAddress(mBluetoothAddress)

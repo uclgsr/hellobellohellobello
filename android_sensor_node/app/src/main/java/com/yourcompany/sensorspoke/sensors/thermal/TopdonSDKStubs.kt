@@ -13,8 +13,14 @@ import com.infisense.iruvc.uvc.UVCCamera
 import com.infisense.iruvc.uvc.UVCType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.sqrt
 
 /**
  * PRODUCTION-READY: IRCamera-Based Topdon TC001 Integration

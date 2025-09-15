@@ -19,6 +19,8 @@ import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001PerformanceMonitor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedWriter
@@ -28,6 +30,7 @@ import java.io.FileWriter
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.math.sqrt
 
 /**
  * Production ThermalCameraRecorder with Real Topdon TC001 Integration.

@@ -5,11 +5,17 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.sqrt
+import kotlin.random.Random
 
 /**
  * TC001CalibrationManager - Advanced thermal calibration system
@@ -132,7 +138,7 @@ class TC001CalibrationManager(
                 delay(2000) // Simulate measurement time
 
                 // Simulate measurement with small error
-                val measuredTemp = refTemp + (Random().nextGaussian() * 0.5).toFloat()
+                val measuredTemp = refTemp + (Random.nextDouble(-0.5, 0.5)).toFloat()
                 val calibrationPoint =
                     TC001CalibrationPoint(
                         referenceTemp = refTemp,
@@ -173,7 +179,7 @@ class TC001CalibrationManager(
 
                 delay(3000) // Allow temperature stabilization
 
-                val measuredTemp = bbTemp + (Random().nextGaussian() * 0.2).toFloat() // Higher accuracy
+                val measuredTemp = bbTemp + (Random.nextDouble(-1.0, 1.0) * 0.2).toFloat() // Higher accuracy
                 val calibrationPoint =
                     TC001CalibrationPoint(
                         referenceTemp = bbTemp,
@@ -200,9 +206,9 @@ class TC001CalibrationManager(
             _calibrationProgress.postValue(TC001CalibrationProgress(20, "Measuring environmental conditions..."))
 
             // Measure ambient conditions for compensation
-            val ambientTemp = 23.5f + (Random().nextGaussian() * 1.0).toFloat()
-            val humidity = 45.0f + (Random().nextGaussian() * 5.0).toFloat()
-            val pressure = 1013.25f + (Random().nextGaussian() * 10.0).toFloat()
+            val ambientTemp = 23.5f + (Random.nextDouble(-1.0, 1.0) * 1.0).toFloat()
+            val humidity = 45.0f + (Random.nextDouble(-1.0, 1.0) * 5.0).toFloat()
+            val pressure = 1013.25f + (Random.nextDouble(-1.0, 1.0) * 10.0).toFloat()
 
             _calibrationProgress.postValue(TC001CalibrationProgress(50, "Calculating environmental compensation..."))
 

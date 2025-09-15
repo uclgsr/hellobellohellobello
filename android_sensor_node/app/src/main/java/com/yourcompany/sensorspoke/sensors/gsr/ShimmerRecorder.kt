@@ -19,13 +19,19 @@ import com.shimmerresearch.driver.Configuration
 import com.shimmerresearch.driver.ObjectCluster
 import com.shimmerresearch.exceptions.ShimmerException
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
+import java.util.Locale
 import kotlin.random.Random
 
 /**
@@ -331,22 +337,22 @@ class LoggingOnlyShimmerManager(
     /**
      * Handle Shimmer state changes (logging mode)
      */
-    private fun handleStateChange(state: ShimmerBluetooth.BT_STATE, address: String) {
+    private fun handleStateChange(state: ShimmerBluetooth.BtState, address: String) {
         Log.d(TAG, "Shimmer logging state change: $state for device $address")
 
         when (state) {
-            ShimmerBluetooth.BT_STATE.CONNECTED -> {
+            ShimmerBluetooth.BtState.CONNECTED -> {
                 isConnected = true
                 loggingCallback?.onConnectionStateChanged(true, "Connected to Shimmer for logging control")
             }
 
-            ShimmerBluetooth.BT_STATE.STREAMING -> {
+            ShimmerBluetooth.BtState.STREAMING -> {
                 isLogging = true
                 loggingCallback?.onLoggingStateChanged(true, "SD card logging started")
             }
 
-            ShimmerBluetooth.BT_STATE.DISCONNECTED,
-            ShimmerBluetooth.BT_STATE.CONNECTION_LOST,
+            ShimmerBluetooth.BtState.DISCONNECTED,
+            ShimmerBluetooth.BtState.CONNECTION_LOST,
             -> {
                 isConnected = false
                 isLogging = false
@@ -832,24 +838,24 @@ class ShimmerGSRIntegrationManager(
      * Handle Shimmer state changes
      */
     private fun handleStateChange(
-        state: ShimmerBluetooth.BT_STATE,
+        state: ShimmerBluetooth.BtState,
         address: String,
     ) {
         Log.d(TAG, "Shimmer state change: $state for device $address")
 
         when (state) {
-            ShimmerBluetooth.BT_STATE.CONNECTED -> {
+            ShimmerBluetooth.BtState.CONNECTED -> {
                 isConnected = true
                 dataCallback?.onConnectionStateChanged(true, "Connected to Shimmer device")
             }
 
-            ShimmerBluetooth.BT_STATE.STREAMING -> {
+            ShimmerBluetooth.BtState.STREAMING -> {
                 isStreaming = true
                 dataCallback?.onStreamingStateChanged(true, "GSR data streaming started")
             }
 
-            ShimmerBluetooth.BT_STATE.DISCONNECTED,
-            ShimmerBluetooth.BT_STATE.CONNECTION_LOST,
+            ShimmerBluetooth.BtState.DISCONNECTED,
+            ShimmerBluetooth.BtState.CONNECTION_LOST,
             -> {
                 isConnected = false
                 isStreaming = false

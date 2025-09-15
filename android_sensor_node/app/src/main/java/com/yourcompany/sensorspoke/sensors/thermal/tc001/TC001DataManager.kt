@@ -4,15 +4,17 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.infisense.iruvc.sdkisp.LibIRParse
+import com.infisense.iruvc.utils.IFrameCallback
 import com.yourcompany.sensorspoke.sensors.thermal.TopdonThermalPalette
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
-
-// IRCamera integration - using proven data processing classes
-import com.infisense.iruvc.sdkisp.LibIRParse
-import com.infisense.iruvc.utils.IFrameCallback
 
 /**
  * TC001DataManager - Real thermal data processing using IRCamera integration

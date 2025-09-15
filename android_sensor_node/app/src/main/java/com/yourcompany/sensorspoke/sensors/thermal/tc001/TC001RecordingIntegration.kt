@@ -9,6 +9,10 @@ import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * TC001RecordingIntegration - Bridge between TC001 system and main recording pipeline

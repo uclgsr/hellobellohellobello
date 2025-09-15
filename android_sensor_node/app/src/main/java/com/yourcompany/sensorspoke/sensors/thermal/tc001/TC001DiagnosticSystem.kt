@@ -7,11 +7,14 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 /**
  * TC001DiagnosticSystem - Comprehensive diagnostic and troubleshooting system

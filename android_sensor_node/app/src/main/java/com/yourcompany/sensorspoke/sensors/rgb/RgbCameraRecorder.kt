@@ -20,6 +20,9 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FallbackStrategy
+import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Quality
 import androidx.camera.video.QualitySelector
 import androidx.camera.video.Recorder
 import androidx.camera.video.Recording
@@ -29,8 +32,14 @@ import androidx.lifecycle.LifecycleOwner
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
 import com.yourcompany.sensorspoke.utils.PreviewBus
 import com.yourcompany.sensorspoke.utils.TimeManager
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -57,7 +66,7 @@ class RgbCameraRecorder(
     private var videoCapture: VideoCapture<Recorder>? = null
     private var recording: Recording? = null
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
-    private val scope = CoroutineScope(Dispatchers.IO + Job())
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var lastPreviewNs: Long = 0L
     private var csvWriter: java.io.BufferedWriter? = null
     private var csvFile: File? = null
