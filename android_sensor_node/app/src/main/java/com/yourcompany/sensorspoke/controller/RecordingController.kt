@@ -53,6 +53,20 @@ class RecordingController(
     }
 
     /**
+     * Unregister a recorder by name.
+     */
+    fun unregister(name: String) {
+        recorders.removeAll { it.name == name }
+    }
+
+    /**
+     * Add a recorder (alias for register for backward compatibility).
+     */
+    fun addRecorder(name: String, recorder: SensorRecorder) {
+        register(name, recorder)
+    }
+
+    /**
      * Starts a new session with an optional provided sessionId. When null, a new id is generated.
      * Creates the session directory tree and starts all registered recorders with synchronized timing.
      */
