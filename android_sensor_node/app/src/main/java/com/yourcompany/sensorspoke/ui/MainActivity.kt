@@ -40,6 +40,7 @@ import com.yourcompany.sensorspoke.ui.adapters.MainPagerAdapter
 import com.yourcompany.sensorspoke.ui.dialogs.QuickStartDialog
 import com.yourcompany.sensorspoke.ui.navigation.NavigationController
 import com.yourcompany.sensorspoke.ui.navigation.ThermalNavigationState
+import com.yourcompany.sensorspoke.utils.PermissionManager
 import com.yourcompany.sensorspoke.utils.UserExperience
 import kotlinx.coroutines.launch
 import java.io.File
@@ -66,16 +67,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var preferences: SharedPreferences
     private var isFirstLaunch: Boolean = false
 
-    private val requestCameraPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                UserExperience.Messaging.showSuccess(this, "Camera permission granted")
-                startRecording()
-            } else {
-                val explanation = UserExperience.QuickStart.getPermissionExplanations()["camera"] ?: ""
-                UserExperience.Messaging.showUserFriendlyError(this, "Permission denied: $explanation", "permission")
-            }
-        }
+    // Comprehensive permission management
+    private lateinit var permissionManager: PermissionManager
 
     private val controlReceiver =
         object : BroadcastReceiver() {
@@ -145,6 +138,9 @@ class MainActivity : AppCompatActivity() {
         // Setup toolbar with menu
         setupToolbar()
 
+        // Initialize comprehensive permission management
+        permissionManager = PermissionManager(this)
+
         // Initialize status
         updateStatusText("Initializing...")
 
@@ -164,6 +160,11 @@ class MainActivity : AppCompatActivity() {
         // Show quick start guide for first-time users
         if (isFirstLaunch) {
             showQuickStartGuide()
+        }
+
+        // Request all permissions on startup if not already granted
+        if (!permissionManager.areAllPermissionsGranted()) {
+            requestAllPermissions()
         }
 
         updateStatusText("Ready to connect")
@@ -232,12 +233,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupButtons() {
         btnStartRecording?.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestCameraPermission.launch(Manifest.permission.CAMERA)
-            } else {
+            if (permissionManager.areAllPermissionsGranted()) {
                 startRecording()
+            } else {
+                UserExperience.Messaging.showProgress(
+                    this,
+                    "Checking permissions for all sensors"
+                )
+                requestAllPermissions()
             }
         }
 
@@ -275,6 +278,9 @@ class MainActivity : AppCompatActivity() {
             multiModalCoordinator?.stopRecording()
             multiModalCoordinator = null
         }
+        
+        // Cleanup permission manager
+        permissionManager.cleanup()
     }
 
     private fun ensureController(): RecordingController {
@@ -472,14 +478,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun isRunningUnderTest(): Boolean =
-        try {
-            Class.forName("org.robolectric.Robolectric")
-            true
-        } catch (_: Throwable) {
-            false
-        }
-
     /**
      * Navigate to thermal camera preview - Enhanced integration method
      */
@@ -515,6 +513,45 @@ class MainActivity : AppCompatActivity() {
             Log.i("MainActivity", "TC001 thermal camera system initialized successfully")
         } catch (e: Exception) {
             Log.e("MainActivity", "Failed to initialize TC001 system", e)
+        }
+    }
+
+    /**
+     * Request all necessary permissions for multi-modal recording
+     */
+    private fun requestAllPermissions() {
+        updateStatusText("Requesting permissions...")
+        
+        permissionManager.requestAllPermissions { allGranted ->
+            if (allGranted) {
+                updateStatusText("All permissions granted - Ready to record")
+                UserExperience.Messaging.showSuccess(
+                    this,
+                    "All sensor permissions granted. Ready to start recording!"
+                )
+            } else {
+                updateStatusText("Some permissions denied - Limited functionality")
+                UserExperience.Messaging.showUserFriendlyError(
+                    this,
+                    "Some permissions were denied. Recording may not include all sensors.",
+                    "permission"
+                )
+                
+                // Show detailed permission status in debug
+                Log.d("MainActivity", "Permission status: ${permissionManager.getPermissionStatus()}")
+            }
+        }
+    }
+
+    /**
+     * Check if we're running under test conditions
+     */
+    private fun isRunningUnderTest(): Boolean {
+        return try {
+            Class.forName("androidx.test.espresso.Espresso")
+            true
+        } catch (e: ClassNotFoundException) {
+            false
         }
     }
 }
