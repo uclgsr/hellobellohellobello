@@ -20,34 +20,34 @@ import com.shimmerresearch.driver.ObjectCluster
 import com.shimmerresearch.exceptions.ShimmerException
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
 import kotlinx.coroutines.*
+import org.json.JSONObject
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
 import kotlin.random.Random
-import org.json.JSONObject
 
 /**
  * Shimmer GSR Recording Modes
  */
 enum class ShimmerRecordingMode {
-    REAL_TIME_STREAMING,  // Live BLE data streaming to app
-    LOGGING_ONLY         // Log to Shimmer SD card, app acts as controller
+    REAL_TIME_STREAMING, // Live BLE data streaming to app
+    LOGGING_ONLY, // Log to Shimmer SD card, app acts as controller
 }
 
 /**
  * Shimmer SD Card Logging Configuration
  */
 data class ShimmerLoggingConfig(
-    val samplingRate: Double = 128.0,           // Hz
-    val gsrRange: Int = 0,                      // GSR range setting
-    val enablePPG: Boolean = true,              // Enable PPG sensors
-    val enableAccel: Boolean = false,           // Enable accelerometer
-    val sessionDurationMinutes: Int = 60        // Maximum session duration
+    val samplingRate: Double = 128.0, // Hz
+    val gsrRange: Int = 0, // GSR range setting
+    val enablePPG: Boolean = true, // Enable PPG sensors
+    val enableAccel: Boolean = false, // Enable accelerometer
+    val sessionDurationMinutes: Int = 60, // Maximum session duration
 )
 
 /**
  * Logging-Only Shimmer Manager
- * 
+ *
  * This class handles Shimmer devices in logging-only mode where data is stored
  * on the Shimmer's internal SD card with device timestamps, and the Android app
  * acts as a remote controller sending start/stop commands.
@@ -57,61 +57,62 @@ class LoggingOnlyShimmerManager(
 ) {
     companion object {
         private const val TAG = "LoggingOnlyShimmer"
-        
+
         // Shimmer command bytes for logging control
         private const val START_LOGGING_COMMAND = 0x07.toByte()
         private const val STOP_LOGGING_COMMAND = 0x20.toByte()
         private const val SET_SAMPLING_RATE_COMMAND = 0x05.toByte()
         private const val SET_SENSORS_COMMAND = 0x08.toByte()
-        
+
         // Default configuration
         private val DEFAULT_CONFIG = ShimmerLoggingConfig()
     }
-    
+
     // Core components
     private var shimmerDevice: Shimmer3BLEAndroid? = null
     private var messageHandler: Handler? = null
     private var loggingCallback: ShimmerLoggingCallback? = null
-    
+
     // Connection and logging state
     @Volatile private var isConnected = false
+
     @Volatile private var isLogging = false
     private var selectedDeviceAddress: String? = null
     private var selectedDeviceName: String? = null
     private var loggingConfig = DEFAULT_CONFIG
     private var sessionStartTime: Long = 0
-    
+
     /**
      * Initialize logging-only Shimmer manager
      */
     fun initialize(): Boolean = try {
-        // Create message handler for Shimmer callbacks  
+        // Create message handler for Shimmer callbacks
         messageHandler = Handler(Looper.getMainLooper()) { message ->
             handleShimmerMessage(message)
         }
-        
+
         Log.i(TAG, "LoggingOnlyShimmerManager initialized")
         true
     } catch (e: Exception) {
         Log.e(TAG, "Failed to initialize LoggingOnlyShimmerManager: ${e.message}", e)
         false
     }
-    
+
     /**
      * Set logging callback for status updates
      */
     fun setLoggingCallback(callback: ShimmerLoggingCallback) {
         loggingCallback = callback
     }
-    
+
     /**
      * Configure logging settings
      */
     fun setLoggingConfig(config: ShimmerLoggingConfig) {
         loggingConfig = config
-        Log.i(TAG, "Logging config updated: ${config}")
+        Log.i(TAG, "Logging config updated: $config")
     }
-    
+
     /**
      * Connect to Shimmer device for logging control
      */
@@ -120,25 +121,25 @@ class LoggingOnlyShimmerManager(
             try {
                 selectedDeviceAddress = deviceAddress
                 selectedDeviceName = deviceName
-                
+
                 Log.i(TAG, "Connecting to Shimmer for logging control: $deviceName ($deviceAddress)")
-                
+
                 // Create Shimmer3BLEAndroid instance
                 messageHandler?.let { handler ->
                     shimmerDevice = Shimmer3BLEAndroid(deviceAddress, handler, context)
-                    
+
                     // Connect to device
                     shimmerDevice?.connect(deviceAddress, deviceName)
-                    
+
                     // Wait for connection (with timeout)
                     var connectionTimeout = 10000L // 10 seconds
                     val checkInterval = 100L
-                    
+
                     while (connectionTimeout > 0 && !isConnected) {
                         delay(checkInterval)
                         connectionTimeout -= checkInterval
                     }
-                    
+
                     if (isConnected) {
                         Log.i(TAG, "Successfully connected to Shimmer for logging control")
                         configureLoggingSettings()
@@ -157,7 +158,7 @@ class LoggingOnlyShimmerManager(
             }
         }
     }
-    
+
     /**
      * Configure Shimmer for logging mode
      */
@@ -167,25 +168,28 @@ class LoggingOnlyShimmerManager(
                 shimmerDevice?.let { device ->
                     // Configure sensors for logging
                     val sensorConfig = (
-                        Shimmer.SENSOR_GSR or 
-                        (if (loggingConfig.enablePPG) Shimmer.SENSOR_INT_A13 else 0) or
-                        (if (loggingConfig.enableAccel) Shimmer.SENSOR_ACCEL else 0) or
-                        Shimmer.SENSOR_TIMESTAMP
-                    ).toLong()
-                    
+                        Shimmer.SENSOR_GSR or
+                            (if (loggingConfig.enablePPG) Shimmer.SENSOR_INT_A13 else 0) or
+                            (if (loggingConfig.enableAccel) Shimmer.SENSOR_ACCEL else 0) or
+                            Shimmer.SENSOR_TIMESTAMP
+                        ).toLong()
+
                     device.setEnabledSensors(sensorConfig)
-                    
+
                     // Set sampling rate for logging
                     device.setSamplingRateShimmer(loggingConfig.samplingRate)
-                    
+
                     // Set GSR range
                     device.setGSRRange(loggingConfig.gsrRange)
-                    
-                    Log.i(TAG, "Shimmer configured for logging mode: " +
-                          "Rate=${loggingConfig.samplingRate}Hz, " +
-                          "GSR Range=${loggingConfig.gsrRange}, " +
-                          "PPG=${loggingConfig.enablePPG}")
-                    
+
+                    Log.i(
+                        TAG,
+                        "Shimmer configured for logging mode: " +
+                            "Rate=${loggingConfig.samplingRate}Hz, " +
+                            "GSR Range=${loggingConfig.gsrRange}, " +
+                            "PPG=${loggingConfig.enablePPG}",
+                    )
+
                     delay(500) // Allow configuration to settle
                 }
             } catch (e: Exception) {
@@ -193,7 +197,7 @@ class LoggingOnlyShimmerManager(
             }
         }
     }
-    
+
     /**
      * Start SD card logging on Shimmer device
      */
@@ -204,22 +208,22 @@ class LoggingOnlyShimmerManager(
                     Log.e(TAG, "Cannot start logging: device not connected")
                     return@withContext false
                 }
-                
+
                 shimmerDevice?.let { device ->
                     Log.i(TAG, "Starting SD card logging for session: $sessionId")
-                    
+
                     // Send start logging command to Shimmer
                     device.startStreaming() // This will start logging to SD card
-                    
+
                     sessionStartTime = System.currentTimeMillis()
                     isLogging = true
-                    
+
                     // Create session metadata for logging mode
                     createLoggingSessionMetadata(sessionId)
-                    
+
                     // Notify callback
                     loggingCallback?.onLoggingStarted(sessionId, sessionStartTime)
-                    
+
                     Log.i(TAG, "SD card logging started successfully")
                     return@withContext true
                 } ?: run {
@@ -232,7 +236,7 @@ class LoggingOnlyShimmerManager(
             }
         }
     }
-    
+
     /**
      * Stop SD card logging on Shimmer device
      */
@@ -243,19 +247,19 @@ class LoggingOnlyShimmerManager(
                     Log.w(TAG, "Logging is not active")
                     return@withContext true
                 }
-                
+
                 shimmerDevice?.let { device ->
                     Log.i(TAG, "Stopping SD card logging")
-                    
+
                     // Send stop logging command to Shimmer
                     device.stopStreaming()
-                    
+
                     val loggingDuration = System.currentTimeMillis() - sessionStartTime
                     isLogging = false
-                    
+
                     // Notify callback
                     loggingCallback?.onLoggingStopped(loggingDuration)
-                    
+
                     Log.i(TAG, "SD card logging stopped. Duration: ${loggingDuration}ms")
                     return@withContext true
                 } ?: run {
@@ -268,7 +272,7 @@ class LoggingOnlyShimmerManager(
             }
         }
     }
-    
+
     /**
      * Disconnect from Shimmer device
      */
@@ -278,20 +282,20 @@ class LoggingOnlyShimmerManager(
                 if (isLogging) {
                     stopLogging()
                 }
-                
+
                 shimmerDevice?.let { device ->
                     device.disconnect()
                     isConnected = false
                     Log.i(TAG, "Disconnected from Shimmer device")
                 }
-                
+
                 shimmerDevice = null
             } catch (e: Exception) {
                 Log.e(TAG, "Error disconnecting from Shimmer device: ${e.message}", e)
             }
         }
     }
-    
+
     /**
      * Handle messages from Shimmer device (logging mode)
      */
@@ -304,12 +308,12 @@ class LoggingOnlyShimmerManager(
                         handleStateChange(objectCluster.mState, objectCluster.getMacAddress())
                     }
                 }
-                
+
                 Shimmer.MSG_IDENTIFIER_NOTIFICATION_MESSAGE -> {
                     val notification = message.obj as? Int ?: 0
                     handleLoggingNotification(notification)
                 }
-                
+
                 Shimmer.MESSAGE_TOAST -> {
                     val toastText = message.data?.getString(Shimmer.TOAST) ?: ""
                     Log.i(TAG, "Shimmer logging toast: $toastText")
@@ -321,38 +325,39 @@ class LoggingOnlyShimmerManager(
             return false
         }
     }
-    
+
     /**
      * Handle Shimmer state changes (logging mode)
      */
     private fun handleStateChange(state: ShimmerBluetooth.BT_STATE, address: String) {
         Log.d(TAG, "Shimmer logging state change: $state for device $address")
-        
+
         when (state) {
             ShimmerBluetooth.BT_STATE.CONNECTED -> {
                 isConnected = true
                 loggingCallback?.onConnectionStateChanged(true, "Connected to Shimmer for logging control")
             }
-            
+
             ShimmerBluetooth.BT_STATE.STREAMING -> {
                 isLogging = true
                 loggingCallback?.onLoggingStateChanged(true, "SD card logging started")
             }
-            
+
             ShimmerBluetooth.BT_STATE.DISCONNECTED,
-            ShimmerBluetooth.BT_STATE.CONNECTION_LOST -> {
+            ShimmerBluetooth.BT_STATE.CONNECTION_LOST,
+            -> {
                 isConnected = false
                 isLogging = false
                 loggingCallback?.onConnectionStateChanged(false, "Disconnected from Shimmer device")
                 loggingCallback?.onLoggingStateChanged(false, "SD card logging stopped")
             }
-            
+
             else -> {
                 // Handle other states as needed
             }
         }
     }
-    
+
     /**
      * Handle logging-specific notifications
      */
@@ -362,17 +367,17 @@ class LoggingOnlyShimmerManager(
                 Log.i(TAG, "Shimmer device ready for logging mode")
                 loggingCallback?.onDeviceInitialized("Shimmer ready for SD card logging")
             }
-            
+
             Shimmer.NOTIFICATION_SHIMMER_START_STREAMING -> {
                 Log.i(TAG, "Shimmer SD card logging started")
             }
-            
+
             Shimmer.NOTIFICATION_SHIMMER_STOP_STREAMING -> {
                 Log.i(TAG, "Shimmer SD card logging stopped")
             }
         }
     }
-    
+
     /**
      * Create session metadata for logging mode
      */
@@ -387,21 +392,23 @@ class LoggingOnlyShimmerManager(
                 put("device_address", selectedDeviceAddress ?: "Unknown")
                 put("sampling_rate_hz", loggingConfig.samplingRate)
                 put("gsr_range", loggingConfig.gsrRange)
-                put("sensors_enabled", JSONObject().apply {
-                    put("gsr", true)
-                    put("ppg", loggingConfig.enablePPG)
-                    put("accelerometer", loggingConfig.enableAccel)
-                })
+                put(
+                    "sensors_enabled",
+                    JSONObject().apply {
+                        put("gsr", true)
+                        put("ppg", loggingConfig.enablePPG)
+                        put("accelerometer", loggingConfig.enableAccel)
+                    },
+                )
                 put("notes", "Data logged to Shimmer SD card with internal timestamps")
             }
-            
+
             Log.d(TAG, "Created logging session metadata: $metadata")
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error creating logging session metadata: ${e.message}", e)
         }
     }
-    
+
     /**
      * Get current logging status
      */
@@ -412,7 +419,7 @@ class LoggingOnlyShimmerManager(
         deviceAddress = selectedDeviceAddress,
         sessionStartTime = if (isLogging) sessionStartTime else null,
         loggingDuration = if (isLogging) System.currentTimeMillis() - sessionStartTime else 0,
-        config = loggingConfig
+        config = loggingConfig,
     )
 }
 
@@ -438,7 +445,7 @@ data class ShimmerLoggingStatus(
     val deviceAddress: String?,
     val sessionStartTime: Long?,
     val loggingDuration: Long,
-    val config: ShimmerLoggingConfig
+    val config: ShimmerLoggingConfig,
 )
 
 /**
@@ -947,18 +954,18 @@ interface ShimmerDataCallback {
  */
 class ShimmerRecorder(
     private val context: Context,
-    private val recordingMode: ShimmerRecordingMode = ShimmerRecordingMode.REAL_TIME_STREAMING
+    private val recordingMode: ShimmerRecordingMode = ShimmerRecordingMode.REAL_TIME_STREAMING,
 ) : SensorRecorder {
     companion object {
         private const val TAG = "ShimmerRecorder"
-        
+
         /**
          * Create ShimmerRecorder for real-time streaming mode
          */
         fun forRealTimeStreaming(context: Context): ShimmerRecorder {
             return ShimmerRecorder(context, ShimmerRecordingMode.REAL_TIME_STREAMING)
         }
-        
+
         /**
          * Create ShimmerRecorder for logging-only mode
          */
@@ -976,10 +983,10 @@ class ShimmerRecorder(
     private var isRecording = false
     private var sampleCount = 0L
     private var currentSessionId: String? = null
-    
+
     // Real-time streaming components
     private var gsrIntegrationManager: ShimmerGSRIntegrationManager? = null
-    
+
     // Logging-only mode components
     private var loggingManager: LoggingOnlyShimmerManager? = null
     private var sessionMetadataFile: File? = null
@@ -1006,7 +1013,7 @@ class ShimmerRecorder(
             Log.e(TAG, "Streaming GSR Integration error: $error")
         }
     }
-    
+
     // Logging-only mode callback implementation
     private val loggingCallback = object : ShimmerLoggingCallback {
         override fun onLoggingStarted(sessionId: String, startTime: Long) {
@@ -1038,10 +1045,10 @@ class ShimmerRecorder(
 
     override suspend fun start(sessionDir: File) {
         if (!sessionDir.exists()) sessionDir.mkdirs()
-        
+
         currentSessionId = sessionDir.name
         isRecording = true
-        
+
         when (recordingMode) {
             ShimmerRecordingMode.REAL_TIME_STREAMING -> {
                 startRealTimeStreaming(sessionDir)
@@ -1051,7 +1058,7 @@ class ShimmerRecorder(
             }
         }
     }
-    
+
     /**
      * Start real-time streaming mode (existing implementation)
      */
@@ -1097,7 +1104,7 @@ class ShimmerRecorder(
             startSimulationRecording(sessionDir)
         }
     }
-    
+
     /**
      * Start logging-only mode (new implementation)
      */
@@ -1108,28 +1115,27 @@ class ShimmerRecorder(
             // In logging-only mode, we can't use simulation since no data streams to app
             throw IllegalStateException("Bluetooth permissions required for logging-only mode")
         }
-        
+
         try {
             // Initialize logging manager
             loggingManager = LoggingOnlyShimmerManager(context).apply {
                 if (!initialize()) {
                     throw RuntimeException("Failed to initialize LoggingOnlyShimmerManager")
                 }
-                
+
                 // Set logging callback
                 setLoggingCallback(loggingCallback)
             }
-            
+
             Log.i(TAG, "Logging-only GSR mode initialized - ready for device connection")
-            
+
             // Create metadata file for logging session
             sessionMetadataFile = File(sessionDir, "shimmer_logging_metadata.json")
-            
+
             // Start monitoring job for connection and logging control
             recordingJob = CoroutineScope(Dispatchers.IO).launch {
                 monitorLoggingSession()
             }
-            
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start logging-only GSR mode: ${e.message}", e)
             throw e
@@ -1157,7 +1163,7 @@ class ShimmerRecorder(
             Log.e(TAG, "Error stopping GSR recording: ${e.message}", e)
         }
     }
-    
+
     /**
      * Stop real-time streaming mode
      */
@@ -1177,7 +1183,7 @@ class ShimmerRecorder(
         csvWriter?.close()
         csvWriter = null
     }
-    
+
     /**
      * Stop logging-only mode
      */
@@ -1191,7 +1197,7 @@ class ShimmerRecorder(
                 manager.disconnect()
             }
         }
-        
+
         // Finalize metadata
         finalizeLoggingSessionMetadata()
     }
@@ -1209,7 +1215,7 @@ class ShimmerRecorder(
             }
         }
     }
-    
+
     /**
      * Connect device for real-time streaming mode
      */
@@ -1232,7 +1238,7 @@ class ShimmerRecorder(
             false
         }
     }
-    
+
     /**
      * Connect device for logging-only mode
      */
@@ -1241,7 +1247,7 @@ class ShimmerRecorder(
             loggingManager?.let { manager ->
                 if (manager.connect(deviceAddress, deviceName)) {
                     Log.i(TAG, "Successfully connected to Shimmer device for logging control: $deviceName")
-                    
+
                     // Start logging to SD card
                     val sessionId = currentSessionId ?: "unknown_session"
                     if (manager.startLogging(sessionId)) {
@@ -1256,7 +1262,7 @@ class ShimmerRecorder(
             false
         }
     }
-    
+
     /**
      * Create logging session metadata
      */
@@ -1267,30 +1273,35 @@ class ShimmerRecorder(
                 put("recording_mode", "SHIMMER_LOGGING_ONLY")
                 put("start_timestamp_ms", startTime)
                 put("start_timestamp_ns", System.nanoTime())
-                put("device_info", loggingManager?.getLoggingStatus()?.let { status ->
-                    JSONObject().apply {
-                        put("device_name", status.deviceName ?: "Unknown")
-                        put("device_address", status.deviceAddress ?: "Unknown")
-                        put("sampling_rate_hz", status.config.samplingRate)
-                        put("gsr_range", status.config.gsrRange)
-                    }
-                })
+                put(
+                    "device_info",
+                    loggingManager?.getLoggingStatus()?.let { status ->
+                        JSONObject().apply {
+                            put("device_name", status.deviceName ?: "Unknown")
+                            put("device_address", status.deviceAddress ?: "Unknown")
+                            put("sampling_rate_hz", status.config.samplingRate)
+                            put("gsr_range", status.config.gsrRange)
+                        }
+                    },
+                )
                 put("data_location", "shimmer_sd_card")
                 put("timestamp_source", "shimmer_internal")
-                put("notes", "Data logged to Shimmer SD card with internal timestamps. " +
-                          "Use Consensys software to download data from device.")
+                put(
+                    "notes",
+                    "Data logged to Shimmer SD card with internal timestamps. " +
+                        "Use Consensys software to download data from device.",
+                )
             }
-            
+
             sessionMetadataFile?.let { file ->
                 file.writeText(metadata.toString(2))
                 Log.i(TAG, "Created logging session metadata: ${file.absolutePath}")
             }
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error creating logging session metadata: ${e.message}", e)
         }
     }
-    
+
     /**
      * Update logging session metadata on stop
      */
@@ -1304,7 +1315,7 @@ class ShimmerRecorder(
                         put("duration_ms", durationMs)
                         put("status", "completed")
                     }
-                    
+
                     file.writeText(existingMetadata.toString(2))
                     Log.i(TAG, "Updated logging session metadata with completion info")
                 }
@@ -1313,7 +1324,7 @@ class ShimmerRecorder(
             Log.e(TAG, "Error updating logging session metadata: ${e.message}", e)
         }
     }
-    
+
     /**
      * Finalize logging session metadata
      */
@@ -1325,16 +1336,19 @@ class ShimmerRecorder(
                     existingMetadata.apply {
                         put("session_finalized", true)
                         put("finalized_timestamp_ms", System.currentTimeMillis())
-                        
+
                         // Add final logging status
                         loggingManager?.getLoggingStatus()?.let { status ->
-                            put("final_status", JSONObject().apply {
-                                put("connected", status.isConnected)
-                                put("logging_duration_ms", status.loggingDuration)
-                            })
+                            put(
+                                "final_status",
+                                JSONObject().apply {
+                                    put("connected", status.isConnected)
+                                    put("logging_duration_ms", status.loggingDuration)
+                                },
+                            )
                         }
                     }
-                    
+
                     file.writeText(existingMetadata.toString(2))
                     Log.i(TAG, "Finalized logging session metadata")
                 }
@@ -1376,7 +1390,7 @@ class ShimmerRecorder(
             startSimulationMode()
         }
     }
-    
+
     /**
      * Monitor logging session (logging-only mode)
      */
@@ -1388,14 +1402,14 @@ class ShimmerRecorder(
                     Log.d(TAG, "Waiting for Shimmer device connection for logging control...")
                     // In a real app, this would trigger device selection UI
                     delay(5000)
-                    
+
                     // Check if we should timeout
                     if (!manager.getLoggingStatus().isConnected && isRecording) {
                         Log.w(TAG, "No Shimmer device connected for logging control")
                         // Could implement retry logic or error handling here
                     }
                 }
-                
+
                 delay(1000) // Check connection status every second
             } catch (e: Exception) {
                 Log.e(TAG, "Error in logging session monitor: ${e.message}")
@@ -1505,7 +1519,7 @@ class ShimmerRecorder(
                     isStreaming = gsrIntegrationManager?.isDeviceStreaming() ?: false,
                     deviceInfo = gsrIntegrationManager?.getSelectedDeviceInfo(),
                     outputFile = csvFile?.absolutePath,
-                    loggingStatus = null
+                    loggingStatus = null,
                 )
             }
             ShimmerRecordingMode.LOGGING_ONLY -> {
@@ -1518,17 +1532,17 @@ class ShimmerRecorder(
                     isStreaming = loggingStatus?.isLogging ?: false,
                     deviceInfo = loggingStatus?.let { Pair(it.deviceAddress, it.deviceName) },
                     outputFile = sessionMetadataFile?.absolutePath,
-                    loggingStatus = loggingStatus
+                    loggingStatus = loggingStatus,
                 )
             }
         }
     }
-    
+
     /**
      * Get current recording mode
      */
     fun getRecordingMode(): ShimmerRecordingMode = recordingMode
-    
+
     /**
      * Check if device supports logging-only mode
      */
@@ -1545,17 +1559,17 @@ class ShimmerRecorder(
             arrayOf(
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION,
             )
         } else {
             arrayOf(
                 Manifest.permission.BLUETOOTH,
                 Manifest.permission.BLUETOOTH_ADMIN,
                 Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
+                Manifest.permission.ACCESS_COARSE_LOCATION,
             )
         }
-        
+
         return requiredPermissions.all { permission ->
             ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
         }
@@ -1570,15 +1584,15 @@ class ShimmerRecorder(
             if (csvFile == null) {
                 csvFile = File(sessionDir, "gsr_data.csv")
                 csvWriter = BufferedWriter(FileWriter(csvFile!!))
-                
+
                 // Write CSV header
                 csvWriter!!.write("${ShimmerGSRIntegrationManager.CSV_HEADER}\n")
                 csvWriter!!.flush()
             }
-            
+
             isRecording = true
             Log.i(TAG, "Starting GSR simulation recording to ${csvFile?.absolutePath}")
-            
+
             // Start simulation mode
             startSimulationMode()
         } catch (e: Exception) {
@@ -1599,5 +1613,5 @@ data class GSRRecordingStats(
     val isStreaming: Boolean,
     val deviceInfo: Pair<String?, String?>?,
     val outputFile: String?,
-    val loggingStatus: ShimmerLoggingStatus?
+    val loggingStatus: ShimmerLoggingStatus?,
 )

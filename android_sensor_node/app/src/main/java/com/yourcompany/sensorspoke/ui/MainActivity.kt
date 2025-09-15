@@ -1,13 +1,11 @@
 package com.yourcompany.sensorspoke.ui
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -19,7 +17,6 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -49,7 +46,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "MainActivity"
     }
-    
+
     private val vm: MainViewModel by viewModels()
 
     private var controller: RecordingController? = null
@@ -240,13 +237,13 @@ class MainActivity : AppCompatActivity() {
             // Enhanced UI feedback during permission checks
             updateStatusText("Checking permissions...")
             btnStartRecording?.isEnabled = false
-            
+
             if (permissionManager.areAllPermissionsGranted()) {
                 startRecording()
             } else {
                 UserExperience.Messaging.showProgress(
                     this,
-                    "Checking permissions for all sensors"
+                    "Checking permissions for all sensors",
                 )
                 requestAllPermissions()
             }
@@ -259,40 +256,40 @@ class MainActivity : AppCompatActivity() {
             stopRecording()
         }
     }
-    
+
     /**
      * Enhanced status text updates with visual indicators.
      */
     private fun updateStatusText(message: String) {
         statusText?.text = message
-        
+
         // Add color coding based on status
         when {
-            message.contains("error", ignoreCase = true) || 
-            message.contains("failed", ignoreCase = true) -> {
+            message.contains("error", ignoreCase = true) ||
+                message.contains("failed", ignoreCase = true) -> {
                 statusText?.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
             }
             message.contains("recording", ignoreCase = true) -> {
                 statusText?.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_light))
             }
             message.contains("ready", ignoreCase = true) ||
-            message.contains("connected", ignoreCase = true) ||
-            message.contains("success", ignoreCase = true) -> {
+                message.contains("connected", ignoreCase = true) ||
+                message.contains("success", ignoreCase = true) -> {
                 statusText?.setTextColor(ContextCompat.getColor(this, android.R.color.holo_green_dark))
             }
             message.contains("checking", ignoreCase = true) ||
-            message.contains("starting", ignoreCase = true) ||
-            message.contains("stopping", ignoreCase = true) -> {
+                message.contains("starting", ignoreCase = true) ||
+                message.contains("stopping", ignoreCase = true) -> {
                 statusText?.setTextColor(ContextCompat.getColor(this, android.R.color.holo_blue_dark))
             }
             else -> {
                 statusText?.setTextColor(ContextCompat.getColor(this, android.R.color.primary_text_light))
             }
         }
-        
+
         Log.i(TAG, "Status: $message")
     }
-    
+
     /**
      * Enhanced button state management.
      */
@@ -301,24 +298,26 @@ class MainActivity : AppCompatActivity() {
             isEnabled = !isRecording && permissionManager.areAllPermissionsGranted()
             text = if (isRecording) "Recording..." else "Start Recording"
             setBackgroundColor(
-                if (isRecording) 
+                if (isRecording) {
                     ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
-                else 
+                } else {
                     ContextCompat.getColor(this@MainActivity, android.R.color.holo_green_light)
+                },
             )
         }
-        
+
         btnStopRecording?.apply {
             isEnabled = isRecording
             setBackgroundColor(
-                if (isRecording)
+                if (isRecording) {
                     ContextCompat.getColor(this@MainActivity, android.R.color.holo_red_light)
-                else
+                } else {
                     ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
+                },
             )
         }
     }
-    
+
     /**
      * Enhanced connection status indicator.
      */
@@ -328,16 +327,17 @@ class MainActivity : AppCompatActivity() {
         } else {
             "Not connected to PC Hub"
         }
-        
+
         // Update status in a dedicated connection indicator (if available)
         updateStatusText(statusMessage)
-        
+
         // Update UI colors/states based on connection
         rootLayout?.setBackgroundColor(
-            if (connected)
+            if (connected) {
                 ContextCompat.getColor(this, android.R.color.background_light)
-            else
+            } else {
                 ContextCompat.getColor(this, android.R.color.background_dark)
+            },
         )
     }
 
@@ -370,7 +370,7 @@ class MainActivity : AppCompatActivity() {
             multiModalCoordinator?.stopRecording()
             multiModalCoordinator = null
         }
-        
+
         // Cleanup permission manager
         permissionManager.cleanup()
     }
@@ -604,22 +604,22 @@ class MainActivity : AppCompatActivity() {
      */
     private fun requestAllPermissions() {
         updateStatusText("Requesting permissions...")
-        
+
         permissionManager.requestAllPermissions { allGranted ->
             if (allGranted) {
                 updateStatusText("All permissions granted - Ready to record")
                 UserExperience.Messaging.showSuccess(
                     this,
-                    "All sensor permissions granted. Ready to start recording!"
+                    "All sensor permissions granted. Ready to start recording!",
                 )
             } else {
                 updateStatusText("Some permissions denied - Limited functionality")
                 UserExperience.Messaging.showUserFriendlyError(
                     this,
                     "Some permissions were denied. Recording may not include all sensors.",
-                    "permission"
+                    "permission",
                 )
-                
+
                 // Show detailed permission status in debug
                 Log.d("MainActivity", "Permission status: ${permissionManager.getPermissionStatus()}")
             }

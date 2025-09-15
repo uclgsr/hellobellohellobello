@@ -1,19 +1,18 @@
 package com.yourcompany.sensorspoke.controller
 
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import io.mockk.mockk
-import io.mockk.MockKAnnotations
 import java.io.File
 import java.nio.file.Files
-import org.junit.Assert.assertThrows
 
 class RecordingControllerComprehensiveTest {
     private lateinit var mockContext: android.content.Context

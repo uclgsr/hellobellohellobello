@@ -161,19 +161,19 @@ class AudioRecorder(
 
                 // Create comprehensive error report
                 val errorReportFile = File(sessionDir!!, "audio_recording_error.json")
-                
+
                 // Create error report using safe JSON construction
                 val errorReport = try {
                     val alternativeMethodsArray = JSONArray()
                         .put("MediaRecorder_retry")
                         .put("AudioRecord_fallback")
                         .put("AAC_format_fallback")
-                    
+
                     val systemInfo = JSONObject()
                         .put("android_version", android.os.Build.VERSION.SDK_INT)
                         .put("device_model", android.os.Build.MODEL ?: "unknown")
                         .put("manufacturer", android.os.Build.MANUFACTURER ?: "unknown")
-                    
+
                     JSONObject()
                         .put("error_type", "AUDIO_RECORDING_FAILURE")
                         .put("timestamp", System.currentTimeMillis())

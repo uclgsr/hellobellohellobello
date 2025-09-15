@@ -43,11 +43,11 @@ class NetworkClient(
     private var reconnectAttempts: Int = 0
     private val maxReconnectAttempts: Int = 5
     private val reconnectDelayMs: Long = 2000L
-    
+
     // Connection health monitoring
     private var lastSuccessfulMessage: Long = 0
     private val healthCheckIntervalMs: Long = 30000L // 30 seconds
-    
+
     // Handler for retry scheduling
     private val mainHandler = Handler(Looper.getMainLooper())
     private var retryRunnable: Runnable? = null
@@ -137,16 +137,16 @@ class NetworkClient(
         } catch (e: Exception) {
             Log.e(TAG, "Failed to connect to $host:$port", e)
             isConnected.set(false)
-            
+
             // Auto-retry if enabled and under max attempts
             if (autoReconnect && reconnectAttempts < maxReconnectAttempts) {
                 reconnectAttempts++
                 val delayMs = reconnectDelayMs * reconnectAttempts // Exponential backoff
-                Log.i(TAG, "Scheduling reconnection attempt ${reconnectAttempts}/$maxReconnectAttempts in ${delayMs}ms...")
-                
+                Log.i(TAG, "Scheduling reconnection attempt $reconnectAttempts/$maxReconnectAttempts in ${delayMs}ms...")
+
                 // Cancel any existing retry
                 retryRunnable?.let { mainHandler.removeCallbacks(it) }
-                
+
                 // Schedule actual retry attempt
                 retryRunnable = Runnable {
                     kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -161,15 +161,15 @@ class NetworkClient(
                 false
             }
         }
-        
+
     /**
      * Enhanced connection method with callback support.
      */
     fun connectWithCallback(
-        host: String, 
-        port: Int, 
+        host: String,
+        port: Int,
         onSuccess: (() -> Unit)? = null,
-        onFailure: ((Exception) -> Unit)? = null
+        onFailure: ((Exception) -> Unit)? = null,
     ) {
         try {
             val success = connect(host, port)
@@ -182,7 +182,7 @@ class NetworkClient(
             onFailure?.invoke(e)
         }
     }
-    
+
     /**
      * Check connection health and attempt reconnection if needed.
      */
@@ -190,11 +190,11 @@ class NetworkClient(
         if (!isConnected.get()) {
             return false
         }
-        
+
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSuccessfulMessage > healthCheckIntervalMs) {
             Log.w(TAG, "Connection appears stale, attempting to send heartbeat...")
-            
+
             // Try to send a simple heartbeat message using safe JSON construction
             val heartbeatJson = try {
                 JSONObject()
@@ -205,7 +205,7 @@ class NetworkClient(
                 Log.e(TAG, "Failed to create heartbeat JSON", e)
                 return false
             }
-            
+
             if (!sendMessage(heartbeatJson)) {
                 Log.w(TAG, "Heartbeat failed, connection may be lost")
                 if (autoReconnect) {
@@ -214,10 +214,10 @@ class NetworkClient(
                 return false
             }
         }
-        
+
         return true
     }
-    
+
     /**
      * Attempt to reconnect using stored server address.
      */
@@ -225,14 +225,14 @@ class NetworkClient(
         val address = serverAddress.get()
         if (address != null && reconnectAttempts < maxReconnectAttempts && autoReconnect) {
             Log.i(TAG, "Attempting to reconnect to ${address.hostString}:${address.port}")
-            
+
             // Use the same retry logic as the main connect method
             val delayMs = reconnectDelayMs * (reconnectAttempts + 1)
             reconnectAttempts++
-            
+
             // Cancel any existing retry
             retryRunnable?.let { mainHandler.removeCallbacks(it) }
-            
+
             // Schedule reconnection attempt
             retryRunnable = Runnable {
                 Log.i(TAG, "Executing scheduled reconnection to ${address.hostString}:${address.port}")
@@ -240,27 +240,27 @@ class NetworkClient(
                     val newSocket = Socket()
                     newSocket.connect(address, connectionTimeoutMs)
                     newSocket.soTimeout = connectionTimeoutMs
-                    
+
                     socket.set(newSocket)
                     isConnected.set(true)
                     reconnectAttempts = 0 // Reset on success
                     lastSuccessfulMessage = System.currentTimeMillis()
-                    
+
                     Log.i(TAG, "Reconnection successful to ${address.hostString}:${address.port}")
                     true
                 } catch (e: Exception) {
                     Log.e(TAG, "Reconnection failed to ${address.hostString}:${address.port}", e)
                     false
                 }
-                
+
                 // If reconnection failed and we can still retry, schedule another attempt
                 if (!success && reconnectAttempts < maxReconnectAttempts && autoReconnect) {
                     attemptReconnection()
                 }
             }
-            
+
             mainHandler.postDelayed(retryRunnable!!, delayMs)
-            Log.i(TAG, "Scheduled reconnection attempt ${reconnectAttempts}/$maxReconnectAttempts in ${delayMs}ms")
+            Log.i(TAG, "Scheduled reconnection attempt $reconnectAttempts/$maxReconnectAttempts in ${delayMs}ms")
         } else {
             Log.w(TAG, "Cannot reconnect: address=${address != null}, attempts=$reconnectAttempts/$maxReconnectAttempts, autoReconnect=$autoReconnect")
         }
@@ -271,13 +271,13 @@ class NetworkClient(
      */
     fun disconnect() {
         isConnected.set(false)
-        
+
         // Cancel any pending retry attempts
-        retryRunnable?.let { 
+        retryRunnable?.let {
             mainHandler.removeCallbacks(it)
             retryRunnable = null
         }
-        
+
         socket.getAndSet(null)?.let { s ->
             try {
                 if (!s.isClosed) {
@@ -313,7 +313,7 @@ class NetworkClient(
 
             // Update last successful message timestamp
             lastSuccessfulMessage = System.currentTimeMillis()
-            
+
             Log.d(TAG, "Message sent successfully: ${message.take(100)}...")
             true
         } catch (e: IOException) {
@@ -382,7 +382,7 @@ class NetworkClient(
             "timeout_ms" to connectionTimeoutMs,
             "reconnect_attempts" to reconnectAttempts,
             "max_reconnect_attempts" to maxReconnectAttempts,
-            "retry_scheduled" to (retryRunnable != null)
+            "retry_scheduled" to (retryRunnable != null),
         )
 
     /**
@@ -403,22 +403,22 @@ class NetworkClient(
      */
     fun cleanup() {
         Log.i(TAG, "Cleaning up NetworkClient resources...")
-        
+
         // Stop discovery
         stopDiscovery()
-        
+
         // Unregister service
         unregister()
-        
+
         // Cancel retry operations
-        retryRunnable?.let { 
+        retryRunnable?.let {
             mainHandler.removeCallbacks(it)
             retryRunnable = null
         }
-        
+
         // Disconnect
         disconnect()
-        
+
         Log.i(TAG, "NetworkClient cleanup completed")
     }
 

@@ -515,7 +515,7 @@ class ThermalCameraRecorder(
     private fun hasUsbPermissionForTopdonDevice(): Boolean {
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
         val topdonDevice = findTopdonTC001Device()
-        
+
         return if (topdonDevice != null) {
             val hasPermission = usbManager.hasPermission(topdonDevice)
             Log.d(TAG, "Topdon TC001 USB permission check: $hasPermission for device ${topdonDevice.deviceName}")
@@ -543,9 +543,9 @@ class ThermalCameraRecorder(
         val topdonVendorId = 0x4d54
         val tc001ProductId1 = 0x0100
         val tc001ProductId2 = 0x0200
-        
+
         return device.vendorId == topdonVendorId &&
-               (device.productId == tc001ProductId1 || device.productId == tc001ProductId2)
+            (device.productId == tc001ProductId1 || device.productId == tc001ProductId2)
     }
 
     /**
@@ -576,7 +576,6 @@ class ThermalCameraRecorder(
 
             // Start simulation recording job
             startSimulationRecordingJob()
-
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start thermal simulation recording: ${e.message}", e)
             throw e
@@ -605,7 +604,7 @@ class ThermalCameraRecorder(
 
                     // Create thermal data record
                     val thermalData = "$timestampNs,$frameNumber,$minTemp,$maxTemp," +
-                                     "$avgTemp,$centerTemp,0.95,thermal_${String.format("%06d", frameNumber)}.jpg"
+                        "$avgTemp,$centerTemp,0.95,thermal_${String.format("%06d", frameNumber)}.jpg"
 
                     // Write to CSV
                     csvWriter?.let { writer ->
@@ -617,7 +616,7 @@ class ThermalCameraRecorder(
 
                     frameNumber++
                     frameCount = frameNumber
-                    
+
                     delay(frameInterval)
                 }
             } catch (e: Exception) {
