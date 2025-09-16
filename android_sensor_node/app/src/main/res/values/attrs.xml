@@ -6,4 +6,20 @@
         <attr name="guide_text" format="string" />
         <attr name="guide_icon_show" format="boolean" />
     </declare-styleable>
+    
+    <!-- Lottie animation attributes (fallback for missing dependency) -->
+    <declare-styleable name="LottieAnimationView">
+        <attr name="lottie_rawRes" format="reference" />
+        <attr name="lottie_autoPlay" format="boolean" />
+        <attr name="lottie_loop" format="boolean" />
+        <attr name="lottie_speed" format="float" />
+        <attr name="lottie_progress" format="float" />
+        <attr name="lottie_repeatMode" format="enum">
+            <enum name="restart" value="1" />
+            <enum name="reverse" value="2" />
+        </attr>
+        <attr name="lottie_repeatCount" format="integer" />
+        <attr name="lottie_colorFilter" format="color" />
+        <attr name="lottie_scale" format="float" />
+    </declare-styleable>
 </resources>

@@ -41,6 +41,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -84,80 +85,110 @@ class RgbCameraRecorder(
     private var backgroundHandler: Handler? = null
 
     override suspend fun start(sessionDir: File) {
+        Log.i(TAG, "Starting RGB camera recording in session: ${sessionDir.absolutePath}")
+        
         // Ensure directories
         val rgbDir = sessionDir
         if (!rgbDir.exists()) rgbDir.mkdirs()
         val framesDir = File(rgbDir, "frames").apply { mkdirs() }
-        // Open CSV for DNG index (Phase 3 requirement)
-        csvFile = File(rgbDir, "rgb.csv")
+        
+        // Open CSV for frame metadata
+        csvFile = File(rgbDir, "rgb_frames.csv")
         csvWriter = java.io.BufferedWriter(java.io.FileWriter(csvFile!!, true))
         if (csvFile!!.length() == 0L) {
-            csvWriter!!.write("timestamp_ns,filename\n")
+            csvWriter!!.write("timestamp_ns,timestamp_ms,frame_number,filename,file_size_bytes\n")
             csvWriter!!.flush()
         }
 
-        // Initialize Samsung camera capabilities and background thread
+        // Initialize camera system
         startBackgroundThread()
+        initializeCameraProvider()
         initializeCameraCapabilities()
-        // Use session start timestamp in video filename for traceability
-        val sessionStartTs = TimeManager.nowNanos()
-        val videoFile = File(rgbDir, "video_$sessionStartTs.mp4")
+        
+        // Start video recording
+        startVideoRecording(File(rgbDir, "video.mp4"))
+        
+        // Start frame capture process
+        startFrameCapture(framesDir)
+    }
 
+    private var sessionDir: File? = null
+    }
+
+    /**
+     * Initialize CameraX provider
+     */
+    private suspend fun initializeCameraProvider() {
         val provider = ProcessCameraProvider.getInstance(context).get()
         cameraProvider = provider
+    }
 
-        // Build Recorder with 4K support for Samsung devices, fallback to 1080p
-        val targetQuality =
-            if (supportsSamsungRawCapture) {
+    /**
+     * Start video recording
+     */
+    private fun startVideoRecording(videoFile: File) {
+        try {
+            sessionDir = videoFile.parentFile
+            val sessionStartTs = TimeManager.nowNanos()
+            val videoFileWithTimestamp = File(videoFile.parent, "video_$sessionStartTs.mp4")
+
+            // Build Recorder with appropriate quality
+            val targetQuality = if (supportsSamsungRawCapture) {
                 Log.i(TAG, "Samsung device detected - enabling 4K video recording")
                 Quality.UHD // 4K for Samsung devices with RAW capability
             } else {
                 Quality.FHD // 1080p for other devices
             }
 
-        val recorder =
-            Recorder
-                .Builder()
+            val recorder = Recorder.Builder()
                 .setQualitySelector(
                     QualitySelector.from(
                         targetQuality,
                         FallbackStrategy.higherQualityOrLowerThan(targetQuality),
                     ),
                 ).build()
-        videoCapture = VideoCapture.withOutput(recorder)
+            videoCapture = VideoCapture.withOutput(recorder)
 
-        // Initialize Samsung RAW capture or fallback to CameraX
-        if (supportsSamsungRawCapture && rawCameraId != null) {
-            Log.i(TAG, "Samsung RAW DNG capture available - using Camera2 API")
-            initializeSamsungRawCapture(framesDir)
-        } else {
-            Log.i(TAG, "Samsung RAW not available - using CameraX fallback")
-            // ImageCapture for high-res stills - standard CameraX fallback with DNG extension
-            imageCapture =
-                ImageCapture
-                    .Builder()
+            // Initialize image capture for stills
+            if (supportsSamsungRawCapture && rawCameraId != null) {
+                Log.i(TAG, "Samsung RAW DNG capture available - using Camera2 API")
+                scope.launch { initializeSamsungRawCapture(File(sessionDir!!, "frames")) }
+            } else {
+                Log.i(TAG, "Samsung RAW not available - using CameraX fallback")
+                imageCapture = ImageCapture.Builder()
                     .setTargetRotation(Surface.ROTATION_0)
                     .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                     .build()
-        }
+            }
 
-        // Unbind then bind
-        provider.unbindAll()
-        val useCases = mutableListOf<androidx.camera.core.UseCase>()
-        imageCapture?.let { useCases.add(it) }
-        videoCapture?.let { useCases.add(it) }
-        provider.bindToLifecycle(lifecycleOwner, cameraSelector, *useCases.toTypedArray())
+            // Bind use cases to lifecycle
+            val provider = cameraProvider ?: return
+            provider.unbindAll()
+            val useCases = mutableListOf<androidx.camera.core.UseCase>()
+            imageCapture?.let { useCases.add(it) }
+            videoCapture?.let { useCases.add(it) }
+            provider.bindToLifecycle(lifecycleOwner, cameraSelector, *useCases.toTypedArray())
 
-        // Start video recording
-        val outputOpts = FileOutputOptions.Builder(videoFile).build()
-        recording =
-            videoCapture!!
-                .output
+            // Start video recording
+            val outputOpts = FileOutputOptions.Builder(videoFileWithTimestamp).build()
+            recording = videoCapture!!.output
                 .prepareRecording(context, outputOpts)
                 .start(ContextCompat.getMainExecutor(context)) { /* events ignored */ }
 
-        // Start still capture loop based on device capabilities
-        startStillCaptureLoop(framesDir)
+            Log.i(TAG, "Video recording started: ${videoFileWithTimestamp.absolutePath}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start video recording: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Start frame capture process
+     */
+    private fun startFrameCapture(framesDir: File) {
+        scope.launch {
+            Log.i(TAG, "Starting frame capture loop")
+            startStillCaptureLoop(framesDir)
+        }
     }
 
     override suspend fun stop() {

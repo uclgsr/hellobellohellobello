@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common dimensions -->
+    <dimen name="dp_40">40dp</dimen>
+    <dimen name="dp_20">20dp</dimen>
+    <dimen name="dp_16">16dp</dimen>
+    <dimen name="dp_12">12dp</dimen>
+    <dimen name="dp_8">8dp</dimen>
+    <dimen name="dp_4">4dp</dimen>
+    <dimen name="dp_2">2dp</dimen>
+    <dimen name="dp_1">1dp</dimen>
+    
+    <!-- Text sizes -->
+    <dimen name="text_size_large">18sp</dimen>
+    <dimen name="text_size_medium">16sp</dimen>
+    <dimen name="text_size_small">14sp</dimen>
+    
+    <!-- Common margins and paddings -->
+    <dimen name="margin_large">24dp</dimen>
+    <dimen name="margin_medium">16dp</dimen>
+    <dimen name="margin_small">8dp</dimen>
+    <dimen name="padding_large">24dp</dimen>
+    <dimen name="padding_medium">16dp</dimen>
+    <dimen name="padding_small">8dp</dimen>
+</resources>

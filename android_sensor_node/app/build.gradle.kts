@@ -117,7 +117,8 @@ dependencies {
     implementation(files("libs/suplib-release.aar")) // existing
     implementation(files("libs/libcommon_1.2.0_24052117.aar"))
     implementation(files("libs/libirutils_1.2.0_2409241055.aar"))
-    implementation(files("libs/lms_international-3.90.009.0.aar"))
+    // Commented out problematic library for MVP build
+    // implementation(files("libs/lms_international-3.90.009.0.aar"))
     implementation(files("libs/abtest-1.0.1.aar"))
     implementation(files("libs/auth-number-2.13.2.1.aar"))
     implementation(files("libs/logger-2.2.1-release.aar"))
