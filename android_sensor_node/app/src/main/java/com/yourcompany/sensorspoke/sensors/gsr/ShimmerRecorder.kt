@@ -586,7 +586,7 @@ class ShimmerRecorder(
 
             // Log progress every second (128 samples at 128Hz)
             if (dataPointCount % 128 == 0) {
-                Log.d(TAG, "Fallback GSR sample $dataPointCount: ${gsrKohms.format(2)} kΩ (raw: $gsrRaw), PPG: $ppgRaw")
+                Log.d(TAG, "Fallback GSR sample $dataPointCount: ${"%.2f".format(gsrKohms)} kΩ (raw: $gsrRaw), PPG: $ppgRaw")
             }
             
         } catch (e: Exception) {
