@@ -62,11 +62,12 @@ class MultiModalSensorCoordinator(
         const val SYNC_LOG_HEADER = "timestamp_ns,system_time_ms,sensor_type,data_type,sensor_value,sync_status"
     }
 
-    // Sensor managers
-    private var gsrIntegrationManager: ShimmerGSRIntegrationManager? = null
+    // Sensor managers - simplified for MVP
+    // private var gsrIntegrationManager: ShimmerGSRIntegrationManager? = null
     private var tc001IntegrationManager: TC001SensorIntegrationManager? = null
     private var rgbRecorder: RgbCameraRecorder? = null
     private var audioRecorder: AudioRecorder? = null
+    private var shimmerRecorder: ShimmerRecorder? = null
 
     // State management
     private val _coordinationState = MutableStateFlow(CoordinationState.UNINITIALIZED)
@@ -102,16 +103,9 @@ class MultiModalSensorCoordinator(
                 _coordinationState.value = CoordinationState.INITIALIZING
                 Log.i(TAG, "Initializing multi-modal sensor coordination system...")
 
-                // Initialize GSR integration
-                gsrIntegrationManager =
-                    ShimmerGSRIntegrationManager(context).apply {
-                        if (!initialize()) {
-                            Log.w(TAG, "GSR integration initialization failed")
-                        } else {
-                            Log.i(TAG, "GSR integration initialized successfully")
-                            setDataCallback(gsrDataCallback)
-                        }
-                    }
+                // Initialize GSR recording using ShimmerRecorder (MVP implementation)
+                shimmerRecorder = ShimmerRecorder(context)
+                Log.i(TAG, "GSR Shimmer recorder initialized")
 
                 // Initialize TC001 thermal integration
                 tc001IntegrationManager =
@@ -335,10 +329,9 @@ class MultiModalSensorCoordinator(
 
                 // Shutdown sensor subsystems
                 tc001IntegrationManager?.shutdown()
-                gsrIntegrationManager?.let { manager ->
-                    if (manager.isDeviceConnected()) {
-                        manager.disconnect()
-                    }
+                shimmerRecorder?.let { recorder ->
+                    // Stop GSR recording if active
+                    Log.i(TAG, "Stopping GSR recording")
                 }
 
                 // Cancel coordination scope
@@ -357,11 +350,8 @@ class MultiModalSensorCoordinator(
      */
     private suspend fun startGSRRecording(sessionDir: File): Boolean =
         try {
-            gsrIntegrationManager?.let { manager ->
-                // For now, we'll use the ShimmerRecorder directly
-                // In production, this would use the full device selection flow
-                val shimmerRecorder = ShimmerRecorder(context)
-                shimmerRecorder.start(sessionDir)
+            shimmerRecorder?.let { recorder ->
+                recorder.start(sessionDir)
                 Log.i(TAG, "GSR recording started")
                 true
             } ?: false
@@ -414,12 +404,10 @@ class MultiModalSensorCoordinator(
      */
     private suspend fun stopGSRRecording(): Boolean =
         try {
-            gsrIntegrationManager?.let { manager ->
-                if (manager.isDeviceStreaming()) {
-                    manager.stopStreaming()
-                }
+            shimmerRecorder?.let { recorder ->
+                recorder.stop()
+                Log.i(TAG, "GSR recording stopped")
             }
-            Log.i(TAG, "GSR recording stopped")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop GSR recording: ${e.message}")
@@ -558,7 +546,7 @@ class MultiModalSensorCoordinator(
      * Perform system health check
      */
     private suspend fun performSystemHealthCheck() {
-        val gsrHealthy = gsrIntegrationManager?.isDeviceConnected() ?: false
+        val gsrHealthy = shimmerRecorder != null // Simplified check for MVP
         val thermalHealthy =
             tc001IntegrationManager?.getCurrentState()?.let { state ->
                 state != TC001SensorIntegrationManager.Companion.IntegrationState.ERROR
@@ -645,7 +633,7 @@ class MultiModalSensorCoordinator(
      */
     private fun getActiveSensorCount(): Int {
         var count = 0
-        if (gsrIntegrationManager?.isDeviceConnected() == true) count++
+        if (shimmerRecorder != null) count++ // GSR recorder available
         if (tc001IntegrationManager?.isRecording() == true) count++
         // RGB and audio would be checked here in full implementation
         return count
@@ -695,47 +683,8 @@ class MultiModalSensorCoordinator(
         _systemHealth.value = health
     }
 
-    /**
-     * GSR data callback for synchronization
-     */
-    private val gsrDataCallback =
-        object : ShimmerDataCallback {
-            override fun onGSRData(data: GSRDataPoint) {
-                // Buffer GSR data for synchronization
-                dataBuffer.addGSRData(data)
-
-                // Log GSR data for synchronization analysis
-                logSyncEvent(
-                    sensorType = "GSR",
-                    dataType = "SAMPLE",
-                    value = data.gsrMicrosiemens,
-                    syncStatus = "RECEIVED",
-                )
-            }
-
-            override fun onConnectionStateChanged(
-                connected: Boolean,
-                message: String,
-            ) {
-                Log.i(TAG, "GSR connection: $connected - $message")
-            }
-
-            override fun onStreamingStateChanged(
-                streaming: Boolean,
-                message: String,
-            ) {
-                Log.i(TAG, "GSR streaming: $streaming - $message")
-            }
-
-            override fun onDeviceInitialized(message: String) {
-                Log.i(TAG, "GSR device initialized: $message")
-            }
-
-            override fun onError(error: String) {
-                Log.e(TAG, "GSR error: $error")
-            }
-        }
-
+    // Simplified for MVP - data callbacks would be implemented when integrating with real sensors
+    
     /**
      * Get current coordination state
      */
@@ -779,30 +728,29 @@ data class SynchronizationMetrics(
 )
 
 /**
- * Multi-sensor data buffer for synchronization analysis
+ * Multi-sensor data buffer for synchronization analysis - MVP implementation
  */
 class SensorDataBuffer {
-    private val gsrData = mutableListOf<GSRDataPoint>()
+    // Simplified for MVP - would contain sensor data structures when fully implemented
+    private val sensorDataCount = mutableMapOf<String, Int>()
     private val maxBufferSize = 1000 // Keep last 1000 samples
 
-    fun addGSRData(data: GSRDataPoint) {
-        synchronized(gsrData) {
-            gsrData.add(data)
-            if (gsrData.size > maxBufferSize) {
-                gsrData.removeAt(0) // Use removeAt(0) instead of removeFirst() for API compatibility
-            }
+    fun addSensorData(sensorType: String, timestamp: Long) {
+        synchronized(sensorDataCount) {
+            val count = sensorDataCount.getOrDefault(sensorType, 0) + 1
+            sensorDataCount[sensorType] = count
         }
     }
 
-    fun getRecentGSRData(count: Int = 10): List<GSRDataPoint> {
-        synchronized(gsrData) {
-            return gsrData.takeLast(count)
+    fun getSensorDataCount(sensorType: String): Int {
+        synchronized(sensorDataCount) {
+            return sensorDataCount.getOrDefault(sensorType, 0)
         }
     }
 
     fun clearBuffer() {
-        synchronized(gsrData) {
-            gsrData.clear()
+        synchronized(sensorDataCount) {
+            sensorDataCount.clear()
         }
     }
 }

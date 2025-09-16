@@ -72,6 +72,7 @@ android {
                     "lib/**/libirnet.so",
                     "lib/**/libusb-1.0.so",
                     "lib/**/libusbcamera.so",
+                    "lib/**/libopencv_java4.so", // Fix for conflicting OpenCV libraries
                 )
         }
     }
