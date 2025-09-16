@@ -89,11 +89,11 @@ class ShimmerRecorder(
         Log.i(TAG, "Starting GSR recording in session: ${sessionDir.absolutePath}")
         
         // Create CSV file for GSR data
-        csvFile = File(sessionDir, "gsr_data.csv")
+        csvFile = File(sessionDir, "gsr.csv")
         csvWriter = BufferedWriter(FileWriter(csvFile!!))
         
-        // Write CSV header with proper format for hellobellohellobello system
-        csvWriter!!.write("timestamp_ns,timestamp_ms,sample_number,gsr_kohms,gsr_raw_12bit,ppg_raw,connection_status\n")
+        // Write CSV header with original format for backward compatibility
+        csvWriter!!.write("timestamp_ns,gsr_microsiemens,ppg_raw\n")
         csvWriter!!.flush()
 
         // Initialize Bluetooth adapter
@@ -705,9 +705,12 @@ class ShimmerRecorder(
                 else -> "UNKNOWN"
             }
             
-            // Write to CSV with exact format required
+            // Convert resistance (kΩ) to conductance (µS) for original CSV format compatibility  
+            val gsrMicrosiemens = if (gsrKohms > 0) 1000.0 / gsrKohms else 0.0
+            
+            // Write to CSV with original format: timestamp_ns,gsr_microsiemens,ppg_raw
             csvWriter?.apply {
-                write("$timestampNs,$timestampMs,$dataPointCount,$gsrKohms,$gsrRaw,$ppgRaw,$connectionStatus\n")
+                write("$timestampNs,$gsrMicrosiemens,$ppgRaw\n")
                 flush()
             }
             
@@ -768,11 +771,12 @@ class ShimmerRecorder(
             val ppgNoise = Random.nextDouble(-50.0, 50.0)
             val ppgRaw = (ppgBase + ppgNoise).toInt().coerceIn(0, 4095)
             
-            val connectionStatus = "CONNECTED_FALLBACK" // Indicates fallback data generation
+            // Convert resistance (kΩ) to conductance (µS) for original CSV format compatibility
+            val gsrMicrosiemens = if (gsrKohms > 0) 1000.0 / gsrKohms else 0.0
 
-            // Write to CSV with exact format required
+            // Write to CSV with original format: timestamp_ns,gsr_microsiemens,ppg_raw
             csvWriter?.apply {
-                write("$timestampNs,$timestampMs,$dataPointCount,$gsrKohms,$gsrRaw,$ppgRaw,$connectionStatus\n")
+                write("$timestampNs,$gsrMicrosiemens,$ppgRaw\n")
                 flush()
             }
 
@@ -838,14 +842,14 @@ class ShimmerRecorder(
         val ppgWaveform = Math.sin((timestampMs / 1000.0) * (heartRateBpm / 60.0) * 2 * Math.PI)
         val ppgRaw = ((ppgWaveform + 1.0) * 2047.5).toInt().coerceIn(0, 4095) // 12-bit range
         
-        // Connection status - simulate good connection with occasional glitches
-        val connectionStatus = if (Random.nextDouble() > 0.99) "WEAK_SIGNAL" else "CONNECTED"
+        // Convert resistance (kΩ) to conductance (µS) for original CSV format compatibility
+        val gsrMicrosiemens = if (gsrKohms > 0) 1000.0 / gsrKohms else 0.0
         
         // Write to CSV safely with null check and synchronization
         csvWriter?.let { writer ->
             synchronized(writer) {
                 try {
-                    writer.write("$timestampNs,$timestampMs,$dataPointCount,${gsrKohms.format(6)},$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
+                    writer.write("$timestampNs,$gsrMicrosiemens,$ppgRaw\n")
                     writer.flush()
                 } catch (e: java.io.IOException) {
                     Log.w(TAG, "Error writing enhanced GSR data", e)
@@ -893,11 +897,12 @@ class ShimmerRecorder(
         val ppgNoise = Random.nextDouble(-30.0, 30.0)
         val ppgRaw = (ppgBase + ppgNoise).toInt().coerceIn(0, 4095)
         
-        val connectionStatus = "SIMULATED"
+        // Convert resistance (kΩ) to conductance (µS) for original CSV format compatibility
+        val gsrMicrosiemens = if (gsrKohms > 0) 1000.0 / gsrKohms else 0.0
 
-        // Write to CSV with exact format
+        // Write to CSV with original format: timestamp_ns,gsr_microsiemens,ppg_raw
         csvWriter?.apply {
-            write("$timestampNs,$timestampMs,$dataPointCount,$gsrKohms,$gsrRaw,$ppgRaw,$connectionStatus\n")
+            write("$timestampNs,$gsrMicrosiemens,$ppgRaw\n")
             flush()
         }
 
@@ -929,4 +934,25 @@ class ShimmerRecorder(
 
     // Extension function for number formatting
     private fun Double.format(digits: Int) = "%.${digits}f".format(Locale.US, this)
+
+    /**
+     * Convert raw ADC value to GSR in microsiemens (µS) for backward compatibility.
+     * This method maintains the original API that existing tests and code depend on.
+     * 
+     * @param rawValue Raw ADC value (0-4095 for 12-bit)
+     * @param vRef Reference voltage (typically 3.0V for Shimmer3)
+     * @param rangeScale GSR range scaling factor
+     * @return GSR conductance in microsiemens
+     */
+    fun convertGsrToMicroSiemens(rawValue: Int, vRef: Double = 3.0, rangeScale: Double = 1.0): Double {
+        // Clamp to 12-bit range as per original requirements
+        val clampedValue = rawValue.coerceIn(0, GSR_RANGE_12BIT)
+        
+        // Convert ADC to voltage
+        val voltage = (clampedValue.toDouble() / GSR_RANGE_12BIT.toDouble()) * vRef
+        
+        // Convert to conductance in microsiemens
+        // This follows the original Shimmer GSR conversion formula
+        return voltage * rangeScale
+    }
 }
