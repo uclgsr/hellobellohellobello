@@ -410,7 +410,7 @@ class TopdonThermalIntegration(private val context: Context) {
         
         // Generate realistic temperature data
         val baseTemp = 22.0f // Room temperature
-        val random = java.util.Random()
+        val random = kotlin.random.Random
         var minTemp = Float.MAX_VALUE
         var maxTemp = Float.MIN_VALUE
         var totalTemp = 0f
