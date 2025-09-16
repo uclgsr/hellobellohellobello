@@ -308,9 +308,10 @@ class EnhancedMainActivity : AppCompatActivity() {
                 // Flash sync executed through screen flash
                 runOnUiThread {
                     // Flash the screen white briefly for visual sync
+                    val originalBackground = window.decorView.background
                     window.decorView.setBackgroundColor(android.graphics.Color.WHITE)
                     window.decorView.postDelayed({
-                        window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        window.decorView.background = originalBackground
                     }, 100) // Flash for 100ms
                 }
                 
