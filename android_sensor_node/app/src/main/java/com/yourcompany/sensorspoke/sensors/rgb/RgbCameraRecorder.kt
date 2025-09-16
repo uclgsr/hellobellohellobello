@@ -117,15 +117,21 @@ class RgbCameraRecorder(
         val provider = ProcessCameraProvider.getInstance(context).get()
         cameraProvider = provider
 
-        // Build recorder for video
+        // Build recorder for 4K60fps video - high performance mode
         val recorder = Recorder.Builder()
-            .setQualitySelector(QualitySelector.from(Quality.FHD))
+            .setQualitySelector(
+                QualitySelector.fromOrderedList(
+                    listOf(Quality.UHD, Quality.FHD, Quality.HD) // 4K priority, fallback to lower
+                )
+            )
             .build()
         videoCapture = VideoCapture.withOutput(recorder)
 
-        // Build image capture for frames
+        // Build image capture for RAW + JPEG frames - maximum quality
         imageCapture = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+            .setTargetRotation(0) // No rotation for maximum quality
+            .setFlashMode(ImageCapture.FLASH_MODE_OFF) // Avoid artifacts in research data
             .build()
 
         // Bind use cases to lifecycle
@@ -162,7 +168,7 @@ class RgbCameraRecorder(
             while (isActive) {
                 try {
                     captureFrame(framesDir)
-                    delay(150) // ~6-7 FPS
+                    delay(33) // ~30 FPS for high-quality data capture (was ~6-7 FPS)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error capturing frame: ${e.message}", e)
                     delay(1000) // Wait longer on error

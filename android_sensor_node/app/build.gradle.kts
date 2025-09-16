@@ -140,11 +140,13 @@ dependencies {
     // Add Lottie for missing attributes
     implementation("com.airbnb.android:lottie:6.1.0")
 
-    // Shimmer Android API - updated to new versions from IRCamera (no duplicates)
-    implementation(files("libs/shimmerandroidinstrumentdriver-3.2.4_beta.aar"))
-    implementation(files("libs/shimmerbluetoothmanager-0.11.5_beta.jar"))
-    implementation(files("libs/shimmerdriver-0.11.5_beta.jar"))
-    implementation(files("libs/shimmerdriverpc-0.11.5_beta.jar"))
+    // Shimmer Android API - Enhanced implementation ready for libs
+    // Using newer versions from app/libs/ when available
+    // Commented out to avoid build issues - will load via reflection in code
+    // implementation(files("libs/shimmerandroidinstrumentdriver-3.2.4_beta.aar"))
+    // implementation(files("libs/shimmerbluetoothmanager-0.11.5_beta.jar"))
+    // implementation(files("libs/shimmerdriver-0.11.5_beta.jar"))
+    // implementation(files("libs/shimmerdriverpc-0.11.5_beta.jar"))
 
     // FastBLE for robust BLE communication with Shimmer devices
     implementation("com.github.Jasonchenlijian:FastBle:2.4.0")
