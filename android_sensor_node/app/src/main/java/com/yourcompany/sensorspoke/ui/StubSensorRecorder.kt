@@ -1,4 +1,4 @@
-package com.yourcompany.sensorspoke.ui
+package com.yourcompany.sensorspoke.sensors
 
 import android.util.Log
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
