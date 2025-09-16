@@ -133,7 +133,7 @@ class Phase1MainActivity : AppCompatActivity() {
             updateStatus("Stopping recording...")
             lifecycleScope.launch {
                 try {
-                    recordingController?.stopSession()
+                    getRecordingController().stopSession()
                     updateStatus("Recording stopped manually")
                     updateButtonStates(isRecording = false)
                 } catch (e: Exception) {
