@@ -11,36 +11,36 @@ import kotlinx.coroutines.launch
 /**
  * MainViewModel coordinates with RecordingController to reflect recording state via StateFlow.
  * Follows MVVM architecture with proper separation of UI logic from business logic.
- * 
+ *
  * This ViewModel acts as the UI layer's interface to the RecordingController session orchestrator,
  * providing reactive state updates for the UI while keeping business logic in the controller layer.
  */
 class MainViewModel : ViewModel() {
-    
+
     // Recording state management
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
-    
+
     private val _currentSessionId = MutableStateFlow<String?>(null)
     val currentSessionId: StateFlow<String?> = _currentSessionId.asStateFlow()
-    
+
     private val _recordingState = MutableStateFlow(RecordingState.IDLE)
     val recordingState: StateFlow<RecordingState> = _recordingState.asStateFlow()
-    
+
     // UI state management
     private val _statusMessage = MutableStateFlow("Ready")
     val statusMessage: StateFlow<String> = _statusMessage.asStateFlow()
-    
+
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
-    
+
     // Sensor status tracking
     private val _sensorStatus = MutableStateFlow<Map<String, SensorStatus>>(emptyMap())
     val sensorStatus: StateFlow<Map<String, SensorStatus>> = _sensorStatus.asStateFlow()
-    
+
     // RecordingController coordination - using SessionOrchestrator interface
     private var sessionOrchestrator: SessionOrchestrator? = null
-    
+
     /**
      * Recording states that mirror SessionOrchestrator states for UI reactivity
      */
@@ -49,9 +49,9 @@ class MainViewModel : ViewModel() {
         PREPARING,
         RECORDING,
         STOPPING,
-        ERROR
+        ERROR,
     }
-    
+
     /**
      * Individual sensor status for UI display
      */
@@ -60,15 +60,15 @@ class MainViewModel : ViewModel() {
         val isActive: Boolean,
         val isHealthy: Boolean,
         val lastUpdate: Long = System.currentTimeMillis(),
-        val statusMessage: String = ""
+        val statusMessage: String = "",
     )
-    
+
     /**
      * Initialize the ViewModel with a SessionOrchestrator instance (typically RecordingController)
      */
     fun initialize(orchestrator: SessionOrchestrator) {
         sessionOrchestrator = orchestrator
-        
+
         // Observe orchestrator state changes
         viewModelScope.launch {
             orchestrator.state.collect { orchestratorState ->
@@ -81,7 +81,7 @@ class MainViewModel : ViewModel() {
                 _isRecording.value = orchestratorState == SessionOrchestrator.State.RECORDING
             }
         }
-        
+
         // Observe current session
         viewModelScope.launch {
             orchestrator.currentSessionId.collect { sessionId ->
@@ -94,7 +94,7 @@ class MainViewModel : ViewModel() {
             }
         }
     }
-    
+
     /**
      * Start a new recording session
      */
@@ -109,7 +109,7 @@ class MainViewModel : ViewModel() {
             }
         }
     }
-    
+
     /**
      * Stop the current recording session
      */
@@ -124,7 +124,7 @@ class MainViewModel : ViewModel() {
             }
         }
     }
-    
+
     /**
      * Update sensor status for UI display
      */
@@ -133,14 +133,14 @@ class MainViewModel : ViewModel() {
         currentStatus[sensorName] = status
         _sensorStatus.value = currentStatus
     }
-    
+
     /**
      * Clear error message
      */
     fun clearError() {
         _errorMessage.value = null
     }
-    
+
     override fun onCleared() {
         super.onCleared()
         // Clean up any resources if needed

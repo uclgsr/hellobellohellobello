@@ -5,11 +5,10 @@ import android.os.Build
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 
 /**
  * Phase 3: Enhanced Protocol v2.0 for Advanced Networking Features
- * 
+ *
  * Extends the basic JSON protocol with advanced session management,
  * flash synchronization, status updates, and enhanced error handling.
  */
@@ -26,7 +25,7 @@ object EnhancedProtocol {
         const val START_RECORDING = "start_recording"
         const val STOP_RECORDING = "stop_recording"
         const val FLASH_SYNC = "flash_sync"
-        
+
         // Enhanced protocol (v2.0)
         const val SESSION_START = "session_start"
         const val SESSION_STOP = "session_stop"
@@ -81,61 +80,81 @@ object EnhancedProtocol {
     private fun createCapabilitiesArray(): JSONArray {
         return JSONArray().apply {
             // RGB Camera
-            put(JSONObject().apply {
-                put("sensor", "rgb_camera")
-                put("type", "video")
-                put("resolution", "1920x1080")
-                put("framerate", 30)
-                put("format", "mp4")
-                put("features", JSONArray().apply {
-                    put("high_resolution")
-                    put("samsung_raw_dng")
-                    put("4k_recording")
-                })
-            })
-            
+            put(
+                JSONObject().apply {
+                    put("sensor", "rgb_camera")
+                    put("type", "video")
+                    put("resolution", "1920x1080")
+                    put("framerate", 30)
+                    put("format", "mp4")
+                    put(
+                        "features",
+                        JSONArray().apply {
+                            put("high_resolution")
+                            put("samsung_raw_dng")
+                            put("4k_recording")
+                        },
+                    )
+                },
+            )
+
             // Thermal Camera
-            put(JSONObject().apply {
-                put("sensor", "thermal_camera")
-                put("type", "thermal")
-                put("hardware", "topdon_tc001")
-                put("accuracy", "±2°C")
-                put("format", "csv")
-                put("features", JSONArray().apply {
-                    put("hardware_calibrated")
-                    put("color_palettes")
-                    put("temperature_compensation")
-                })
-            })
-            
+            put(
+                JSONObject().apply {
+                    put("sensor", "thermal_camera")
+                    put("type", "thermal")
+                    put("hardware", "topdon_tc001")
+                    put("accuracy", "±2°C")
+                    put("format", "csv")
+                    put(
+                        "features",
+                        JSONArray().apply {
+                            put("hardware_calibrated")
+                            put("color_palettes")
+                            put("temperature_compensation")
+                        },
+                    )
+                },
+            )
+
             // GSR Sensor
-            put(JSONObject().apply {
-                put("sensor", "gsr")
-                put("type", "physiological")
-                put("hardware", "shimmer3_gsr_plus")
-                put("precision", "12_bit_adc")
-                put("sampling_rate", 128)
-                put("format", "csv")
-                put("features", JSONArray().apply {
-                    put("dual_sensor")
-                    put("ble_communication")
-                    put("scientific_accuracy")
-                })
-            })
-            
+            put(
+                JSONObject().apply {
+                    put("sensor", "gsr")
+                    put("type", "physiological")
+                    put("hardware", "shimmer3_gsr_plus")
+                    put("precision", "12_bit_adc")
+                    put("sampling_rate", 128)
+                    put("format", "csv")
+                    put(
+                        "features",
+                        JSONArray().apply {
+                            put("dual_sensor")
+                            put("ble_communication")
+                            put("scientific_accuracy")
+                        },
+                    )
+                },
+            )
+
             // Audio Recording
-            put(JSONObject().apply {
-                put("sensor", "audio")
-                put("type", "audio")
-                put("sampling_rate", 44100)
-                put("channels", 2)
-                put("format", "m4a")
-                put("features", JSONArray().apply {
-                    put("stereo_recording")
-                    put("aac_encoding")
-                    put("high_quality")
-                })
-            })
+            put(
+                JSONObject().apply {
+                    put("sensor", "audio")
+                    put("type", "audio")
+                    put("sampling_rate", 44100)
+                    put("channels", 2)
+                    put("format", "m4a")
+                    put(
+                        "features",
+                        JSONArray().apply {
+                            put("stereo_recording")
+                            put("aac_encoding")
+                            put("high_quality")
+                        },
+                    )
+                },
+            )
         }
     }
 
@@ -209,13 +228,13 @@ object EnhancedProtocol {
             put("device_id", "${Build.MODEL}_${System.currentTimeMillis()}")
             put("timestamp", System.currentTimeMillis())
             put("message_id", generateMessageId())
-            
+
             // System status
             put("battery_level", getBatteryLevel(context))
             put("storage_free_mb", getAvailableStorageMB(context))
             put("memory_free_mb", getAvailableMemoryMB())
             put("cpu_usage", getCpuUsage())
-            
+
             // Session status
             if (sessionId != null) {
                 put("session_id", sessionId)
@@ -223,7 +242,7 @@ object EnhancedProtocol {
             } else {
                 put("recording_status", "idle")
             }
-            
+
             // Sensor status
             put("sensors", createSensorStatusArray())
         }
@@ -253,19 +272,22 @@ object EnhancedProtocol {
             put("error", error)
             put("timestamp", System.currentTimeMillis())
             put("message_id", generateMessageId())
-            
+
             if (details != null) {
                 put("details", details)
             }
-            
+
             if (sessionId != null) {
                 put("session_id", sessionId)
             }
-            
-            put("device_info", JSONObject().apply {
-                put("model", Build.MODEL)
-                put("android_version", Build.VERSION.RELEASE)
-            })
+
+            put(
+                "device_info",
+                JSONObject().apply {
+                    put("model", Build.MODEL)
+                    put("android_version", Build.VERSION.RELEASE)
+                },
+            )
         }
     }
 
@@ -274,26 +296,34 @@ object EnhancedProtocol {
      */
     private fun createSensorStatusArray(): JSONArray {
         return JSONArray().apply {
-            put(JSONObject().apply {
-                put("sensor", "rgb_camera")
-                put("status", "available")
-                put("connection", "ready")
-            })
-            put(JSONObject().apply {
-                put("sensor", "thermal_camera")
-                put("status", "available") // Would check actual hardware
-                put("connection", "usb_ready")
-            })
-            put(JSONObject().apply {
-                put("sensor", "gsr")
-                put("status", "available") // Would check BLE connection
-                put("connection", "ble_ready")
-            })
-            put(JSONObject().apply {
-                put("sensor", "audio")
-                put("status", "available")
-                put("connection", "ready")
-            })
+            put(
+                JSONObject().apply {
+                    put("sensor", "rgb_camera")
+                    put("status", "available")
+                    put("connection", "ready")
+                },
+            )
+            put(
+                JSONObject().apply {
+                    put("sensor", "thermal_camera")
+                    put("status", "available") // Would check actual hardware
+                    put("connection", "usb_ready")
+                },
+            )
+            put(
+                JSONObject().apply {
+                    put("sensor", "gsr")
+                    put("status", "available") // Would check BLE connection
+                    put("connection", "ble_ready")
+                },
+            )
+            put(
+                JSONObject().apply {
+                    put("sensor", "audio")
+                    put("status", "available")
+                    put("connection", "ready")
+                },
+            )
         }
     }
 
@@ -350,13 +380,13 @@ object EnhancedProtocol {
     fun parseMessage(messageStr: String): JSONObject? {
         return try {
             val message = JSONObject(messageStr)
-            
+
             // Validate required fields
             if (!message.has("type")) {
                 Log.w(TAG, "Message missing 'type' field")
                 return null
             }
-            
+
             // Check protocol version compatibility
             if (message.has("v")) {
                 val version = message.getString("v")
@@ -364,7 +394,7 @@ object EnhancedProtocol {
                     Log.w(TAG, "Unsupported protocol version: $version")
                 }
             }
-            
+
             message
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse message: ${e.message}", e)
@@ -381,12 +411,12 @@ object EnhancedProtocol {
             put("type", "ack")
             put("status", status)
             put("timestamp", System.currentTimeMillis())
-            
+
             // Include original message ID if present
             if (originalMessage.has("message_id")) {
                 put("ack_message_id", originalMessage.getString("message_id"))
             }
-            
+
             // Include additional data if provided
             if (data != null) {
                 put("data", data)

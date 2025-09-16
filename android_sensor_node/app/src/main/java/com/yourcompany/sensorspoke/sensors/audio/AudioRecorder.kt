@@ -42,10 +42,10 @@ class AudioRecorder(
         try {
             initializeAudioRecorder()
             startRecording()
-            
+
             // Verify recording is actually working
             verifyRecordingStarted()
-            
+
             Log.d(TAG, "Audio recording started successfully: ${audioFile?.absolutePath}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start audio recording: ${e.message}", e)
@@ -100,8 +100,8 @@ class AudioRecorder(
 
                 // Log recording start event with timestamp
                 logAudioEvent("RECORDING_STARTED", recordingStartTime)
-                
-                Log.i(TAG, "MediaRecorder started successfully at ${recordingStartTime}")
+
+                Log.i(TAG, "MediaRecorder started successfully at $recordingStartTime")
             } catch (e: RuntimeException) {
                 Log.e(TAG, "MediaRecorder start failed", e)
                 throw RuntimeException("Failed to start audio recording", e)
@@ -275,13 +275,13 @@ class AudioRecorder(
     private suspend fun verifyRecordingStarted() {
         // Wait a moment for recording to stabilize
         kotlinx.coroutines.delay(500)
-        
+
         try {
             // Check if the audio file is being written to
             val initialSize = audioFile?.length() ?: 0
             kotlinx.coroutines.delay(1000) // Wait 1 second
             val currentSize = audioFile?.length() ?: 0
-            
+
             if (currentSize > initialSize && currentSize > 0) {
                 Log.i(TAG, "Audio recording verification successful - file growing from $initialSize to $currentSize bytes")
                 logAudioEvent("RECORDING_VERIFIED", System.nanoTime(), "File size: $currentSize bytes")
@@ -289,14 +289,13 @@ class AudioRecorder(
                 Log.w(TAG, "Audio recording verification failed - file not growing (size: $currentSize)")
                 logAudioEvent("RECORDING_VERIFICATION_FAILED", System.nanoTime(), "File size unchanged: $currentSize")
             }
-            
+
             // Additional verification through MediaRecorder state (if available)
             if (isRecording) {
                 val recordingDuration = (System.nanoTime() - recordingStartTime) / 1_000_000 // Convert to ms
                 Log.d(TAG, "Recording duration verification: ${recordingDuration}ms")
                 logAudioEvent("RECORDING_DURATION_CHECK", System.nanoTime(), "Duration: ${recordingDuration}ms")
             }
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error during recording verification: ${e.message}", e)
             logAudioEvent("RECORDING_VERIFICATION_ERROR", System.nanoTime(), e.message ?: "Unknown error")

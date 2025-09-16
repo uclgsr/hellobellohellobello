@@ -81,7 +81,7 @@ android {
                 "META-INF/LICENSE",
                 "META-INF/LICENSE.txt",
                 "META-INF/NOTICE",
-                "META-INF/NOTICE.txt"
+                "META-INF/NOTICE.txt",
             )
         }
     }
@@ -118,7 +118,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("androidx.security:security-crypto:1.1.0")
-    
+
     // Lottie for animations (required by Shimmer SDK)
     implementation("com.airbnb.android:lottie:6.1.0")
 
@@ -136,7 +136,7 @@ dependencies {
     implementation(files("libs/auth-number-2.13.2.1.aar"))
     implementation(files("libs/logger-2.2.1-release.aar"))
     implementation(files("libs/main-2.2.1-release.aar"))
-    
+
     // Add Lottie for missing attributes
     implementation("com.airbnb.android:lottie:6.1.0")
 

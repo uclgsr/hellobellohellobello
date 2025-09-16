@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Phase 3: Advanced Connection Manager with Automatic Recovery
- * 
+ *
  * Manages robust network connections with the PC Hub including:
  * - Automatic reconnection with exponential backoff
  * - Connection health monitoring
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class ConnectionManager(
     private val context: Context,
-    private val networkClient: NetworkClient
+    private val networkClient: NetworkClient,
 ) {
     companion object {
         private const val TAG = "ConnectionManager"
@@ -41,21 +41,21 @@ class ConnectionManager(
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var heartbeatJob: Job? = null
     private var reconnectJob: Job? = null
-    
+
     // Connection state
     private val isConnected = AtomicBoolean(false)
     private val isReconnecting = AtomicBoolean(false)
     private val reconnectAttempts = AtomicInteger(0)
     private val lastHeartbeatTime = AtomicLong(0)
-    
+
     // PC Hub connection info
     private var hubAddress: InetAddress? = null
     private var hubPort: Int = 0
-    
+
     // Session persistence
     private var currentSessionId: String? = null
     private var wasRecording: Boolean = false
-    
+
     // Callbacks
     var onConnectionEstablished: ((InetAddress, Int) -> Unit)? = null
     var onConnectionLost: (() -> Unit)? = null
@@ -68,9 +68,9 @@ class ConnectionManager(
     fun connectToHub(address: InetAddress, port: Int) {
         hubAddress = address
         hubPort = port
-        
+
         Log.i(TAG, "Connecting to PC Hub at $address:$port")
-        
+
         scope.launch {
             try {
                 networkClient.connect(address.hostAddress, port)
@@ -89,17 +89,17 @@ class ConnectionManager(
         isConnected.set(true)
         isReconnecting.set(false)
         reconnectAttempts.set(0)
-        
+
         startHeartbeat()
-        
+
         hubAddress?.let { addr ->
             onConnectionEstablished?.invoke(addr, hubPort)
         }
-        
+
         // If we were reconnecting, notify restoration
         if (reconnectAttempts.get() > 0) {
             onConnectionRestored?.invoke()
-            
+
             // If we had an active session, try to rejoin
             currentSessionId?.let { sessionId ->
                 if (wasRecording) {
@@ -109,7 +109,7 @@ class ConnectionManager(
                 }
             }
         }
-        
+
         Log.i(TAG, "Connection established with PC Hub")
     }
 
@@ -118,13 +118,13 @@ class ConnectionManager(
      */
     fun onConnectionLost() {
         if (!isConnected.get()) return
-        
+
         isConnected.set(false)
         stopHeartbeat()
-        
+
         Log.w(TAG, "Connection to PC Hub lost")
         onConnectionLost?.invoke()
-        
+
         startReconnection()
     }
 
@@ -133,25 +133,25 @@ class ConnectionManager(
      */
     private fun startReconnection() {
         if (isReconnecting.get()) return
-        
+
         isReconnecting.set(true)
-        
+
         reconnectJob = scope.launch {
             val hubAddr = hubAddress
             if (hubAddr == null) {
                 Log.e(TAG, "Cannot reconnect - hub address not set")
                 return@launch
             }
-            
+
             while (isReconnecting.get() && reconnectAttempts.get() < MAX_RECONNECT_ATTEMPTS) {
                 val attempt = reconnectAttempts.incrementAndGet()
                 val backoffMs = calculateBackoff(attempt)
-                
+
                 Log.i(TAG, "Reconnection attempt $attempt/$MAX_RECONNECT_ATTEMPTS in ${backoffMs}ms")
                 delay(backoffMs)
-                
+
                 if (!isReconnecting.get()) break
-                
+
                 try {
                     networkClient.connect(hubAddr.hostAddress, hubPort)
                     onConnectionSuccessful()
@@ -160,7 +160,7 @@ class ConnectionManager(
                     Log.w(TAG, "Reconnection attempt $attempt failed: ${e.message}")
                 }
             }
-            
+
             // Max attempts reached
             if (reconnectAttempts.get() >= MAX_RECONNECT_ATTEMPTS) {
                 Log.e(TAG, "Max reconnection attempts reached")
@@ -183,7 +183,7 @@ class ConnectionManager(
      */
     private fun startHeartbeat() {
         stopHeartbeat()
-        
+
         heartbeatJob = scope.launch {
             while (isConnected.get()) {
                 try {
@@ -211,14 +211,17 @@ class ConnectionManager(
      */
     private suspend fun sendHeartbeat() {
         val heartbeat = EnhancedProtocol.createHeartbeatMessage()
-        
+
         // Add connection statistics
-        heartbeat.put("connection_stats", JSONObject().apply {
-            put("uptime_ms", System.currentTimeMillis() - lastHeartbeatTime.get())
-            put("reconnect_attempts", reconnectAttempts.get())
-            put("session_active", currentSessionId != null)
-        })
-        
+        heartbeat.put(
+            "connection_stats",
+            JSONObject().apply {
+                put("uptime_ms", System.currentTimeMillis() - lastHeartbeatTime.get())
+                put("reconnect_attempts", reconnectAttempts.get())
+                put("session_active", currentSessionId != null)
+            },
+        )
+
         networkClient.sendMessage(heartbeat.toString())
         lastHeartbeatTime.set(System.currentTimeMillis())
     }
@@ -236,7 +239,7 @@ class ConnectionManager(
             put("timestamp", System.currentTimeMillis())
             put("device_id", android.os.Build.MODEL)
         }
-        
+
         try {
             networkClient.sendMessage(rejoinMessage.toString())
             Log.i(TAG, "Sent session rejoin message for session: $sessionId")
@@ -251,7 +254,7 @@ class ConnectionManager(
     fun updateSessionState(sessionId: String?, isRecording: Boolean) {
         currentSessionId = sessionId
         wasRecording = isRecording
-        
+
         Log.d(TAG, "Session state updated - ID: $sessionId, Recording: $isRecording")
     }
 
@@ -267,7 +270,7 @@ class ConnectionManager(
             hubAddress = hubAddress?.hostAddress,
             hubPort = hubPort,
             currentSessionId = currentSessionId,
-            wasRecording = wasRecording
+            wasRecording = wasRecording,
         )
     }
 
@@ -279,7 +282,7 @@ class ConnectionManager(
         isReconnecting.set(false)
         stopHeartbeat()
         reconnectJob?.cancel()
-        
+
         Log.i(TAG, "Disconnected from PC Hub")
     }
 
@@ -302,7 +305,7 @@ class ConnectionManager(
         val hubAddress: String?,
         val hubPort: Int,
         val currentSessionId: String?,
-        val wasRecording: Boolean
+        val wasRecording: Boolean,
     ) {
         fun getStatusDescription(): String = when {
             isConnected -> "Connected to $hubAddress:$hubPort"

@@ -4,11 +4,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Camera
-import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -64,10 +64,10 @@ class RgbCameraRecorder(
 
     override suspend fun start(sessionDir: File) {
         Log.i(TAG, "Starting RGB camera recording in session: ${sessionDir.absolutePath}")
-        
+
         // Ensure directories
         val framesDir = File(sessionDir, "frames").apply { mkdirs() }
-        
+
         // Open CSV for frame metadata - enhanced with video correlation
         csvFile = File(sessionDir, "rgb_frames.csv")
         csvWriter = java.io.BufferedWriter(java.io.FileWriter(csvFile!!, true))
@@ -78,17 +78,17 @@ class RgbCameraRecorder(
 
         // Initialize CameraX
         initializeCameraX()
-        
+
         // Start video recording
         startVideoRecording(File(sessionDir, "video.mp4"))
-        
+
         // Start frame capture process
         startFrameCapture(framesDir)
     }
 
     override suspend fun stop() {
         Log.i(TAG, "Stopping RGB camera recording")
-        
+
         // Stop recording
         recording?.stop()
         recording = null
@@ -99,7 +99,7 @@ class RgbCameraRecorder(
             it.join() // Wait for completion to avoid race condition
         }
         captureJob = null
-        
+
         // Unbind camera
         cameraProvider?.unbindAll()
         cameraProvider = null
@@ -113,10 +113,10 @@ class RgbCameraRecorder(
         csvWriter?.close()
         csvWriter = null
         csvFile = null
-        
+
         // Shutdown executor
         executor.shutdown()
-        
+
         Log.i(TAG, "RGB camera recording stopped")
     }
 
@@ -128,8 +128,8 @@ class RgbCameraRecorder(
         val recorder = Recorder.Builder()
             .setQualitySelector(
                 QualitySelector.fromOrderedList(
-                    listOf(Quality.UHD, Quality.FHD, Quality.HD) // 4K priority, fallback to lower
-                )
+                    listOf(Quality.UHD, Quality.FHD, Quality.HD), // 4K priority, fallback to lower
+                ),
             )
             .build()
         videoCapture = VideoCapture.withOutput(recorder)
@@ -151,7 +151,7 @@ class RgbCameraRecorder(
             cameraSelector,
             videoCapture,
             imageCapture,
-            preview
+            preview,
         )
 
         // Configure enhanced camera controls for scientific recording
@@ -159,26 +159,26 @@ class RgbCameraRecorder(
 
         Log.i(TAG, "CameraX initialized successfully with enhanced controls")
     }
-    
+
     private fun configureCameraControls() {
         try {
             camera?.let { cam ->
                 val cameraControl = cam.cameraControl
                 val cameraInfo = cam.cameraInfo
-                
+
                 // Simple autofocus to center of frame - using basic CameraX API
                 try {
                     // Create a simple focus point at center of frame
                     val factory = SurfaceOrientedMeteringPointFactory(1.0f, 1.0f)
                     val centerPoint = factory.createPoint(0.5f, 0.5f)
                     val action = FocusMeteringAction.Builder(centerPoint).build()
-                    
+
                     cameraControl.startFocusAndMetering(action)
                     Log.d(TAG, "Focus metering started at center point")
                 } catch (focusError: Exception) {
                     Log.w(TAG, "Could not configure focus metering: ${focusError.message}")
                 }
-                
+
                 // Set neutral exposure compensation for consistent research conditions
                 try {
                     val exposureRange = cameraInfo.exposureState.exposureCompensationRange
@@ -189,7 +189,7 @@ class RgbCameraRecorder(
                 } catch (exposureError: Exception) {
                     Log.w(TAG, "Could not configure exposure: ${exposureError.message}")
                 }
-                
+
                 Log.i(TAG, "Camera controls configured successfully")
             }
         } catch (e: Exception) {
@@ -225,7 +225,7 @@ class RgbCameraRecorder(
     private fun startFrameCapture(framesDir: File) {
         captureJob = scope.launch {
             Log.i(TAG, "Starting frame capture loop")
-            
+
             while (isActive) {
                 try {
                     captureFrame(framesDir)
@@ -242,8 +242,8 @@ class RgbCameraRecorder(
         val timestampNs = TimeManager.nowNanos()
         val timestampMs = System.currentTimeMillis()
         frameCount++
-        
-        val filename = "frame_${timestampNs}.jpg"
+
+        val filename = "frame_$timestampNs.jpg"
         val outputFile = File(framesDir, filename)
         val outputFileOptions = ImageCapture.OutputFileOptions.Builder(outputFile).build()
 
@@ -258,17 +258,21 @@ class RgbCameraRecorder(
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     try {
                         val fileSize = if (outputFile.exists()) outputFile.length() else 0
-                        
+
                         // Calculate video correlation metrics
                         val videoRelativeTimeMs = if (videoStartTime > 0) {
                             ((timestampNs - videoStartTime) / 1_000_000).toInt()
-                        } else 0
-                        
+                        } else {
+                            0
+                        }
+
                         // Estimate video frame number assuming 30 FPS
                         val estimatedVideoFrame = if (videoRelativeTimeMs > 0) {
                             (videoRelativeTimeMs * 30 / 1000).toInt()
-                        } else 0
-                        
+                        } else {
+                            0
+                        }
+
                         // Enhanced CSV logging with video correlation
                         csvWriter?.apply {
                             write("$timestampNs,$timestampMs,$frameCount,$filename,$fileSize,$videoRelativeTimeMs,$estimatedVideoFrame\n")
@@ -277,13 +281,13 @@ class RgbCameraRecorder(
 
                         // Generate preview for UI
                         generatePreview(outputFile, timestampNs)
-                        
-                        Log.d(TAG, "Captured frame: $filename (${fileSize} bytes) - Video time: ${videoRelativeTimeMs}ms, Est. frame: $estimatedVideoFrame")
+
+                        Log.d(TAG, "Captured frame: $filename ($fileSize bytes) - Video time: ${videoRelativeTimeMs}ms, Est. frame: $estimatedVideoFrame")
                     } catch (e: Exception) {
                         Log.e(TAG, "Error processing captured frame: ${e.message}", e)
                     }
                 }
-            }
+            },
         )
     }
 
@@ -296,20 +300,20 @@ class RgbCameraRecorder(
                 inSampleSize = 4 // 1/4 size for preview
                 inPreferredConfig = Bitmap.Config.RGB_565
             }
-            
+
             val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath, options)
             if (bitmap != null) {
                 // Scale to standard preview size
                 val previewBitmap = Bitmap.createScaledBitmap(bitmap, 320, 240, true)
-                
+
                 // Compress to JPEG for preview bus
                 val baos = ByteArrayOutputStream()
                 previewBitmap.compress(Bitmap.CompressFormat.JPEG, 60, baos)
                 val previewBytes = baos.toByteArray()
-                
+
                 // Emit preview
                 PreviewBus.emit(previewBytes, timestamp)
-                
+
                 // Cleanup
                 baos.close()
                 if (previewBitmap != bitmap) {
