@@ -6,7 +6,6 @@ bidirectional communication for the multi-modal sensing platform.
 
 Features:
 - Multi-threaded connection handling
-- TLS encryption support
 - JSON command protocol
 - Session management
 - Real-time status monitoring
@@ -17,7 +16,6 @@ from __future__ import annotations
 import json
 import logging
 import socket
-import ssl
 import threading
 import time
 from dataclasses import dataclass
