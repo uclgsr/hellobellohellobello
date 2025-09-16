@@ -9,6 +9,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicBoolean
@@ -312,11 +313,8 @@ class ConnectionManager(
 }
 
 /**
- * Extension for NetworkClient to support message sending
+ * Extension for NetworkClient to support suspending message sending
  */
-suspend fun NetworkClient.sendMessage(message: String) {
-    // This would need to be implemented in the actual NetworkClient
-    // For now, this is a placeholder showing the intended interface
-    Log.d("NetworkClient", "Sending message: $message")
-    // TODO: Implement actual message sending via existing NetworkClient methods
+suspend fun NetworkClient.sendMessage(message: String): Boolean = withContext(Dispatchers.IO) {
+    sendMessage(message) // Use the existing sendMessage method
 }
