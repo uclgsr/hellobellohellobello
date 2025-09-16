@@ -134,35 +134,41 @@ class TCPCommandServer:
             last_activity=time.time()
         )
         
+        # Set a timeout for the client socket to prevent indefinite blocking
+        client_socket.settimeout(30.0)  # 30 seconds timeout; adjust as needed
+
         self.clients[device_id] = client
         
         try:
             while self.running:
-                # Receive data from client
-                data = client_socket.recv(4096)
-                if not data:
-                    break
-                    
-                client.last_activity = time.time()
-                
                 try:
-                    # Parse JSON command
-                    message = json.loads(data.decode('utf-8'))
-                    response = self._process_command(client, message)
-                    
-                    # Send response
-                    if response:
-                        response_json = json.dumps(response)
-                        client_socket.send(response_json.encode('utf-8'))
-                        
-                except json.JSONDecodeError as e:
-                    error_response = {
-                        "type": "error",
-                        "message": f"Invalid JSON: {e}",
-                        "timestamp": time.time()
-                    }
-                    client_socket.send(json.dumps(error_response).encode('utf-8'))
-                    
+                    # Receive data from client
+                    data = client_socket.recv(4096)
+                    if not data:
+                        break
+
+                    client.last_activity = time.time()
+
+                    try:
+                        # Parse JSON command
+                        message = json.loads(data.decode('utf-8'))
+                        response = self._process_command(client, message)
+
+                        # Send response
+                        if response:
+                            response_json = json.dumps(response)
+                            client_socket.send(response_json.encode('utf-8'))
+
+                    except json.JSONDecodeError as e:
+                        error_response = {
+                            "type": "error",
+                            "message": f"Invalid JSON: {e}",
+                            "timestamp": time.time()
+                        }
+                        client_socket.send(json.dumps(error_response).encode('utf-8'))
+                except socket.timeout:
+                    logger.warning(f"Client {device_id} timed out due to inactivity.")
+                    break
         except Exception as e:
             logger.error(f"Error handling client {device_id}: {e}")
             
