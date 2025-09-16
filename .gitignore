@@ -70,3 +70,9 @@ pc_controller_data/
 !CHANGELOG.md
 !docs/*.md
 !docs/**/*.md
+
+# GitHub Actions runtime logs (prevent upload issues)
+/home/runner/work/_temp/runtime-logs/
+**/runtime-logs/
+blocked.jsonl
+blocked.md
