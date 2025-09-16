@@ -5,11 +5,11 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- Phase 1 Title -->
+    <!-- Phase 2 Title -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Sensor Spoke - Phase 1"
+        android:text="Sensor Spoke - Phase 2"
         android:textSize="24sp"
         android:textStyle="bold"
         android:gravity="center"
@@ -28,11 +28,11 @@
         android:gravity="center"
         android:layout_marginBottom="24dp" />
 
-    <!-- Description of Phase 1 functionality -->
+    <!-- Description of Phase 2 functionality -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Phase 1 Foundation:\n• Service running with NSD advertising\n• TCP server listening for PC Hub\n• Session directory creation\n• Basic recording coordination\n• BroadcastReceiver for remote commands"
+        android:text="Phase 2 Multi-Modal Recording:\n• RGB Camera (CameraX) - High-resolution video\n• Thermal Camera (Topdon TC001) - Hardware-calibrated\n• GSR Sensor (Shimmer3) - Production BLE\n• Audio Recording (MediaRecorder) - 44.1kHz stereo\n• Synchronized session management"
         android:textSize="14sp"
         android:lineSpacingExtra="4dp"
         android:layout_marginBottom="32dp" />
@@ -69,7 +69,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="The app is advertising '_gsr-controller._tcp' service on the network.\nPC Hub can discover and connect to control recording sessions."
+        android:text="Phase 2 is advertising '_gsr-controller._tcp' service with multi-modal sensor support.\nPC Hub can connect to control coordinated RGB, thermal, GSR, and audio recording sessions."
         android:textSize="12sp"
         android:textStyle="italic"
         android:gravity="center"

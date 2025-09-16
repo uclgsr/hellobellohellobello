@@ -39,7 +39,7 @@
             tools:replace="android:label">
 
         <activity
-                android:name=".ui.Phase1MainActivity"
+                android:name=".ui.MainActivity"
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -47,9 +47,9 @@
             </intent-filter>
         </activity>
 
-        <!-- Full MainActivity for later phases -->
+        <!-- Phase 1 MainActivity for foundation testing -->
         <activity
-                android:name=".ui.MainActivity"
+                android:name=".ui.Phase1MainActivity"
                 android:exported="false" />
 
         <service

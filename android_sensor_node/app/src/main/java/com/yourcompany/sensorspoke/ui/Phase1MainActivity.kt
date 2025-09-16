@@ -14,6 +14,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.controller.RecordingController
+import com.yourcompany.sensorspoke.sensors.audio.AudioRecorder
+import com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder
+import com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
+import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
 import com.yourcompany.sensorspoke.service.RecordingService
 import kotlinx.coroutines.launch
 
@@ -154,11 +158,14 @@ class Phase1MainActivity : AppCompatActivity() {
         return recordingController ?: run {
             val controller = RecordingController(applicationContext)
             
-            // For Phase 1, register stub sensor recorders for testing
-            controller.register("stub_sensor", StubSensorRecorder())
+            // Phase 2: Register real sensor recorders for multi-modal recording
+            controller.register("rgb", RgbCameraRecorder(applicationContext, this))
+            controller.register("thermal", ThermalCameraRecorder(applicationContext))
+            controller.register("gsr", ShimmerRecorder(applicationContext))
+            controller.register("audio", AudioRecorder(applicationContext)) // FR5: Audio recording support
             
             recordingController = controller
-            Log.i(TAG, "RecordingController initialized with stub sensors")
+            Log.i(TAG, "RecordingController initialized with real sensors for Phase 2")
             controller
         }
     }
