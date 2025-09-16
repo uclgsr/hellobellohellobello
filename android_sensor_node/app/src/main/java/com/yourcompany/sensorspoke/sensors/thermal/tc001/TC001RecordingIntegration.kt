@@ -13,6 +13,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * TC001RecordingIntegration - Bridge between TC001 system and main recording pipeline
@@ -82,7 +83,7 @@ class TC001RecordingIntegration(
     /**
      * Start TC001 recording session
      */
-    suspend fun startRecording(sessionId: String): Boolean =
+    suspend fun startRecording(sessionId: String, sessionDirectory: File): Boolean =
         withContext(Dispatchers.IO) {
             try {
                 currentSessionId = sessionId
@@ -97,8 +98,8 @@ class TC001RecordingIntegration(
                     return@withContext false
                 }
 
-                // Start thermal recorder
-                thermalRecorder?.startRecording()
+                // Start thermal recorder using the public interface
+                thermalRecorder?.start(sessionDirectory)
 
                 _recordingStatus.postValue(TC001RecordingStatus.RECORDING)
                 Log.i(TAG, "TC001 recording session started: $sessionId")
@@ -119,8 +120,8 @@ class TC001RecordingIntegration(
     suspend fun stopRecording(): Boolean =
         withContext(Dispatchers.IO) {
             try {
-                // Stop thermal recorder
-                thermalRecorder?.stopRecording()
+                // Stop thermal recorder using public interface
+                thermalRecorder?.stop()
 
                 // Stop TC001 system
                 tc001IntegrationManager?.stopSystem()

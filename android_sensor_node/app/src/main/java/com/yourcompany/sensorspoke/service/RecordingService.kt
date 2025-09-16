@@ -137,7 +137,7 @@ class RecordingService : Service() {
                 .Builder(this, channelId)
                 .setContentTitle(getString(R.string.notification_title))
                 .setContentText(getString(R.string.notification_text))
-                .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth) // placeholder icon
+                .setSmallIcon(R.drawable.ic_notification_recording) // Use proper recording icon
                 .setOngoing(true)
                 .build()
         startForeground(1001, notification)

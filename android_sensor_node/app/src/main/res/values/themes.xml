@@ -1,12 +1,12 @@
 <resources>
     <style name="Theme.SensorSpoke" parent="Theme.Material3.DayNight.NoActionBar"/>
-    
-    <!-- Missing style required by Shimmer SDK -->
+    <!-- ActivityTranslucent style for transparent activities -->
     <style name="ActivityTranslucent" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowAnimationStyle">@android:style/Animation</item>
         <item name="android:windowNoTitle">true</item>
-        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowContentOverlay">@null</item>
     </style>
 </resources>
