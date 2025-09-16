@@ -15,28 +15,30 @@ import java.util.Locale
 import java.util.UUID
 
 /**
- * RecordingController coordinates start/stop across sensor recorders and manages
- * the lifecycle of a recording session, including session directory creation.
+ * RecordingController implements SessionOrchestrator to coordinate start/stop across sensor recorders 
+ * and manages the lifecycle of a recording session, including session directory creation.
  *
- * Provides synchronized session management with common timestamp reference
- * for multi-modal data alignment.
+ * This is the central session orchestrator mentioned in the MVP architecture that:
+ * - Holds each sensor's SensorRecorder implementation
+ * - Starts and stops them together with synchronized timing
+ * - Creates session directory and sub-folders per sensor
+ * - Provides synchronized session management with common timestamp reference for multi-modal data alignment
  */
 class RecordingController(
     private val context: Context?,
     private val sessionsRootOverride: File? = null,
-) {
+) : SessionOrchestrator {
     data class RecorderEntry(
         val name: String,
         val recorder: SensorRecorder,
     )
 
-    enum class State { IDLE, PREPARING, RECORDING, STOPPING }
-
-    private val _state = MutableStateFlow(State.IDLE)
-    val state: StateFlow<State> = _state
+    // Use SessionOrchestrator.State for consistent interface
+    private val _state = MutableStateFlow(SessionOrchestrator.State.IDLE)
+    override val state: StateFlow<SessionOrchestrator.State> = _state
 
     private val _currentSessionId = MutableStateFlow<String?>(null)
-    val currentSessionId: StateFlow<String?> = _currentSessionId
+    override val currentSessionId: StateFlow<String?> = _currentSessionId
 
     private val recorders = mutableListOf<RecorderEntry>()
     private var sessionRootDir: File? = null
@@ -48,7 +50,7 @@ class RecordingController(
     /**
      * Register a recorder under a unique name; its data will be stored under sessionDir/<name>.
      */
-    fun register(
+    override fun register(
         name: String,
         recorder: SensorRecorder,
     ) {
@@ -59,7 +61,7 @@ class RecordingController(
     /**
      * Unregister a recorder by name.
      */
-    fun unregister(name: String) {
+    override fun unregister(name: String) {
         recorders.removeAll { it.name == name }
     }
 
@@ -74,9 +76,9 @@ class RecordingController(
      * Starts a new session with an optional provided sessionId. When null, a new id is generated.
      * Creates the session directory tree and starts all registered recorders with synchronized timing.
      */
-    suspend fun startSession(sessionId: String? = null) {
-        if (_state.value != State.IDLE) return
-        _state.value = State.PREPARING
+    override suspend fun startSession(sessionId: String?) {
+        if (_state.value != SessionOrchestrator.State.IDLE) return
+        _state.value = SessionOrchestrator.State.PREPARING
         try {
             val id = sessionId ?: generateSessionId()
             val root = ensureSessionsRoot()
@@ -105,7 +107,7 @@ class RecordingController(
             }
             sessionRootDir = sessionDir
             _currentSessionId.value = id
-            _state.value = State.RECORDING
+            _state.value = SessionOrchestrator.State.RECORDING
 
             Log.i("RecordingController", "Session $id started successfully with all recorders")
         } catch (t: Throwable) {
@@ -114,7 +116,7 @@ class RecordingController(
             safeStopAll()
             _currentSessionId.value = null
             sessionRootDir = null
-            _state.value = State.IDLE
+            _state.value = SessionOrchestrator.State.IDLE
             throw t
         }
     }
@@ -123,9 +125,9 @@ class RecordingController(
      * Stops the current session and all recorders, leaving files on disk.
      * Updates session metadata with completion information.
      */
-    suspend fun stopSession() {
-        if (_state.value != State.RECORDING) return
-        _state.value = State.STOPPING
+    override suspend fun stopSession() {
+        if (_state.value != SessionOrchestrator.State.RECORDING) return
+        _state.value = SessionOrchestrator.State.STOPPING
 
         val sessionId = _currentSessionId.value
         val sessionDir = sessionRootDir
@@ -157,7 +159,7 @@ class RecordingController(
 
             Log.i("RecordingController", "Session $sessionId stopped. Results: $stopResults")
         } finally {
-            _state.value = State.IDLE
+            _state.value = SessionOrchestrator.State.IDLE
             _currentSessionId.value = null
             sessionRootDir = null
         }
@@ -321,6 +323,20 @@ class RecordingController(
         } else {
             null
         }
+    }
+    
+    // SessionOrchestrator interface implementations
+    
+    override fun getCurrentSessionDirectory(): File? {
+        return sessionRootDir
+    }
+    
+    override fun getSessionsRootDirectory(): File {
+        return ensureSessionsRoot()
+    }
+    
+    override fun getRegisteredSensors(): List<String> {
+        return recorders.map { it.name }
     }
 
     /**
