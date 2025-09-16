@@ -426,7 +426,7 @@ class TopdonThermalIntegration(private val context: Context) {
                 temperatureMatrix[y][x] = temp
                 minTemp = minOf(minTemp, temp)
                 maxTemp = maxOf(maxTemp, temp)
-                totalTemp += temp.toFloat()
+                totalTemp += temp
             }
         }
         
