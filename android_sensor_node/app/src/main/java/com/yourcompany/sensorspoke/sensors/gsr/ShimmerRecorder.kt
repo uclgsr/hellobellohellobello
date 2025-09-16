@@ -302,11 +302,28 @@ class ShimmerRecorder(
             val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter() ?: return emptyList()
             
             // Get paired devices
-            val pairedDevices = bluetoothAdapter.bondedDevices
+            val pairedDevices = try {
+                bluetoothAdapter.bondedDevices
+            } catch (e: SecurityException) {
+                Log.w(TAG, "Cannot access bonded devices due to missing permissions", e)
+                return emptyList()
+            }
+            
             val shimmerDevices = pairedDevices.filter { device ->
-                device.name?.contains("Shimmer", ignoreCase = true) == true ||  
-                device.name?.contains("GSR", ignoreCase = true) == true ||
-                device.address.startsWith("00:06:66") // Shimmer MAC prefix
+                val deviceName = try {
+                    device.name
+                } catch (e: SecurityException) {  
+                    null
+                }
+                val deviceAddress = try {
+                    device.address
+                } catch (e: SecurityException) {
+                    return@filter false
+                }
+                
+                deviceName?.contains("Shimmer", ignoreCase = true) == true ||  
+                deviceName?.contains("GSR", ignoreCase = true) == true ||
+                deviceAddress.startsWith("00:06:66") // Shimmer MAC prefix
             }
             
             return shimmerDevices
@@ -402,9 +419,15 @@ class ShimmerRecorder(
      * Check if a device is a Shimmer device based on name and MAC address
      */
     private fun isShimmerDevice(device: BluetoothDevice, deviceName: String?): Boolean {
+        val deviceAddress = try {
+            device.address
+        } catch (e: SecurityException) {
+            return false
+        }
+        
         return deviceName?.contains("Shimmer", ignoreCase = true) == true ||
                deviceName?.contains("GSR", ignoreCase = true) == true ||
-               device.address.startsWith("00:06:66") // Shimmer MAC prefix
+               deviceAddress.startsWith("00:06:66") // Shimmer MAC prefix
     }
 
     /**
@@ -412,7 +435,19 @@ class ShimmerRecorder(
      */
     private suspend fun connectSingleDevice(device: BluetoothDevice): Boolean = withContext(Dispatchers.IO) {
         try {
-            Log.i(TAG, "Attempting to connect to Shimmer device: ${device.name} (${device.address})")
+            val deviceName = try {
+                device.name ?: "Unknown Device"
+            } catch (e: SecurityException) {
+                "Unknown Device"
+            }
+            
+            val deviceAddress = try {
+                device.address ?: "Unknown Address"
+            } catch (e: SecurityException) {
+                "Unknown Address"
+            }
+            
+            Log.i(TAG, "Attempting to connect to Shimmer device: $deviceName ($deviceAddress)")
             
             if (shimmerApiAvailable) {
                 // Use reflection to connect via ShimmerBluetoothManagerAndroid
