@@ -7,6 +7,7 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
+import com.yourcompany.sensorspoke.utils.PermissionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,6 +27,7 @@ import kotlin.math.sqrt
  */
 class ThermalCameraRecorder(
     private val context: Context,
+    private val permissionManager: PermissionManager? = null,
 ) : SensorRecorder {
     companion object {
         private const val TAG = "ThermalCameraRecorder"
@@ -44,6 +46,8 @@ class ThermalCameraRecorder(
     private var realTopdonIntegration: RealTopdonIntegration? = null
     private var frameCount = 0
     private var targetFps = DEFAULT_FPS // Configurable FPS
+    private var lastFrameTime = 0L // For performance monitoring
+    private var frameProcessingTimeSum = 0L // For performance monitoring
 
     override suspend fun start(sessionDirectory: File) {
         Log.i(TAG, "Starting thermal camera recording in session: ${sessionDirectory.absolutePath}")
@@ -100,13 +104,16 @@ class ThermalCameraRecorder(
             if (topdonDevice != null) {
                 Log.i(TAG, "Topdon TC001 device found: ${topdonDevice.deviceName}")
                 
-                // Check if we have USB permission
-                if (usbManager.hasPermission(topdonDevice)) {
-                    Log.i(TAG, "USB permission granted, initializing real Topdon integration")
-                    initializeRealTopdonIntegration()
-                } else {
-                    Log.w(TAG, "USB permission not granted, using simulation mode")
-                    initializeStubTopdonIntegration()
+                // Request USB permissions if needed
+                CoroutineScope(Dispatchers.IO).launch {
+                    val hasPermission = requestUsbPermissionIfNeeded(topdonDevice, usbManager)
+                    if (hasPermission) {
+                        Log.i(TAG, "USB permission granted, initializing real Topdon integration")
+                        initializeRealTopdonIntegration()
+                    } else {
+                        Log.w(TAG, "USB permission not granted, using simulation mode")
+                        initializeStubTopdonIntegration()
+                    }
                 }
             } else {
                 Log.w(TAG, "No Topdon TC001 device found - using simulation mode")
@@ -115,6 +122,22 @@ class ThermalCameraRecorder(
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing Topdon integration: ${e.message}", e)
             initializeStubTopdonIntegration()
+        }
+    }
+
+    /**
+     * Request USB permission for Topdon device if not already granted
+     */
+    private suspend fun requestUsbPermissionIfNeeded(device: UsbDevice, usbManager: UsbManager): Boolean {
+        return if (usbManager.hasPermission(device)) {
+            Log.d(TAG, "USB permission already granted for ${device.deviceName}")
+            true
+        } else {
+            Log.i(TAG, "Requesting USB permission for Topdon TC001")
+            permissionManager?.requestUsbPermissions() ?: run {
+                Log.w(TAG, "No PermissionManager available, cannot request USB permission")
+                false
+            }
         }
     }
 
@@ -159,6 +182,24 @@ class ThermalCameraRecorder(
         targetFps = fps.coerceIn(1, MAX_FPS)
         Log.i(TAG, "Thermal camera frame rate set to $targetFps FPS")
     }
+
+    /**
+     * Get current performance metrics
+     */
+    fun getPerformanceMetrics(): ThermalPerformanceMetrics {
+        val avgProcessingTime = if (frameCount > 0) frameProcessingTimeSum / frameCount.toDouble() / 1_000_000.0 else 0.0
+        return ThermalPerformanceMetrics(
+            frameCount = frameCount,
+            targetFps = targetFps,
+            averageProcessingTimeMs = avgProcessingTime
+        )
+    }
+
+    data class ThermalPerformanceMetrics(
+        val frameCount: Int,
+        val targetFps: Int,
+        val averageProcessingTimeMs: Double
+    )
 
     private fun isTopdonTC001Device(device: UsbDevice): Boolean {
         return device.vendorId == TOPDON_VENDOR_ID &&
@@ -219,6 +260,7 @@ class ThermalCameraRecorder(
     }
 
     private suspend fun handleRealThermalFrame(thermalFrame: RealTopdonIntegration.ThermalFrame) {
+        val frameStartTime = System.nanoTime()
         val timestampNs = thermalFrame.timestamp
         val timestampMs = System.currentTimeMillis()
         frameCount++
@@ -242,6 +284,24 @@ class ThermalCameraRecorder(
                 write("$timestampNs,$timestampMs,$frameCount,$centerTemp,$minTemp,$maxTemp,$avgTemp,$imageFileName\n")
                 flush()
             }
+
+            // Performance monitoring
+            val frameEndTime = System.nanoTime()
+            val processingTime = frameEndTime - frameStartTime
+            frameProcessingTimeSum += processingTime
+            
+            // Log performance every 100 frames
+            if (frameCount % 100 == 0) {
+                val avgProcessingTime = frameProcessingTimeSum / 100.0 / 1_000_000.0 // Convert to ms
+                val actualFps = if (lastFrameTime > 0) {
+                    1_000_000_000.0 / (frameEndTime - lastFrameTime) // Calculate actual FPS
+                } else {
+                    0.0
+                }
+                Log.i(TAG, "Thermal performance: Frame $frameCount, Avg processing: ${"%.2f".format(avgProcessingTime)}ms, Actual FPS: ${"%.1f".format(actualFps)}")
+                frameProcessingTimeSum = 0L
+            }
+            lastFrameTime = frameEndTime
 
             Log.d(TAG, "Captured real thermal frame: $frameCount, center: ${"%.2f".format(centerTemp)}°C, range: ${"%.2f".format(minTemp)}-${"%.2f".format(maxTemp)}°C")
         } catch (e: Exception) {
