@@ -6,17 +6,16 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import com.yourcompany.sensorspoke.R
 
 /**
  * Dashboard Fragment - Main overview of system status
  */
 class DashboardFragment : Fragment() {
-    
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View? {
         val view = TextView(requireContext())
         view.text = "Dashboard\n\nSystem Status: Ready\nSensors: 4 Available\nConnection: PC Hub Connected"

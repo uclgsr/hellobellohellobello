@@ -2,9 +2,7 @@ package com.yourcompany.sensorspoke.sensors.thermal
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
@@ -31,9 +29,9 @@ class ThermalCameraRecorder(
 ) : SensorRecorder {
     companion object {
         private const val TAG = "ThermalCameraRecorder"
-        private const val TOPDON_VENDOR_ID = 0x4d54  // Topdon TC001 vendor ID
-        private const val TC001_PRODUCT_ID_1 = 0x0100  // TC001 product ID variant 1
-        private const val TC001_PRODUCT_ID_2 = 0x0200  // TC001 product ID variant 2
+        private const val TOPDON_VENDOR_ID = 0x4d54 // Topdon TC001 vendor ID
+        private const val TC001_PRODUCT_ID_1 = 0x0100 // TC001 product ID variant 1
+        private const val TC001_PRODUCT_ID_2 = 0x0200 // TC001 product ID variant 2
     }
 
     private var csvWriter: BufferedWriter? = null
@@ -45,7 +43,7 @@ class ThermalCameraRecorder(
 
     override suspend fun start(sessionDirectory: File) {
         Log.i(TAG, "Starting thermal camera recording in session: ${sessionDirectory.absolutePath}")
-        
+
         // Check for USB permissions and Topdon device
         if (!hasUsbPermissionForTopdonDevice()) {
             Log.w(TAG, "USB permission not granted for Topdon TC001 - starting simulation mode")
@@ -69,7 +67,7 @@ class ThermalCameraRecorder(
             // Create CSV file for thermal data logging
             csvFile = File(sessionDirectory, "thermal_data.csv")
             csvWriter = BufferedWriter(FileWriter(csvFile!!))
-            
+
             // Write CSV header
             csvWriter!!.write("timestamp_ns,timestamp_ms,frame_number,temperature_celsius,min_temp,max_temp,avg_temp,filename\n")
             csvWriter!!.flush()
@@ -89,16 +87,16 @@ class ThermalCameraRecorder(
         try {
             val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
             val deviceList = usbManager.deviceList
-            
+
             // Look for Topdon TC001 device
             val topdonDevice = deviceList.values.find { device ->
                 isTopdonTC001Device(device)
             }
-            
+
             if (topdonDevice != null) {
                 Log.i(TAG, "Topdon TC001 device found: ${topdonDevice.deviceName}")
                 topdonIntegration = TopdonThermalIntegration(context)
-                
+
                 if (topdonIntegration!!.initialize() == TopdonResult.SUCCESS) {
                     val connectResult = topdonIntegration!!.connectDevice(topdonDevice)
                     if (connectResult == TopdonResult.SUCCESS) {
@@ -123,8 +121,8 @@ class ThermalCameraRecorder(
     }
 
     private fun isTopdonTC001Device(device: UsbDevice): Boolean {
-        return device.vendorId == TOPDON_VENDOR_ID && 
-               (device.productId == TC001_PRODUCT_ID_1 || device.productId == TC001_PRODUCT_ID_2)
+        return device.vendorId == TOPDON_VENDOR_ID &&
+            (device.productId == TC001_PRODUCT_ID_1 || device.productId == TC001_PRODUCT_ID_2)
     }
 
     private fun configureTopdonDevice() {
@@ -141,7 +139,7 @@ class ThermalCameraRecorder(
     private suspend fun startRecording() {
         recordingJob = CoroutineScope(Dispatchers.IO).launch {
             Log.i(TAG, "Starting thermal recording loop")
-            
+
             while (isActive) {
                 try {
                     captureFrame()
@@ -172,25 +170,25 @@ class ThermalCameraRecorder(
 
     private suspend fun captureRealThermalFrame(timestampNs: Long, timestampMs: Long) {
         val thermalData = topdonIntegration!!.captureThermalFrame()
-        
+
         if (thermalData != null) {
             val minTemp = thermalData.minTemperature
             val maxTemp = thermalData.maxTemperature
             val avgTemp = thermalData.averageTemperature
             val centerTemp = thermalData.centerTemperature
-            
+
             // Save thermal image
-            val imageFileName = "thermal_${timestampNs}.png"
+            val imageFileName = "thermal_$timestampNs.png"
             val imageFile = File(thermalImagesDir, imageFileName)
             saveThermalImage(thermalData.thermalBitmap, imageFile)
-            
+
             // Log to CSV
             csvWriter?.apply {
                 write("$timestampNs,$timestampMs,$frameCount,$centerTemp,$minTemp,$maxTemp,$avgTemp,$imageFileName\n")
                 flush()
             }
-            
-            Log.d(TAG, "Captured real thermal frame: $frameCount, temp: ${centerTemp}°C")
+
+            Log.d(TAG, "Captured real thermal frame: $frameCount, temp: $centerTemp°C")
         }
     }
 
@@ -200,28 +198,28 @@ class ThermalCameraRecorder(
         val minTemp = baseTemp - 5.0f
         val maxTemp = baseTemp + 15.0f
         val avgTemp = (minTemp + maxTemp) / 2
-        
+
         // Create simulated thermal image
         val thermalBitmap = generateSimulatedThermalImage(320, 240, baseTemp)
-        
+
         // Save thermal image
-        val imageFileName = "thermal_sim_${timestampNs}.png"
+        val imageFileName = "thermal_sim_$timestampNs.png"
         val imageFile = File(thermalImagesDir, imageFileName)
         saveThermalImage(thermalBitmap, imageFile)
-        
+
         // Log to CSV
         csvWriter?.apply {
             write("$timestampNs,$timestampMs,$frameCount,$baseTemp,$minTemp,$maxTemp,$avgTemp,$imageFileName\n")
             flush()
         }
-        
-        Log.d(TAG, "Captured simulated thermal frame: $frameCount, temp: ${baseTemp}°C")
+
+        Log.d(TAG, "Captured simulated thermal frame: $frameCount, temp: $baseTemp°C")
     }
 
     private fun generateSimulatedThermalImage(width: Int, height: Int, baseTemp: Float): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val pixels = IntArray(width * height)
-        
+
         // Generate thermal-like image with temperature variations
         for (y in 0 until height) {
             for (x in 0 until width) {
@@ -229,11 +227,11 @@ class ThermalCameraRecorder(
                 val centerY = height / 2f
                 val distance = sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY))
                 val maxDistance = sqrt(centerX * centerX + centerY * centerY)
-                
+
                 // Temperature decreases with distance from center
                 val temp = baseTemp * (1 - distance / maxDistance * 0.3f)
                 val normalizedTemp = ((temp - 20f) / 40f).coerceIn(0f, 1f) // Normalize to 0-1
-                
+
                 // Convert to thermal color (blue = cold, red = hot)
                 val color = when {
                     normalizedTemp < 0.33f -> {
@@ -249,11 +247,11 @@ class ThermalCameraRecorder(
                         (0xFF shl 24) or (red shl 16)
                     }
                 }
-                
+
                 pixels[y * width + x] = color
             }
         }
-        
+
         bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
         return bitmap
     }
@@ -279,11 +277,11 @@ class ThermalCameraRecorder(
                 csvWriter?.flush()
                 csvWriter?.close()
                 csvWriter = null
-                
+
                 topdonIntegration?.disconnect()
                 topdonIntegration?.cleanup()
                 topdonIntegration = null
-                
+
                 Log.i(TAG, "Thermal recording cleanup completed")
             } catch (e: Exception) {
                 Log.e(TAG, "Error during cleanup: ${e.message}", e)
@@ -294,11 +292,11 @@ class ThermalCameraRecorder(
     private fun hasUsbPermissionForTopdonDevice(): Boolean {
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
         val deviceList = usbManager.deviceList
-        
+
         val topdonDevice = deviceList.values.find { device ->
             isTopdonTC001Device(device)
         }
-        
+
         return if (topdonDevice != null) {
             usbManager.hasPermission(topdonDevice)
         } else {
@@ -322,7 +320,7 @@ data class ThermalFrameData(
     val maxTemperature: Float,
     val averageTemperature: Float,
     val centerTemperature: Float,
-    val temperatureMatrix: Array<FloatArray>
+    val temperatureMatrix: Array<FloatArray>,
 )
 
 class TopdonThermalIntegration(private val context: Context) {
@@ -335,12 +333,12 @@ class TopdonThermalIntegration(private val context: Context) {
     private var currentPalette = TopdonThermalPalette.IRON
     private var autoGainEnabled = true
     private var temperatureCompensationEnabled = true
-    
+
     fun initialize(): TopdonResult {
         Log.d(TAG, "Initializing Topdon thermal integration")
         return TopdonResult.SUCCESS
     }
-    
+
     fun connectDevice(device: UsbDevice): TopdonResult {
         Log.d(TAG, "Connecting to Topdon device: ${device.deviceName}")
         return try {
@@ -353,33 +351,33 @@ class TopdonThermalIntegration(private val context: Context) {
             TopdonResult.FAILURE
         }
     }
-    
+
     fun setEmissivity(emissivity: Float) {
         currentEmissivity = emissivity.coerceIn(0.1f, 1.0f)
         Log.d(TAG, "Set emissivity to $currentEmissivity")
     }
-    
+
     fun setTemperatureRange(minTemp: Float, maxTemp: Float) {
         this.minTemp = minTemp
         this.maxTemp = maxTemp
         Log.d(TAG, "Set temperature range: $minTemp°C to $maxTemp°C")
     }
-    
+
     fun setThermalPalette(palette: TopdonThermalPalette) {
         currentPalette = palette
         Log.d(TAG, "Set thermal palette to $palette")
     }
-    
+
     fun enableAutoGainControl(enabled: Boolean) {
         autoGainEnabled = enabled
         Log.d(TAG, "Auto gain control: $enabled")
     }
-    
+
     fun enableTemperatureCompensation(enabled: Boolean) {
         temperatureCompensationEnabled = enabled
         Log.d(TAG, "Temperature compensation: $enabled")
     }
-    
+
     fun configureDevice() {
         if (!isConnected) {
             Log.w(TAG, "Device not connected, cannot configure")
@@ -387,7 +385,7 @@ class TopdonThermalIntegration(private val context: Context) {
         }
         Log.d(TAG, "Configuring device with current settings")
     }
-    
+
     fun captureThermalFrame(): ThermalFrameData? {
         return if (isConnected && currentDevice != null) {
             try {
@@ -403,58 +401,58 @@ class TopdonThermalIntegration(private val context: Context) {
             null
         }
     }
-    
+
     private fun generateMockThermalFrame(): ThermalFrameData {
         val width = 256
         val height = 192
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val temperatureMatrix = Array(height) { FloatArray(width) }
-        
+
         // Generate realistic temperature data
         val baseTemp = 22.0f // Room temperature
         val random = kotlin.random.Random
         var minTemp = Float.MAX_VALUE
         var maxTemp = Float.MIN_VALUE
         var totalTemp = 0f
-        
+
         for (y in 0 until height) {
             for (x in 0 until width) {
                 // Create temperature variation with some hot spots
                 val temp = baseTemp + (random.nextFloat() * 10f - 5f) +
-                          if (x > 100 && x < 150 && y > 80 && y < 120) 15f else 0f
-                
+                    if (x > 100 && x < 150 && y > 80 && y < 120) 15f else 0f
+
                 temperatureMatrix[y][x] = temp
                 minTemp = minOf(minTemp, temp)
                 maxTemp = maxOf(maxTemp, temp)
                 totalTemp += temp
             }
         }
-        
+
         val avgTemp = totalTemp / (width * height)
-        val centerTemp = temperatureMatrix[height/2][width/2]
-        
+        val centerTemp = temperatureMatrix[height / 2][width / 2]
+
         // Apply thermal palette to bitmap
         applyThermalPalette(bitmap, temperatureMatrix, minTemp, maxTemp)
-        
+
         return ThermalFrameData(
             thermalBitmap = bitmap,
             minTemperature = minTemp,
             maxTemperature = maxTemp,
             averageTemperature = avgTemp,
             centerTemperature = centerTemp,
-            temperatureMatrix = temperatureMatrix
+            temperatureMatrix = temperatureMatrix,
         )
     }
-    
+
     private fun applyThermalPalette(
         bitmap: Bitmap,
         temperatureMatrix: Array<FloatArray>,
         minTemp: Float,
-        maxTemp: Float
+        maxTemp: Float,
     ) {
         val pixels = IntArray(bitmap.width * bitmap.height)
         val width = bitmap.width
-        
+
         for (y in temperatureMatrix.indices) {
             for (x in temperatureMatrix[y].indices) {
                 val temp = temperatureMatrix[y][x]
@@ -471,7 +469,7 @@ class TopdonThermalIntegration(private val context: Context) {
         }
         bitmap.setPixels(pixels, 0, width, 0, 0, width, bitmap.height)
     }
-    
+
     private fun getIronColor(normalized: Float): Int {
         val value = (normalized * 255).toInt().coerceIn(0, 255)
         return when {
@@ -481,17 +479,17 @@ class TopdonThermalIntegration(private val context: Context) {
             else -> Color.rgb(255, 255 - (value - 192) * 4, 0)
         }
     }
-    
+
     private fun getRainbowColor(normalized: Float): Int {
         val hue = normalized * 300f // 0 to 300 degrees (blue to red)
         return Color.HSVToColor(floatArrayOf(hue, 1f, 1f))
     }
-    
+
     private fun getGrayscaleColor(normalized: Float): Int {
         val gray = (normalized * 255).toInt().coerceIn(0, 255)
         return Color.rgb(gray, gray, gray)
     }
-    
+
     private fun getHotColor(normalized: Float): Int {
         val value = (normalized * 255).toInt().coerceIn(0, 255)
         return when {

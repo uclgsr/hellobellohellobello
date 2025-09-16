@@ -684,7 +684,7 @@ class MultiModalSensorCoordinator(
     }
 
     // Simplified for MVP - data callbacks would be implemented when integrating with real sensors
-    
+
     /**
      * Get current coordination state
      */
