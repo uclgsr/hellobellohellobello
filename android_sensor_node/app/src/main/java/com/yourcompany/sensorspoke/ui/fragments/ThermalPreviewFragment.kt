@@ -328,7 +328,8 @@ class ThermalPreviewFragment : Fragment() {
             when (currentPalette) {
                 TopdonThermalPalette.IRON -> TopdonThermalPalette.RAINBOW
                 TopdonThermalPalette.RAINBOW -> TopdonThermalPalette.GRAYSCALE
-                TopdonThermalPalette.GRAYSCALE -> TopdonThermalPalette.IRON
+                TopdonThermalPalette.GRAYSCALE -> TopdonThermalPalette.HOT
+                TopdonThermalPalette.HOT -> TopdonThermalPalette.IRON
             }
 
         updateThermalPalette(currentPalette)
@@ -394,6 +395,13 @@ class ThermalPreviewFragment : Fragment() {
                 // Enhanced Grayscale with better contrast
                 val gray = (normalized * 255 * 0.8f + 32).toInt().coerceIn(0, 255)
                 (0xFF shl 24) or (gray shl 16) or (gray shl 8) or gray
+            }
+            TopdonThermalPalette.HOT -> {
+                // HOT palette: black -> red -> yellow -> white
+                val red = (255 * (normalized + 0.5f).coerceAtMost(1f)).toInt()
+                val green = (255 * (normalized * 2f - 1f).coerceIn(0f, 1f)).toInt()
+                val blue = (255 * (normalized - 0.75f).coerceAtLeast(0f) * 4f).toInt()
+                (0xFF shl 24) or (red shl 16) or (green shl 8) or blue
             }
         }
 
