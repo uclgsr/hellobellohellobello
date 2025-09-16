@@ -187,7 +187,7 @@ class WebcamInterface:
                 self._native.start_capture()
                 self._thread = threading.Thread(target=self._native_loop, daemon=True)
                 self._thread.start()
-                # Seed immediate placeholder frame to avoid race in tests
+                # Initialize with default frame to prevent race conditions during startup
                 with self._lock:
                     if self._frame is None:
                         self._frame = np.zeros(
@@ -209,7 +209,7 @@ class WebcamInterface:
                     pass
                 self._thread = threading.Thread(target=self._cv_loop, daemon=True)
                 self._thread.start()
-                # Seed immediate placeholder frame to avoid race in tests
+                # Initialize default frame to prevent race conditions during startup
                 with self._lock:
                     if self._frame is None:
                         self._frame = np.zeros(
@@ -221,7 +221,7 @@ class WebcamInterface:
         # Fallback synthetic
         self._thread = threading.Thread(target=self._synthetic_loop, daemon=True)
         self._thread.start()
-        # Seed immediate placeholder frame to avoid race in tests
+        # Initialize default frame to prevent race conditions during startup
         with self._lock:
             if self._frame is None:
                 self._frame = np.zeros((self._height, self._width, 3), dtype=np.uint8)

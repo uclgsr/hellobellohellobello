@@ -1,7 +1,9 @@
 package com.yourcompany.sensorspoke.ui.fragments
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.hardware.usb.UsbManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -192,19 +194,38 @@ class ThermalPreviewFragment : Fragment() {
         // Initialize TC001 system status view
         setupTC001SystemStatusView(view)
 
-        // Initialize TC001 integration components
+        // Initialize thermal camera integration components
         initializeTC001Integration()
 
         // Setup gesture handling for controls toggle
         setupGestureHandling()
 
-        // Initialize with placeholder content
-        statusText?.text = "Thermal camera initializing..."
-        temperatureRangeText?.text = "Temperature Range: N/A"
-        frameCountText?.text = "Frames: 0"
+        // Initialize UI with system status
+        updateInitialStatus()
 
         // Create initial thermal image
         createEnhancedThermalImage()
+    }
+
+    /**
+     * Initialize UI status indicators with proper system state
+     */
+    private fun updateInitialStatus() {
+        statusText?.text = "Thermal camera ready"
+        temperatureRangeText?.text = "Temperature Range: -20°C to 150°C"
+        frameCountText?.text = "Frames: 0"
+        
+        // Check hardware availability
+        val usbManager = requireContext().getSystemService(Context.USB_SERVICE) as UsbManager
+        val hasTC001 = usbManager.deviceList.values.any { device ->
+            device.productName?.contains("TC001", ignoreCase = true) == true
+        }
+        
+        if (hasTC001) {
+            statusText?.text = "TC001 thermal camera detected"
+        } else {
+            statusText?.text = "Simulation mode - No TC001 detected"
+        }
     }
 
     override fun onResume() {

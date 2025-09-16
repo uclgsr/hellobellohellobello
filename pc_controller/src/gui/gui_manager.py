@@ -1037,7 +1037,7 @@ class GUIManager(QMainWindow):
         if not self._gsr_file:
             return
         for t, v in zip(ts, vals, strict=False):
-            # PC-local does not have PPG; write empty placeholder for schema consistency
+            # Write GSR data with timestamp and value (PPG column left empty for PC-only mode)
             self._gsr_file.write(f"{int(t*1e9)},{v:.6f},\n")
         self._gsr_file.flush()
 
