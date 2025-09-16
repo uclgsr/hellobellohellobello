@@ -12,8 +12,11 @@ import android.os.IBinder
 import android.util.Base64
 import androidx.core.app.NotificationCompat
 import com.yourcompany.sensorspoke.R
+import com.yourcompany.sensorspoke.network.ConnectionManager
+import com.yourcompany.sensorspoke.network.EnhancedProtocol
 import com.yourcompany.sensorspoke.network.FileTransferManager
 import com.yourcompany.sensorspoke.network.NetworkClient
+import com.yourcompany.sensorspoke.network.TimeSyncService
 import com.yourcompany.sensorspoke.utils.PreviewBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +56,10 @@ class RecordingService : Service() {
     private val clientWriters = Collections.synchronizedList(mutableListOf<BufferedWriter>())
     private var previewListener: ((ByteArray, Long) -> Unit)? = null
 
+    // Phase 3: Advanced networking components
+    private var timeSyncService: TimeSyncService? = null
+    private var connectionManager: ConnectionManager? = null
+    
     // FR8: track current session state to support rejoin notification
     private var currentSessionId: String? = null
     private var isRecording: Boolean = false
@@ -60,6 +67,20 @@ class RecordingService : Service() {
     override fun onCreate() {
         super.onCreate()
         networkClient = NetworkClient(applicationContext)
+        
+        // Phase 3: Initialize advanced networking components
+        timeSyncService = TimeSyncService(applicationContext)
+        connectionManager = ConnectionManager(applicationContext, networkClient).apply {
+            onConnectionEstablished = { address, port ->
+                // Start time synchronization when connection is established
+                timeSyncService?.startSync(address, 8081) // Default time server port
+            }
+            onConnectionLost = {
+                // Stop time sync on connection loss
+                timeSyncService?.stopSync()
+            }
+        }
+        
         startInForeground()
         // Subscribe to preview frames and forward to connected clients
         previewListener = { bytes, ts -> broadcastPreviewFrame(bytes, ts) }
@@ -86,6 +107,11 @@ class RecordingService : Service() {
             serverSocket?.close()
         } catch (_: Exception) {
         }
+        
+        // Phase 3: Cleanup advanced networking components
+        timeSyncService?.cleanup()
+        connectionManager?.cleanup()
+        
         previewListener?.let { PreviewBus.unsubscribe(it) }
         previewListener = null
         scope.cancel()

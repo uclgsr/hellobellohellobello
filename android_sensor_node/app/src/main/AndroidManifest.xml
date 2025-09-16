@@ -47,6 +47,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Phase 1 MainActivity for foundation testing -->
+        <activity
+                android:name=".ui.Phase1MainActivity"
+                android:exported="false" />
+
         <service
                 android:name=".service.RecordingService"
                 android:foregroundServiceType="dataSync|connectedDevice|camera"/>

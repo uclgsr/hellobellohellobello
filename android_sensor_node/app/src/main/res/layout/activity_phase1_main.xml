@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Phase 2 Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sensor Spoke - Phase 2"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingBottom="16dp" />
+
+    <!-- Status display -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/status_background"
+        android:text="@string/status_initializing"
+        android:textColor="@color/status_text"
+        android:textSize="16sp"
+        android:padding="16dp"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Description of Phase 2 functionality -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Phase 2 Multi-Modal Recording:\n• RGB Camera (CameraX) - High-resolution video\n• Thermal Camera (Topdon TC001) - Hardware-calibrated\n• GSR Sensor (Shimmer3) - Production BLE\n• Audio Recording (MediaRecorder) - 44.1kHz stereo\n• Synchronized session management"
+        android:textSize="14sp"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Control buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btnStartRecording"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="@string/start_recording"
+            style="@style/Widget.Material3.Button" />
+
+        <Button
+            android:id="@+id/btnStopRecording"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="@string/stop_recording"
+            android:enabled="false"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+    </LinearLayout>
+
+    <!-- Connection info -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Phase 2 is advertising '_gsr-controller._tcp' service with multi-modal sensor support.\nPC Hub can connect to control coordinated RGB, thermal, GSR, and audio recording sessions."
+        android:textSize="12sp"
+        android:textStyle="italic"
+        android:gravity="center"
+        android:layout_marginTop="24dp" />
+
+</LinearLayout>
