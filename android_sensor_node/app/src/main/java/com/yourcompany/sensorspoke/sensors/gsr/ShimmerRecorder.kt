@@ -318,9 +318,11 @@ class ShimmerRecorder(
         // Connection status - simulate good connection with occasional glitches
         val connectionStatus = if (Random.nextDouble() > 0.99) "WEAK_SIGNAL" else "CONNECTED"
         
-        synchronized(csvWriter!!) {
-            csvWriter!!.write("$timestampNs,$timestampMs,$dataPointCount,${gsrKohms.format(6)},$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
-            csvWriter!!.flush()
+        csvWriter?.let { writer ->
+            synchronized(writer) {
+                writer.write("$timestampNs,$timestampMs,$dataPointCount,${gsrKohms.format(6)},$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
+                writer.flush()
+            }
         }
         
         dataPointCount++
