@@ -325,8 +325,10 @@ class ShimmerRecorder(
                 try {
                     writer.write("$timestampNs,$timestampMs,$dataPointCount,${gsrKohms.format(6)},$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
                     writer.flush()
+                } catch (e: java.io.IOException) {
+                    Log.w(TAG, "Error writing enhanced GSR data", e)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Error writing enhanced GSR data: ${e.message}")
+                    Log.w(TAG, "Unexpected error writing enhanced GSR data", e)
                 }
             }
         }
