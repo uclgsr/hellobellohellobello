@@ -1,6 +1,5 @@
 <resources>
     <style name="Theme.SensorSpoke" parent="Theme.Material3.DayNight.NoActionBar"/>
-    
     <!-- ActivityTranslucent style for transparent activities -->
     <style name="ActivityTranslucent" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@android:color/transparent</item>
