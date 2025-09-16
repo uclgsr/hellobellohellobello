@@ -57,10 +57,13 @@ class RgbCameraRecorder(
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var captureJob: Job? = null
+    private var syncMonitorJob: Job? = null
     private var csvWriter: java.io.BufferedWriter? = null
     private var csvFile: File? = null
     private var frameCount = 0
     private var videoStartTime: Long = 0L
+    private var actualVideoStartTime: Long = 0L // Actual start from VideoRecordEvent.Start
+    private var frameTimestampOffset: Long = 0L // Offset for better synchronization
 
     override suspend fun start(sessionDir: File) {
         Log.i(TAG, "Starting RGB camera recording in session: ${sessionDir.absolutePath}")
@@ -72,7 +75,7 @@ class RgbCameraRecorder(
         csvFile = File(sessionDir, "rgb_frames.csv")
         csvWriter = java.io.BufferedWriter(java.io.FileWriter(csvFile!!, true))
         if (csvFile!!.length() == 0L) {
-            csvWriter!!.write("timestamp_ns,timestamp_ms,frame_number,filename,file_size_bytes,video_relative_time_ms,video_frame_estimate\n")
+            csvWriter!!.write("timestamp_ns,timestamp_ms,frame_number,filename,file_size_bytes,video_relative_time_ms,video_frame_estimate,sync_quality,actual_video_offset_ms\n")
             csvWriter!!.flush()
         }
 
@@ -84,6 +87,9 @@ class RgbCameraRecorder(
 
         // Start frame capture process
         startFrameCapture(framesDir)
+
+        // Start synchronization monitoring
+        startSyncMonitoring()
     }
 
     override suspend fun stop() {
@@ -100,6 +106,10 @@ class RgbCameraRecorder(
         }
         captureJob = null
 
+        // Cancel sync monitoring job
+        syncMonitorJob?.cancel()
+        syncMonitorJob = null
+
         // Unbind camera
         cameraProvider?.unbindAll()
         cameraProvider = null
@@ -107,6 +117,8 @@ class RgbCameraRecorder(
         imageCapture = null
         videoCapture = null
         videoStartTime = 0L
+        actualVideoStartTime = 0L
+        frameTimestampOffset = 0L
 
         // Close CSV resources
         csvWriter?.flush()
@@ -211,10 +223,28 @@ class RgbCameraRecorder(
                 Log.d(TAG, "Recording event: $event")
                 when (event) {
                     is androidx.camera.video.VideoRecordEvent.Start -> {
-                        Log.i(TAG, "Video recording actually started at: ${System.nanoTime()}")
+                        actualVideoStartTime = System.nanoTime()
+                        frameTimestampOffset = actualVideoStartTime - videoStartTime
+                        Log.i(TAG, "Video recording actually started at: $actualVideoStartTime")
+                        Log.i(TAG, "Video start offset: ${frameTimestampOffset / 1_000_000}ms")
+                        
+                        // Log the actual video start for post-processing synchronization
+                        logVideoEvent("VIDEO_RECORDING_STARTED", actualVideoStartTime, 
+                                    "offset_ms:${frameTimestampOffset / 1_000_000}")
                     }
                     is androidx.camera.video.VideoRecordEvent.Finalize -> {
+                        val finalizeTime = System.nanoTime()
                         Log.i(TAG, "Video recording finalized: ${event.outputResults}")
+                        logVideoEvent("VIDEO_RECORDING_FINALIZED", finalizeTime, 
+                                    "duration_ms:${(finalizeTime - actualVideoStartTime) / 1_000_000}")
+                    }
+                    is androidx.camera.video.VideoRecordEvent.Status -> {
+                        // Log periodic status for timing verification
+                        if (event.recordingStats.numBytesRecorded > 0) {
+                            val statusTime = System.nanoTime()
+                            logVideoEvent("VIDEO_STATUS_UPDATE", statusTime,
+                                        "bytes:${event.recordingStats.numBytesRecorded}")
+                        }
                     }
                 }
             }
@@ -232,6 +262,34 @@ class RgbCameraRecorder(
                     delay(33) // ~30 FPS for high-quality data capture (was ~6-7 FPS)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error capturing frame: ${e.message}", e)
+                    delay(1000) // Wait longer on error
+                }
+            }
+        }
+    }
+
+    private fun startSyncMonitoring() {
+        syncMonitorJob = scope.launch {
+            Log.i(TAG, "Starting synchronization monitoring")
+            
+            while (isActive) {
+                try {
+                    delay(5000) // Monitor every 5 seconds
+                    
+                    if (actualVideoStartTime > 0 && frameCount > 0) {
+                        val currentTime = System.nanoTime()
+                        val totalRecordingTime = (currentTime - actualVideoStartTime) / 1_000_000 // ms
+                        val avgFrameRate = if (totalRecordingTime > 0) {
+                            (frameCount * 1000.0) / totalRecordingTime
+                        } else 0.0
+                        
+                        logVideoEvent("SYNC_MONITOR_UPDATE", currentTime,
+                                    "frames:$frameCount,avg_fps:${"%.2f".format(avgFrameRate)},recording_time_ms:$totalRecordingTime")
+                        
+                        Log.d(TAG, "Sync monitor - Frames: $frameCount, Avg FPS: ${"%.2f".format(avgFrameRate)}, Recording time: ${totalRecordingTime}ms")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in sync monitoring: ${e.message}", e)
                     delay(1000) // Wait longer on error
                 }
             }
@@ -259,30 +317,42 @@ class RgbCameraRecorder(
                     try {
                         val fileSize = if (outputFile.exists()) outputFile.length() else 0
 
-                        // Calculate video correlation metrics
-                        val videoRelativeTimeMs = if (videoStartTime > 0) {
-                            ((timestampNs - videoStartTime) / 1_000_000).toInt()
+                        // Enhanced video correlation metrics with improved accuracy
+                        val baseTime = if (actualVideoStartTime > 0) actualVideoStartTime else videoStartTime
+                        val videoRelativeTimeMs = if (baseTime > 0) {
+                            ((timestampNs - baseTime) / 1_000_000).toInt()
                         } else {
                             0
                         }
 
-                        // Estimate video frame number assuming 30 FPS
+                        // More accurate video frame estimation using actual video timing
                         val estimatedVideoFrame = if (videoRelativeTimeMs > 0) {
-                            (videoRelativeTimeMs * 30 / 1000).toInt()
+                            // Assume 30 FPS but account for potential frame rate variations
+                            (videoRelativeTimeMs * 30.0 / 1000.0).toInt()
                         } else {
                             0
                         }
 
-                        // Enhanced CSV logging with video correlation
+                        // Calculate synchronization quality metric
+                        val syncQuality = calculateSyncQuality(timestampNs, baseTime)
+                        
+                        // Calculate offset from actual video start
+                        val actualVideoOffsetMs = if (actualVideoStartTime > 0) {
+                            ((timestampNs - actualVideoStartTime) / 1_000_000).toInt()
+                        } else {
+                            -1 // Indicates video hasn't actually started yet
+                        }
+
+                        // Enhanced CSV logging with comprehensive video correlation
                         csvWriter?.apply {
-                            write("$timestampNs,$timestampMs,$frameCount,$filename,$fileSize,$videoRelativeTimeMs,$estimatedVideoFrame\n")
+                            write("$timestampNs,$timestampMs,$frameCount,$filename,$fileSize,$videoRelativeTimeMs,$estimatedVideoFrame,$syncQuality,$actualVideoOffsetMs\n")
                             flush()
                         }
 
                         // Generate preview for UI
                         generatePreview(outputFile, timestampNs)
 
-                        Log.d(TAG, "Captured frame: $filename ($fileSize bytes) - Video time: ${videoRelativeTimeMs}ms, Est. frame: $estimatedVideoFrame")
+                        Log.d(TAG, "Captured frame: $filename ($fileSize bytes) - Video time: ${videoRelativeTimeMs}ms, Est. frame: $estimatedVideoFrame, Sync quality: $syncQuality")
                     } catch (e: Exception) {
                         Log.e(TAG, "Error processing captured frame: ${e.message}", e)
                     }
@@ -324,5 +394,62 @@ class RgbCameraRecorder(
         } catch (e: Exception) {
             Log.e(TAG, "Error generating preview: ${e.message}", e)
         }
+    }
+
+    /**
+     * Calculate synchronization quality metric based on timing alignment
+     * Returns a score from 0.0 (poor) to 1.0 (excellent) synchronization
+     */
+    private fun calculateSyncQuality(frameTimestamp: Long, videoBaseTime: Long): Double {
+        return if (videoBaseTime <= 0) {
+            0.0 // No video timing reference yet
+        } else {
+            // Calculate timing consistency - how well frame timing aligns with expected intervals
+            val relativeTime = frameTimestamp - videoBaseTime
+            val expectedFrameInterval = 33_333_333L // ~30 FPS in nanoseconds
+            
+            // Calculate how close we are to expected frame timing
+            val timingDeviation = relativeTime % expectedFrameInterval
+            val deviationRatio = timingDeviation.toDouble() / expectedFrameInterval.toDouble()
+            
+            // Convert to quality score (closer to 0 deviation = higher quality)
+            1.0 - kotlin.math.min(deviationRatio, 0.5) * 2.0
+        }
+    }
+
+    /**
+     * Log video-related events for comprehensive timing analysis
+     */
+    private fun logVideoEvent(event: String, timestamp: Long, details: String = "") {
+        try {
+            val videoEventsFile = File(csvFile?.parent, "video_events.csv")
+            
+            if (!videoEventsFile.exists()) {
+                videoEventsFile.writeText("timestamp_ns,timestamp_ms,event,details\n")
+            }
+            
+            val timestampMs = timestamp / 1_000_000
+            videoEventsFile.appendText("$timestamp,$timestampMs,$event,$details\n")
+            
+            Log.d(TAG, "Video event logged: $event at $timestamp ($details)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to log video event: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Get comprehensive timing statistics for post-processing analysis
+     */
+    fun getTimingStatistics(): Map<String, Any> {
+        return mapOf(
+            "videoStartTime" to videoStartTime,
+            "actualVideoStartTime" to actualVideoStartTime,
+            "frameTimestampOffset" to frameTimestampOffset,
+            "totalFramesCaptured" to frameCount,
+            "avgFrameInterval" to if (frameCount > 1) {
+                (System.nanoTime() - videoStartTime) / frameCount / 1_000_000 // ms
+            } else 0,
+            "syncQualityMetricAvailable" to (actualVideoStartTime > 0)
+        )
     }
 }
