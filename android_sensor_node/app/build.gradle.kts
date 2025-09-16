@@ -75,6 +75,15 @@ android {
                     "lib/**/libopencv_java4.so", // Fix for conflicting OpenCV libraries
                 )
         }
+        resources {
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt"
+            )
+        }
     }
 }
 
@@ -127,6 +136,9 @@ dependencies {
     implementation(files("libs/auth-number-2.13.2.1.aar"))
     implementation(files("libs/logger-2.2.1-release.aar"))
     implementation(files("libs/main-2.2.1-release.aar"))
+    
+    // Add Lottie for missing attributes
+    implementation("com.airbnb.android:lottie:6.1.0")
 
     // Shimmer Android API - updated to new versions from IRCamera (no duplicates)
     implementation(files("libs/shimmerandroidinstrumentdriver-3.2.4_beta.aar"))

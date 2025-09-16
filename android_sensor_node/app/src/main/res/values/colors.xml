@@ -28,4 +28,11 @@
     <color name="c_bg_white">#FF16131E</color>
     <color name="device_connect_name">#FFFFFFFF</color>
     <color name="device_connect_state">#FF83808C</color>
+    
+    <!-- Phase 4 Enhanced UI Colors -->
+    <color name="background_primary">#FFF5F5F5</color>
+    <color name="control_text">#FF2E7D32</color>
+    <color name="accent_color">#FFFF5722</color>
+    <color name="status_inactive">#FF757575</color>
+    <color name="status_active">#FF4CAF50</color>
 </resources>
