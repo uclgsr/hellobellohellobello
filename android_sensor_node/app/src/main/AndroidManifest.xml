@@ -39,13 +39,18 @@
             tools:replace="android:label">
 
         <activity
-                android:name=".ui.MainActivity"
+                android:name=".ui.Phase1MainActivity"
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- Full MainActivity for later phases -->
+        <activity
+                android:name=".ui.MainActivity"
+                android:exported="false" />
 
         <service
                 android:name=".service.RecordingService"

@@ -72,7 +72,17 @@ android {
                     "lib/**/libirnet.so",
                     "lib/**/libusb-1.0.so",
                     "lib/**/libusbcamera.so",
+                    "lib/**/libopencv_java4.so",  // Fix duplicate OpenCV library
                 )
+        }
+        resources {
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt"
+            )
         }
     }
 }
@@ -117,11 +127,15 @@ dependencies {
     implementation(files("libs/suplib-release.aar")) // existing
     implementation(files("libs/libcommon_1.2.0_24052117.aar"))
     implementation(files("libs/libirutils_1.2.0_2409241055.aar"))
-    implementation(files("libs/lms_international-3.90.009.0.aar"))
-    implementation(files("libs/abtest-1.0.1.aar"))
-    implementation(files("libs/auth-number-2.13.2.1.aar"))
+    // Phase 1: Temporarily disable problematic dependencies for foundational build
+    // implementation(files("libs/lms_international-3.90.009.0.aar"))
+    // implementation(files("libs/abtest-1.0.1.aar"))
+    // implementation(files("libs/auth-number-2.13.2.1.aar"))
     implementation(files("libs/logger-2.2.1-release.aar"))
     implementation(files("libs/main-2.2.1-release.aar"))
+    
+    // Add Lottie for missing attributes
+    implementation("com.airbnb.android:lottie:6.1.0")
 
     // Shimmer Android API - updated to new versions from IRCamera (no duplicates)
     implementation(files("libs/shimmerandroidinstrumentdriver-3.2.4_beta.aar"))

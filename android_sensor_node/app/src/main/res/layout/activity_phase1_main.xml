@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Phase 1 Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sensor Spoke - Phase 1"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingBottom="16dp" />
+
+    <!-- Status display -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/status_background"
+        android:text="@string/status_initializing"
+        android:textColor="@color/status_text"
+        android:textSize="16sp"
+        android:padding="16dp"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Description of Phase 1 functionality -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Phase 1 Foundation:\n• Service running with NSD advertising\n• TCP server listening for PC Hub\n• Session directory creation\n• Basic recording coordination\n• BroadcastReceiver for remote commands"
+        android:textSize="14sp"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Control buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btnStartRecording"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="@string/start_recording"
+            style="@style/Widget.Material3.Button" />
+
+        <Button
+            android:id="@+id/btnStopRecording"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="@string/stop_recording"
+            android:enabled="false"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+    </LinearLayout>
+
+    <!-- Connection info -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="The app is advertising '_gsr-controller._tcp' service on the network.\nPC Hub can discover and connect to control recording sessions."
+        android:textSize="12sp"
+        android:textStyle="italic"
+        android:gravity="center"
+        android:layout_marginTop="24dp" />
+
+</LinearLayout>
