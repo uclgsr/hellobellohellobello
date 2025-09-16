@@ -33,7 +33,7 @@ class ShimmerRecorder(
     companion object {
         private const val TAG = "ShimmerRecorder"
         private const val SAMPLING_RATE_HZ = 128.0
-        private const val SAMPLE_INTERVAL_MS = (1000.0 / SAMPLING_RATE_HZ).toLong()
+        private const val SAMPLE_INTERVAL_MS = 7L // ~128Hz (1000/128 ≈ 7.8ms)
     }
 
     private var isRecording = false
