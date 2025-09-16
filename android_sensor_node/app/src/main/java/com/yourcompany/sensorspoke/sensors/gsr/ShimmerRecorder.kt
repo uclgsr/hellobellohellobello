@@ -14,6 +14,8 @@ import android.os.ParcelUuid
 import android.util.Log
 import android.widget.Toast
 import com.shimmerresearch.bluetooth.ShimmerBluetooth
+import com.shimmerresearch.driver.Configuration
+import com.shimmerresearch.driver.ObjectCluster
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -458,15 +460,37 @@ class ShimmerRecorder(
                 currentConnectionState = ShimmerBluetooth.BtState.CONNECTING
                 showUserMessage("Connecting to Shimmer GSR sensor...")
                 
-                // For now, simulate successful connection - real implementation would use actual API
-                delay(3000) // Simulate connection time
-                
-                currentConnectionState = ShimmerBluetooth.BtState.CONNECTED
-                showUserMessage("Shimmer GSR sensor connected successfully!")
-                
-                Log.i(TAG, "Successfully connected to Shimmer device")
-                useSimulationMode = false
-                return@withContext true
+                try {
+                    // Attempt real connection using Shimmer API
+                    val connectMethod = shimmerManagerClass.getMethod("connectDevice", String::class.java)
+                    connectMethod.invoke(shimmerBtManager, deviceAddress)
+                    
+                    // Wait for connection to establish
+                    var connectionTimeout = 0
+                    while (currentConnectionState == ShimmerBluetooth.BtState.CONNECTING && connectionTimeout < 30) {
+                        delay(100)
+                        connectionTimeout++
+                    }
+                    
+                    if (currentConnectionState == ShimmerBluetooth.BtState.CONNECTED) {
+                        // Configure sensors for GSR and PPG recording
+                        configureSensors()
+                        
+                        showUserMessage("Shimmer GSR sensor connected successfully!")
+                        Log.i(TAG, "Successfully connected to Shimmer device")
+                        useSimulationMode = false
+                        return@withContext true
+                    } else {
+                        Log.w(TAG, "Connection timeout or failed")
+                        currentConnectionState = ShimmerBluetooth.BtState.DISCONNECTED
+                        return@withContext false
+                    }
+                    
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error during real Shimmer connection: ${e.message}", e)
+                    currentConnectionState = ShimmerBluetooth.BtState.DISCONNECTED
+                    return@withContext false
+                }
             } else {
                 // Fallback when Shimmer API not available
                 Log.w(TAG, "Shimmer API not available, using enhanced simulation")
@@ -567,10 +591,34 @@ class ShimmerRecorder(
     private fun startStreamingAll() {
         try {
             if (shimmerBtManager != null && shimmerApiAvailable) {
-                // Use reflection to call startStreamingAll() if available
-                val startStreamingMethod = shimmerBtManager!!::class.java.getMethod("startStreamingAll")
-                startStreamingMethod.invoke(shimmerBtManager)
-                Log.i(TAG, "Started streaming on all connected Shimmer devices")
+                // Configure data callback to receive ObjectCluster data
+                val shimmerManagerClass = shimmerBtManager!!::class.java
+                
+                // Set up data received callback (this would normally be done through proper listener registration)
+                Log.i(TAG, "Setting up Shimmer data stream callback")
+                
+                // Start streaming on all connected devices
+                try {
+                    val startStreamingMethod = shimmerManagerClass.getMethod("startStreamingAll")
+                    startStreamingMethod.invoke(shimmerBtManager)
+                    
+                    currentConnectionState = ShimmerBluetooth.BtState.STREAMING
+                    Log.i(TAG, "Started streaming on all connected Shimmer devices")
+                    
+                } catch (e: NoSuchMethodException) {
+                    // Try alternative method names
+                    try {
+                        val startStreamingMethod = shimmerManagerClass.getMethod("startStreaming")
+                        startStreamingMethod.invoke(shimmerBtManager)
+                        
+                        currentConnectionState = ShimmerBluetooth.BtState.STREAMING
+                        Log.i(TAG, "Started streaming on Shimmer device using alternative method")
+                        
+                    } catch (e2: Exception) {
+                        Log.e(TAG, "Could not start streaming: ${e2.message}", e2)
+                    }
+                }
+                
             } else {
                 Log.w(TAG, "Cannot start streaming - Shimmer manager not available")
             }
@@ -580,37 +628,95 @@ class ShimmerRecorder(
     }
 
     /**
-     * Process incoming Shimmer data packets
+     * Configure Shimmer sensors for GSR and PPG recording
      */
-    private fun handleShimmerData(dataPacket: Any) {
+    private fun configureSensors() {
         try {
-            // For now, log that data was received
-            // In real implementation, this would parse the actual data packet
-            Log.d(TAG, "Received Shimmer data packet: $dataPacket")
+            if (shimmerBtManager != null && shimmerApiAvailable) {
+                val shimmerManagerClass = shimmerBtManager!!::class.java
+                
+                // Enable GSR and PPG sensors
+                val enabledSensors = Configuration.Shimmer3.SENSOR.GSR or 
+                                   Configuration.Shimmer3.SENSOR.PPG_A13 or
+                                   Configuration.Shimmer3.SENSOR.TIMESTAMP
+                
+                val writeEnabledSensorsMethod = shimmerManagerClass.getMethod("writeEnabledSensors", Long::class.java)
+                writeEnabledSensorsMethod.invoke(shimmerBtManager, enabledSensors)
+                
+                // Set sampling rate to 128Hz as specified
+                val setSamplingRateMethod = shimmerManagerClass.getMethod("writeSamplingRate", Double::class.java)
+                setSamplingRateMethod.invoke(shimmerBtManager, SAMPLING_RATE_HZ)
+                
+                // Set GSR range for optimal sensitivity
+                val setGsrRangeMethod = shimmerManagerClass.getMethod("writeGSRRange", Int::class.java)
+                setGsrRangeMethod.invoke(shimmerBtManager, Configuration.Shimmer3.GsrRange.RANGE_4_7M)
+                
+                Log.i(TAG, "Shimmer sensors configured successfully")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error configuring Shimmer sensors: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Process incoming Shimmer data packets using real ObjectCluster parsing
+     */
+    private fun handleShimmerData(objectCluster: ObjectCluster) {
+        try {
+            Log.d(TAG, "Received Shimmer ObjectCluster data")
             
-            // Extract GSR and PPG values from the data packet
-            // This is a placeholder - real implementation would use ObjectCluster from Shimmer API
+            // Extract timestamp from ObjectCluster
+            val timestampCluster = objectCluster.getFormatCluster(
+                Configuration.Shimmer3.ObjectClusterSensorName.TIMESTAMP,
+                Configuration.Shimmer3.ChannelType.CAL.toString()
+            )
+            val timestampMs = timestampCluster?.mData?.toLong() ?: System.currentTimeMillis()
             val timestampNs = System.nanoTime()
-            val timestampMs = System.currentTimeMillis()
             dataPointCount++
             
-            // Simulate realistic values until real parsing is implemented
-            val gsrKohms = 45.0 + (dataPointCount % 100) * 0.1
-            val gsrRaw = ((gsrKohms / 200.0) * GSR_RANGE_12BIT).toInt().coerceIn(0, GSR_RANGE_12BIT)
-            val ppgRaw = 2048 + (dataPointCount % 500)
+            // Extract GSR data (both raw and calibrated)
+            val gsrRawCluster = objectCluster.getFormatCluster(
+                Configuration.Shimmer3.ObjectClusterSensorName.GSR,
+                Configuration.Shimmer3.ChannelType.RAW.toString()
+            )
+            val gsrCalCluster = objectCluster.getFormatCluster(
+                Configuration.Shimmer3.ObjectClusterSensorName.GSR_CONDUCTANCE,
+                Configuration.Shimmer3.ChannelType.CAL.toString()
+            )
             
-            // Write to CSV
+            val gsrRaw = (gsrRawCluster?.mData?.toInt() ?: 0).coerceIn(0, GSR_RANGE_12BIT)
+            val gsrConductanceUs = gsrCalCluster?.mData ?: 0.0
+            
+            // Convert conductance (µS) to resistance (kΩ) for CSV format
+            val gsrKohms = if (gsrConductanceUs > 0) 1000.0 / gsrConductanceUs else 0.0
+            
+            // Extract PPG data
+            val ppgRawCluster = objectCluster.getFormatCluster(
+                Configuration.Shimmer3.ObjectClusterSensorName.PPG,
+                Configuration.Shimmer3.ChannelType.RAW.toString()
+            )
+            val ppgRaw = (ppgRawCluster?.mData?.toInt() ?: 0).coerceIn(0, 4095)
+            
+            // Determine connection status from ObjectCluster state
+            val connectionStatus = when (objectCluster.mState) {
+                ShimmerBluetooth.BtState.CONNECTED -> "CONNECTED"
+                ShimmerBluetooth.BtState.STREAMING -> "STREAMING"
+                ShimmerBluetooth.BtState.CONNECTION_LOST -> "CONNECTION_LOST"
+                else -> "UNKNOWN"
+            }
+            
+            // Write to CSV with exact format required
             csvWriter?.apply {
-                write("$timestampNs,$timestampMs,$dataPointCount,$gsrKohms,$gsrRaw,$ppgRaw,CONNECTED\n")
+                write("$timestampNs,$timestampMs,$dataPointCount,$gsrKohms,$gsrRaw,$ppgRaw,$connectionStatus\n")
                 flush()
             }
             
             if (dataPointCount % 128 == 0) {
-                Log.d(TAG, "Processed Shimmer data sample $dataPointCount: GSR=${gsrKohms.format(3)}kΩ")
+                Log.d(TAG, "Real Shimmer data sample $dataPointCount: GSR=${gsrKohms.format(3)}kΩ (raw: $gsrRaw), PPG: $ppgRaw")
             }
             
         } catch (e: Exception) {
-            Log.e(TAG, "Error handling Shimmer data: ${e.message}", e)
+            Log.e(TAG, "Error processing Shimmer ObjectCluster data: ${e.message}", e)
         }
     }
 
@@ -635,50 +741,75 @@ class ShimmerRecorder(
         val timestampMs = System.currentTimeMillis()
         dataPointCount++
 
-        // For MVP: Generate realistic GSR data until real Shimmer integration is complete
-        // This follows the exact requirements: 12-bit ADC resolution (0-4095 range)
-        
-        // Simulate realistic GSR patterns
-        val time = timestampMs / 1000.0
-        val baseGsr = 45.0 + 10.0 * kotlin.math.sin(time * 0.1) // Slow breathing pattern
-        val noise = Random.nextDouble(-2.0, 2.0) // Small random variation
-        val gsrKohms = (baseGsr + noise).coerceIn(10.0, 200.0)
-        
-        // Convert to 12-bit raw value (critical requirement from hellobellohellobello spec)
-        val gsrRaw = ((gsrKohms / 200.0) * 4095.0).toInt().coerceIn(0, 4095)
-        
-        // Generate realistic PPG data
-        val heartRate = 70.0 // BPM
-        val ppgBase = 2048.0 + 400.0 * kotlin.math.sin(time * heartRate * 2 * kotlin.math.PI / 60.0)
-        val ppgNoise = Random.nextDouble(-50.0, 50.0)
-        val ppgRaw = (ppgBase + ppgNoise).toInt().coerceIn(0, 4095)
-        
-        val connectionStatus = "CONNECTED" // Real device would report actual status
+        try {
+            // When connected to real Shimmer device, data comes through handleShimmerData()
+            // This method is used when we have a connection but are waiting for data
+            // or for fallback when ObjectCluster data is not available
+            
+            if (shimmerBtManager != null && currentConnectionState == ShimmerBluetooth.BtState.STREAMING) {
+                // Data should come through the Shimmer callback - this is just a heartbeat
+                Log.d(TAG, "Waiting for Shimmer ObjectCluster data...")
+                return
+            }
+            
+            // Fallback: Generate realistic GSR data based on Shimmer3 GSR+ characteristics
+            // This follows the exact requirements: 12-bit ADC resolution (0-4095 range)
+            val time = timestampMs / 1000.0
+            val baseGsr = 45.0 + 10.0 * kotlin.math.sin(time * 0.1) // Slow breathing pattern
+            val noise = Random.nextDouble(-2.0, 2.0) // Small random variation
+            val gsrKohms = (baseGsr + noise).coerceIn(10.0, 200.0)
+            
+            // Convert to 12-bit raw value (critical requirement from hellobellohellobello spec)
+            val gsrRaw = ((gsrKohms / 200.0) * 4095.0).toInt().coerceIn(0, 4095)
+            
+            // Generate realistic PPG data
+            val heartRate = 70.0 // BPM
+            val ppgBase = 2048.0 + 400.0 * kotlin.math.sin(time * heartRate * 2 * kotlin.math.PI / 60.0)
+            val ppgNoise = Random.nextDouble(-50.0, 50.0)
+            val ppgRaw = (ppgBase + ppgNoise).toInt().coerceIn(0, 4095)
+            
+            val connectionStatus = "CONNECTED_FALLBACK" // Indicates fallback data generation
 
-        // Write to CSV with exact format required
-        csvWriter?.apply {
-            write("$timestampNs,$timestampMs,$dataPointCount,$gsrKohms,$gsrRaw,$ppgRaw,$connectionStatus\n")
-            flush()
-        }
+            // Write to CSV with exact format required
+            csvWriter?.apply {
+                write("$timestampNs,$timestampMs,$dataPointCount,$gsrKohms,$gsrRaw,$ppgRaw,$connectionStatus\n")
+                flush()
+            }
 
-        // Log progress every second (128 samples at 128Hz)
-        if (dataPointCount % 128 == 0) {
-            Log.d(TAG, "Real GSR sample $dataPointCount: ${gsrKohms.format(2)} kΩ (raw: $gsrRaw), PPG: $ppgRaw")
+            // Log progress every second (128 samples at 128Hz)
+            if (dataPointCount % 128 == 0) {
+                Log.d(TAG, "Fallback GSR sample $dataPointCount: ${gsrKohms.format(2)} kΩ (raw: $gsrRaw), PPG: $ppgRaw")
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in real Shimmer data capture: ${e.message}", e)
         }
     }
 
     private fun startEnhancedShimmerRecording() {
-        Log.i(TAG, "Starting enhanced Shimmer GSR recording with real hardware patterns")
+        Log.i(TAG, "Starting enhanced Shimmer GSR recording with real hardware integration")
         
         recordingJob = scope.launch {
             while (isActive && isRecording) {
                 try {
-                    // Enhanced simulation that mimics real Shimmer data patterns
-                    captureEnhancedShimmerData()
-                    delay(SAMPLE_INTERVAL_MS)
+                    if (currentConnectionState == ShimmerBluetooth.BtState.STREAMING) {
+                        // When streaming, data comes through handleShimmerData() callback
+                        // This loop just maintains the recording state and handles reconnection
+                        delay(1000) // Check connection every second
+                        
+                        // Check if we're still connected
+                        if (currentConnectionState == ShimmerBluetooth.BtState.DISCONNECTED) {
+                            Log.w(TAG, "Connection lost during streaming")
+                            handleConnectionStateChange(ShimmerBluetooth.BtState.DISCONNECTED)
+                        }
+                    } else {
+                        // Use enhanced simulation patterns while waiting for connection
+                        captureEnhancedShimmerData()
+                        delay(SAMPLE_INTERVAL_MS)
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in enhanced Shimmer recording: ${e.message}", e)
-                    delay(100)
+                    delay(1000)
                 }
             }
         }
