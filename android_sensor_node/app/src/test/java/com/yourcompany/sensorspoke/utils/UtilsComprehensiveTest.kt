@@ -7,6 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertTrue
+import kotlin.test.assertContentEquals
 
 class TimeManagerComprehensiveTest {
     private lateinit var timeManager: TimeManager
@@ -316,7 +317,7 @@ class PreviewBusComprehensiveTest {
 
         // Register subscriber (if supported by implementation)
         try {
-            previewBus.subscribe { frame ->
+            previewBus.subscribe { frame, timestamp ->
                 notificationCount++
                 lastFrame = frame
             }
@@ -328,7 +329,7 @@ class PreviewBusComprehensiveTest {
             Thread.sleep(10)
 
             assertEquals("Should receive one notification", 1, notificationCount)
-            assertArrayEquals("Notified frame should match", testFrame, lastFrame)
+            assertContentEquals(testFrame, lastFrame, "Notified frame should match")
         } catch (e: NoSuchMethodError) {
             // If subscribe method doesn't exist, skip this test
             kotlin.test.assertEquals("Method not implemented", "Method not implemented", "Method not implemented")
