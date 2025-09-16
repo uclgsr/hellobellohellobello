@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import QApplication
 from .gui.gui_manager import GUIManager
 from .network.network_controller import NetworkController
 from .network.time_server import TimeSyncServer
+from .network.tcp_command_server import TCPCommandServer
 
 
 def _time_server_thread(stop_flag: threading.Event) -> None:
@@ -54,6 +55,10 @@ def main() -> int:
     )
     _ts_thread.start()
 
+    # Start TCP Command Server for enhanced communication
+    tcp_server = TCPCommandServer(host="0.0.0.0", port=8080)
+    tcp_server.start()
+
     network = NetworkController()
     gui = GUIManager(network)
 
@@ -62,6 +67,7 @@ def main() -> int:
 
     # Ensure proper shutdown
     network.shutdown()
+    tcp_server.stop()
     try:
         _stop_flag.set()
         _ts_thread.join(timeout=2.0)

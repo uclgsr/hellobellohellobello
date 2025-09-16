@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Translucent activity style for overlays and dialogs -->
-    <style name="ActivityTranslucent" parent="Theme.Material3.DayNight">
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowAnimationStyle">@android:style/Animation</item>
-    </style>
+    <!-- ActivityTranslucent style moved to themes.xml to avoid duplication -->
     
     <!-- Phase 4 App Themes -->
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">

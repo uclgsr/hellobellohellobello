@@ -404,11 +404,11 @@ class MultiModalSensorCoordinator(
      */
     private suspend fun stopGSRRecording(): Boolean =
         try {
-            shimmerRecorder?.let { recorder ->
-                recorder.stop()
+            shimmerRecorder?.let {
+                it.stop()
                 Log.i(TAG, "GSR recording stopped")
-            }
-            true
+                true
+            } ?: false
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop GSR recording: ${e.message}")
             false

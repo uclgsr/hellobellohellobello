@@ -166,8 +166,8 @@ class EnhancedMainActivity : AppCompatActivity() {
             // Initialize multi-modal coordinator
             multiModalCoordinator = ensureMultiModalCoordinator()
             
-            // Update ViewModel with controllers
-            mainViewModel.setControllers(controller, multiModalCoordinator)
+            // Update ViewModel with controller
+            controller?.let { mainViewModel.initialize(it) }
             
             Log.i(TAG, "All components initialized successfully")
             
@@ -233,9 +233,15 @@ class EnhancedMainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 // Request all sensor permissions
-                permissionManager.requestCameraPermissions()
-                permissionManager.requestBluetoothPermissions()
-                permissionManager.requestStoragePermissions()
+                permissionManager.requestCameraPermissions { success ->
+                    Log.d(TAG, "Camera permissions: $success")
+                }
+                permissionManager.requestBluetoothPermissions { success ->
+                    Log.d(TAG, "Bluetooth permissions: $success")
+                }
+                permissionManager.requestStoragePermissions { success ->
+                    Log.d(TAG, "Storage permissions: $success")
+                }
                 
                 Log.i(TAG, "Permission requests initiated")
             } catch (e: Exception) {
@@ -254,7 +260,7 @@ class EnhancedMainActivity : AppCompatActivity() {
                 c.startSession(sessionId)
                 
                 // Update UI to show recording state
-                mainViewModel.setRecordingState(true, sessionId)
+                mainViewModel.startRecording(sessionId)
                 
                 // Show notification
                 runOnUiThread {
@@ -278,7 +284,7 @@ class EnhancedMainActivity : AppCompatActivity() {
                 c.stopSession()
                 
                 // Update UI to show idle state
-                mainViewModel.setRecordingState(false, null)
+                mainViewModel.stopRecording()
                 
                 // Show notification
                 runOnUiThread {
@@ -299,8 +305,15 @@ class EnhancedMainActivity : AppCompatActivity() {
         // Trigger flash synchronization across all sensors
         lifecycleScope.launch {
             try {
-                // Flash the screen white briefly for visual sync
-                mainViewModel.triggerFlashSync(flashTimestamp)
+                // Flash sync executed through screen flash
+                runOnUiThread {
+                    // Flash the screen white briefly for visual sync
+                    val originalBackground = window.decorView.background
+                    window.decorView.setBackgroundColor(android.graphics.Color.WHITE)
+                    window.decorView.postDelayed({
+                        window.decorView.background = originalBackground
+                    }, 100) // Flash for 100ms
+                }
                 
                 // Log flash event for data analysis
                 Log.i(TAG, "Flash sync executed at timestamp: $flashTimestamp")
