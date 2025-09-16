@@ -105,9 +105,10 @@ class RgbCameraRecorder(
         
         // Shutdown executor
         executor.shutdown()
-        
-        // Cancel scope
-        scope.cancel()
+
+        // Cancel only the capture job, not the scope to allow restart
+        captureJob?.cancel()
+        captureJob = null
         
         Log.i(TAG, "RGB camera recording stopped")
     }

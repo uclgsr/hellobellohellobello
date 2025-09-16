@@ -80,9 +80,10 @@ class ShimmerRecorder(
         csvWriter?.flush()
         csvWriter?.close()
         csvWriter = null
-        
-        // Cancel scope
-        scope.cancel()
+
+        // Cancel only the recording job, not the scope to allow restart
+        recordingJob?.cancel()
+        recordingJob = null
         
         Log.i(TAG, "GSR recording stopped. Total samples: $dataPointCount")
     }
