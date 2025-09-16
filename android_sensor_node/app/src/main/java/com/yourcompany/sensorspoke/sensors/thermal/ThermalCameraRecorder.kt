@@ -31,8 +31,9 @@ class ThermalCameraRecorder(
 ) : SensorRecorder {
     companion object {
         private const val TAG = "ThermalCameraRecorder"
-        private const val TOPDON_VENDOR_ID = 0x2744  // Topdon TC001 vendor ID
-        private const val TC001_PRODUCT_ID = 0x0001  // Topdon TC001 product ID
+        private const val TOPDON_VENDOR_ID = 0x4d54  // Topdon TC001 vendor ID
+        private const val TC001_PRODUCT_ID_1 = 0x0100  // TC001 product ID variant 1
+        private const val TC001_PRODUCT_ID_2 = 0x0200  // TC001 product ID variant 2
     }
 
     private var csvWriter: BufferedWriter? = null
@@ -122,7 +123,8 @@ class ThermalCameraRecorder(
     }
 
     private fun isTopdonTC001Device(device: UsbDevice): Boolean {
-        return device.vendorId == TOPDON_VENDOR_ID && device.productId == TC001_PRODUCT_ID
+        return device.vendorId == TOPDON_VENDOR_ID && 
+               (device.productId == TC001_PRODUCT_ID_1 || device.productId == TC001_PRODUCT_ID_2)
     }
 
     private fun configureTopdonDevice() {
@@ -445,28 +447,29 @@ class TopdonThermalIntegration(private val context: Context) {
     }
     
     private fun applyThermalPalette(
-        bitmap: Bitmap, 
+        bitmap: Bitmap,
         temperatureMatrix: Array<FloatArray>,
         minTemp: Float,
         maxTemp: Float
     ) {
-        val canvas = Canvas(bitmap)
-        val paint = Paint()
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        val width = bitmap.width
         
         for (y in temperatureMatrix.indices) {
             for (x in temperatureMatrix[y].indices) {
                 val temp = temperatureMatrix[y][x]
-                val normalized = (temp - minTemp) / (maxTemp - minTemp)
+                val tempRange = (maxTemp - minTemp).takeIf { it != 0f } ?: 1f
+                val normalized = ((temp - minTemp) / tempRange).coerceIn(0f, 1f)
                 val color = when (currentPalette) {
                     TopdonThermalPalette.IRON -> getIronColor(normalized)
                     TopdonThermalPalette.RAINBOW -> getRainbowColor(normalized)
                     TopdonThermalPalette.GRAYSCALE -> getGrayscaleColor(normalized)
                     TopdonThermalPalette.HOT -> getHotColor(normalized)
                 }
-                paint.color = color
-                canvas.drawPoint(x.toFloat(), y.toFloat(), paint)
+                pixels[y * width + x] = color
             }
         }
+        bitmap.setPixels(pixels, 0, width, 0, 0, width, bitmap.height)
     }
     
     private fun getIronColor(normalized: Float): Int {

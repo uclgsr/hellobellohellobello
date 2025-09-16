@@ -85,17 +85,18 @@ class ShimmerRecorder(
         Log.i(TAG, "Stopping GSR recording")
         
         isRecording = false
-        recordingJob?.cancel()
+        
+        // Wait for recording job to complete before closing resources
+        recordingJob?.let {
+            it.cancel()
+            it.join() // Wait for completion to avoid race condition
+        }
         recordingJob = null
         
-        // Close CSV writer
+        // Close CSV writer safely
         csvWriter?.flush()
         csvWriter?.close()
         csvWriter = null
-
-        // Cancel only the recording job, not the scope to allow restart
-        recordingJob?.cancel()
-        recordingJob = null
         
         Log.i(TAG, "GSR recording stopped. Total samples: $dataPointCount")
     }
@@ -318,10 +319,15 @@ class ShimmerRecorder(
         // Connection status - simulate good connection with occasional glitches
         val connectionStatus = if (Random.nextDouble() > 0.99) "WEAK_SIGNAL" else "CONNECTED"
         
+        // Write to CSV safely with null check and synchronization
         csvWriter?.let { writer ->
             synchronized(writer) {
-                writer.write("$timestampNs,$timestampMs,$dataPointCount,${gsrKohms.format(6)},$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
-                writer.flush()
+                try {
+                    writer.write("$timestampNs,$timestampMs,$dataPointCount,${gsrKohms.format(6)},$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
+                    writer.flush()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error writing enhanced GSR data: ${e.message}")
+                }
             }
         }
         

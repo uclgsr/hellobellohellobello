@@ -87,8 +87,11 @@ class RgbCameraRecorder(
         recording?.stop()
         recording = null
 
-        // Cancel capture job
-        captureJob?.cancel()
+        // Cancel capture job and wait for completion
+        captureJob?.let {
+            it.cancel()
+            it.join() // Wait for completion to avoid race condition
+        }
         captureJob = null
         
         // Unbind camera
@@ -105,10 +108,6 @@ class RgbCameraRecorder(
         
         // Shutdown executor
         executor.shutdown()
-
-        // Cancel only the capture job, not the scope to allow restart
-        captureJob?.cancel()
-        captureJob = null
         
         Log.i(TAG, "RGB camera recording stopped")
     }
