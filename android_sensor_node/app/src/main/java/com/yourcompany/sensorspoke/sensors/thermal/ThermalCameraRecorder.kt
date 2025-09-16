@@ -7,6 +7,8 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationManager
+import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001SensorIntegrationManager
 import com.yourcompany.sensorspoke.utils.PermissionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +38,13 @@ class ThermalCameraRecorder(
         private const val TC001_PRODUCT_ID_2 = 0x0200 // TC001 product ID variant 2
         private const val DEFAULT_FPS = 10 // Default 10 FPS for simulation
         private const val MAX_FPS = 25 // Maximum 25 Hz as per Topdon capability
+        
+        // Integration modes
+        enum class IntegrationMode {
+            SIMULATION_ONLY,      // Use stub integration for development
+            BASIC_REAL,          // Use RealTopdonIntegration directly
+            ADVANCED_TC001       // Use comprehensive TC001SensorIntegrationManager
+        }
     }
 
     private var csvWriter: BufferedWriter? = null
