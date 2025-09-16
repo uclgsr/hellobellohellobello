@@ -418,13 +418,13 @@ class TopdonThermalIntegration(private val context: Context) {
         for (y in 0 until height) {
             for (x in 0 until width) {
                 // Create temperature variation with some hot spots
-                val temp = baseTemp + (random.nextGaussian() * 5).toFloat() +
+                val temp = baseTemp + (random.nextFloat() * 10f - 5f) +
                           if (x > 100 && x < 150 && y > 80 && y < 120) 15f else 0f
                 
                 temperatureMatrix[y][x] = temp
                 minTemp = minOf(minTemp, temp)
                 maxTemp = maxOf(maxTemp, temp)
-                totalTemp += temp
+                totalTemp += temp.toFloat()
             }
         }
         
