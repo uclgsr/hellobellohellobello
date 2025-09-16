@@ -208,12 +208,8 @@ class SystemValidator:
                 # Replace common placeholder patterns
                 improved_line = original_line
                 if "placeholder" in original_line.lower():
-                    if "icon" in original_line.lower():
-                        improved_line = original_line.replace("proper notification icon", "proper notification icon")
-                    elif "content" in original_line.lower():
-                        improved_line = original_line.replace("initial system state", "initial system state")
-                    elif "frame" in original_line.lower():
-                        improved_line = original_line.replace("default frame buffer", "default frame buffer")
+                    # No meaningful auto-fix available for this placeholder.
+                    return False
                 
                 if improved_line != original_line:
                     lines[issue.line_number - 1] = improved_line
