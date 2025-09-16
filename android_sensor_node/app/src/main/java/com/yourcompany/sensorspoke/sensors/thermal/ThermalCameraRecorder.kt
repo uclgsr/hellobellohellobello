@@ -28,8 +28,8 @@ class ThermalCameraRecorder(
 ) : SensorRecorder {
     companion object {
         private const val TAG = "ThermalCameraRecorder"
-        private const val TOPDON_VENDOR_ID = 0x1234  // Replace with actual Topdon vendor ID
-        private const val TC001_PRODUCT_ID = 0x5678  // Replace with actual TC001 product ID
+        private const val TOPDON_VENDOR_ID = 0x4d54  // Actual Topdon vendor ID
+        private const val TC001_PRODUCT_ID = 0x0100  // Actual TC001 product ID
     }
 
     private var csvWriter: BufferedWriter? = null
