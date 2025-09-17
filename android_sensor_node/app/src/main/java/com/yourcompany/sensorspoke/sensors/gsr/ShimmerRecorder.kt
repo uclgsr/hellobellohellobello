@@ -13,16 +13,6 @@ import java.io.File
 import java.io.FileWriter
 import kotlin.random.Random
 
-/**
- * Refactored ShimmerRecorder focused on data logging with improved separation of concerns.
- * Device management is now handled by ShimmerManager, data processing by ShimmerDataProcessor.
- * 
- * This recorder is responsible for:
- * - Managing CSV file output for GSR data
- * - Coordinating with ShimmerManager for device state
- * - Reporting status via Flow for UI reactivity
- * - Session-based recording lifecycle
- */
 class ShimmerRecorder(
     private val context: Context,
     private val shimmerManager: ShimmerManager? = null,
@@ -62,6 +52,7 @@ class ShimmerRecorder(
         STOPPING,
         ERROR
     }
+
 
     override suspend fun start(sessionDir: File) {
         Log.i(TAG, "Starting GSR recording in session: ${sessionDir.absolutePath}")
@@ -208,6 +199,50 @@ class ShimmerRecorder(
                     }
                     
                     delay(SAMPLE_INTERVAL_MS)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in enhanced Shimmer recording: ${e.message}", e)
+                    delay(100)
+                }
+            }
+        }
+    }
+
+    private suspend fun captureEnhancedShimmerData() {
+        // Enhanced GSR simulation with realistic Shimmer3 GSR+ patterns
+        val timestampNs = System.nanoTime()
+        val timestampMs = System.currentTimeMillis()
+
+        // Generate realistic GSR data using actual Shimmer3 GSR+ characteristics
+        // Baseline GSR resistance: 10-100 kΩ typical range
+        val baselineGsr = 25.0 + (Random.nextDouble(-3.0, 3.0)) // 25kΩ ± 3kΩ baseline
+
+        // Add realistic skin conductance variations
+        val timeBasedVariation = Math.sin((timestampMs / 1000.0) * 0.1) * 5.0 // Slow drift
+        val spontaneousFluctuations = Random.nextDouble(-2.0, 2.0) // Spontaneous SC responses
+
+        val gsrKohms = (baselineGsr + timeBasedVariation + spontaneousFluctuations).coerceIn(5.0, 200.0)
+
+        // Convert to 12-bit ADC values (0-4095) as per Shimmer3 GSR+ specs
+        val gsrRaw12bit = ((gsrKohms / 200.0) * GSR_RANGE_12BIT).toInt().coerceIn(0, GSR_RANGE_12BIT)
+
+        // Simulate PPG data (photoplethysmography) - typical range
+        val heartRateBpm = 72.0 + (Random.nextDouble(-8.0, 8.0)) // 72 ± 8 BPM
+        val ppgWaveform = Math.sin((timestampMs / 1000.0) * (heartRateBpm / 60.0) * 2 * Math.PI)
+        val ppgRaw = ((ppgWaveform + 1.0) * 2047.5).toInt().coerceIn(0, 4095) // 12-bit range
+
+        // Connection status - simulate good connection with occasional glitches
+        val connectionStatus = if (Random.nextDouble() > 0.99) "WEAK_SIGNAL" else "CONNECTED"
+
+        // Write to CSV safely with null check and synchronization
+        csvWriter?.let { writer ->
+            synchronized(writer) {
+                try {
+                    writer.write("$timestampNs,$timestampMs,$dataPointCount,${gsrKohms.format(6)},$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
+                    writer.flush()
+                } catch (e: java.io.IOException) {
+                    Log.w(TAG, "Error writing enhanced GSR data", e)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Unexpected error writing enhanced GSR data", e)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error in GSR recording loop: ${e.message}", e)
@@ -216,6 +251,13 @@ class ShimmerRecorder(
                 // Final flush on completion
                 csvWriter?.flush()
             }
+        }
+
+        dataPointCount++
+
+        // Log progress at 1-second intervals (128 samples at 128Hz)
+        if (dataPointCount % 128 == 0) {
+            Log.d(TAG, "Enhanced Shimmer data point $dataPointCount: GSR=${gsrKohms.format(3)}kΩ ($gsrRaw12bit/4095), PPG=$ppgRaw")
         }
     }
 

@@ -41,14 +41,14 @@ class ShimmerRecorderTest {
             val tmp = createTempDirectory("shimmer_lifecycle_test_").toFile()
             try {
                 val recorder = ShimmerRecorder(mockContext)
-                
+
                 // Multiple start/stop cycles should work
                 recorder.start(tmp)
                 recorder.stop()
-                
+
                 recorder.start(tmp)
                 recorder.stop()
-                
+
                 // Should not throw exceptions
                 assertThat(File(tmp, "gsr_data.csv").exists()).isTrue()
             } finally {

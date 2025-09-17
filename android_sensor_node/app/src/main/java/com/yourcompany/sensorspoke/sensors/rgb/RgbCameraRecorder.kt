@@ -96,7 +96,6 @@ class RgbCameraRecorder(
                     throw RuntimeException("Failed to initialize RGB camera manager")
                 }
             }
-
             // Update device connection manager
             deviceConnectionManager?.updateRgbCameraState(
                 DeviceConnectionManager.DeviceState.CONNECTING,
