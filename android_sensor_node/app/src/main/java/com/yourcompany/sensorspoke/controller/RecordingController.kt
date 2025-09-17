@@ -15,7 +15,7 @@ import java.util.Locale
 import java.util.UUID
 
 /**
- * RecordingController implements SessionOrchestrator to coordinate start/stop across sensor recorders 
+ * RecordingController implements SessionOrchestrator to coordinate start/stop across sensor recorders
  * and manages the lifecycle of a recording session, including session directory creation.
  *
  * This is the central session orchestrator mentioned in the MVP architecture that:
@@ -324,17 +324,17 @@ class RecordingController(
             null
         }
     }
-    
+
     // SessionOrchestrator interface implementations
-    
+
     override fun getCurrentSessionDirectory(): File? {
         return sessionRootDir
     }
-    
+
     override fun getSessionsRootDirectory(): File {
         return ensureSessionsRoot()
     }
-    
+
     override fun getRegisteredSensors(): List<String> {
         return recorders.map { it.name }
     }

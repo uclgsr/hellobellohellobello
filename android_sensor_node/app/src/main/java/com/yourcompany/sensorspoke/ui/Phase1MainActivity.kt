@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Phase 1 MainActivity - Simplified implementation focused on foundational architecture.
- * 
+ *
  * This activity provides:
  * - Basic Start/Stop recording functionality
  * - Service connection and NSD advertising
@@ -89,25 +89,25 @@ class Phase1MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_phase1_main)
-        
+
         // Initialize UI elements
         initializeViews()
-        
+
         // Set up button click handlers
         setupButtonHandlers()
-        
+
         // Start the RecordingService (foreground service with NSD)
         startRecordingService()
-        
+
         updateStatus("Phase 1 initialized - Service starting...")
         Log.i(TAG, "Phase 1 MainActivity created")
     }
 
     private fun initializeViews() {
         statusText = findViewById(R.id.statusText)
-        startButton = findViewById(R.id.btnStartRecording) 
+        startButton = findViewById(R.id.btnStartRecording)
         stopButton = findViewById(R.id.btnStopRecording)
-        
+
         // Initial button states
         updateButtonStates(isRecording = false)
     }
@@ -157,13 +157,13 @@ class Phase1MainActivity : AppCompatActivity() {
     private fun getRecordingController(): RecordingController {
         return recordingController ?: run {
             val controller = RecordingController(applicationContext)
-            
+
             // Phase 2: Register real sensor recorders for multi-modal recording
             controller.register("rgb", RgbCameraRecorder(applicationContext, this))
             controller.register("thermal", ThermalCameraRecorder(applicationContext))
             controller.register("gsr", ShimmerRecorder(applicationContext))
             controller.register("audio", AudioRecorder(applicationContext)) // FR5: Audio recording support
-            
+
             recordingController = controller
             Log.i(TAG, "RecordingController initialized with real sensors for Phase 2")
             controller
@@ -178,7 +178,7 @@ class Phase1MainActivity : AppCompatActivity() {
     private fun updateButtonStates(isRecording: Boolean) {
         startButton.isEnabled = !isRecording
         stopButton.isEnabled = isRecording
-        
+
         if (isRecording) {
             startButton.text = "Recording..."
             stopButton.text = "Stop Recording"
@@ -196,14 +196,14 @@ class Phase1MainActivity : AppCompatActivity() {
             addAction(RecordingService.ACTION_STOP_RECORDING)
             addAction(RecordingService.ACTION_FLASH_SYNC)
         }
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(commandReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
             @Suppress("DEPRECATION")
             registerReceiver(commandReceiver, filter)
         }
-        
+
         updateStatus("Ready - Service advertising on network")
         Log.i(TAG, "Phase 1 MainActivity started and listening for PC Hub commands")
     }

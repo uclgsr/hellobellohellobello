@@ -58,10 +58,10 @@ class RgbCameraRecorder(
 
     override suspend fun start(sessionDir: File) {
         Log.i(TAG, "Starting RGB camera recording in session: ${sessionDir.absolutePath}")
-        
+
         // Ensure directories
         val framesDir = File(sessionDir, "frames").apply { mkdirs() }
-        
+
         // Open CSV for frame metadata
         csvFile = File(sessionDir, "rgb_frames.csv")
         csvWriter = java.io.BufferedWriter(java.io.FileWriter(csvFile!!, true))
@@ -72,17 +72,17 @@ class RgbCameraRecorder(
 
         // Initialize CameraX
         initializeCameraX()
-        
+
         // Start video recording
         startVideoRecording(File(sessionDir, "video.mp4"))
-        
+
         // Start frame capture process
         startFrameCapture(framesDir)
     }
 
     override suspend fun stop() {
         Log.i(TAG, "Stopping RGB camera recording")
-        
+
         // Stop recording
         recording?.stop()
         recording = null
@@ -93,7 +93,7 @@ class RgbCameraRecorder(
             it.join() // Wait for completion to avoid race condition
         }
         captureJob = null
-        
+
         // Unbind camera
         cameraProvider?.unbindAll()
         cameraProvider = null
@@ -105,10 +105,10 @@ class RgbCameraRecorder(
         csvWriter?.close()
         csvWriter = null
         csvFile = null
-        
+
         // Shutdown executor
         executor.shutdown()
-        
+
         Log.i(TAG, "RGB camera recording stopped")
     }
 
@@ -120,8 +120,8 @@ class RgbCameraRecorder(
         val recorder = Recorder.Builder()
             .setQualitySelector(
                 QualitySelector.fromOrderedList(
-                    listOf(Quality.UHD, Quality.FHD, Quality.HD) // 4K priority, fallback to lower
-                )
+                    listOf(Quality.UHD, Quality.FHD, Quality.HD), // 4K priority, fallback to lower
+                ),
             )
             .build()
         videoCapture = VideoCapture.withOutput(recorder)
@@ -139,7 +139,7 @@ class RgbCameraRecorder(
             lifecycleOwner,
             cameraSelector,
             videoCapture,
-            imageCapture
+            imageCapture,
         )
 
         Log.i(TAG, "CameraX initialized successfully")
@@ -163,7 +163,7 @@ class RgbCameraRecorder(
     private fun startFrameCapture(framesDir: File) {
         captureJob = scope.launch {
             Log.i(TAG, "Starting frame capture loop")
-            
+
             while (isActive) {
                 try {
                     captureFrame(framesDir)
@@ -180,8 +180,8 @@ class RgbCameraRecorder(
         val timestampNs = TimeManager.nowNanos()
         val timestampMs = System.currentTimeMillis()
         frameCount++
-        
-        val filename = "frame_${timestampNs}.jpg"
+
+        val filename = "frame_$timestampNs.jpg"
         val outputFile = File(framesDir, filename)
         val outputFileOptions = ImageCapture.OutputFileOptions.Builder(outputFile).build()
 
@@ -196,7 +196,7 @@ class RgbCameraRecorder(
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     try {
                         val fileSize = if (outputFile.exists()) outputFile.length() else 0
-                        
+
                         // Log to CSV
                         csvWriter?.apply {
                             write("$timestampNs,$timestampMs,$frameCount,$filename,$fileSize\n")
@@ -205,13 +205,13 @@ class RgbCameraRecorder(
 
                         // Generate preview for UI
                         generatePreview(outputFile, timestampNs)
-                        
-                        Log.d(TAG, "Captured frame: $filename (${fileSize} bytes)")
+
+                        Log.d(TAG, "Captured frame: $filename ($fileSize bytes)")
                     } catch (e: Exception) {
                         Log.e(TAG, "Error processing captured frame: ${e.message}", e)
                     }
                 }
-            }
+            },
         )
     }
 
@@ -224,20 +224,20 @@ class RgbCameraRecorder(
                 inSampleSize = 4 // 1/4 size for preview
                 inPreferredConfig = Bitmap.Config.RGB_565
             }
-            
+
             val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath, options)
             if (bitmap != null) {
                 // Scale to standard preview size
                 val previewBitmap = Bitmap.createScaledBitmap(bitmap, 320, 240, true)
-                
+
                 // Compress to JPEG for preview bus
                 val baos = ByteArrayOutputStream()
                 previewBitmap.compress(Bitmap.CompressFormat.JPEG, 60, baos)
                 val previewBytes = baos.toByteArray()
-                
+
                 // Emit preview
                 PreviewBus.emit(previewBytes, timestamp)
-                
+
                 // Cleanup
                 baos.close()
                 if (previewBitmap != bitmap) {

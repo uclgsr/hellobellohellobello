@@ -214,13 +214,13 @@ class ThermalPreviewFragment : Fragment() {
         statusText?.text = "Thermal camera ready"
         temperatureRangeText?.text = "Temperature Range: -20°C to 150°C"
         frameCountText?.text = "Frames: 0"
-        
+
         // Check hardware availability
         val usbManager = requireContext().getSystemService(Context.USB_SERVICE) as UsbManager
         val hasTC001 = usbManager.deviceList.values.any { device ->
             device.productName?.contains("TC001", ignoreCase = true) == true
         }
-        
+
         if (hasTC001) {
             statusText?.text = "TC001 thermal camera detected"
         } else {

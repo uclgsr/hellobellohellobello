@@ -5,7 +5,6 @@ import android.util.Log
 import com.yourcompany.sensorspoke.controller.SessionOrchestrator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -13,29 +12,29 @@ import org.json.JSONObject
 
 /**
  * PCOrchestrationClient handles PC Hub communication for the Android Sensor Node.
- * 
+ *
  * This is a focused networking module that provides:
  * - Service discovery and registration with PC Hub
  * - Command reception and processing (start_recording, stop_recording, etc.)
  * - Status updates and session coordination with PC
  * - Clean separation between networking logic and session orchestration
- * 
+ *
  * Implements the networking layer as specified in the MVP architecture requirements.
  */
 class PCOrchestrationClient(
     private val context: Context,
-    private val sessionOrchestrator: SessionOrchestrator
+    private val sessionOrchestrator: SessionOrchestrator,
 ) {
     companion object {
         private const val TAG = "PCOrchestrationClient"
         private const val DEFAULT_SERVICE_TYPE = "_sensorspoke._tcp"
         private const val DEFAULT_SERVICE_NAME = "SensorSpoke-Node"
     }
-    
+
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var networkClient: NetworkClient? = null
     private var isStarted = false
-    
+
     // Protocol definitions for JSON message format
     object Protocol {
         const val CMD_START_RECORDING = "start_recording"
@@ -43,17 +42,17 @@ class PCOrchestrationClient(
         const val CMD_FLASH_SYNC = "flash_sync"
         const val CMD_QUERY_CAPABILITIES = "query_capabilities"
         const val CMD_TRANSFER_FILES = "transfer_files"
-        
+
         const val FIELD_COMMAND = "command"
         const val FIELD_SESSION_ID = "session_id"
         const val FIELD_TIMESTAMP = "timestamp"
         const val FIELD_STATUS = "status"
         const val FIELD_ACK_ID = "ack_id"
-        
+
         const val STATUS_OK = "ok"
         const val STATUS_ERROR = "error"
     }
-    
+
     /**
      * Start the PC orchestration client
      * - Registers NSD service for PC Hub discovery
@@ -64,28 +63,27 @@ class PCOrchestrationClient(
             Log.w(TAG, "PCOrchestrationClient already started")
             return
         }
-        
+
         scope.launch {
             try {
                 networkClient = NetworkClient(context)
-                
+
                 // Register service for PC discovery
                 networkClient?.register(
                     type = DEFAULT_SERVICE_TYPE,
                     name = DEFAULT_SERVICE_NAME,
-                    port = servicePort
+                    port = servicePort,
                 )
-                
+
                 isStarted = true
                 Log.i(TAG, "PCOrchestrationClient started on port $servicePort")
-                
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start PCOrchestrationClient", e)
                 stop()
             }
         }
     }
-    
+
     /**
      * Stop the PC orchestration client
      */
@@ -101,7 +99,7 @@ class PCOrchestrationClient(
             }
         }
     }
-    
+
     /**
      * Process incoming command from PC Hub
      * @param commandJson JSON command string from PC
@@ -112,9 +110,9 @@ class PCOrchestrationClient(
             val command = JSONObject(commandJson)
             val cmd = command.getString(Protocol.FIELD_COMMAND)
             val ackId = command.optString(Protocol.FIELD_ACK_ID, "")
-            
+
             Log.d(TAG, "Processing command: $cmd")
-            
+
             val response = when (cmd) {
                 Protocol.CMD_START_RECORDING -> handleStartRecording(command)
                 Protocol.CMD_STOP_RECORDING -> handleStopRecording(command)
@@ -123,15 +121,14 @@ class PCOrchestrationClient(
                 Protocol.CMD_TRANSFER_FILES -> handleTransferFiles(command)
                 else -> createErrorResponse(ackId, "Unknown command: $cmd")
             }
-            
+
             response.toString()
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error processing command", e)
             createErrorResponse("", "Invalid command format: ${e.message}").toString()
         }
     }
-    
+
     /**
      * Handle start recording command from PC
      */
@@ -139,7 +136,7 @@ class PCOrchestrationClient(
         val ackId = command.optString(Protocol.FIELD_ACK_ID, "")
         val sessionId = command.optString(Protocol.FIELD_SESSION_ID, "")
         val finalSessionId = if (sessionId.isEmpty()) null else sessionId
-        
+
         return try {
             sessionOrchestrator.startSession(finalSessionId)
             createSuccessResponse(ackId, "Recording started")
@@ -148,13 +145,13 @@ class PCOrchestrationClient(
             createErrorResponse(ackId, "Failed to start recording: ${e.message}")
         }
     }
-    
+
     /**
      * Handle stop recording command from PC
      */
     private suspend fun handleStopRecording(command: JSONObject): JSONObject {
         val ackId = command.optString(Protocol.FIELD_ACK_ID, "")
-        
+
         return try {
             sessionOrchestrator.stopSession()
             createSuccessResponse(ackId, "Recording stopped")
@@ -163,45 +160,48 @@ class PCOrchestrationClient(
             createErrorResponse(ackId, "Failed to stop recording: ${e.message}")
         }
     }
-    
+
     /**
      * Handle flash sync command for temporal synchronization
      */
     private suspend fun handleFlashSync(command: JSONObject): JSONObject {
         val ackId = command.optString(Protocol.FIELD_ACK_ID, "")
         val timestamp = System.nanoTime()
-        
+
         // TODO: Trigger actual flash sync UI indication
         Log.d(TAG, "Flash sync triggered at timestamp: $timestamp")
-        
+
         return createSuccessResponse(ackId, "Flash sync executed")
             .put(Protocol.FIELD_TIMESTAMP, timestamp)
     }
-    
+
     /**
      * Handle query capabilities command
      */
     private suspend fun handleQueryCapabilities(command: JSONObject): JSONObject {
         val ackId = command.optString(Protocol.FIELD_ACK_ID, "")
         val sensors = sessionOrchestrator.getRegisteredSensors()
-        
+
         val capabilities = JSONObject().apply {
             put("sensors", sensors)
             put("version", "1.0.0")
             put("device_type", "android_sensor_node")
-            put("supported_commands", listOf(
-                Protocol.CMD_START_RECORDING,
-                Protocol.CMD_STOP_RECORDING,
-                Protocol.CMD_FLASH_SYNC,
-                Protocol.CMD_QUERY_CAPABILITIES,
-                Protocol.CMD_TRANSFER_FILES
-            ))
+            put(
+                "supported_commands",
+                listOf(
+                    Protocol.CMD_START_RECORDING,
+                    Protocol.CMD_STOP_RECORDING,
+                    Protocol.CMD_FLASH_SYNC,
+                    Protocol.CMD_QUERY_CAPABILITIES,
+                    Protocol.CMD_TRANSFER_FILES,
+                ),
+            )
         }
-        
+
         return createSuccessResponse(ackId, "Capabilities queried")
             .put("capabilities", capabilities)
     }
-    
+
     /**
      * Handle file transfer command
      */
@@ -210,17 +210,17 @@ class PCOrchestrationClient(
         val host = command.optString("host", "")
         val port = command.optInt("port", -1)
         val sessionId = command.optString(Protocol.FIELD_SESSION_ID, "")
-        
+
         if (host.isEmpty() || port <= 0 || sessionId.isEmpty()) {
             return createErrorResponse(ackId, "Invalid transfer parameters")
         }
-        
+
         // TODO: Implement actual file transfer
         Log.d(TAG, "File transfer requested for session $sessionId to $host:$port")
-        
+
         return createSuccessResponse(ackId, "File transfer initiated")
     }
-    
+
     /**
      * Create success response JSON
      */
@@ -232,7 +232,7 @@ class PCOrchestrationClient(
             put(Protocol.FIELD_TIMESTAMP, System.nanoTime())
         }
     }
-    
+
     /**
      * Create error response JSON
      */
@@ -244,14 +244,14 @@ class PCOrchestrationClient(
             put(Protocol.FIELD_TIMESTAMP, System.nanoTime())
         }
     }
-    
+
     /**
      * Get current connection status
      */
     fun isConnected(): Boolean {
         return isStarted && networkClient != null
     }
-    
+
     /**
      * Clean up resources
      */

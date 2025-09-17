@@ -1,19 +1,15 @@
 package com.yourcompany.sensorspoke.ui
 
-import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -41,7 +37,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Phase 4: Enhanced Main Activity with Tabbed Interface
- * 
+ *
  * Advanced UI for the Multi-Modal Physiological Sensing Platform featuring:
  * - Real-time sensor data visualization
  * - Tabbed interface with sensor previews
@@ -59,22 +55,22 @@ class EnhancedMainActivity : AppCompatActivity() {
     private var multiModalCoordinator: MultiModalSensorCoordinator? = null
     private lateinit var permissionManager: PermissionManager
     private lateinit var mainViewModel: MainViewModel
-    
+
     // Service binding
     private var recordingService: RecordingService? = null
     private var isServiceBound = false
-    
+
     // UI components
     private lateinit var viewPager: ViewPager2
     private lateinit var tabLayout: TabLayout
-    
+
     // Fragments for tabbed interface
     private val fragments = listOf<Pair<String, () -> Fragment>>(
         "Dashboard" to { DashboardFragment() },
         "RGB Camera" to { RgbPreviewFragment() },
         "Thermal" to { ThermalPreviewFragment() },
         "Sensors" to { SensorStatusFragment() },
-        "Sessions" to { SessionManagementFragment() }
+        "Sessions" to { SessionManagementFragment() },
     )
 
     // Broadcast receiver for service commands
@@ -112,27 +108,27 @@ class EnhancedMainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_enhanced_main)
-        
+
         Log.i(TAG, "Enhanced MainActivity created - Phase 4 Multi-Modal Interface")
-        
+
         // Initialize components
         permissionManager = PermissionManager(this)
         mainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-        
+
         // Set up UI
         setupTabbedInterface()
-        
+
         // Initialize sensors and controllers
         lifecycleScope.launch {
             initializeComponents()
         }
-        
+
         // Start and bind to recording service
         startRecordingService()
-        
+
         // Register broadcast receiver
         registerCommandReceiver()
-        
+
         // Request permissions
         requestNecessaryPermissions()
     }
@@ -140,21 +136,21 @@ class EnhancedMainActivity : AppCompatActivity() {
     private fun setupTabbedInterface() {
         viewPager = findViewById(R.id.viewPager)
         tabLayout = findViewById(R.id.tabLayout)
-        
+
         // Set up ViewPager2 with fragment adapter
         viewPager.adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = fragments.size
-            
+
             override fun createFragment(position: Int): Fragment {
                 return fragments[position].second()
             }
         }
-        
+
         // Connect TabLayout with ViewPager2
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = fragments[position].first
         }.attach()
-        
+
         Log.i(TAG, "Tabbed interface initialized with ${fragments.size} tabs")
     }
 
@@ -162,15 +158,14 @@ class EnhancedMainActivity : AppCompatActivity() {
         try {
             // Initialize recording controller with all sensors
             controller = ensureController()
-            
+
             // Initialize multi-modal coordinator
             multiModalCoordinator = ensureMultiModalCoordinator()
-            
+
             // Update ViewModel with controller
             controller?.let { mainViewModel.initialize(it) }
-            
+
             Log.i(TAG, "All components initialized successfully")
-            
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize components: ${e.message}", e)
             showError("Failed to initialize sensor components: ${e.message}")
@@ -180,15 +175,15 @@ class EnhancedMainActivity : AppCompatActivity() {
     private fun ensureController(): RecordingController {
         val existing = controller
         if (existing != null) return existing
-        
+
         val c = RecordingController(applicationContext)
-        
+
         // Register all Phase 2 sensors for complete multi-modal recording
         c.register("rgb", RgbCameraRecorder(applicationContext, this))
         c.register("thermal", ThermalCameraRecorder(applicationContext))
         c.register("gsr", ShimmerRecorder(applicationContext))
         c.register("audio", AudioRecorder(applicationContext))
-        
+
         controller = c
         Log.i(TAG, "RecordingController initialized with all sensor modalities")
         return c
@@ -242,7 +237,7 @@ class EnhancedMainActivity : AppCompatActivity() {
                 permissionManager.requestStoragePermissions { success ->
                     Log.d(TAG, "Storage permissions: $success")
                 }
-                
+
                 Log.i(TAG, "Permission requests initiated")
             } catch (e: Exception) {
                 Log.e(TAG, "Error requesting permissions: ${e.message}", e)
@@ -255,19 +250,21 @@ class EnhancedMainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 Log.i(TAG, "Remote start recording command received: $sessionId")
-                
+
                 val c = controller ?: ensureController()
                 c.startSession(sessionId)
-                
+
                 // Update UI to show recording state
                 mainViewModel.startRecording(sessionId)
-                
+
                 // Show notification
                 runOnUiThread {
-                    Toast.makeText(this@EnhancedMainActivity, 
-                        "Recording started: $sessionId", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@EnhancedMainActivity,
+                        "Recording started: $sessionId",
+                        Toast.LENGTH_SHORT,
+                    ).show()
                 }
-                
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start remote recording: ${e.message}", e)
                 showError("Failed to start recording: ${e.message}")
@@ -279,19 +276,21 @@ class EnhancedMainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 Log.i(TAG, "Remote stop recording command received")
-                
+
                 val c = controller ?: return@launch
                 c.stopSession()
-                
+
                 // Update UI to show idle state
                 mainViewModel.stopRecording()
-                
+
                 // Show notification
                 runOnUiThread {
-                    Toast.makeText(this@EnhancedMainActivity, 
-                        "Recording stopped", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@EnhancedMainActivity,
+                        "Recording stopped",
+                        Toast.LENGTH_SHORT,
+                    ).show()
                 }
-                
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to stop remote recording: ${e.message}", e)
                 showError("Failed to stop recording: ${e.message}")
@@ -301,7 +300,7 @@ class EnhancedMainActivity : AppCompatActivity() {
 
     private fun handleFlashSync(flashTimestamp: Long) {
         Log.i(TAG, "Flash sync command received: $flashTimestamp")
-        
+
         // Trigger flash synchronization across all sensors
         lifecycleScope.launch {
             try {
@@ -314,10 +313,9 @@ class EnhancedMainActivity : AppCompatActivity() {
                         window.decorView.background = originalBackground
                     }, 100) // Flash for 100ms
                 }
-                
+
                 // Log flash event for data analysis
                 Log.i(TAG, "Flash sync executed at timestamp: $flashTimestamp")
-                
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to execute flash sync: ${e.message}", e)
             }
@@ -332,20 +330,20 @@ class EnhancedMainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        
+
         try {
             unregisterReceiver(commandReceiver)
         } catch (e: Exception) {
             Log.w(TAG, "Error unregistering receiver: ${e.message}")
         }
-        
+
         if (isServiceBound) {
             unbindService(serviceConnection)
         }
-        
+
         // Cleanup coordinators
         multiModalCoordinator?.cleanup()
-        
+
         Log.i(TAG, "Enhanced MainActivity destroyed")
     }
 
