@@ -75,8 +75,8 @@ class ShimmerRecorder(
         
         Log.i(TAG, "GSR recording stopped, ${dataPointCount} samples recorded")
     }
-
     private fun startSimulatedRecording() {
+
         recordingJob = scope.launch {
             try {
                 while (isActive && isRecording) {
