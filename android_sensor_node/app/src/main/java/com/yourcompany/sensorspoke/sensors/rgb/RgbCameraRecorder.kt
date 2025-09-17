@@ -74,6 +74,10 @@ class RgbCameraRecorder(
     private val _frameRate = MutableStateFlow(0.0)
     val frameRate: StateFlow<Double> = _frameRate.asStateFlow()
 
+    // Enhanced camera status for UI feedback
+    private val _cameraStatus = MutableStateFlow<RgbCameraManager.CameraStatus?>(null)
+    val cameraStatus: StateFlow<RgbCameraManager.CameraStatus?> = _cameraStatus.asStateFlow()
+
     /**
      * Recording status enum for UI state management
      */
@@ -86,22 +90,30 @@ class RgbCameraRecorder(
     }
 
     override suspend fun start(sessionDir: File) {
-        Log.i(TAG, "Starting RGB camera recording in session: ${sessionDir.absolutePath}")
+        Log.i(TAG, "Starting enhanced RGB camera recording in session: ${sessionDir.absolutePath}")
         _recordingStatus.value = RecordingStatus.STARTING
 
         try {
-            // Initialize camera manager if not already done
+            // Initialize enhanced camera manager if not already done
             if (!rgbCameraManager.isReady()) {
                 if (!rgbCameraManager.initialize()) {
-                    throw RuntimeException("Failed to initialize RGB camera manager")
+                    throw RuntimeException("Failed to initialize enhanced RGB camera manager")
                 }
             }
-            // Update device connection manager
+
+            // Update camera status for UI feedback
+            _cameraStatus.value = rgbCameraManager.getCameraStatus()
+            
+            // Log camera capabilities for Samsung S22
+            val status = _cameraStatus.value
+            Log.i(TAG, "Camera initialized - Model: ${status?.deviceModel}, Quality: ${status?.quality}, 4K Support: ${status?.supports4K}")
+            
+            // Update device connection manager with enhanced info
             deviceConnectionManager?.updateRgbCameraState(
                 DeviceConnectionManager.DeviceState.CONNECTING,
                 DeviceConnectionManager.DeviceDetails(
-                    deviceType = "RGB Camera",
-                    deviceName = "CameraX RGB",
+                    deviceType = "Enhanced RGB Camera",
+                    deviceName = "CameraX ${status?.quality ?: "HD"} (${status?.deviceModel ?: "Unknown"})",
                     connectionState = DeviceConnectionManager.DeviceState.CONNECTING,
                     isRequired = true,
                 ),
@@ -118,7 +130,7 @@ class RgbCameraRecorder(
                 csvWriter!!.flush()
             }
 
-            // Start video recording
+            // Start enhanced video recording with detected quality
             startVideoRecording(File(sessionDir, "video.mp4"))
 
             // Start frame capture process
@@ -387,6 +399,107 @@ class RgbCameraRecorder(
         val framesRecorded: Int,
         val frameRate: Double,
         val recordingStatus: RecordingStatus,
+        val timingStatistics: Map<String, Any>,
+    )
+
+    /**
+     * Switch between front and back camera
+     */
+    fun switchCamera(): Boolean {
+        return try {
+            val success = rgbCameraManager.switchCamera()
+            if (success) {
+                cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                    CameraSelector.DEFAULT_FRONT_CAMERA
+                } else {
+                    CameraSelector.DEFAULT_BACK_CAMERA
+                }
+                
+                // Update camera status for UI
+                _cameraStatus.value = rgbCameraManager.getCameraStatus()
+                
+                Log.i(TAG, "Switched to ${if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) "back" else "front"} camera")
+            }
+            success
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to switch camera: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * Set Preview surface provider for on-screen display
+     */
+    fun setPreviewSurfaceProvider(surfaceProvider: androidx.camera.core.Preview.SurfaceProvider) {
+        rgbCameraManager.setPreviewSurfaceProvider(surfaceProvider)
+        Log.i(TAG, "Preview surface provider set for on-screen camera display")
+    }
+
+    /**
+     * Get Preview for UI integration
+     */
+    fun getPreview(): androidx.camera.core.Preview? {
+        return rgbCameraManager.getPreview()
+    }
+
+    /**
+     * Check if device supports 4K recording
+     */
+    fun supports4K(): Boolean {
+        return rgbCameraManager.supports4K()
+    }
+
+    /**
+     * Get current camera status for UI feedback
+     */
+    fun getCurrentCameraStatus(): RgbCameraManager.CameraStatus? {
+        return _cameraStatus.value
+    }
+
+    /**
+     * Check if currently using back camera
+     */
+    fun isUsingBackCamera(): Boolean {
+        return cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
+    }
+
+    /**
+     * Enhanced recording statistics with camera information
+     */
+    fun getEnhancedRecordingStatistics(): EnhancedRecordingStatistics {
+        val cameraStatus = _cameraStatus.value
+        return EnhancedRecordingStatistics(
+            isRecording = _recordingStatus.value == RecordingStatus.RECORDING,
+            framesRecorded = frameCount,
+            frameRate = _frameRate.value,
+            recordingStatus = _recordingStatus.value,
+            cameraQuality = cameraStatus?.quality ?: "Unknown",
+            cameraResolution = cameraStatus?.resolution ?: "Unknown",
+            isBackCamera = cameraStatus?.isBackCamera ?: true,
+            supports4K = cameraStatus?.supports4K ?: false,
+            deviceModel = cameraStatus?.deviceModel ?: "Unknown",
+            timingStatistics = dataProcessor.getTimingStatistics(
+                videoStartTime,
+                actualVideoStartTime,
+                frameTimestampOffset,
+                frameCount,
+            ),
+        )
+    }
+
+    /**
+     * Enhanced recording statistics data class
+     */
+    data class EnhancedRecordingStatistics(
+        val isRecording: Boolean,
+        val framesRecorded: Int,
+        val frameRate: Double,
+        val recordingStatus: RecordingStatus,
+        val cameraQuality: String,
+        val cameraResolution: String,
+        val isBackCamera: Boolean,
+        val supports4K: Boolean,
+        val deviceModel: String,
         val timingStatistics: Map<String, Any>,
     )
 }
