@@ -372,7 +372,7 @@ class PCOrchestrationClient(
         
         // Look for session directory by ID
         return sessionsDir.listFiles()?.find { dir ->
-            dir.isDirectory && (dir.name == sessionId || dir.name.contains(sessionId))
+            dir.isDirectory && dir.name == sessionId
         }
     }
 
