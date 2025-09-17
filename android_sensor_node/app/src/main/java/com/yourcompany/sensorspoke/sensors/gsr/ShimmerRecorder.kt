@@ -62,22 +62,38 @@ class ShimmerRecorder(
     }
 
     override suspend fun start(sessionDir: File) {
-        Log.i(TAG, "Starting GSR recording in session: ${sessionDir.absolutePath}")
+        Log.i(TAG, "Starting enhanced GSR recording in session: ${sessionDir.absolutePath}")
         _recordingStatus.value = RecordingStatus.STARTING
 
         try {
-            // Initialize ShimmerManager if available
+            // Initialize enhanced ShimmerManager if available
             shimmerManager?.let { manager ->
                 if (!manager.initialize()) {
-                    throw RuntimeException("Failed to initialize ShimmerManager")
+                    throw RuntimeException("Failed to initialize enhanced ShimmerManager")
                 }
-
-                // Update device connection manager
+                
+                // Start scanning for Shimmer devices
+                manager.startScanning()
+                
+                // Wait a bit for scanning to find devices, then try to connect
+                delay(3000)
+                
+                // Try to connect to first discovered device or fallback
+                val discoveredDevices = manager.discoveredDevices.value
+                if (discoveredDevices.isNotEmpty()) {
+                    val targetDevice = discoveredDevices.first()
+                    Log.i(TAG, "Attempting to connect to discovered device: ${targetDevice.name}")
+                    manager.connectToDevice(targetDevice.address)
+                } else {
+                    Log.w(TAG, "No Shimmer devices discovered, will use simulation mode")
+                }
+                
+                // Update device connection manager with enhanced state
                 deviceConnectionManager?.updateShimmerState(
                     DeviceConnectionManager.DeviceState.CONNECTING,
                     DeviceConnectionManager.DeviceDetails(
-                        deviceType = "Shimmer3 GSR+",
-                        deviceName = "GSR Sensor",
+                        deviceType = "Enhanced Shimmer3 GSR+",
+                        deviceName = "GSR Sensor with BLE",
                         connectionState = DeviceConnectionManager.DeviceState.CONNECTING,
                         isRequired = true,
                     ),
@@ -101,24 +117,24 @@ class ShimmerRecorder(
             deviceConnectionManager?.updateShimmerState(
                 DeviceConnectionManager.DeviceState.CONNECTED,
                 DeviceConnectionManager.DeviceDetails(
-                    deviceType = "Shimmer3 GSR+",
-                    deviceName = "GSR Sensor",
+                    deviceType = "Enhanced Shimmer3 GSR+",
+                    deviceName = "GSR Sensor with BLE",
                     connectionState = DeviceConnectionManager.DeviceState.CONNECTED,
                     dataRate = SAMPLING_RATE_HZ,
                     isRequired = true,
                 ),
             )
 
-            Log.i(TAG, "GSR recording started successfully")
+            Log.i(TAG, "Enhanced GSR recording started successfully")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start GSR recording: ${e.message}", e)
+            Log.e(TAG, "Failed to start enhanced GSR recording: ${e.message}", e)
             _recordingStatus.value = RecordingStatus.ERROR
 
             deviceConnectionManager?.updateShimmerState(
                 DeviceConnectionManager.DeviceState.ERROR,
                 DeviceConnectionManager.DeviceDetails(
-                    deviceType = "Shimmer3 GSR+",
-                    deviceName = "GSR Sensor",
+                    deviceType = "Enhanced Shimmer3 GSR+",
+                    deviceName = "GSR Sensor with BLE",
                     connectionState = DeviceConnectionManager.DeviceState.ERROR,
                     errorMessage = e.message,
                     isRequired = true,
