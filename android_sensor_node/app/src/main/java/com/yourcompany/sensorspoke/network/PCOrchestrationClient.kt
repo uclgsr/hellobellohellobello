@@ -309,7 +309,18 @@ class PCOrchestrationClient(
             } else {
                 try {
                     transferFile(file, outputStream)
-                    transferredFiles.add(file.relativeTo(dir.parentFile).path)
+                    // Use the session directory as base for relative path calculation
+                    val sessionDir = dir
+                    while (sessionDir.parentFile != null && sessionDir.parentFile?.name != "recording_sessions") {
+                        // Walk up to find the session directory
+                    }
+                    val relativePath = try {
+                        file.relativeTo(dir).path
+                    } catch (e: IllegalArgumentException) {
+                        // Fallback to absolute path if relativeTo fails
+                        file.absolutePath
+                    }
+                    transferredFiles.add(relativePath)
                     Log.d(TAG, "Transferred file: ${file.name} (${file.length()} bytes)")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error transferring file ${file.name}: ${e.message}", e)
@@ -370,7 +381,7 @@ class PCOrchestrationClient(
         val appDir = context.getExternalFilesDir(null) ?: context.filesDir
         val sessionsDir = File(appDir, "recording_sessions")
         
-        // Look for session directory by ID
+        // Look for session directory by ID - use exact match only
         return sessionsDir.listFiles()?.find { dir ->
             dir.isDirectory && dir.name == sessionId
         }
