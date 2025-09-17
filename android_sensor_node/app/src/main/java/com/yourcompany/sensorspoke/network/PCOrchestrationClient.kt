@@ -36,7 +36,7 @@ class PCOrchestrationClient(
         private const val TAG = "PCOrchestrationClient"
         private const val DEFAULT_SERVICE_TYPE = "_sensorspoke._tcp"
         private const val DEFAULT_SERVICE_NAME = "SensorSpoke-Node"
-        
+
         // Intent action for flash sync
         const val ACTION_FLASH_SYNC = "com.yourcompany.sensorspoke.FLASH_SYNC"
         const val EXTRA_TIMESTAMP = "timestamp"
@@ -185,9 +185,9 @@ class PCOrchestrationClient(
                 putExtra(EXTRA_TIMESTAMP, timestamp)
             }
             context.sendBroadcast(flashIntent)
-            
+
             Log.i(TAG, "Flash sync triggered at timestamp: $timestamp")
-            
+
             return createSuccessResponse(ackId, "Flash sync executed")
                 .put(Protocol.FIELD_TIMESTAMP, timestamp)
         } catch (e: Exception) {
@@ -244,7 +244,7 @@ class PCOrchestrationClient(
             }
 
             Log.i(TAG, "Starting file transfer for session $sessionId to $host:$port")
-            
+
             // Start file transfer in background
             scope.launch {
                 transferSessionFiles(sessionDir, host, port, sessionId)
@@ -263,34 +263,34 @@ class PCOrchestrationClient(
     private suspend fun transferSessionFiles(sessionDir: File, host: String, port: Int, sessionId: String) = withContext(Dispatchers.IO) {
         try {
             Log.i(TAG, "Connecting to PC at $host:$port for file transfer")
-            
+
             Socket(host, port).use { socket ->
                 val outputStream = socket.getOutputStream()
-                
+
                 // Send transfer header
                 val header = JSONObject().apply {
                     put("type", "file_transfer")
                     put("session_id", sessionId)
                     put("timestamp", System.currentTimeMillis())
                 }.toString() + "\n"
-                
+
                 outputStream.write(header.toByteArray())
                 outputStream.flush()
-                
+
                 // Transfer files
                 val transferredFiles = mutableListOf<String>()
                 transferDirectoryFiles(sessionDir, outputStream, transferredFiles)
-                
+
                 // Send completion marker
                 val completion = JSONObject().apply {
                     put("type", "transfer_complete")
                     put("files_transferred", transferredFiles.size)
                     put("files", transferredFiles)
                 }.toString() + "\n"
-                
+
                 outputStream.write(completion.toByteArray())
                 outputStream.flush()
-                
+
                 Log.i(TAG, "File transfer completed successfully: ${transferredFiles.size} files transferred")
             }
         } catch (e: Exception) {
@@ -340,34 +340,34 @@ class PCOrchestrationClient(
             put("size", file.length())
             put("timestamp", file.lastModified())
         }
-        
+
         // Send file metadata
         val header = fileInfo.toString() + "\n"
         outputStream.write(header.toByteArray())
-        
+
         // Send file content (Base64 encoded for JSON compatibility)
         FileInputStream(file).use { fileInput ->
             val buffer = ByteArray(8192)
             var bytesRead: Int
             val encoder = Base64.getEncoder()
-            
+
             while (fileInput.read(buffer).also { bytesRead = it } != -1) {
                 val encodedChunk = encoder.encode(buffer.copyOf(bytesRead))
                 val chunkJson = JSONObject().apply {
                     put("type", "file_chunk")
                     put("data", String(encodedChunk))
                 }.toString() + "\n"
-                
+
                 outputStream.write(chunkJson.toByteArray())
             }
         }
-        
+
         // Send file end marker
         val endMarker = JSONObject().apply {
             put("type", "file_end")
             put("name", file.name)
         }.toString() + "\n"
-        
+
         outputStream.write(endMarker.toByteArray())
         outputStream.flush()
     }
@@ -380,7 +380,7 @@ class PCOrchestrationClient(
         // This is a simplified implementation - in practice, you'd get this from the session manager
         val appDir = context.getExternalFilesDir(null) ?: context.filesDir
         val sessionsDir = File(appDir, "recording_sessions")
-        
+
         // Look for session directory by ID - use exact match only
         return sessionsDir.listFiles()?.find { dir ->
             dir.isDirectory && dir.name == sessionId

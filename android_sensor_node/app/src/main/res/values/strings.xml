@@ -22,6 +22,18 @@
     <string name="status_connected">Connected to PC Hub</string>
     <string name="status_recording">Recording in progress</string>
     <string name="status_stopping">Stopping recording...</string>
+    <string name="sensor_status_indicator">Sensor status indicator</string>
+    
+    <!-- Sensor Status Messages -->
+    <string name="sensor_rgb_active">Recording</string>
+    <string name="sensor_rgb_inactive">Offline</string>
+    <string name="sensor_thermal_active">Active</string>
+    <string name="sensor_thermal_simulated">Simulated</string>
+    <string name="sensor_thermal_inactive">Offline</string>
+    <string name="sensor_gsr_connected">Connected</string>
+    <string name="sensor_gsr_disconnected">Disconnected</string>
+    <string name="sensor_pc_connected">Connected</string>
+    <string name="sensor_pc_disconnected">Not Connected</string>
 
     <!-- Menu Items -->
     <string name="menu_quick_start">Quick Start Guide</string>
