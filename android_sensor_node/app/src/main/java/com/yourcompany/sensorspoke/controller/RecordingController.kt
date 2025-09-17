@@ -496,35 +496,7 @@ class RecordingController(
         }
     }
 
-    /**
-     * Validate that sufficient storage space is available for recording
-     */
-    private fun validateStorageSpace() {
-        try {
-            val sessionsRoot = ensureSessionsRoot()
-            val statsFs = android.os.StatFs(sessionsRoot.path)
-            val availableBytes = statsFs.availableBytes
-            val availableMB = availableBytes / (1024 * 1024)
-            
-            // Require at least 100MB free space for recording
-            // This accounts for video files, images, and CSV data
-            val requiredMB = 100L
-            
-            Log.i("RecordingController", "Available storage: ${availableMB}MB, required: ${requiredMB}MB")
-            
-            if (availableMB < requiredMB) {
-                throw IllegalStateException(
-                    "Insufficient storage space for recording. Available: ${availableMB}MB, Required: ${requiredMB}MB"
-                )
-            }
-        } catch (e: Exception) {
-            if (e is IllegalStateException) {
-                throw e
-            }
-            Log.w("RecordingController", "Failed to check storage space: ${e.message}", e)
-            // Don't block recording if we can't check storage space
-        }
-    }
+
 
     /**
      * Create session metadata file with synchronized timing information

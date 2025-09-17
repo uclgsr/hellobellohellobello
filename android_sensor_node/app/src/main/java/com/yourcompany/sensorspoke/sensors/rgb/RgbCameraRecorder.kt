@@ -1,27 +1,16 @@
 package com.yourcompany.sensorspoke.sensors.rgb
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Log
-import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
-import androidx.camera.core.SurfaceOrientedMeteringPointFactory
-import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.FileOutputOptions
-import androidx.camera.video.Quality
-import androidx.camera.video.QualitySelector
-import androidx.camera.video.Recorder
 import androidx.camera.video.Recording
-import androidx.camera.video.VideoCapture
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import com.yourcompany.sensorspoke.network.DeviceConnectionManager
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
-import com.yourcompany.sensorspoke.utils.PreviewBus
 import com.yourcompany.sensorspoke.utils.TimeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,178 +18,194 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.io.ByteArrayOutputStream
+import java.io.BufferedWriter
 import java.io.File
+import java.io.FileWriter
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * RGB camera recorder using CameraX for video recording and image capture.
- * Implements the MVP functionality for the hellobellohellobello system.
+ * Refactored RGB camera recorder focused on data logging with improved separation of concerns.
+ * Camera management is now handled by RgbCameraManager, data processing by RgbDataProcessor.
+ * 
+ * This recorder is responsible for:
+ * - Managing CSV file output for frame metadata
+ * - Coordinating with RgbCameraManager for camera state
+ * - Reporting status via Flow for UI reactivity
+ * - Session-based recording lifecycle
  */
 class RgbCameraRecorder(
     private val context: Context,
     private val lifecycleOwner: LifecycleOwner,
     private val cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
+    private val cameraManager: RgbCameraManager? = null,
+    private val deviceConnectionManager: DeviceConnectionManager? = null
 ) : SensorRecorder {
     companion object {
         private const val TAG = "RgbCameraRecorder"
     }
 
-    private var cameraProvider: ProcessCameraProvider? = null
-    private var camera: Camera? = null
-    private var imageCapture: ImageCapture? = null
-    private var videoCapture: VideoCapture<Recorder>? = null
+    // Manager classes for separation of concerns
+    private val rgbCameraManager = cameraManager ?: RgbCameraManager(context, lifecycleOwner, cameraSelector)
+    private val dataProcessor = RgbDataProcessor()
+
+    // Recording state
     private var recording: Recording? = null
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var captureJob: Job? = null
     private var syncMonitorJob: Job? = null
-    private var csvWriter: java.io.BufferedWriter? = null
+    private var csvWriter: BufferedWriter? = null
     private var csvFile: File? = null
     private var frameCount = 0
     private var videoStartTime: Long = 0L
-    private var actualVideoStartTime: Long = 0L // Actual start from VideoRecordEvent.Start
-    private var frameTimestampOffset: Long = 0L // Offset for better synchronization
+    private var actualVideoStartTime: Long = 0L
+    private var frameTimestampOffset: Long = 0L
+
+    // Status reporting for UI reactivity
+    private val _recordingStatus = MutableStateFlow(RecordingStatus.IDLE)
+    val recordingStatus: StateFlow<RecordingStatus> = _recordingStatus.asStateFlow()
+
+    private val _frameRate = MutableStateFlow(0.0)
+    val frameRate: StateFlow<Double> = _frameRate.asStateFlow()
+
+    /**
+     * Recording status enum for UI state management
+     */
+    enum class RecordingStatus {
+        IDLE,
+        STARTING,
+        RECORDING,
+        STOPPING,
+        ERROR
+    }
 
     override suspend fun start(sessionDir: File) {
         Log.i(TAG, "Starting RGB camera recording in session: ${sessionDir.absolutePath}")
+        _recordingStatus.value = RecordingStatus.STARTING
 
-        // Ensure directories
-        val framesDir = File(sessionDir, "frames").apply { mkdirs() }
+        try {
+            // Initialize camera manager if not already done
+            if (!rgbCameraManager.isReady()) {
+                if (!rgbCameraManager.initialize()) {
+                    throw RuntimeException("Failed to initialize RGB camera manager")
+                }
+            }
+            // Update device connection manager
+            deviceConnectionManager?.updateRgbCameraState(
+                DeviceConnectionManager.DeviceState.CONNECTING,
+                DeviceConnectionManager.DeviceDetails(
+                    deviceType = "RGB Camera",
+                    deviceName = "CameraX RGB",
+                    connectionState = DeviceConnectionManager.DeviceState.CONNECTING,
+                    isRequired = true
+                )
+            )
 
-        csvFile = File(sessionDir, "rgb_frames.csv")
-        csvWriter = java.io.BufferedWriter(java.io.FileWriter(csvFile!!, true))
-        if (csvFile!!.length() == 0L) {
-            csvWriter!!.write("timestamp_ns,timestamp_ms,frame_number,filename,file_size_bytes,video_relative_time_ms,video_frame_estimate,sync_quality,actual_video_offset_ms\n")
-            csvWriter!!.flush()
+            // Ensure directories
+            val framesDir = File(sessionDir, "frames").apply { mkdirs() }
+
+            // Open CSV for frame metadata using data processor
+            csvFile = File(sessionDir, "rgb_frames.csv")
+            csvWriter = BufferedWriter(FileWriter(csvFile!!, true))
+            if (csvFile!!.length() == 0L) {
+                csvWriter!!.write(dataProcessor.getCsvHeader() + "\n")
+                csvWriter!!.flush()
+            }
+
+            // Start video recording
+            startVideoRecording(File(sessionDir, "video.mp4"))
+
+            // Start frame capture process
+            startFrameCapture(framesDir)
+
+            // Start synchronization monitoring
+            startSyncMonitoring()
+
+            _recordingStatus.value = RecordingStatus.RECORDING
+            rgbCameraManager.updateRecordingState(true)
+
+            // Update device connection state to connected
+            deviceConnectionManager?.updateRgbCameraState(
+                DeviceConnectionManager.DeviceState.CONNECTED,
+                DeviceConnectionManager.DeviceDetails(
+                    deviceType = "RGB Camera",
+                    deviceName = "CameraX RGB",
+                    connectionState = DeviceConnectionManager.DeviceState.CONNECTED,
+                    isRequired = true
+                )
+            )
+
+            Log.i(TAG, "RGB camera recording started successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start RGB camera recording: ${e.message}", e)
+            _recordingStatus.value = RecordingStatus.ERROR
+
+            deviceConnectionManager?.updateRgbCameraState(
+                DeviceConnectionManager.DeviceState.ERROR,
+                DeviceConnectionManager.DeviceDetails(
+                    deviceType = "RGB Camera",
+                    deviceName = "CameraX RGB",
+                    connectionState = DeviceConnectionManager.DeviceState.ERROR,
+                    errorMessage = e.message,
+                    isRequired = true
+                )
+            )
+            throw e
         }
-
-        // Initialize CameraX
-        initializeCameraX()
-
-        // Start video recording
-        startVideoRecording(File(sessionDir, "video.mp4"))
-
-        // Start frame capture process
-        startFrameCapture(framesDir)
-
-        // Start synchronization monitoring
-        startSyncMonitoring()
     }
 
     override suspend fun stop() {
         Log.i(TAG, "Stopping RGB camera recording")
+        _recordingStatus.value = RecordingStatus.STOPPING
 
-        // Stop recording
-        recording?.stop()
-        recording = null
-
-        // Cancel capture job and wait for completion
-        captureJob?.let {
-            it.cancel()
-            it.join() // Wait for completion to avoid race condition
-        }
-        captureJob = null
-
-        // Unbind camera
-        cameraProvider?.unbindAll()
-        cameraProvider = null
-        camera = null
-        imageCapture = null
-        videoCapture = null
-        videoStartTime = 0L
-        actualVideoStartTime = 0L
-        frameTimestampOffset = 0L
-
-        // Close CSV resources
-        csvWriter?.flush()
-        csvWriter?.close()
-        csvWriter = null
-        csvFile = null
-
-        // Shutdown executor
-        executor.shutdown()
-
-        Log.i(TAG, "RGB camera recording stopped")
-    }
-
-    private suspend fun initializeCameraX() {
-        val provider = ProcessCameraProvider.getInstance(context).get()
-        cameraProvider = provider
-
-        // Build recorder for 4K60fps video - high performance mode
-        val recorder = Recorder.Builder()
-            .setQualitySelector(
-                QualitySelector.fromOrderedList(
-                    listOf(Quality.UHD, Quality.FHD, Quality.HD), // 4K priority, fallback to lower
-                ),
-            )
-            .build()
-        videoCapture = VideoCapture.withOutput(recorder)
-
-        // Build image capture for high-quality frames with enhanced settings
-        imageCapture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-            .setTargetRotation(0) // No rotation for maximum quality
-            .setFlashMode(ImageCapture.FLASH_MODE_OFF) // Avoid artifacts in research data
-            .build()
-
-        // Create preview for focus metering (not displayed, just for camera controls)
-        val preview = Preview.Builder().build()
-
-        // Bind use cases to lifecycle
-        provider.unbindAll()
-        camera = provider.bindToLifecycle(
-            lifecycleOwner,
-            cameraSelector,
-            videoCapture,
-            imageCapture,
-        )
-
-        // Configure enhanced camera controls for scientific recording
-        configureCameraControls()
-
-        Log.i(TAG, "CameraX initialized successfully with enhanced controls")
-    }
-
-    private fun configureCameraControls() {
         try {
-            camera?.let { cam ->
-                val cameraControl = cam.cameraControl
-                val cameraInfo = cam.cameraInfo
+            // Stop recording
+            recording?.stop()
+            recording = null
 
-                // Simple autofocus to center of frame - using basic CameraX API
-                try {
-                    // Create a simple focus point at center of frame
-                    val factory = SurfaceOrientedMeteringPointFactory(1.0f, 1.0f)
-                    val centerPoint = factory.createPoint(0.5f, 0.5f)
-                    val action = FocusMeteringAction.Builder(centerPoint).build()
-
-                    cameraControl.startFocusAndMetering(action)
-                    Log.d(TAG, "Focus metering started at center point")
-                } catch (focusError: Exception) {
-                    Log.w(TAG, "Could not configure focus metering: ${focusError.message}")
-                }
-
-                // Set neutral exposure compensation for consistent research conditions
-                try {
-                    val exposureRange = cameraInfo.exposureState.exposureCompensationRange
-                    if (exposureRange.contains(0)) {
-                        cameraControl.setExposureCompensationIndex(0) // Neutral exposure
-                        Log.d(TAG, "Exposure compensation set to neutral")
-                    }
-                } catch (exposureError: Exception) {
-                    Log.w(TAG, "Could not configure exposure: ${exposureError.message}")
-                }
-
-                Log.i(TAG, "Camera controls configured successfully")
+            // Cancel capture job and wait for completion
+            captureJob?.let {
+                it.cancel()
+                it.join() // Wait for completion to avoid race condition
             }
+            captureJob = null
+
+            // Cancel sync monitoring job
+            syncMonitorJob?.cancel()
+            syncMonitorJob = null
+
+            // Close CSV resources
+            csvWriter?.flush()
+            csvWriter?.close()
+            csvWriter = null
+            csvFile = null
+
+            // Update camera manager state
+            rgbCameraManager.updateRecordingState(false)
+
+            // Update device connection state
+            deviceConnectionManager?.updateRgbCameraState(DeviceConnectionManager.DeviceState.DISCONNECTED)
+
+            // Shutdown executor
+            executor.shutdown()
+
+            // Cancel scope
+            scope.cancel()
+
+            _recordingStatus.value = RecordingStatus.IDLE
+            _frameRate.value = 0.0
+
+            Log.i(TAG, "RGB camera recording stopped, ${frameCount} frames captured")
         } catch (e: Exception) {
-            Log.w(TAG, "Could not configure enhanced camera controls: ${e.message}", e)
-            // Continue without enhanced controls - basic functionality will still work
+            Log.e(TAG, "Error during RGB camera recording stop: ${e.message}", e)
+            _recordingStatus.value = RecordingStatus.ERROR
+            throw e
         }
     }
 
@@ -210,7 +215,10 @@ class RgbCameraRecorder(
         val videoFileWithTimestamp = File(videoFile.parent, "video_$sessionStartTs.mp4")
 
         val outputOpts = FileOutputOptions.Builder(videoFileWithTimestamp).build()
-        recording = videoCapture!!.output
+        val videoCapture = rgbCameraManager.getVideoCapture()
+            ?: throw RuntimeException("Video capture not available from camera manager")
+
+        recording = videoCapture.output
             .prepareRecording(context, outputOpts)
             .start(ContextCompat.getMainExecutor(context)) { event ->
                 // Handle recording events for better synchronization logging
@@ -223,20 +231,20 @@ class RgbCameraRecorder(
                         Log.i(TAG, "Video start offset: ${frameTimestampOffset / 1_000_000}ms")
                         
                         // Log the actual video start for post-processing synchronization
-                        logVideoEvent("VIDEO_RECORDING_STARTED", actualVideoStartTime, 
+                        dataProcessor.logVideoEvent(csvFile, "VIDEO_RECORDING_STARTED", actualVideoStartTime, 
                                     "offset_ms:${frameTimestampOffset / 1_000_000}")
                     }
                     is androidx.camera.video.VideoRecordEvent.Finalize -> {
                         val finalizeTime = System.nanoTime()
                         Log.i(TAG, "Video recording finalized: ${event.outputResults}")
-                        logVideoEvent("VIDEO_RECORDING_FINALIZED", finalizeTime, 
+                        dataProcessor.logVideoEvent(csvFile, "VIDEO_RECORDING_FINALIZED", finalizeTime, 
                                     "duration_ms:${(finalizeTime - actualVideoStartTime) / 1_000_000}")
                     }
                     is androidx.camera.video.VideoRecordEvent.Status -> {
                         // Log periodic status for timing verification
                         if (event.recordingStats.numBytesRecorded > 0) {
                             val statusTime = System.nanoTime()
-                            logVideoEvent("VIDEO_STATUS_UPDATE", statusTime,
+                            dataProcessor.logVideoEvent(csvFile, "VIDEO_STATUS_UPDATE", statusTime,
                                         "bytes:${event.recordingStats.numBytesRecorded}")
                         }
                     }
@@ -253,7 +261,7 @@ class RgbCameraRecorder(
             while (isActive) {
                 try {
                     captureFrame(framesDir)
-                    delay(33) // ~30 FPS for high-quality data capture (was ~6-7 FPS)
+                    delay(33) // ~30 FPS for high-quality data capture
                 } catch (e: Exception) {
                     Log.e(TAG, "Error capturing frame: ${e.message}", e)
                     delay(1000) // Wait longer on error
@@ -277,8 +285,11 @@ class RgbCameraRecorder(
                             (frameCount * 1000.0) / totalRecordingTime
                         } else 0.0
                         
-                        logVideoEvent("SYNC_MONITOR_UPDATE", currentTime,
-                                    "frames:$frameCount,avg_fps:${"%.2f".format(avgFrameRate)},recording_time_ms:$totalRecordingTime")
+                        // Update frame rate for UI
+                        _frameRate.value = avgFrameRate
+                        
+                        dataProcessor.logVideoEvent(csvFile, "SYNC_MONITOR_UPDATE", currentTime,
+                                "frames:$frameCount,avg_fps:${"%.2f".format(avgFrameRate)},recording_time_ms:$totalRecordingTime")
                         
                         Log.d(TAG, "Sync monitor - Frames: $frameCount, Avg FPS: ${"%.2f".format(avgFrameRate)}, Recording time: ${totalRecordingTime}ms")
                     }
@@ -299,7 +310,10 @@ class RgbCameraRecorder(
         val outputFile = File(framesDir, filename)
         val outputFileOptions = ImageCapture.OutputFileOptions.Builder(outputFile).build()
 
-        imageCapture?.takePicture(
+        val imageCapture = rgbCameraManager.getImageCapture()
+            ?: throw RuntimeException("Image capture not available from camera manager")
+
+        imageCapture.takePicture(
             outputFileOptions,
             executor,
             object : ImageCapture.OnImageSavedCallback {
@@ -309,18 +323,22 @@ class RgbCameraRecorder(
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     try {
-                        val fileSize = if (outputFile.exists()) outputFile.length() else 0
+                        // Create frame data using data processor
+                        val frameData = dataProcessor.createFrameData(
+                            timestampNs, timestampMs, frameCount, outputFile,
+                            videoStartTime, actualVideoStartTime
+                        )
 
+                        // Write to CSV using data processor
                         csvWriter?.apply {
-                            write("$timestampNs,$timestampMs,$frameCount,$filename,$fileSize,$videoRelativeTimeMs,$estimatedVideoFrame,$syncQuality,$actualVideoOffsetMs\n")
+                            write(dataProcessor.formatFrameDataForCsv(frameData) + "\n")
                             flush()
                         }
 
                         // Generate preview for UI
-                        generatePreview(outputFile, timestampNs)
+                        dataProcessor.generatePreview(outputFile, timestampNs)
 
-                        Log.d(TAG, "Captured frame: $filename ($fileSize bytes)")
-
+                        Log.d(TAG, "Captured frame: ${frameData.filename} (${frameData.fileSizeBytes} bytes) - Video time: ${frameData.videoRelativeTimeMs}ms, Est. frame: ${frameData.estimatedVideoFrame}, Sync quality: ${"%.3f".format(frameData.syncQuality)}")
                     } catch (e: Exception) {
                         Log.e(TAG, "Error processing captured frame: ${e.message}", e)
                     }
@@ -329,38 +347,29 @@ class RgbCameraRecorder(
         )
     }
 
-    private fun generatePreview(imageFile: File, timestamp: Long) {
-        try {
-            if (!imageFile.exists()) return
-
-            // Load and downsample the image for preview
-            val options = BitmapFactory.Options().apply {
-                inSampleSize = 4 // 1/4 size for preview
-                inPreferredConfig = Bitmap.Config.RGB_565
-            }
-
-            val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath, options)
-            if (bitmap != null) {
-                // Scale to standard preview size
-                val previewBitmap = Bitmap.createScaledBitmap(bitmap, 320, 240, true)
-
-                // Compress to JPEG for preview bus
-                val baos = ByteArrayOutputStream()
-                previewBitmap.compress(Bitmap.CompressFormat.JPEG, 60, baos)
-                val previewBytes = baos.toByteArray()
-
-                // Emit preview
-                PreviewBus.emit(previewBytes, timestamp)
-
-                // Cleanup
-                baos.close()
-                if (previewBitmap != bitmap) {
-                    bitmap.recycle()
-                }
-                previewBitmap.recycle()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error generating preview: ${e.message}", e)
-        }
+    /**
+     * Get current recording statistics for external monitoring
+     */
+    fun getRecordingStatistics(): RecordingStatistics {
+        return RecordingStatistics(
+            isRecording = _recordingStatus.value == RecordingStatus.RECORDING,
+            framesRecorded = frameCount,
+            frameRate = _frameRate.value,
+            recordingStatus = _recordingStatus.value,
+            timingStatistics = dataProcessor.getTimingStatistics(
+                videoStartTime, actualVideoStartTime, frameTimestampOffset, frameCount
+            )
+        )
     }
+
+    /**
+     * Recording statistics data class
+     */
+    data class RecordingStatistics(
+        val isRecording: Boolean,
+        val framesRecorded: Int,
+        val frameRate: Double,
+        val recordingStatus: RecordingStatus,
+        val timingStatistics: Map<String, Any>
+    )
 }
