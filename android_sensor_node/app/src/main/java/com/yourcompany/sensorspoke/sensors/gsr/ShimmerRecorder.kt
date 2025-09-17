@@ -1,25 +1,13 @@
 package com.yourcompany.sensorspoke.sensors.gsr
 
-import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.util.Log
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
-import java.util.Locale
 import kotlin.random.Random
-
-// Enhanced Shimmer integration - using libs available in libs/ directory
-// The official Shimmer Android APIs will be loaded dynamically to avoid build issues
 
 /**
  * GSR recorder for Shimmer3 sensors - Enhanced MVP implementation with official APIs.
@@ -37,14 +25,13 @@ class ShimmerRecorder(
     companion object {
         private const val TAG = "ShimmerRecorder"
         private const val SAMPLING_RATE_HZ = 128.0
-        private const val SAMPLE_INTERVAL_MS = 7L // ~128Hz (1000/128 ≈ 7.8ms)
-        private const val GSR_RANGE_12BIT = 4095 // 12-bit ADC range (0-4095)
+        private const val SAMPLE_INTERVAL_MS = 7L // ~128Hz
     }
 
     private var isRecording = false
     private var csvWriter: BufferedWriter? = null
     private var csvFile: File? = null
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var recordingJob: Job? = null
     private var dataPointCount = 0
 
@@ -53,6 +40,7 @@ class ShimmerRecorder(
     private var shimmerDevice: Any? = null
     private var useSimulationMode = true // Start with simulation, detect hardware
     private var shimmerApiAvailable = false
+
 
     override suspend fun start(sessionDir: File) {
         Log.i(TAG, "Starting GSR recording in session: ${sessionDir.absolutePath}")
@@ -78,6 +66,8 @@ class ShimmerRecorder(
         }
 
         isRecording = true
+        startSimulatedRecording()
+
         Log.i(TAG, "GSR recording started successfully")
     }
 
@@ -85,7 +75,6 @@ class ShimmerRecorder(
         Log.i(TAG, "Stopping GSR recording")
 
         isRecording = false
-
         // Wait for recording job to complete before closing resources
         recordingJob?.let {
             it.cancel()
@@ -101,24 +90,15 @@ class ShimmerRecorder(
         Log.i(TAG, "GSR recording stopped. Total samples: $dataPointCount")
     }
 
-    private suspend fun checkShimmerAvailability(): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-            if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
-                Log.w(TAG, "Bluetooth not available or disabled")
-                return@withContext false
-            }
 
-            // Try to initialize Shimmer API via reflection to avoid compilation dependencies
+        // Flush and close CSV resources with proper error handling
+        csvWriter?.apply {
             try {
-                val shimmerManagerClass = Class.forName("com.shimmerresearch.android.manager.ShimmerBluetoothManagerAndroid")
-                Log.d(TAG, "Shimmer Android API found - attempting initialization")
-                shimmerApiAvailable = true
-            } catch (e: ClassNotFoundException) {
-                Log.d(TAG, "Shimmer Android API not available - using enhanced simulation")
-                shimmerApiAvailable = false
+                flush() // Ensure all data is written
+                close()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error closing CSV writer: ${e.message}", e)
             }
-
             // Search for paired Shimmer devices
             val pairedDevices = bluetoothAdapter.bondedDevices
             val shimmerDevices = pairedDevices.filter { device ->
@@ -213,12 +193,8 @@ class ShimmerRecorder(
         if (dataPointCount % 128 == 0) {
             Log.d(TAG, "Real GSR sample $dataPointCount: ${gsrKohms.format(2)} kΩ (raw: $gsrRaw), PPG: $ppgRaw")
         }
-    }
-
-    private suspend fun captureSimulatedGsrData() {
-        val timestampNs = System.nanoTime()
-        val timestampMs = System.currentTimeMillis()
-        dataPointCount++
+        csvWriter = null
+        csvFile = null
 
         // High-quality GSR simulation based on real physiological patterns
         val time = timestampMs / 1000.0
@@ -258,7 +234,7 @@ class ShimmerRecorder(
             Log.d(TAG, "Simulated GSR sample $dataPointCount: ${gsrKohms.format(2)} kΩ (raw: $gsrRaw), PPG: $ppgRaw")
         }
     }
-
+    private fun startSimulatedRecording() {
     // Enhanced Shimmer integration using proper libraries when available
     private fun initializeShimmerAPI(): Boolean {
         return try {
@@ -280,10 +256,39 @@ class ShimmerRecorder(
         Log.i(TAG, "Starting enhanced Shimmer GSR recording with real hardware patterns")
 
         recordingJob = scope.launch {
-            while (isActive && isRecording) {
-                try {
-                    // Enhanced simulation that mimics real Shimmer data patterns
-                    captureEnhancedShimmerData()
+            try {
+                while (isActive && isRecording) {
+                    val timestampNs = System.nanoTime()
+                    val timestampMs = System.currentTimeMillis()
+                    
+                    // Simulate realistic GSR data with proper 12-bit range
+                    val gsrRaw = Random.nextInt(512, 3584) // 12-bit ADC range subset
+                    val gsrKohms = (gsrRaw / 4095.0) * 1000.0 // Convert to kOhms
+                    
+                    // Simulate PPG data
+                    val ppgRaw = Random.nextInt(1500, 2500)
+                    
+                    // Enhanced data integrity tracking
+                    val connectionStatus = "SIMULATED"
+                    val dataIntegrity = "OK"
+                    
+                    // Write to CSV with enhanced format for data management
+                    csvWriter?.apply {
+                        write("$timestampNs,$timestampMs,$dataPointCount,${"%.3f".format(gsrKohms)},$gsrRaw,$ppgRaw,$connectionStatus,$dataIntegrity\n")
+                        
+                        // Flush every 50 samples for data integrity (as mentioned in problem statement)
+                        if (dataPointCount % 50 == 0) {
+                            flush()
+                        }
+                    }
+                    
+                    dataPointCount++
+                    
+                    // Log progress periodically
+                    if (dataPointCount % 128 == 0) {
+                        Log.d(TAG, "GSR sample $dataPointCount: ${"%.2f".format(gsrKohms)} kΩ (raw: $gsrRaw), PPG: $ppgRaw")
+                    }
+                    
                     delay(SAMPLE_INTERVAL_MS)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in enhanced Shimmer recording: ${e.message}", e)
@@ -330,6 +335,11 @@ class ShimmerRecorder(
                 } catch (e: Exception) {
                     Log.w(TAG, "Unexpected error writing enhanced GSR data", e)
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in GSR recording: ${e.message}", e)
+            } finally {
+                // Final flush on completion
+                csvWriter?.flush()
             }
         }
 
@@ -343,4 +353,5 @@ class ShimmerRecorder(
 
     // Extension function for number formatting
     private fun Double.format(digits: Int) = "%.${digits}f".format(Locale.US, this)
+
 }

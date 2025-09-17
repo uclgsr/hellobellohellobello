@@ -1,6 +1,7 @@
 package com.yourcompany.sensorspoke.network
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import com.yourcompany.sensorspoke.controller.SessionOrchestrator
 import kotlinx.coroutines.CoroutineScope
@@ -8,7 +9,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.File
+import java.io.FileInputStream
+import java.io.OutputStream
+import java.net.Socket
+import java.util.Base64
 
 /**
  * PCOrchestrationClient handles PC Hub communication for the Android Sensor Node.
@@ -29,6 +36,10 @@ class PCOrchestrationClient(
         private const val TAG = "PCOrchestrationClient"
         private const val DEFAULT_SERVICE_TYPE = "_sensorspoke._tcp"
         private const val DEFAULT_SERVICE_NAME = "SensorSpoke-Node"
+        
+        // Intent action for flash sync
+        const val ACTION_FLASH_SYNC = "com.yourcompany.sensorspoke.FLASH_SYNC"
+        const val EXTRA_TIMESTAMP = "timestamp"
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -216,10 +227,11 @@ class PCOrchestrationClient(
             return createErrorResponse(ackId, "Invalid transfer parameters")
         }
 
+
         // Initiate file transfer using FileTransferManager
         return initiateFileTransfer(sessionId, host, port, ackId)
 
-        return createSuccessResponse(ackId, "File transfer initiated")
+
     }
 
     /**

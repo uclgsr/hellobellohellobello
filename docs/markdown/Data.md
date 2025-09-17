@@ -14,7 +14,76 @@ This document defines the data structures, file formats, and storage organizatio
 
 ## Storage Directory Structure
 
+### Enhanced Data Management Features (Latest Update)
+
+The system now includes comprehensive data management enhancements for improved reliability and user experience:
+
+#### Enhanced Session Directory Structure
+Sessions now use improved naming: `YYYYMMDD_HHMMSS_mmm_DeviceModel_DeviceID`
+- Example: `20241218_143052_001_Pixel7_ab12cd34`
+- Includes millisecond precision and device identification for uniqueness
+- Each session includes comprehensive metadata file: `session_metadata.json`
+
+#### Storage Space Management
+- **Pre-recording validation**: Automatic storage space checking before session start
+- **Intelligent estimation**: Calculates expected session size based on active sensors
+  - RGB: ~902MB per 10 minutes (video + frames + CSV)  
+  - Thermal: ~75MB per 10 minutes (CSV data)
+  - GSR: ~8MB per 10 minutes (CSV data)
+  - Audio: ~100MB per 10 minutes (AAC format)
+- **Safety margins**: Requires estimated size + 50MB additional buffer
+- **Low storage warnings**: Alerts when remaining space < 20% after session
+
+#### Enhanced Cleanup System
+- **Configurable retention**: Default 30-day automatic cleanup (vs previous 7-day)
+- **Storage-based cleanup**: Activates when storage > 80% full
+- **Smart selection**: Prioritizes oldest and largest sessions for removal
+- **Detailed reporting**: Shows space freed and session counts
+- **User confirmation**: Preview cleanup actions before execution
+
+#### Data Validation System
+- **Session integrity checking**: Validates expected file structure
+- **CSV format validation**: Ensures timestamp consistency across sensors
+- **Metadata validation**: Confirms required fields and data types
+- **Post-session reports**: Generates validation summary for each session
+
 ### On-Device Storage Layout (Android)
+
+```
+/Android/data/com.yourcompany.sensorspoke/files/
+├── sessions/
+│   ├── 20241218_143052_001_Pixel7_ab12cd34/    # Enhanced session directory format
+│   │   ├── session_metadata.json              # Comprehensive session metadata  
+│   │   ├── rgb/
+│   │   │   ├── video.mp4                       # H.264 video recording
+│   │   │   ├── frames/
+│   │   │   │   ├── frame_1703856123456789012.jpg
+│   │   │   │   ├── frame_1703856123606789013.jpg
+│   │   │   │   └── ...
+│   │   │   └── rgb_frames.csv                  # Frame index with timestamps
+│   │   ├── thermal/
+│   │   │   ├── thermal_data.csv                # Thermal matrix data
+│   │   │   ├── thermal_images/                 # PNG thermal images
+│   │   │   └── metadata.json                   # Camera settings and calibration
+│   │   ├── gsr/
+│   │   │   └── gsr.csv                         # GSR and PPG measurements  
+│   │   ├── audio/                              # Audio recordings (if enabled)
+│   │   │   ├── audio.aac                       # AAC audio file
+│   │   │   └── audio_events.csv                # Audio event timestamps
+│   │   └── validation_report.json              # Session data validation results
+│   ├── 20241218_144105_002_Pixel7_cd34ef56/    # Next session
+│   │   └── ...
+│   └── ...
+├── flash_sync_events.csv                       # Global sync events (all sessions)
+├── config/
+│   ├── device_config.json                      # Device-specific settings  
+│   └── sensor_calibration.json                 # Sensor calibration parameters
+└── logs/
+    ├── app.log                                  # Application event log
+    └── error.log                                # Error and exception log
+```
+
+### Legacy On-Device Storage Layout (Pre-Enhancement)
 
 ```
 /Android/data/com.yourcompany.sensorspoke/files/

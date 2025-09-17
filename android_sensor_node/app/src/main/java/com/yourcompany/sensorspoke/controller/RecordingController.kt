@@ -80,6 +80,9 @@ class RecordingController(
         if (_state.value != SessionOrchestrator.State.IDLE) return
         _state.value = SessionOrchestrator.State.PREPARING
         try {
+            // Validate storage space before starting recording
+            validateStorageSpace()
+            
             val id = sessionId ?: generateSessionId()
             val root = ensureSessionsRoot()
             val sessionDir = File(root, id)
@@ -197,7 +200,38 @@ class RecordingController(
     }
 
     /**
+     * Validate that sufficient storage space is available for recording
+     */
+    private fun validateStorageSpace() {
+        try {
+            val sessionsRoot = ensureSessionsRoot()
+            val statsFs = android.os.StatFs(sessionsRoot.path)
+            val availableBytes = statsFs.availableBytes
+            val availableMB = availableBytes / (1024 * 1024)
+            
+            // Require at least 100MB free space for recording
+            // This accounts for video files, images, and CSV data
+            val requiredMB = 100L
+            
+            Log.i("RecordingController", "Available storage: ${availableMB}MB, required: ${requiredMB}MB")
+            
+            if (availableMB < requiredMB) {
+                throw IllegalStateException(
+                    "Insufficient storage space for recording. Available: ${availableMB}MB, Required: ${requiredMB}MB"
+                )
+            }
+        } catch (e: Exception) {
+            if (e is IllegalStateException) {
+                throw e
+            }
+            Log.w("RecordingController", "Failed to check storage space: ${e.message}", e)
+            // Don't block recording if we can't check storage space
+        }
+    }
+
+    /**
      * Create session metadata file with synchronized timing information
+     * Enhanced with comprehensive session information and file structure documentation
      */
     private fun createSessionMetadata(sessionDir: File, sessionId: String) {
         try {
@@ -206,7 +240,50 @@ class RecordingController(
             // Create metadata using safe JSON construction
             val metadata = try {
                 val recordersArray = JSONArray()
-                recorders.forEach { recordersArray.put(it.name) }
+                val expectedFilesArray = JSONArray()
+                val storageInfoObject = JSONObject()
+                
+                // Add detailed recorder info and expected file structure
+                recorders.forEach { entry ->
+                    recordersArray.put(entry.name)
+                    
+                    // Document expected file structure for each recorder
+                    when (entry.name.lowercase()) {
+                        "rgb" -> {
+                            expectedFilesArray.put("${entry.name}/video.mp4")
+                            expectedFilesArray.put("${entry.name}/frames/frame_*.jpg")
+                            expectedFilesArray.put("${entry.name}/rgb_frames.csv")
+                        }
+                        "thermal" -> {
+                            expectedFilesArray.put("${entry.name}/thermal_data.csv")
+                            expectedFilesArray.put("${entry.name}/thermal_images/")
+                        }
+                        "gsr" -> {
+                            expectedFilesArray.put("${entry.name}/gsr.csv")
+                        }
+                        "audio" -> {
+                            expectedFilesArray.put("${entry.name}/audio.aac")
+                            expectedFilesArray.put("${entry.name}/audio_events.csv")
+                        }
+                        else -> {
+                            expectedFilesArray.put("${entry.name}/data.csv")
+                        }
+                    }
+                }
+                
+                // Add storage information for monitoring
+                val sessionsRoot = ensureSessionsRoot()
+                val statsFs = android.os.StatFs(sessionsRoot.path)
+                val availableBytes = statsFs.availableBytes
+                val totalBytes = statsFs.totalBytes
+                
+                storageInfoObject.apply {
+                    put("available_bytes", availableBytes)
+                    put("total_bytes", totalBytes)
+                    put("available_mb", availableBytes / (1024 * 1024))
+                    put("total_mb", totalBytes / (1024 * 1024))
+                    put("usage_percent", ((totalBytes - availableBytes).toFloat() / totalBytes * 100f).toInt())
+                }
 
                 val dateFormatter = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
 
@@ -219,8 +296,19 @@ class RecordingController(
                     .put("android_version", Build.VERSION.RELEASE ?: "unknown")
                     .put("app_version", "1.0.0")
                     .put("recorders", recordersArray)
+                    .put("expected_files", expectedFilesArray)
+                    .put("storage_info", storageInfoObject)
+                    .put("estimated_session_size_mb", calculateEstimatedSessionSize())
                     .put("session_status", "STARTED")
+                    .put("synchronization_reference", "System time: System.currentTimeMillis() + System.nanoTime()")
+                    .put("timezone", java.util.TimeZone.getDefault().id)
                     .put("created_at", dateFormatter.format(java.util.Date(sessionStartTimestampMs)))
+                    .put("file_structure_info", JSONObject().apply {
+                        put("description", "Session data organized by sensor modality")
+                        put("timestamp_format", "nanosecond precision for synchronization")
+                        put("csv_format", "All CSV files include timestamp_ns and timestamp_ms columns")
+                        put("sync_notes", "All timestamps use common system reference for cross-sensor alignment")
+                    })
                     .toString(2) // Pretty print with 2-space indent
             } catch (jsonError: Exception) {
                 Log.e("RecordingController", "Failed to create session metadata JSON", jsonError)
@@ -236,7 +324,7 @@ class RecordingController(
             }
 
             metadataFile.writeText(metadata, Charsets.UTF_8)
-            Log.d("RecordingController", "Session metadata created: ${metadataFile.absolutePath}")
+            Log.d("RecordingController", "Enhanced session metadata created: ${metadataFile.absolutePath}")
         } catch (e: Exception) {
             Log.e("RecordingController", "Failed to create session metadata: ${e.message}", e)
         }
