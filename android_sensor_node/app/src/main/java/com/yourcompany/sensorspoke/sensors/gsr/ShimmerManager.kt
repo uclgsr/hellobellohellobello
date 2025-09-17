@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * - Error handling and recovery
  */
 class ShimmerManager(
-    private val context: Context
+    private val context: Context?
 ) {
     companion object {
         private const val TAG = "ShimmerManager"

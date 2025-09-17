@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.combine
  * - Network connections to PC hub
  */
 class DeviceConnectionManager(
-    private val context: Context
+    private val context: Context?
 ) {
     companion object {
         private const val TAG = "DeviceConnectionManager"

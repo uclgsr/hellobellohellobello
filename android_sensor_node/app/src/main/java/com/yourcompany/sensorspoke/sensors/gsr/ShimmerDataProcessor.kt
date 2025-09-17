@@ -91,8 +91,8 @@ class ShimmerDataProcessor {
     private fun extractGsrData(objectCluster: ObjectCluster): Pair<Double, Int> {
         return try {
             // Try to get calibrated GSR data first
-            val calibratedGsr = objectCluster.getFormatClusterValue(GSR_CHANNEL, CAL_FORMAT)
-            val rawGsr = objectCluster.getFormatClusterValue(GSR_CHANNEL, RAW_FORMAT)
+            val calibratedGsr = objectCluster.getFormatCluster(GSR_CHANNEL, CAL_FORMAT)?.mData
+            val rawGsr = objectCluster.getFormatCluster(GSR_CHANNEL, RAW_FORMAT)?.mData
             
             when {
                 calibratedGsr != null && rawGsr != null -> {
@@ -123,8 +123,8 @@ class ShimmerDataProcessor {
      */
     private fun extractPpgData(objectCluster: ObjectCluster): Int {
         return try {
-            val ppgValue = objectCluster.getFormatClusterValue(PPG_CHANNEL, RAW_FORMAT)
-                ?: objectCluster.getFormatClusterValue(PPG_CHANNEL, CAL_FORMAT)
+            val ppgValue = objectCluster.getFormatCluster(PPG_CHANNEL, RAW_FORMAT)?.mData
+                ?: objectCluster.getFormatCluster(PPG_CHANNEL, CAL_FORMAT)?.mData
             
             ppgValue?.toInt()?.coerceIn(0, 65535) ?: 0 // 16-bit range for PPG
         } catch (e: Exception) {
