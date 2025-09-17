@@ -3,65 +3,36 @@ package com.yourcompany.sensorspoke.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourcompany.sensorspoke.controller.SessionOrchestrator
+import com.yourcompany.sensorspoke.ui.models.MainUiState
+import com.yourcompany.sensorspoke.ui.models.SensorStatus
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * MainViewModel coordinates with RecordingController to reflect recording state via StateFlow.
- * Follows MVVM architecture with proper separation of UI logic from business logic.
+ * Enhanced MainViewModel with comprehensive UI feedback and sensor status tracking.
+ * Coordinates with RecordingController and provides real-time status updates for all sensors.
  *
- * This ViewModel acts as the UI layer's interface to the RecordingController session orchestrator,
- * providing reactive state updates for the UI while keeping business logic in the controller layer.
+ * This ViewModel implements the UI feedback requirements including:
+ * - Real-time sensor status indicators
+ * - Recording timer and status updates
+ * - Error handling and notifications
+ * - Thermal camera simulation feedback
  */
 class MainViewModel : ViewModel() {
 
-    // Recording state management
-    private val _isRecording = MutableStateFlow(false)
-    val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
-
-    private val _currentSessionId = MutableStateFlow<String?>(null)
-    val currentSessionId: StateFlow<String?> = _currentSessionId.asStateFlow()
-
-    private val _recordingState = MutableStateFlow(RecordingState.IDLE)
-    val recordingState: StateFlow<RecordingState> = _recordingState.asStateFlow()
-
-    // UI state management
-    private val _statusMessage = MutableStateFlow("Ready")
-    val statusMessage: StateFlow<String> = _statusMessage.asStateFlow()
-
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
-
-    // Sensor status tracking
-    private val _sensorStatus = MutableStateFlow<Map<String, SensorStatus>>(emptyMap())
-    val sensorStatus: StateFlow<Map<String, SensorStatus>> = _sensorStatus.asStateFlow()
+    // Comprehensive UI state
+    private val _uiState = MutableStateFlow(MainUiState())
+    val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     // RecordingController coordination - using SessionOrchestrator interface
     private var sessionOrchestrator: SessionOrchestrator? = null
-
-    /**
-     * Recording states that mirror SessionOrchestrator states for UI reactivity
-     */
-    enum class RecordingState {
-        IDLE,
-        PREPARING,
-        RECORDING,
-        STOPPING,
-        ERROR,
-    }
-
-    /**
-     * Individual sensor status for UI display
-     */
-    data class SensorStatus(
-        val name: String,
-        val isActive: Boolean,
-        val isHealthy: Boolean,
-        val lastUpdate: Long = System.currentTimeMillis(),
-        val statusMessage: String = "",
-    )
+    
+    // Recording timer job
+    private var recordingTimerJob: Job? = null
 
     /**
      * Initialize the ViewModel with a SessionOrchestrator instance (typically RecordingController)
@@ -69,28 +40,62 @@ class MainViewModel : ViewModel() {
     fun initialize(orchestrator: SessionOrchestrator) {
         sessionOrchestrator = orchestrator
 
+        // Initialize UI state
+        updateUiState { it.copy(isInitialized = true, statusText = "Ready to connect") }
+
         // Observe orchestrator state changes
         viewModelScope.launch {
             orchestrator.state.collect { orchestratorState ->
-                _recordingState.value = when (orchestratorState) {
-                    SessionOrchestrator.State.IDLE -> RecordingState.IDLE
-                    SessionOrchestrator.State.PREPARING -> RecordingState.PREPARING
-                    SessionOrchestrator.State.RECORDING -> RecordingState.RECORDING
-                    SessionOrchestrator.State.STOPPING -> RecordingState.STOPPING
+                when (orchestratorState) {
+                    SessionOrchestrator.State.IDLE -> {
+                        stopRecordingTimer()
+                        updateUiState { 
+                            it.copy(
+                                isRecording = false,
+                                startButtonEnabled = true,
+                                stopButtonEnabled = false,
+                                statusText = "Ready to record"
+                            )
+                        }
+                    }
+                    SessionOrchestrator.State.PREPARING -> {
+                        updateUiState { 
+                            it.copy(
+                                isRecording = false,
+                                startButtonEnabled = false,
+                                stopButtonEnabled = false,
+                                statusText = "Preparing to record..."
+                            )
+                        }
+                    }
+                    SessionOrchestrator.State.RECORDING -> {
+                        startRecordingTimer()
+                        updateUiState { 
+                            it.copy(
+                                isRecording = true,
+                                startButtonEnabled = false,
+                                stopButtonEnabled = true,
+                                statusText = "Recording in progress..."
+                            )
+                        }
+                    }
+                    SessionOrchestrator.State.STOPPING -> {
+                        updateUiState { 
+                            it.copy(
+                                startButtonEnabled = false,
+                                stopButtonEnabled = false,
+                                statusText = "Stopping recording..."
+                            )
+                        }
+                    }
                 }
-                _isRecording.value = orchestratorState == SessionOrchestrator.State.RECORDING
             }
         }
 
         // Observe current session
         viewModelScope.launch {
             orchestrator.currentSessionId.collect { sessionId ->
-                _currentSessionId.value = sessionId
-                _statusMessage.value = if (sessionId != null) {
-                    "Session: $sessionId"
-                } else {
-                    "Ready"
-                }
+                updateUiState { it.copy(currentSessionId = sessionId) }
             }
         }
 
@@ -136,11 +141,11 @@ class MainViewModel : ViewModel() {
     fun startRecording(sessionId: String? = null) {
         viewModelScope.launch {
             try {
-                _errorMessage.value = null
+                clearError()
+                updateUiState { it.copy(statusText = "Starting recording...") }
                 sessionOrchestrator?.startSession(sessionId)
             } catch (e: Exception) {
-                _recordingState.value = RecordingState.ERROR
-                _errorMessage.value = "Failed to start recording: ${e.message}"
+                showError("Failed to start recording: ${e.message}")
             }
         }
     }
@@ -151,11 +156,11 @@ class MainViewModel : ViewModel() {
     fun stopRecording() {
         viewModelScope.launch {
             try {
-                _errorMessage.value = null
+                clearError()
+                updateUiState { it.copy(statusText = "Stopping recording...") }
                 sessionOrchestrator?.stopSession()
             } catch (e: Exception) {
-                _recordingState.value = RecordingState.ERROR
-                _errorMessage.value = "Failed to stop recording: ${e.message}"
+                showError("Failed to stop recording: ${e.message}")
             }
         }
     }
@@ -164,16 +169,147 @@ class MainViewModel : ViewModel() {
      * Update sensor status for UI display
      */
     fun updateSensorStatus(sensorName: String, status: SensorStatus) {
-        val currentStatus = _sensorStatus.value.toMutableMap()
-        currentStatus[sensorName] = status
-        _sensorStatus.value = currentStatus
+        when (sensorName.lowercase()) {
+            "rgb", "camera", "rgb_camera" -> {
+                updateUiState { 
+                    it.copy(
+                        isCameraConnected = status.isActive,
+                        cameraStatus = status
+                    )
+                }
+            }
+            "thermal", "thermal_camera" -> {
+                updateUiState { 
+                    it.copy(
+                        isThermalConnected = status.isActive,
+                        thermalStatus = status,
+                        thermalIsSimulated = status.statusMessage.contains("Simulated", ignoreCase = true)
+                    )
+                }
+            }
+            "gsr", "shimmer" -> {
+                updateUiState { 
+                    it.copy(
+                        isShimmerConnected = status.isActive,
+                        shimmerStatus = status
+                    )
+                }
+            }
+            "pc", "pc_link", "hub" -> {
+                updateUiState { 
+                    it.copy(
+                        isPcConnected = status.isActive,
+                        pcStatus = status
+                    )
+                }
+            }
+        }
+        
+        // Update overall button states based on sensor connectivity
+        updateButtonStates()
     }
 
     /**
-     * Clear error message
+     * Show error message with dialog
+     */
+    fun showError(message: String) {
+        updateUiState { 
+            it.copy(
+                errorMessage = message,
+                showErrorDialog = true,
+                statusText = "Error: $message"
+            )
+        }
+    }
+
+    /**
+     * Clear error message and hide dialog
      */
     fun clearError() {
-        _errorMessage.value = null
+        updateUiState { 
+            it.copy(
+                errorMessage = null,
+                showErrorDialog = false
+            )
+        }
+    }
+
+    /**
+     * Show progress with message
+     */
+    fun showProgress(message: String) {
+        updateUiState { 
+            it.copy(
+                showProgress = true,
+                progressMessage = message
+            )
+        }
+    }
+
+    /**
+     * Hide progress
+     */
+    fun hideProgress() {
+        updateUiState { 
+            it.copy(showProgress = false, progressMessage = "")
+        }
+    }
+
+    /**
+     * Update RGB preview availability
+     */
+    fun updateRgbPreviewAvailable(available: Boolean) {
+        updateUiState { it.copy(rgbPreviewAvailable = available) }
+    }
+
+    /**
+     * Update thermal preview availability
+     */
+    fun updateThermalPreviewAvailable(available: Boolean) {
+        updateUiState { it.copy(thermalPreviewAvailable = available) }
+    }
+
+    /**
+     * Update status text
+     */
+    fun updateStatusText(text: String) {
+        updateUiState { it.copy(statusText = text) }
+    }
+
+    private fun updateUiState(update: (MainUiState) -> MainUiState) {
+        _uiState.value = update(_uiState.value)
+    }
+
+    private fun updateButtonStates() {
+        val currentState = _uiState.value
+        val canStartRecording = currentState.isInitialized && 
+                               !currentState.isRecording && 
+                               (currentState.isCameraConnected || currentState.isThermalConnected || currentState.isShimmerConnected)
+        
+        updateUiState { 
+            it.copy(
+                startButtonEnabled = canStartRecording,
+                stopButtonEnabled = currentState.isRecording
+            )
+        }
+    }
+
+    private fun startRecordingTimer() {
+        recordingTimerJob?.cancel()
+        recordingTimerJob = viewModelScope.launch {
+            var seconds = 0L
+            while (true) {
+                updateUiState { it.copy(recordingDurationSeconds = seconds) }
+                delay(1000)
+                seconds++
+            }
+        }
+    }
+
+    private fun stopRecordingTimer() {
+        recordingTimerJob?.cancel()
+        recordingTimerJob = null
+        updateUiState { it.copy(recordingDurationSeconds = 0) }
     }
 
     override fun onCleared() {

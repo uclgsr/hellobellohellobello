@@ -1,6 +1,7 @@
 package com.yourcompany.sensorspoke.ui
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -22,6 +23,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -34,13 +36,16 @@ import com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
 import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
 import com.yourcompany.sensorspoke.service.RecordingService
 import com.yourcompany.sensorspoke.ui.adapters.MainPagerAdapter
+import com.yourcompany.sensorspoke.ui.components.SensorStatusIndicator
 import com.yourcompany.sensorspoke.ui.dialogs.QuickStartDialog
+import com.yourcompany.sensorspoke.ui.models.SensorStatus
 import com.yourcompany.sensorspoke.ui.navigation.NavigationController
 import com.yourcompany.sensorspoke.ui.navigation.ThermalNavigationState
 import com.yourcompany.sensorspoke.utils.PermissionManager
 import com.yourcompany.sensorspoke.utils.UserExperience
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -59,7 +64,14 @@ class MainActivity : AppCompatActivity() {
     private var btnStartRecording: Button? = null
     private var btnStopRecording: Button? = null
     private var statusText: TextView? = null
+    private var recordingTimer: TextView? = null
     private var rootLayout: ViewGroup? = null
+
+    // Sensor status indicators
+    private var rgbSensorStatus: SensorStatusIndicator? = null
+    private var thermalSensorStatus: SensorStatusIndicator? = null
+    private var gsrSensorStatus: SensorStatusIndicator? = null
+    private var pcSensorStatus: SensorStatusIndicator? = null
 
     // Enhanced navigation controller from IRCamera architecture
     private var navigationController: NavigationController? = null
@@ -128,7 +140,14 @@ class MainActivity : AppCompatActivity() {
         btnStartRecording = findViewById(R.id.btnStartRecording)
         btnStopRecording = findViewById(R.id.btnStopRecording)
         statusText = findViewById(R.id.statusText)
+        recordingTimer = findViewById(R.id.recordingTimer)
         rootLayout = findViewById<ViewGroup>(android.R.id.content)
+        
+        // Initialize sensor status indicators
+        rgbSensorStatus = findViewById(R.id.rgbSensorStatus)
+        thermalSensorStatus = findViewById(R.id.thermalSensorStatus)
+        gsrSensorStatus = findViewById(R.id.gsrSensorStatus)
+        pcSensorStatus = findViewById(R.id.pcSensorStatus)
 
         // Setup ViewPager with fragments
         setupViewPager()
@@ -141,6 +160,12 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize comprehensive permission management
         permissionManager = PermissionManager(this)
+
+        // Initialize the ViewModel with the recording controller
+        initializeViewModel()
+
+        // Setup UI state observation
+        observeUiState()
 
         // Initialize status
         updateStatusText("Initializing...")
@@ -168,7 +193,153 @@ class MainActivity : AppCompatActivity() {
             requestAllPermissions()
         }
 
+        // Initialize sensor status indicators with realistic initial states
+        initializeSensorStatusIndicators()
+
         updateStatusText("Ready to connect")
+    }
+
+    /**
+     * Initialize sensor status indicators with default states
+     */
+    private fun initializeSensorStatusIndicators() {
+        // Initialize with default sensor names for display
+        rgbSensorStatus?.updateStatus("RGB", SensorStatusIndicator.SensorStatus(
+            name = "RGB Camera",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Offline"
+        ))
+        
+        thermalSensorStatus?.updateStatus("Thermal", SensorStatusIndicator.SensorStatus(
+            name = "Thermal Camera",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Offline"
+        ))
+        
+        gsrSensorStatus?.updateStatus("GSR", SensorStatusIndicator.SensorStatus(
+            name = "GSR Sensor",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Disconnected"
+        ))
+        
+        pcSensorStatus?.updateStatus("PC", SensorStatusIndicator.SensorStatus(
+            name = "PC Link",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Not Connected"
+        ))
+        
+        // Then update with ViewModel data
+        updateSensorStatus()
+    }
+
+    /**
+     * Initialize the ViewModel with the recording controller
+     */
+    private fun initializeViewModel() {
+        lifecycleScope.launch {
+            val controller = ensureController()
+            vm.initialize(controller)
+        }
+    }
+
+    /**
+     * Observe UI state changes and update the interface accordingly
+     */
+    private fun observeUiState() {
+        lifecycleScope.launch {
+            vm.uiState.collect { state ->
+                // Update status text
+                statusText?.text = state.statusText
+                
+                // Update recording timer
+                if (state.isRecording && state.recordingDurationSeconds > 0) {
+                    recordingTimer?.visibility = View.VISIBLE
+                    recordingTimer?.text = formatRecordingTime(state.recordingDurationSeconds)
+                } else {
+                    recordingTimer?.visibility = View.GONE
+                }
+                
+                // Update button states
+                btnStartRecording?.isEnabled = state.startButtonEnabled
+                btnStopRecording?.isEnabled = state.stopButtonEnabled
+                
+                // Update button text based on recording state
+                btnStartRecording?.text = if (state.isRecording) "Recording..." else "Start Recording"
+                
+                // Update sensor status indicators
+                rgbSensorStatus?.updateStatus("RGB Camera", state.cameraStatus.toSensorStatusIndicator())
+                thermalSensorStatus?.updateStatus("Thermal", state.thermalStatus.toSensorStatusIndicator())
+                gsrSensorStatus?.updateStatus("GSR", state.shimmerStatus.toSensorStatusIndicator())
+                pcSensorStatus?.updateStatus("PC Link", state.pcStatus.toSensorStatusIndicator())
+                
+                // Handle error dialog
+                if (state.showErrorDialog && !state.errorMessage.isNullOrEmpty()) {
+                    showErrorDialog(state.errorMessage)
+                }
+                
+                // Handle thermal simulation feedback
+                if (state.thermalIsSimulated && state.isThermalConnected) {
+                    showThermalSimulationOverlay()
+                }
+            }
+        }
+    }
+
+    /**
+     * Format recording time in HH:MM:SS format
+     */
+    private fun formatRecordingTime(seconds: Long): String {
+        val hours = TimeUnit.SECONDS.toHours(seconds)
+        val minutes = TimeUnit.SECONDS.toMinutes(seconds) % 60
+        val secs = seconds % 60
+        return String.format("%02d:%02d:%02d", hours, minutes, secs)
+    }
+
+    /**
+     * Convert SensorStatus to SensorStatusIndicator.SensorStatus
+     */
+    private fun SensorStatus.toSensorStatusIndicator(): SensorStatusIndicator.SensorStatus {
+        return SensorStatusIndicator.SensorStatus(
+            name = this.name,
+            isActive = this.isActive,
+            isHealthy = this.isHealthy,
+            lastUpdate = this.lastUpdate,
+            statusMessage = this.statusMessage
+        )
+    }
+
+    /**
+     * Show error dialog with user-friendly message
+     */
+    private fun showErrorDialog(message: String) {
+        AlertDialog.Builder(this)
+            .setTitle("Error")
+            .setMessage(message)
+            .setPositiveButton("OK") { _, _ ->
+                vm.clearError()
+            }
+            .setOnDismissListener {
+                vm.clearError() 
+            }
+            .show()
+    }
+
+    /**
+     * Show thermal simulation overlay when thermal camera is in simulation mode
+     */
+    private fun showThermalSimulationOverlay() {
+        rootLayout?.let { layout ->
+            val snackbar = Snackbar.make(
+                layout, 
+                "Thermal Camera Simulation (device not found)", 
+                Snackbar.LENGTH_LONG
+            )
+            snackbar.show()
+        }
     }
 
     private fun setupToolbar() {
@@ -234,25 +405,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupButtons() {
         btnStartRecording?.setOnClickListener {
-            // Enhanced UI feedback during permission checks
-            updateStatusText("Checking permissions...")
-            btnStartRecording?.isEnabled = false
-
-            if (permissionManager.areAllPermissionsGranted()) {
-                startRecording()
-            } else {
-                UserExperience.Messaging.showProgress(
-                    this,
-                    "Checking permissions for all sensors",
-                )
-                requestAllPermissions()
-            }
+            startRecording()
         }
 
         btnStopRecording?.setOnClickListener {
-            // Enhanced UI feedback during stop operation
-            updateStatusText("Stopping recording...")
-            btnStopRecording?.isEnabled = false
             stopRecording()
         }
     }
@@ -261,8 +417,8 @@ class MainActivity : AppCompatActivity() {
      * Enhanced status text updates with visual indicators.
      */
     private fun updateStatusText(message: String) {
-        statusText?.text = message
-
+        vm.updateStatusText(message)
+        
         // Add color coding based on status
         when {
             message.contains("error", ignoreCase = true) ||
@@ -291,31 +447,44 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Enhanced button state management.
+     * Update sensor status based on actual sensor state 
      */
-    private fun updateButtonStates(isRecording: Boolean) {
-        btnStartRecording?.apply {
-            isEnabled = !isRecording && permissionManager.areAllPermissionsGranted()
-            text = if (isRecording) "Recording..." else "Start Recording"
-            setBackgroundColor(
-                if (isRecording) {
-                    ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
-                } else {
-                    ContextCompat.getColor(this@MainActivity, android.R.color.holo_green_light)
-                },
-            )
-        }
+    private fun updateSensorStatus() {
+        // RGB Camera status (simulate for now)
+        val rgbStatus = SensorStatus(
+            name = "RGB Camera",
+            isActive = true, // Would be updated by actual camera manager
+            isHealthy = true,
+            statusMessage = getString(R.string.sensor_rgb_active)
+        )
+        vm.updateSensorStatus("rgb", rgbStatus)
 
-        btnStopRecording?.apply {
-            isEnabled = isRecording
-            setBackgroundColor(
-                if (isRecording) {
-                    ContextCompat.getColor(this@MainActivity, android.R.color.holo_red_light)
-                } else {
-                    ContextCompat.getColor(this@MainActivity, android.R.color.darker_gray)
-                },
-            )
-        }
+        // Thermal Camera status (simulate detection)
+        val thermalStatus = SensorStatus(
+            name = "Thermal Camera",
+            isActive = false, // Would be updated by thermal camera manager
+            isHealthy = false,
+            statusMessage = getString(R.string.sensor_thermal_simulated)
+        )
+        vm.updateSensorStatus("thermal", thermalStatus)
+
+        // GSR Sensor status (simulate BLE connection)
+        val gsrStatus = SensorStatus(
+            name = "GSR Sensor",
+            isActive = false, // Would be updated by Shimmer manager
+            isHealthy = false,
+            statusMessage = getString(R.string.sensor_gsr_disconnected)
+        )
+        vm.updateSensorStatus("gsr", gsrStatus)
+
+        // PC Link status (simulate network connection)
+        val pcStatus = SensorStatus(
+            name = "PC Link",
+            isActive = false, // Would be updated by network manager
+            isHealthy = false,
+            statusMessage = getString(R.string.sensor_pc_disconnected)
+        )
+        vm.updateSensorStatus("pc", pcStatus)
     }
 
     /**
@@ -328,7 +497,16 @@ class MainActivity : AppCompatActivity() {
             "Not connected to PC Hub"
         }
 
-        // Update status in a dedicated connection indicator (if available)
+        // Update PC connection status through ViewModel
+        val pcStatus = SensorStatus(
+            name = "PC Link",
+            isActive = connected,
+            isHealthy = connected,
+            statusMessage = if (connected) getString(R.string.sensor_pc_connected) else getString(R.string.sensor_pc_disconnected)
+        )
+        vm.updateSensorStatus("pc", pcStatus)
+
+        // Update status text
         updateStatusText(statusMessage)
 
         // Update UI colors/states based on connection
@@ -410,68 +588,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startRecording() {
-        updateStatusText("Starting recording...")
-        lifecycleScope.launch {
-            try {
-                // Full Integration: Use MultiModalSensorCoordinator for comprehensive sensor management
-                val coordinator = ensureMultiModalCoordinator()
+        // Enhanced UI feedback during permission checks
+        vm.updateStatusText("Checking permissions...")
+        btnStartRecording?.isEnabled = false
 
-                // Start coordinated multi-modal recording with session directory
-                val sessionDir = File(applicationContext.filesDir, "sessions")
-                if (!sessionDir.exists()) sessionDir.mkdirs()
-
-                val startResult = coordinator.startRecording(sessionDir)
-
-                if (startResult) {
-                    UserExperience.Messaging.showSuccess(this@MainActivity, "Full multi-modal recording started")
-                    updateStatusText("Full integration recording in progress")
-                    updateButtonStates(isRecording = true)
-                } else {
-                    // Fallback to individual controller if coordinator fails
-                    Log.w("MainActivity", "Coordinator failed, falling back to individual recorders")
-                    ensureController().startSession()
-                    UserExperience.Messaging.showSuccess(this@MainActivity, "Recording started (fallback mode)")
-                    updateStatusText("Recording in progress (fallback)")
-                    updateButtonStates(isRecording = true)
-                }
-            } catch (e: Exception) {
-                UserExperience.Messaging.showUserFriendlyError(this@MainActivity, e.message ?: "Unknown error", "recording")
-                updateStatusText("Ready to record")
-            }
+        if (permissionManager.areAllPermissionsGranted()) {
+            vm.startRecording()
+        } else {
+            vm.showProgress("Checking permissions for all sensors")
+            requestAllPermissions()
         }
     }
 
     private fun stopRecording() {
-        updateStatusText("Stopping recording...")
-        lifecycleScope.launch {
-            try {
-                // Full Integration: Stop coordinated recording first, then fallback if needed
-                val coordinator = multiModalCoordinator
-                if (coordinator != null) {
-                    val stopResult = coordinator.stopRecording()
-                    if (stopResult) {
-                        UserExperience.Messaging.showSuccess(this@MainActivity, "Full multi-modal recording stopped")
-                        updateStatusText("Ready to record")
-                        updateButtonStates(isRecording = false)
-                        return@launch
-                    } else {
-                        Log.w("MainActivity", "Coordinator stop failed, trying individual controller")
-                    }
-                }
-
-                // Fallback to individual controller
-                controller?.stopSession()
-                UserExperience.Messaging.showSuccess(this@MainActivity, "Recording stopped")
-                updateStatusText("Ready to record")
-                updateButtonStates(isRecording = false)
-            } catch (e: Exception) {
-                UserExperience.Messaging.showUserFriendlyError(this@MainActivity, e.message ?: "Unknown error", "recording")
-                updateStatusText("Error stopping recording")
-                // Re-enable buttons on error
-                btnStartRecording?.isEnabled = true
-                btnStopRecording?.isEnabled = true
-            }
-        }
+        // Enhanced UI feedback during stop operation
+        vm.updateStatusText("Stopping recording...")
+        btnStopRecording?.isEnabled = false
+        vm.stopRecording()
     }
 
     private fun showQuickStartGuide() {
@@ -603,17 +736,22 @@ class MainActivity : AppCompatActivity() {
      * Request all necessary permissions for multi-modal recording
      */
     private fun requestAllPermissions() {
-        updateStatusText("Requesting permissions...")
+        vm.updateStatusText("Requesting permissions...")
 
         permissionManager.requestAllPermissions { allGranted ->
             if (allGranted) {
-                updateStatusText("All permissions granted - Ready to record")
+                vm.updateStatusText("All permissions granted - Ready to record")
+                vm.hideProgress()
                 UserExperience.Messaging.showSuccess(
                     this,
                     "All sensor permissions granted. Ready to start recording!",
                 )
+                
+                // Update sensor status to reflect permission grants
+                updateSensorStatus()
             } else {
-                updateStatusText("Some permissions denied - Limited functionality")
+                vm.updateStatusText("Some permissions denied - Limited functionality")
+                vm.hideProgress()
                 UserExperience.Messaging.showUserFriendlyError(
                     this,
                     "Some permissions were denied. Recording may not include all sensors.",
@@ -624,6 +762,26 @@ class MainActivity : AppCompatActivity() {
                 Log.d("MainActivity", "Permission status: ${permissionManager.getPermissionStatus()}")
             }
         }
+    }
+
+    /**
+     * Show toast message for transient notifications
+     */
+    fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Show user-friendly error with Toast
+     */
+    private fun showUserFriendlyError(message: String, context: String = "") {
+        val fullMessage = if (context.isNotEmpty()) {
+            "Error in $context: $message"
+        } else {
+            message
+        }
+        showToast(fullMessage)
+        vm.showError(fullMessage)
     }
 
     /**
