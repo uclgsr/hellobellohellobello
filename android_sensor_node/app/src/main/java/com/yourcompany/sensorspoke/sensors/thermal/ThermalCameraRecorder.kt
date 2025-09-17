@@ -7,6 +7,7 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
+import com.yourcompany.sensorspoke.utils.PermissionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -19,6 +20,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.FileWriter
 import kotlin.math.sqrt
+import com.yourcompany.sensorspoke.sensors.thermal.RealTopdonIntegration
 
 /**
  * Thermal camera recorder with Topdon TC001 integration and simulation fallback.
@@ -26,12 +28,15 @@ import kotlin.math.sqrt
  */
 class ThermalCameraRecorder(
     private val context: Context,
+    private val permissionManager: PermissionManager? = null,
 ) : SensorRecorder {
     companion object {
         private const val TAG = "ThermalCameraRecorder"
         private const val TOPDON_VENDOR_ID = 0x4d54 // Topdon TC001 vendor ID
         private const val TC001_PRODUCT_ID_1 = 0x0100 // TC001 product ID variant 1
         private const val TC001_PRODUCT_ID_2 = 0x0200 // TC001 product ID variant 2
+        private const val DEFAULT_FPS = 10 // Default 10 FPS for simulation
+        private const val MAX_FPS = 25 // Maximum 25 Hz as per Topdon capability
     }
 
     private var csvWriter: BufferedWriter? = null
@@ -39,7 +44,13 @@ class ThermalCameraRecorder(
     private var thermalImagesDir: File? = null
     private var recordingJob: Job? = null
     private var topdonIntegration: TopdonThermalIntegration? = null
+    private var realTopdonIntegration: RealTopdonIntegration? = null
     private var frameCount = 0
+    private var targetFps = DEFAULT_FPS // Configurable FPS
+    private var lastFrameTime = 0L // For performance monitoring
+    private var frameProcessingTimeSum = 0L // For performance monitoring
+    private var frameTimeWindow = mutableListOf<Long>() // Track frame times for FPS calculation
+    private var initializationJob: Job? = null // Track initialization progress
 
     override suspend fun start(sessionDirectory: File) {
         Log.i(TAG, "Starting thermal camera recording in session: ${sessionDirectory.absolutePath}")
@@ -95,30 +106,130 @@ class ThermalCameraRecorder(
 
             if (topdonDevice != null) {
                 Log.i(TAG, "Topdon TC001 device found: ${topdonDevice.deviceName}")
-                topdonIntegration = TopdonThermalIntegration(context)
-
-                if (topdonIntegration!!.initialize() == TopdonResult.SUCCESS) {
-                    val connectResult = topdonIntegration!!.connectDevice(topdonDevice)
-                    if (connectResult == TopdonResult.SUCCESS) {
-                        configureTopdonDevice()
-                        Log.i(TAG, "Topdon TC001 connected and configured successfully")
-                    } else {
-                        Log.w(TAG, "Failed to connect to Topdon TC001")
-                        topdonIntegration = null
-                    }
+                
+                // Request USB permissions if needed
+                val hasPermission = requestUsbPermissionIfNeeded(topdonDevice, usbManager)
+                if (hasPermission) {
+                    Log.i(TAG, "USB permission granted, initializing real Topdon integration")
+                    initializeRealTopdonIntegration()
                 } else {
-                    Log.w(TAG, "Failed to initialize Topdon integration")
-                    topdonIntegration = null
+                    Log.w(TAG, "USB permission not granted, using simulation mode")
+                    initializeStubTopdonIntegration()
                 }
             } else {
                 Log.w(TAG, "No Topdon TC001 device found - using simulation mode")
-                topdonIntegration = null
+                initializeStubTopdonIntegration()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing Topdon integration: ${e.message}", e)
+            initializeStubTopdonIntegration()
+        }
+    }
+
+    /**
+     * Request USB permission for Topdon device if not already granted
+     * Note: This returns immediately - the actual permission dialog is asynchronous
+     */
+    private fun requestUsbPermissionIfNeeded(device: UsbDevice, usbManager: UsbManager): Boolean {
+        return if (usbManager.hasPermission(device)) {
+            Log.d(TAG, "USB permission already granted for ${device.deviceName}")
+            true
+        } else {
+            Log.i(TAG, "Requesting USB permission for Topdon TC001")
+            // Note: This triggers async permission dialog - we can't wait for result here
+            permissionManager?.let {
+                CoroutineScope(Dispatchers.IO).launch {
+                    it.requestUsbPermissions()
+                }
+                false // Return false since we don't have permission yet
+            } ?: run {
+                Log.w(TAG, "No PermissionManager available, cannot request USB permission")
+                false
+            }
+        }
+    }
+
+    private fun initializeRealTopdonIntegration() {
+        initializationJob = CoroutineScope(Dispatchers.IO).launch {
+            try {
+                realTopdonIntegration = RealTopdonIntegration(context)
+                
+                val success = realTopdonIntegration!!.initialize()
+                if (success) {
+                    Log.i(TAG, "Real Topdon TC001 integration initialized successfully")
+                    // If recording is already started, begin real streaming now
+                    recordingJob?.let {
+                        if (it.isActive) {
+                            Log.i(TAG, "Recording already active, starting real thermal streaming")
+                            startRealThermalStreaming()
+                        }
+                    }
+                } else {
+                    Log.w(TAG, "Real Topdon integration failed, falling back to simulation")
+                    realTopdonIntegration = null
+                    initializeStubTopdonIntegration()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error initializing real Topdon integration: ${e.message}", e)
+                realTopdonIntegration = null
+                initializeStubTopdonIntegration()
+            }
+        }
+    }
+
+    private suspend fun startRealThermalStreaming() {
+        realTopdonIntegration?.let { integration ->
+            val success = integration.startStreaming { thermalFrame ->
+                CoroutineScope(Dispatchers.IO).launch {
+                    handleRealThermalFrame(thermalFrame)
+                }
+            }
+            
+            if (success) {
+                Log.i(TAG, "Real thermal streaming started successfully")
+            } else {
+                Log.e(TAG, "Failed to start real thermal streaming")
+            }
+        }
+    }
+
+    private fun initializeStubTopdonIntegration() {
+        topdonIntegration = TopdonThermalIntegration(context)
+        
+        if (topdonIntegration!!.initialize() == TopdonResult.SUCCESS) {
+            configureTopdonDevice()
+            Log.i(TAG, "Stub Topdon integration initialized for simulation mode")
+        } else {
+            Log.w(TAG, "Failed to initialize stub Topdon integration")
             topdonIntegration = null
         }
     }
+
+    /**
+     * Configure thermal camera frame rate (1-25 FPS)
+     */
+    fun setFrameRate(fps: Int) {
+        targetFps = fps.coerceIn(1, MAX_FPS)
+        Log.i(TAG, "Thermal camera frame rate set to $targetFps FPS")
+    }
+
+    /**
+     * Get current performance metrics
+     */
+    fun getPerformanceMetrics(): ThermalPerformanceMetrics {
+        val avgProcessingTime = if (frameCount > 0) frameProcessingTimeSum / frameCount.toDouble() / 1_000_000.0 else 0.0
+        return ThermalPerformanceMetrics(
+            frameCount = frameCount,
+            targetFps = targetFps,
+            averageProcessingTimeMs = avgProcessingTime
+        )
+    }
+
+    data class ThermalPerformanceMetrics(
+        val frameCount: Int,
+        val targetFps: Int,
+        val averageProcessingTimeMs: Double
+    )
 
     private fun isTopdonTC001Device(device: UsbDevice): Boolean {
         return device.vendorId == TOPDON_VENDOR_ID &&
@@ -140,15 +251,91 @@ class ThermalCameraRecorder(
         recordingJob = CoroutineScope(Dispatchers.IO).launch {
             Log.i(TAG, "Starting thermal recording loop")
 
-            while (isActive) {
-                try {
-                    captureFrame()
-                    delay(100) // ~10 FPS
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error during thermal recording: ${e.message}", e)
-                    delay(1000) // Wait longer on error
+            // Wait a bit for initialization to complete if it's in progress
+            initializationJob?.join()
+
+            if (realTopdonIntegration != null) {
+                // Start streaming with callback for real thermal camera
+                startRealThermalStreaming()
+                
+                // Keep the coroutine alive to maintain streaming
+                while (isActive) {
+                    delay(1000) // Check every second to keep alive
                 }
+            } else {
+                startSimulationRecording()
             }
+        }
+    }
+
+    private suspend fun startSimulationRecording() {
+        val frameIntervalMs = 1000L / targetFps // Calculate interval based on target FPS
+        while (recordingJob?.isActive == true) {
+            try {
+                captureFrame()
+                delay(frameIntervalMs)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during thermal recording: ${e.message}", e)
+                delay(1000) // Wait longer on error
+            }
+        }
+    }
+
+    private suspend fun handleRealThermalFrame(thermalFrame: RealTopdonIntegration.ThermalFrame) {
+        val frameStartTime = System.nanoTime()
+        val timestampNs = thermalFrame.timestamp
+        val timestampMs = System.currentTimeMillis()
+        frameCount++
+
+        try {
+            val minTemp = thermalFrame.minTemp
+            val maxTemp = thermalFrame.maxTemp
+            val avgTemp = thermalFrame.avgTemp
+            val centerTemp = thermalFrame.centerTemp
+
+            // Save thermal image if bitmap is available
+            val imageFileName = "thermal_real_$timestampNs.png"
+            val imageFile = File(thermalImagesDir, imageFileName)
+            
+            thermalFrame.thermalBitmap?.let { bitmap ->
+                saveThermalImage(bitmap, imageFile)
+            }
+
+            // Log to CSV with real thermal data
+            csvWriter?.apply {
+                write("$timestampNs,$timestampMs,$frameCount,$centerTemp,$minTemp,$maxTemp,$avgTemp,$imageFileName\n")
+                flush()
+            }
+
+            // Performance monitoring
+            val frameEndTime = System.nanoTime()
+            val processingTime = frameEndTime - frameStartTime
+            frameProcessingTimeSum += processingTime
+            
+            // Track frame times for FPS calculation
+            frameTimeWindow.add(frameEndTime)
+            if (frameTimeWindow.size > 100) {
+                frameTimeWindow.removeAt(0) // Keep only last 100 frames
+            }
+            
+            // Log performance every 100 frames
+            if (frameCount % 100 == 0) {
+                val avgProcessingTime = frameProcessingTimeSum / 100.0 / 1_000_000.0 // Convert to ms
+                val actualFps = if (frameTimeWindow.size >= 2) {
+                    // Calculate FPS over the entire 100-frame window
+                    val timeSpan = (frameTimeWindow.last() - frameTimeWindow.first()) / 1_000_000_000.0
+                    (frameTimeWindow.size - 1) / timeSpan
+                } else {
+                    0.0
+                }
+                Log.i(TAG, "Thermal performance: Frame $frameCount, Avg processing: ${"%.2f".format(avgProcessingTime)}ms, Actual FPS: ${"%.1f".format(actualFps)}")
+                frameProcessingTimeSum = 0L
+            }
+            lastFrameTime = frameEndTime
+
+            Log.d(TAG, "Captured real thermal frame: $frameCount, center: ${"%.2f".format(centerTemp)}°C, range: ${"%.2f".format(minTemp)}-${"%.2f".format(maxTemp)}°C")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling real thermal frame: ${e.message}", e)
         }
     }
 
@@ -158,7 +345,11 @@ class ThermalCameraRecorder(
         frameCount++
 
         try {
-            if (topdonIntegration != null) {
+            if (realTopdonIntegration != null) {
+                // Real integration: frames will come via callback, so we don't capture here
+                // This method will be used to handle frames from the callback
+                return
+            } else if (topdonIntegration != null) {
                 captureRealThermalFrame(timestampNs, timestampMs)
             } else {
                 captureSimulatedThermalFrame(timestampNs, timestampMs)
@@ -274,13 +465,27 @@ class ThermalCameraRecorder(
     private suspend fun cleanup() {
         withContext(Dispatchers.IO) {
             try {
+                // Cancel any ongoing initialization
+                initializationJob?.cancel()
+                initializationJob = null
+
                 csvWriter?.flush()
                 csvWriter?.close()
                 csvWriter = null
 
-                topdonIntegration?.disconnect()
-                topdonIntegration?.cleanup()
-                topdonIntegration = null
+                // Clean up real integration
+                realTopdonIntegration?.let {
+                    it.stopStreaming()
+                    it.disconnect()
+                    realTopdonIntegration = null
+                }
+
+                // Clean up stub integration
+                topdonIntegration?.let {
+                    it.disconnect()
+                    it.cleanup()
+                    topdonIntegration = null
+                }
 
                 Log.i(TAG, "Thermal recording cleanup completed")
             } catch (e: Exception) {
