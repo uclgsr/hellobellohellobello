@@ -42,13 +42,16 @@ import java.util.concurrent.Executors
 class RgbCameraRecorder(
     private val context: Context,
     private val lifecycleOwner: LifecycleOwner,
-    private val cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
+    initialCameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
     private val cameraManager: RgbCameraManager? = null,
     private val deviceConnectionManager: DeviceConnectionManager? = null,
 ) : SensorRecorder {
     companion object {
         private const val TAG = "RgbCameraRecorder"
     }
+
+    // Mutable camera selector for switching between front/back
+    private var cameraSelector: CameraSelector = initialCameraSelector
 
     // Manager classes for separation of concerns
     private val rgbCameraManager = cameraManager ?: RgbCameraManager(context, lifecycleOwner, cameraSelector)

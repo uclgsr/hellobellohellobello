@@ -43,7 +43,6 @@ class ThermalCameraManager(
     val frameRate: StateFlow<Double> = _frameRate.asStateFlow()
 
     // Camera integration components
-    private var topdonIntegration: TopdonThermalIntegration? = null
     private var realTopdonIntegration: RealTopdonIntegration? = null
     private var targetFps = DEFAULT_FPS
 
@@ -132,15 +131,19 @@ class ThermalCameraManager(
     private fun initializeRealThermalIntegration() {
         try {
             realTopdonIntegration = RealTopdonIntegration(context)
-            val success = realTopdonIntegration!!.initialize()
-
-            if (success) {
-                Log.i(TAG, "Real Topdon TC001 integration initialized successfully")
-                updateCameraInfo(isReal = true)
-            } else {
-                Log.w(TAG, "Real Topdon integration failed, falling back to simulation")
-                realTopdonIntegration = null
-                initializeSimulationIntegration()
+            
+            // Use coroutine scope to call suspend function
+            managerScope.launch {
+                val success = realTopdonIntegration!!.initialize()
+                
+                if (success) {
+                    Log.i(TAG, "Real Topdon TC001 integration initialized successfully")
+                    updateCameraInfo(isReal = true)
+                } else {
+                    Log.w(TAG, "Real Topdon integration failed, falling back to simulation")
+                    realTopdonIntegration = null
+                    initializeSimulationIntegration()
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing real Topdon integration: ${e.message}", e)

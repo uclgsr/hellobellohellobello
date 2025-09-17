@@ -19,6 +19,19 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
 /**
+ * Thermal camera palette options for the Topdon TC001
+ */
+enum class TopdonThermalPalette(val value: Int) {
+    IRON(0),
+    RAINBOW(1),
+    WHITE_HOT(2),
+    BLACK_HOT(3),
+    RED(4),
+    GREEN(5),
+    BLUE(6)
+}
+
+/**
  * Enhanced TC001DeviceManager - Advanced device management inspired by IRCamera
  *
  * Provides comprehensive TC001 thermal camera management:

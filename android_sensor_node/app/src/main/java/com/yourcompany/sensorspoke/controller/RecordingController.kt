@@ -502,19 +502,6 @@ class RecordingController(
             crashRecoveryStatus = recoveryResult,
         )
     }
-            }
-        } catch (t: Throwable) {
-            Log.e("RecordingController", "Failed to start session: ${t.message}", t)
-            // Best-effort cleanup: stop any started recorders
-            safeStopAll()
-            _currentSessionId.value = null
-            sessionRootDir = null
-            _state.value = SessionOrchestrator.State.IDLE
-            _lastSessionResult.value = null
-            updateSensorStates()
-            throw t
-        }
-    }
 
     /**
      * Enhanced stopSession with data validation and comprehensive cleanup
@@ -612,7 +599,7 @@ class RecordingController(
             // Log validation results
             if (validationResults != null) {
                 if (validationResults.isValid) {
-                    Log.i(TAG, "Session data validation passed: ${validationResults.validatedFiles.size} files validated")
+                    Log.i(TAG, "Session data validation passed: ${validationResults.results.size} checks completed")
                 } else {
                     Log.w(TAG, "Session data validation issues: ${validationResults.issues.joinToString(", ")}")
                 }
@@ -645,7 +632,7 @@ class RecordingController(
                 Log.i(TAG, "Performing session data validation for: ${dir.name}")
                 val result = SessionDataValidator.validateSessionData(dir)
                 
-                Log.i(TAG, "Validation completed: ${result.validatedFiles.size} files checked, " +
+                Log.i(TAG, "Validation completed: ${result.results.size} checks performed, " +
                            "${result.issues.size} issues found")
                 
                 if (result.issues.isNotEmpty()) {
@@ -660,34 +647,7 @@ class RecordingController(
         }
     }
 
-            val successfulStops = stopResults.filterValues { it }.keys
-            val failedStops = stopResults.filterValues { !it }.keys
 
-            if (failedStops.isNotEmpty()) {
-                Log.w(
-                    "RecordingController",
-                    "Session $sessionId stopped with some failures. " +
-                        "Successful stops: ${successfulStops.joinToString()}, " +
-                        "Failed stops: ${failedStops.joinToString()}",
-                )
-            } else {
-                Log.i("RecordingController", "Session $sessionId stopped successfully. Results: $stopResults")
-            }
-        } finally {
-            // Always reset state regardless of stop success/failure
-            _state.value = SessionOrchestrator.State.IDLE
-            _currentSessionId.value = null
-            sessionRootDir = null
-
-            // Reset all recorder states to IDLE
-            for (entry in recorders) {
-                if (entry.state != RecorderState.ERROR) {
-                    entry.state = RecorderState.IDLE
-                }
-            }
-            updateSensorStates()
-        }
-    }
 
     private fun ensureSessionsRoot(): File {
         sessionsRootOverride?.let {
@@ -833,20 +793,6 @@ class RecordingController(
             true
         }
     }
-
-    /**
-     * Create session metadata file with synchronized timing information
-     * Enhanced with comprehensive session information and file structure documentation
-     */
-    private fun createSessionMetadata(sessionDir: File, sessionId: String) {
-        try {
-            val metadataFile = File(sessionDir, "session_metadata.json")
-
-            // Create metadata using safe JSON construction
-            val metadata = try {
-                val recordersArray = JSONArray()
-                val expectedFilesArray = JSONArray()
-                val storageInfoObject = JSONObject()
 
     /**
      * Create enhanced session metadata file with crash recovery information
@@ -1002,7 +948,7 @@ class RecordingController(
                 val validationObject = JSONObject().apply {
                     if (validationResults != null) {
                         put("is_valid", validationResults.isValid)
-                        put("validated_files", validationResults.validatedFiles.size)
+                        put("validated_checks", validationResults.results.size)
                         put("issues", JSONArray(validationResults.issues))
                         put("validation_timestamp", System.currentTimeMillis())
                     } else {
@@ -1217,34 +1163,7 @@ class RecordingController(
         val sessionId: String?,
     )
 
-    /**
-     * Detect and handle crashed/interrupted sessions on startup
-     */
-    suspend fun performCrashRecovery() {
-        Log.i("RecordingController", "Performing crash recovery check")
 
-        try {
-            val sessionsRoot = ensureSessionsRoot()
-            val sessionDirs = sessionsRoot.listFiles { file -> file.isDirectory } ?: return
-
-            for (sessionDir in sessionDirs) {
-                val metadataFile = File(sessionDir, "session_metadata.json")
-                if (metadataFile.exists()) {
-                    val metadata = metadataFile.readText(Charsets.UTF_8)
-                    val json = JSONObject(metadata)
-                    val status = json.optString("session_status", "")
-
-                    if (status == "STARTED") {
-                        // Found an unfinished session - mark it as crashed
-                        Log.w("RecordingController", "Found crashed session: ${sessionDir.name}")
-                        markSessionAsCrashed(sessionDir, json)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("RecordingController", "Error during crash recovery: ${e.message}", e)
-        }
-    }
 
     /**
      * Mark a session as crashed in its metadata
@@ -1338,6 +1257,7 @@ class RecordingController(
                 RecorderState.STOPPING -> "Stopping..."
                 RecorderState.STOPPED -> "Stopped"
                 RecorderState.ERROR -> "Error: ${entry.lastError ?: "Unknown"}"
+                RecorderState.RECOVERING -> "Recovering..."
             }
             entry.name to status
         }

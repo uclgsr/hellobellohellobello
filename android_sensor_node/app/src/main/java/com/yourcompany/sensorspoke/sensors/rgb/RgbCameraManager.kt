@@ -189,8 +189,17 @@ class RgbCameraManager(
      */
     private fun updateCameraInfo(provider: ProcessCameraProvider, deviceModel: String) {
         try {
-            val cameraInfo = provider.getCameraInfo(cameraSelector)
-            val supportedQualities = QualitySelector.getSupportedQualities(cameraInfo)
+            val availableCameraInfos = provider.availableCameraInfos
+            val cameraInfo = availableCameraInfos.find { info ->
+                val lensFacing = (info as? androidx.camera.core.impl.CameraInfoInternal)?.lensFacing
+                lensFacing == if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                    androidx.camera.core.CameraSelector.LENS_FACING_BACK
+                } else {
+                    androidx.camera.core.CameraSelector.LENS_FACING_FRONT
+                }
+            } ?: availableCameraInfos.firstOrNull()
+            
+            val supportedQualities = cameraInfo?.let { QualitySelector.getSupportedQualities(it) } ?: emptyList()
             val actualQuality = getActualQuality(supportedQualities)
             val resolution = getResolutionForQuality(actualQuality)
 
@@ -199,9 +208,9 @@ class RgbCameraManager(
                 supportedQualities = supportedQualities,
                 actualQuality = actualQuality,
                 resolution = resolution,
-                hasFlash = cameraInfo.hasFlashUnit(),
+                hasFlash = cameraInfo?.hasFlashUnit() ?: false,
                 isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA,
-                maxZoomRatio = cameraInfo.zoomState.value?.maxZoomRatio ?: 1.0f,
+                maxZoomRatio = cameraInfo?.zoomState?.value?.maxZoomRatio ?: 1.0f,
                 deviceModel = deviceModel
             )
 
@@ -314,7 +323,7 @@ class RgbCameraManager(
         val info = _cameraInfo.value
         return CameraStatus(
             state = _cameraState.value,
-            quality = info?.actualQuality?.name ?: "Unknown",
+            quality = info?.actualQuality?.toString() ?: "Unknown",
             resolution = info?.resolution?.let { "${it.width}x${it.height}" } ?: "Unknown",
             isBackCamera = info?.isBackCamera ?: true,
             hasFlash = info?.hasFlash ?: false,

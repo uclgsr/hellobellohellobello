@@ -675,21 +675,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    /**
-     * Show error dialog with user-friendly message
-     */
-    private fun showErrorDialog(message: String) {
-        AlertDialog.Builder(this)
-            .setTitle("Error")
-            .setMessage(message)
-            .setPositiveButton("OK") { _, _ ->
-                vm.clearError()
-            }
-            .setOnDismissListener {
-                vm.clearError()
-            }
-            .show()
-    }
+
 
     /**
      * Show thermal simulation overlay when thermal camera is in simulation mode
