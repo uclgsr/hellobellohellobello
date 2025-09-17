@@ -140,7 +140,7 @@ class RecordingService : Service() {
             // For now, use stub recorders in the service context to avoid lifecycle issues
             // The actual sensor integration will be handled by the MainActivity
             // This service focuses on network coordination and session management
-            
+
             Log.i("RecordingService", "Recording system initialized for network coordination")
         } catch (e: Exception) {
             Log.e("RecordingService", "Failed to initialize recording system: ${e.message}", e)
@@ -255,20 +255,20 @@ class RecordingService : Service() {
 
                         "start_recording" -> {
                             val sessionId = obj.optString("session_id", "")
-                            
+
                             // Forward to UI via broadcast - the MainActivity will handle actual recording with sensors
                             val intent = Intent(ACTION_START_RECORDING)
                                 .putExtra(EXTRA_SESSION_ID, sessionId)
                                 .setPackage("com.yourcompany.sensorspoke")
                             sendBroadcast(intent)
-                            
+
                             // FR8: update local session state for rejoin purposes
                             if (sessionId.isNotEmpty()) currentSessionId = sessionId
                             isRecording = true
-                            
+
                             // Update notification to show recording status
                             updateNotificationForRecording(currentSessionId)
-                            
+
                             val response = JSONObject().put("ack_id", id).put("status", "ok")
                                 .put("session_id", sessionId)
                             if (isV1) {
@@ -277,7 +277,7 @@ class RecordingService : Service() {
                             } else {
                                 safeWriteLine(writer, response.toString())
                             }
-                            
+
                             Log.i("RecordingService", "Recording start command sent for session: $sessionId")
                         }
 
@@ -286,13 +286,13 @@ class RecordingService : Service() {
                             val intent = Intent(ACTION_STOP_RECORDING)
                                 .setPackage("com.yourcompany.sensorspoke")
                             sendBroadcast(intent)
-                            
+
                             // FR8: update local session state — session ended but keep id for rejoin-triggered transfer
                             isRecording = false
-                            
+
                             // Update notification to show idle status
                             updateNotificationForIdle()
-                            
+
                             val response = JSONObject().put("ack_id", id).put("status", "ok")
                                 .put("session_id", currentSessionId ?: "")
                             if (isV1) {
@@ -301,7 +301,7 @@ class RecordingService : Service() {
                             } else {
                                 safeWriteLine(writer, response.toString())
                             }
-                            
+
                             Log.i("RecordingService", "Recording stop command sent for session: $currentSessionId")
                         }
 
@@ -499,7 +499,7 @@ class RecordingService : Service() {
         result.put("android_sdk", Build.VERSION.SDK_INT)
         result.put("android_release", Build.VERSION.RELEASE ?: "")
         result.put("service_port", serverPort)
-        
+
         // Enhanced sensor availability reporting
         val controller = recordingController
         if (controller != null) {
@@ -514,7 +514,7 @@ class RecordingService : Service() {
             result.put("has_thermal", true)
             result.put("has_gsr", true)
         }
-        
+
         val cameras = JSONArray()
         try {
             val cm = getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -543,7 +543,7 @@ class RecordingService : Service() {
     private fun updateNotificationForRecording(sessionId: String?) {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "recording_service_channel"
-        
+
         val notification: Notification =
             NotificationCompat
                 .Builder(this, channelId)
@@ -553,7 +553,7 @@ class RecordingService : Service() {
                 .setOngoing(true)
                 .setProgress(0, 0, true) // Indeterminate progress
                 .build()
-        
+
         nm.notify(1001, notification)
     }
 
@@ -563,7 +563,7 @@ class RecordingService : Service() {
     private fun updateNotificationForIdle() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "recording_service_channel"
-        
+
         val notification: Notification =
             NotificationCompat
                 .Builder(this, channelId)
@@ -572,7 +572,7 @@ class RecordingService : Service() {
                 .setSmallIcon(R.drawable.ic_notification_recording)
                 .setOngoing(true)
                 .build()
-        
+
         nm.notify(1001, notification)
     }
 }

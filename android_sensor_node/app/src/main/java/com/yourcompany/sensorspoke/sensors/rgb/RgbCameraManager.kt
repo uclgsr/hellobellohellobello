@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * RgbCameraManager handles RGB camera lifecycle management and configuration.
  * Separates camera management concerns from data recording logic.
- * 
+ *
  * This class is responsible for:
  * - Camera initialization and configuration
  * - Camera state monitoring
@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class RgbCameraManager(
     private val context: Context,
     private val lifecycleOwner: LifecycleOwner,
-    private val cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+    private val cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
 ) {
     companion object {
         private const val TAG = "RgbCameraManager"
@@ -58,7 +58,7 @@ class RgbCameraManager(
         INITIALIZING,
         READY,
         RECORDING,
-        ERROR
+        ERROR,
     }
 
     /**
@@ -69,7 +69,7 @@ class RgbCameraManager(
         val supportedQualities: List<Quality>,
         val hasFlash: Boolean = false,
         val isBackCamera: Boolean = true,
-        val maxZoomRatio: Float = 1.0f
+        val maxZoomRatio: Float = 1.0f,
     )
 
     /**
@@ -79,9 +79,9 @@ class RgbCameraManager(
         return try {
             Log.i(TAG, "Initializing RGB camera manager")
             _cameraState.value = CameraState.INITIALIZING
-            
+
             initializeCameraX()
-            
+
             _cameraState.value = CameraState.READY
             Log.i(TAG, "RGB camera manager initialized successfully")
             true
@@ -190,13 +190,13 @@ class RgbCameraManager(
                 CameraSelector.DEFAULT_FRONT_CAMERA -> "FRONT"
                 else -> "UNKNOWN"
             }
-            
+
             _cameraInfo.value = CameraInfo(
                 cameraId = cameraId,
                 supportedQualities = listOf(Quality.UHD, Quality.FHD, Quality.HD),
                 hasFlash = info.hasFlashUnit(),
                 isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA,
-                maxZoomRatio = info.zoomState.value?.maxZoomRatio ?: 1.0f
+                maxZoomRatio = info.zoomState.value?.maxZoomRatio ?: 1.0f,
             )
         }
     }
@@ -228,14 +228,14 @@ class RgbCameraManager(
      */
     fun cleanup() {
         Log.i(TAG, "Cleaning up RGB camera manager")
-        
+
         // Unbind camera
         cameraProvider?.unbindAll()
         cameraProvider = null
         camera = null
         imageCapture = null
         videoCapture = null
-        
+
         _cameraState.value = CameraState.UNINITIALIZED
         _cameraInfo.value = null
     }

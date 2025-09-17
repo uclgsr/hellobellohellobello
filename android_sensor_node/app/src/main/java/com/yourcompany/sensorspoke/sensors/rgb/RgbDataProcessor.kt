@@ -10,7 +10,7 @@ import java.io.File
 /**
  * RgbDataProcessor handles RGB camera data processing and formatting.
  * Extracted from RgbCameraRecorder to improve modularity and testability.
- * 
+ *
  * This utility class is responsible for:
  * - Processing captured frames and video timing data
  * - Generating preview images for UI
@@ -34,7 +34,7 @@ class RgbDataProcessor {
         val videoRelativeTimeMs: Int,
         val estimatedVideoFrame: Int,
         val syncQuality: Double,
-        val actualVideoOffsetMs: Int
+        val actualVideoOffsetMs: Int,
     )
 
     /**
@@ -53,7 +53,7 @@ class RgbDataProcessor {
         frameNumber: Int,
         imageFile: File,
         videoStartTime: Long,
-        actualVideoStartTime: Long
+        actualVideoStartTime: Long,
     ): FrameData {
         val fileSize = if (imageFile.exists()) imageFile.length() else 0
         val filename = imageFile.name
@@ -76,7 +76,7 @@ class RgbDataProcessor {
 
         // Calculate synchronization quality metric
         val syncQuality = calculateSyncQuality(timestampNs, baseTime)
-        
+
         // Calculate offset from actual video start
         val actualVideoOffsetMs = if (actualVideoStartTime > 0) {
             ((timestampNs - actualVideoStartTime) / 1_000_000).toInt()
@@ -93,7 +93,7 @@ class RgbDataProcessor {
             videoRelativeTimeMs = videoRelativeTimeMs,
             estimatedVideoFrame = estimatedVideoFrame,
             syncQuality = syncQuality,
-            actualVideoOffsetMs = actualVideoOffsetMs
+            actualVideoOffsetMs = actualVideoOffsetMs,
         )
     }
 
@@ -136,7 +136,7 @@ class RgbDataProcessor {
                     bitmap.recycle()
                 }
                 previewBitmap.recycle()
-                
+
                 true
             } else {
                 false
@@ -158,11 +158,11 @@ class RgbDataProcessor {
             // Calculate timing consistency - how well frame timing aligns with expected intervals
             val relativeTime = frameTimestamp - videoBaseTime
             val expectedFrameInterval = 33_333_333L // ~30 FPS in nanoseconds
-            
+
             // Calculate how close we are to expected frame timing
             val timingDeviation = relativeTime % expectedFrameInterval
             val deviationRatio = timingDeviation.toDouble() / expectedFrameInterval.toDouble()
-            
+
             // Convert to quality score (closer to 0 deviation = higher quality)
             1.0 - kotlin.math.min(deviationRatio, 0.5) * 2.0
         }
@@ -174,14 +174,14 @@ class RgbDataProcessor {
     fun logVideoEvent(csvFile: File?, event: String, timestamp: Long, details: String = "") {
         try {
             val videoEventsFile = File(csvFile?.parent, "video_events.csv")
-            
+
             if (!videoEventsFile.exists()) {
                 videoEventsFile.writeText("timestamp_ns,timestamp_ms,event,details\n")
             }
-            
+
             val timestampMs = timestamp / 1_000_000
             videoEventsFile.appendText("$timestamp,$timestampMs,$event,$details\n")
-            
+
             Log.d(TAG, "Video event logged: $event at $timestamp ($details)")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to log video event: ${e.message}", e)
@@ -195,7 +195,7 @@ class RgbDataProcessor {
         videoStartTime: Long,
         actualVideoStartTime: Long,
         frameTimestampOffset: Long,
-        frameCount: Int
+        frameCount: Int,
     ): Map<String, Any> {
         return mapOf(
             "videoStartTime" to videoStartTime,
@@ -204,8 +204,10 @@ class RgbDataProcessor {
             "totalFramesCaptured" to frameCount,
             "avgFrameInterval" to if (frameCount > 1) {
                 (System.nanoTime() - videoStartTime) / frameCount / 1_000_000 // ms
-            } else 0,
-            "syncQualityMetricAvailable" to (actualVideoStartTime > 0)
+            } else {
+                0
+            },
+            "syncQualityMetricAvailable" to (actualVideoStartTime > 0),
         )
     }
 }

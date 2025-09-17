@@ -32,7 +32,7 @@ import java.util.concurrent.Executors
 /**
  * Refactored RGB camera recorder focused on data logging with improved separation of concerns.
  * Camera management is now handled by RgbCameraManager, data processing by RgbDataProcessor.
- * 
+ *
  * This recorder is responsible for:
  * - Managing CSV file output for frame metadata
  * - Coordinating with RgbCameraManager for camera state
@@ -44,7 +44,7 @@ class RgbCameraRecorder(
     private val lifecycleOwner: LifecycleOwner,
     private val cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
     private val cameraManager: RgbCameraManager? = null,
-    private val deviceConnectionManager: DeviceConnectionManager? = null
+    private val deviceConnectionManager: DeviceConnectionManager? = null,
 ) : SensorRecorder {
     companion object {
         private const val TAG = "RgbCameraRecorder"
@@ -82,7 +82,7 @@ class RgbCameraRecorder(
         STARTING,
         RECORDING,
         STOPPING,
-        ERROR
+        ERROR,
     }
 
     override suspend fun start(sessionDir: File) {
@@ -103,8 +103,8 @@ class RgbCameraRecorder(
                     deviceType = "RGB Camera",
                     deviceName = "CameraX RGB",
                     connectionState = DeviceConnectionManager.DeviceState.CONNECTING,
-                    isRequired = true
-                )
+                    isRequired = true,
+                ),
             )
 
             // Ensure directories
@@ -137,8 +137,8 @@ class RgbCameraRecorder(
                     deviceType = "RGB Camera",
                     deviceName = "CameraX RGB",
                     connectionState = DeviceConnectionManager.DeviceState.CONNECTED,
-                    isRequired = true
-                )
+                    isRequired = true,
+                ),
             )
 
             Log.i(TAG, "RGB camera recording started successfully")
@@ -153,8 +153,8 @@ class RgbCameraRecorder(
                     deviceName = "CameraX RGB",
                     connectionState = DeviceConnectionManager.DeviceState.ERROR,
                     errorMessage = e.message,
-                    isRequired = true
-                )
+                    isRequired = true,
+                ),
             )
             throw e
         }
@@ -201,7 +201,7 @@ class RgbCameraRecorder(
             _recordingStatus.value = RecordingStatus.IDLE
             _frameRate.value = 0.0
 
-            Log.i(TAG, "RGB camera recording stopped, ${frameCount} frames captured")
+            Log.i(TAG, "RGB camera recording stopped, $frameCount frames captured")
         } catch (e: Exception) {
             Log.e(TAG, "Error during RGB camera recording stop: ${e.message}", e)
             _recordingStatus.value = RecordingStatus.ERROR
@@ -229,23 +229,29 @@ class RgbCameraRecorder(
                         frameTimestampOffset = actualVideoStartTime - videoStartTime
                         Log.i(TAG, "Video recording actually started at: $actualVideoStartTime")
                         Log.i(TAG, "Video start offset: ${frameTimestampOffset / 1_000_000}ms")
-                        
+
                         // Log the actual video start for post-processing synchronization
-                        dataProcessor.logVideoEvent(csvFile, "VIDEO_RECORDING_STARTED", actualVideoStartTime, 
-                                    "offset_ms:${frameTimestampOffset / 1_000_000}")
+                        dataProcessor.logVideoEvent(
+                            csvFile, "VIDEO_RECORDING_STARTED", actualVideoStartTime,
+                            "offset_ms:${frameTimestampOffset / 1_000_000}",
+                        )
                     }
                     is androidx.camera.video.VideoRecordEvent.Finalize -> {
                         val finalizeTime = System.nanoTime()
                         Log.i(TAG, "Video recording finalized: ${event.outputResults}")
-                        dataProcessor.logVideoEvent(csvFile, "VIDEO_RECORDING_FINALIZED", finalizeTime, 
-                                    "duration_ms:${(finalizeTime - actualVideoStartTime) / 1_000_000}")
+                        dataProcessor.logVideoEvent(
+                            csvFile, "VIDEO_RECORDING_FINALIZED", finalizeTime,
+                            "duration_ms:${(finalizeTime - actualVideoStartTime) / 1_000_000}",
+                        )
                     }
                     is androidx.camera.video.VideoRecordEvent.Status -> {
                         // Log periodic status for timing verification
                         if (event.recordingStats.numBytesRecorded > 0) {
                             val statusTime = System.nanoTime()
-                            dataProcessor.logVideoEvent(csvFile, "VIDEO_STATUS_UPDATE", statusTime,
-                                        "bytes:${event.recordingStats.numBytesRecorded}")
+                            dataProcessor.logVideoEvent(
+                                csvFile, "VIDEO_STATUS_UPDATE", statusTime,
+                                "bytes:${event.recordingStats.numBytesRecorded}",
+                            )
                         }
                     }
                 }
@@ -273,24 +279,28 @@ class RgbCameraRecorder(
     private fun startSyncMonitoring() {
         syncMonitorJob = scope.launch {
             Log.i(TAG, "Starting synchronization monitoring")
-            
+
             while (isActive) {
                 try {
                     delay(5000) // Monitor every 5 seconds
-                    
+
                     if (actualVideoStartTime > 0 && frameCount > 0) {
                         val currentTime = System.nanoTime()
                         val totalRecordingTime = (currentTime - actualVideoStartTime) / 1_000_000 // ms
                         val avgFrameRate = if (totalRecordingTime > 0) {
                             (frameCount * 1000.0) / totalRecordingTime
-                        } else 0.0
-                        
+                        } else {
+                            0.0
+                        }
+
                         // Update frame rate for UI
                         _frameRate.value = avgFrameRate
-                        
-                        dataProcessor.logVideoEvent(csvFile, "SYNC_MONITOR_UPDATE", currentTime,
-                                "frames:$frameCount,avg_fps:${"%.2f".format(avgFrameRate)},recording_time_ms:$totalRecordingTime")
-                        
+
+                        dataProcessor.logVideoEvent(
+                            csvFile, "SYNC_MONITOR_UPDATE", currentTime,
+                            "frames:$frameCount,avg_fps:${"%.2f".format(avgFrameRate)},recording_time_ms:$totalRecordingTime",
+                        )
+
                         Log.d(TAG, "Sync monitor - Frames: $frameCount, Avg FPS: ${"%.2f".format(avgFrameRate)}, Recording time: ${totalRecordingTime}ms")
                     }
                 } catch (e: Exception) {
@@ -325,8 +335,12 @@ class RgbCameraRecorder(
                     try {
                         // Create frame data using data processor
                         val frameData = dataProcessor.createFrameData(
-                            timestampNs, timestampMs, frameCount, outputFile,
-                            videoStartTime, actualVideoStartTime
+                            timestampNs,
+                            timestampMs,
+                            frameCount,
+                            outputFile,
+                            videoStartTime,
+                            actualVideoStartTime,
                         )
 
                         // Write to CSV using data processor
@@ -357,8 +371,11 @@ class RgbCameraRecorder(
             frameRate = _frameRate.value,
             recordingStatus = _recordingStatus.value,
             timingStatistics = dataProcessor.getTimingStatistics(
-                videoStartTime, actualVideoStartTime, frameTimestampOffset, frameCount
-            )
+                videoStartTime,
+                actualVideoStartTime,
+                frameTimestampOffset,
+                frameCount,
+            ),
         )
     }
 
@@ -370,6 +387,6 @@ class RgbCameraRecorder(
         val framesRecorded: Int,
         val frameRate: Double,
         val recordingStatus: RecordingStatus,
-        val timingStatistics: Map<String, Any>
+        val timingStatistics: Map<String, Any>,
     )
 }

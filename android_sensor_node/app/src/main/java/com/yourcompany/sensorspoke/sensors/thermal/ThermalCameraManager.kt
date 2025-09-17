@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * ThermalCameraManager handles thermal camera lifecycle management and configuration.
  * Separates thermal camera management concerns from data recording logic.
- * 
+ *
  * This class is responsible for:
  * - USB device discovery and permission management
  * - Thermal camera initialization and configuration
@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class ThermalCameraManager(
     private val context: Context,
-    private val permissionManager: PermissionManager? = null
+    private val permissionManager: PermissionManager? = null,
 ) {
     companion object {
         private const val TAG = "ThermalCameraManager"
@@ -55,7 +55,7 @@ class ThermalCameraManager(
         INITIALIZING,
         READY,
         RECORDING,
-        ERROR
+        ERROR,
     }
 
     /**
@@ -68,7 +68,7 @@ class ThermalCameraManager(
         val vendorId: Int = TOPDON_VENDOR_ID,
         val productId: Int = TC001_PRODUCT_ID_1,
         val maxFps: Int = MAX_FPS,
-        val currentFps: Int = DEFAULT_FPS
+        val currentFps: Int = DEFAULT_FPS,
     )
 
     /**
@@ -78,9 +78,9 @@ class ThermalCameraManager(
         return try {
             Log.i(TAG, "Initializing thermal camera manager")
             _cameraState.value = CameraState.INITIALIZING
-            
+
             initializeThermalCamera()
-            
+
             _cameraState.value = CameraState.READY
             Log.i(TAG, "Thermal camera manager initialized successfully")
             true
@@ -106,7 +106,7 @@ class ThermalCameraManager(
 
             if (topdonDevice != null) {
                 Log.i(TAG, "Topdon TC001 device found: ${topdonDevice.deviceName}")
-                
+
                 // Request USB permissions if needed
                 val hasPermission = checkUsbPermission(topdonDevice, usbManager)
                 if (hasPermission) {
@@ -133,7 +133,7 @@ class ThermalCameraManager(
         try {
             realTopdonIntegration = RealTopdonIntegration(context)
             val success = realTopdonIntegration!!.initialize()
-            
+
             if (success) {
                 Log.i(TAG, "Real Topdon TC001 integration initialized successfully")
                 updateCameraInfo(isReal = true)
@@ -154,7 +154,7 @@ class ThermalCameraManager(
      */
     private fun initializeSimulationIntegration() {
         topdonIntegration = TopdonThermalIntegration(context)
-        
+
         if (topdonIntegration!!.initialize() == TopdonResult.SUCCESS) {
             configureDevice()
             Log.i(TAG, "Simulation thermal integration initialized")
@@ -173,7 +173,7 @@ class ThermalCameraManager(
             deviceId = if (isReal) "TOPDON_TC001" else "THERMAL_SIM",
             deviceName = if (isReal) "Topdon TC001 Thermal Camera" else "Simulated Thermal Camera",
             isRealDevice = isReal,
-            currentFps = targetFps
+            currentFps = targetFps,
         )
     }
 
@@ -265,7 +265,7 @@ class ThermalCameraManager(
      */
     fun cleanup() {
         Log.i(TAG, "Cleaning up thermal camera manager")
-        
+
         // Clean up real integration
         realTopdonIntegration?.let {
             it.stopStreaming()
@@ -279,7 +279,7 @@ class ThermalCameraManager(
             it.cleanup()
             topdonIntegration = null
         }
-        
+
         _cameraState.value = CameraState.UNINITIALIZED
         _cameraInfo.value = null
         _frameRate.value = DEFAULT_FPS.toDouble()

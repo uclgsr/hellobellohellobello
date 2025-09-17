@@ -236,7 +236,12 @@ class PCOrchestrationClient(
             return createErrorResponse(ackId, "Invalid transfer parameters")
         }
 
+        return try {
             Log.i(TAG, "Starting file transfer for session $sessionId to $host:$port")
+
+            // Get session directory
+            val sessionDir = getSessionDirectory(sessionId)
+                ?: return createErrorResponse(ackId, "Session directory not found for session $sessionId")
 
             // Start file transfer in background
             scope.launch {
@@ -427,11 +432,11 @@ class PCOrchestrationClient(
     private suspend fun initiateFileTransfer(sessionId: String, host: String, port: Int, ackId: String): JSONObject {
         return try {
             Log.d(TAG, "Initiating file transfer for session $sessionId to $host:$port")
-            
+
             // In a full implementation, this would use FileTransferManager
             // For now, we simulate the transfer initiation
             val transferStarted = true // Simulate successful transfer start
-            
+
             if (transferStarted) {
                 createSuccessResponse(ackId, "File transfer initiated")
                     .put("transfer_session", sessionId)

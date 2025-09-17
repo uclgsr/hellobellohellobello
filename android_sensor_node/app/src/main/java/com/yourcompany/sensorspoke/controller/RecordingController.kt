@@ -157,9 +157,8 @@ class RecordingController(
         }
 
         _state.value = SessionOrchestrator.State.PREPARING
-        
-        try {
 
+        try {
             val prerequisites = validateRecordingPrerequisites()
             if (!meetsMinimumRequirements(prerequisites)) {
                 throw IllegalStateException("Prerequisites not met: ${getPrerequisiteErrors(prerequisites)}")
@@ -194,7 +193,7 @@ class RecordingController(
             for (entry in recorders) {
                 val sub = File(sessionDir, entry.name)
                 Log.d("RecordingController", "Starting ${entry.name} recorder")
-                
+
                 try {
                     entry.recorder.start(sub)
                     entry.state = RecorderState.RECORDING
@@ -204,11 +203,11 @@ class RecordingController(
                 } catch (e: Exception) {
                     val errorMsg = "Failed to start ${entry.name}: ${e.message}"
                     Log.e("RecordingController", errorMsg, e)
-                    
+
                     entry.state = RecorderState.ERROR
                     entry.lastError = e.message
                     failedSensors[entry.name] = e.message ?: "Unknown error"
-                    
+
                     // Check if this is a required sensor
                     if (entry.isRequired) {
                         // Required sensor failed - abort entire session
@@ -236,18 +235,20 @@ class RecordingController(
                 sessionId = id,
                 successfulSensors = successfulSensors,
                 failedSensors = failedSensors,
-                isPartialSuccess = failedSensors.isNotEmpty()
+                isPartialSuccess = failedSensors.isNotEmpty(),
             )
             _lastSessionResult.value = sessionResult
 
             if (failedSensors.isNotEmpty()) {
-                Log.w("RecordingController", "Session $id started with partial failures. " +
+                Log.w(
+                    "RecordingController",
+                    "Session $id started with partial failures. " +
                         "Successful: ${successfulSensors.joinToString()}, " +
-                        "Failed: ${failedSensors.keys.joinToString()}")
+                        "Failed: ${failedSensors.keys.joinToString()}",
+                )
             } else {
                 Log.i("RecordingController", "Session $id started successfully with all ${successfulSensors.size} recorders")
             }
-
         } catch (t: Throwable) {
             Log.e("RecordingController", "Failed to start session: ${t.message}", t)
             // Best-effort cleanup: stop any started recorders
@@ -271,7 +272,7 @@ class RecordingController(
             Log.w("RecordingController", "stopSession called but not in RECORDING state: ${_state.value}")
             return
         }
-        
+
         _state.value = SessionOrchestrator.State.STOPPING
 
         val sessionId = _currentSessionId.value
@@ -292,7 +293,7 @@ class RecordingController(
                 if (entry.state == RecorderState.RECORDING) {
                     entry.state = RecorderState.STOPPING
                     updateSensorStates()
-                    
+
                     val result = runCatching {
                         entry.recorder.stop()
                         entry.state = RecorderState.STOPPED
@@ -314,13 +315,13 @@ class RecordingController(
             // Update session metadata with completion info
             if (sessionDir != null && sessionId != null) {
                 updateSessionMetadata(
-                    sessionDir, 
-                    sessionId, 
-                    sessionEndTimestampMs, 
-                    sessionEndTimestampNs, 
-                    sessionDurationMs, 
+                    sessionDir,
+                    sessionId,
+                    sessionEndTimestampMs,
+                    sessionEndTimestampNs,
+                    sessionDurationMs,
                     stopResults,
-                    stopErrors
+                    stopErrors,
                 )
             }
 
@@ -328,19 +329,21 @@ class RecordingController(
             val failedStops = stopResults.filterValues { !it }.keys
 
             if (failedStops.isNotEmpty()) {
-                Log.w("RecordingController", "Session $sessionId stopped with some failures. " +
+                Log.w(
+                    "RecordingController",
+                    "Session $sessionId stopped with some failures. " +
                         "Successful stops: ${successfulStops.joinToString()}, " +
-                        "Failed stops: ${failedStops.joinToString()}")
+                        "Failed stops: ${failedStops.joinToString()}",
+                )
             } else {
                 Log.i("RecordingController", "Session $sessionId stopped successfully. Results: $stopResults")
             }
-
         } finally {
             // Always reset state regardless of stop success/failure
             _state.value = SessionOrchestrator.State.IDLE
             _currentSessionId.value = null
             sessionRootDir = null
-            
+
             // Reset all recorder states to IDLE
             for (entry in recorders) {
                 if (entry.state != RecorderState.ERROR) {
@@ -380,7 +383,7 @@ class RecordingController(
         for (entry in recorders) {
             if (entry.state == RecorderState.RECORDING || entry.state == RecorderState.STARTING) {
                 entry.state = RecorderState.STOPPING
-                runCatching { 
+                runCatching {
                     entry.recorder.stop()
                     entry.state = RecorderState.STOPPED
                 }.getOrElse {
@@ -410,7 +413,7 @@ class RecordingController(
             hasStoragePermission = checkStoragePermission(),
             hasBluetoothPermission = checkBluetoothPermission(),
             availableStorageBytes = availableStorage,
-            registeredSensors = recorders.map { it.name }
+            registeredSensors = recorders.map { it.name },
         )
     }
 
@@ -419,7 +422,7 @@ class RecordingController(
      */
     private fun meetsMinimumRequirements(prerequisites: SessionPrerequisites): Boolean {
         return prerequisites.availableStorageBytes >= prerequisites.minimumRequiredBytes &&
-                prerequisites.registeredSensors.isNotEmpty()
+            prerequisites.registeredSensors.isNotEmpty()
     }
 
     /**
@@ -427,7 +430,7 @@ class RecordingController(
      */
     private fun getPrerequisiteErrors(prerequisites: SessionPrerequisites): String {
         val errors = mutableListOf<String>()
-        
+
         if (!prerequisites.hasCameraPermission) {
             errors.add("Camera permission not granted")
         }
@@ -445,7 +448,7 @@ class RecordingController(
         if (prerequisites.registeredSensors.isEmpty()) {
             errors.add("No sensors registered")
         }
-        
+
         return errors.joinToString(", ")
     }
 
@@ -455,7 +458,7 @@ class RecordingController(
     private fun checkCameraPermission(): Boolean {
         val ctx = context ?: return true // Assume granted if no context
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            ctx.checkSelfPermission(android.Manifest.permission.CAMERA) == 
+            ctx.checkSelfPermission(android.Manifest.permission.CAMERA) ==
                 android.content.pm.PackageManager.PERMISSION_GRANTED
         } else {
             true
@@ -468,9 +471,9 @@ class RecordingController(
     private fun checkStoragePermission(): Boolean {
         val ctx = context ?: return true // Assume granted if no context
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            ctx.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == 
+            ctx.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
                 android.content.pm.PackageManager.PERMISSION_GRANTED ||
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q // Scoped storage on Q+
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q // Scoped storage on Q+
         } else {
             true
         }
@@ -483,20 +486,18 @@ class RecordingController(
         val ctx = context ?: return true // Assume granted if no context
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val hasBluetoothConnect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                ctx.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == 
+                ctx.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) ==
                     android.content.pm.PackageManager.PERMISSION_GRANTED
             } else {
                 true
             }
-            val hasBluetoothAdmin = ctx.checkSelfPermission(android.Manifest.permission.BLUETOOTH_ADMIN) == 
+            val hasBluetoothAdmin = ctx.checkSelfPermission(android.Manifest.permission.BLUETOOTH_ADMIN) ==
                 android.content.pm.PackageManager.PERMISSION_GRANTED
             hasBluetoothConnect && hasBluetoothAdmin
         } else {
             true
         }
     }
-
-
 
     /**
      * Create session metadata file with synchronized timing information
@@ -511,11 +512,11 @@ class RecordingController(
                 val recordersArray = JSONArray()
                 val expectedFilesArray = JSONArray()
                 val storageInfoObject = JSONObject()
-                
+
                 // Add detailed recorder info and expected file structure
                 recorders.forEach { entry ->
                     recordersArray.put(entry.name)
-                    
+
                     // Document expected file structure for each recorder
                     when (entry.name.lowercase()) {
                         "rgb" -> {
@@ -539,13 +540,13 @@ class RecordingController(
                         }
                     }
                 }
-                
+
                 // Add storage information for monitoring
                 val sessionsRoot = ensureSessionsRoot()
                 val statsFs = android.os.StatFs(sessionsRoot.path)
                 val availableBytes = statsFs.availableBytes
                 val totalBytes = statsFs.totalBytes
-                
+
                 storageInfoObject.apply {
                     put("available_bytes", availableBytes)
                     put("total_bytes", totalBytes)
@@ -572,12 +573,15 @@ class RecordingController(
                     .put("synchronization_reference", "System time: System.currentTimeMillis() + System.nanoTime()")
                     .put("timezone", java.util.TimeZone.getDefault().id)
                     .put("created_at", dateFormatter.format(java.util.Date(sessionStartTimestampMs)))
-                    .put("file_structure_info", JSONObject().apply {
-                        put("description", "Session data organized by sensor modality")
-                        put("timestamp_format", "nanosecond precision for synchronization")
-                        put("csv_format", "All CSV files include timestamp_ns and timestamp_ms columns")
-                        put("sync_notes", "All timestamps use common system reference for cross-sensor alignment")
-                    })
+                    .put(
+                        "file_structure_info",
+                        JSONObject().apply {
+                            put("description", "Session data organized by sensor modality")
+                            put("timestamp_format", "nanosecond precision for synchronization")
+                            put("csv_format", "All CSV files include timestamp_ns and timestamp_ms columns")
+                            put("sync_notes", "All timestamps use common system reference for cross-sensor alignment")
+                        },
+                    )
                     .toString(2) // Pretty print with 2-space indent
             } catch (jsonError: Exception) {
                 Log.e("RecordingController", "Failed to create session metadata JSON", jsonError)
@@ -715,18 +719,18 @@ class RecordingController(
      */
     suspend fun performCrashRecovery() {
         Log.i("RecordingController", "Performing crash recovery check")
-        
+
         try {
             val sessionsRoot = ensureSessionsRoot()
             val sessionDirs = sessionsRoot.listFiles { file -> file.isDirectory } ?: return
-            
+
             for (sessionDir in sessionDirs) {
                 val metadataFile = File(sessionDir, "session_metadata.json")
                 if (metadataFile.exists()) {
                     val metadata = metadataFile.readText(Charsets.UTF_8)
                     val json = JSONObject(metadata)
                     val status = json.optString("session_status", "")
-                    
+
                     if (status == "STARTED") {
                         // Found an unfinished session - mark it as crashed
                         Log.w("RecordingController", "Found crashed session: ${sessionDir.name}")
@@ -749,10 +753,10 @@ class RecordingController(
                 .put("session_status", "CRASHED")
                 .put("crash_detected_at", crashTimestamp)
                 .put("recovery_note", "Session was interrupted and recovered on app restart")
-            
+
             val metadataFile = File(sessionDir, "session_metadata.json")
             metadataFile.writeText(updatedMetadata.toString(2), Charsets.UTF_8)
-            
+
             Log.i("RecordingController", "Marked session ${sessionDir.name} as crashed")
         } catch (e: Exception) {
             Log.e("RecordingController", "Failed to mark session as crashed: ${e.message}", e)
@@ -766,11 +770,11 @@ class RecordingController(
         val entry = recorders.find { it.name == sensorName }
         if (entry != null && entry.state == RecorderState.RECORDING) {
             Log.w("RecordingController", "Sensor $sensorName disconnected during recording: $error")
-            
+
             entry.state = RecorderState.ERROR
             entry.lastError = error
             updateSensorStates()
-            
+
             // Attempt to stop the failed sensor gracefully
             try {
                 entry.recorder.stop()
@@ -778,7 +782,7 @@ class RecordingController(
             } catch (e: Exception) {
                 Log.e("RecordingController", "Failed to stop disconnected sensor $sensorName: ${e.message}", e)
             }
-            
+
             // Check if this was a required sensor
             if (entry.isRequired) {
                 Log.e("RecordingController", "Required sensor $sensorName disconnected - stopping entire session")
@@ -797,7 +801,7 @@ class RecordingController(
         val entry = recorders.find { it.name == sensorName }
         if (entry != null && entry.state == RecorderState.ERROR) {
             Log.i("RecordingController", "Attempting to reconnect sensor: $sensorName")
-            
+
             try {
                 // If we're in a recording session, try to restart the sensor
                 if (_state.value == SessionOrchestrator.State.RECORDING && sessionRootDir != null) {
@@ -806,7 +810,7 @@ class RecordingController(
                     entry.state = RecorderState.RECORDING
                     entry.lastError = null
                     updateSensorStates()
-                    
+
                     Log.i("RecordingController", "Successfully reconnected sensor: $sensorName")
                     return true
                 }

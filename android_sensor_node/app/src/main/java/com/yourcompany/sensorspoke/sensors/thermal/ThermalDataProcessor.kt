@@ -8,7 +8,7 @@ import java.io.FileOutputStream
 /**
  * ThermalDataProcessor handles thermal camera data processing and formatting.
  * Extracted from ThermalCameraRecorder to improve modularity and testability.
- * 
+ *
  * This utility class is responsible for:
  * - Processing thermal frame data and temperature calculations
  * - Saving thermal images to files
@@ -31,7 +31,7 @@ class ThermalDataProcessor {
         val minTemperature: Float,
         val maxTemperature: Float,
         val averageTemperature: Float,
-        val imageFilename: String
+        val imageFilename: String,
     )
 
     /**
@@ -41,7 +41,7 @@ class ThermalDataProcessor {
         val frameCount: Int,
         val targetFps: Int,
         val averageProcessingTimeMs: Double,
-        val actualFps: Double
+        val actualFps: Double,
     )
 
     /**
@@ -56,10 +56,10 @@ class ThermalDataProcessor {
      */
     fun createThermalFrameData(
         thermalFrame: RealTopdonIntegration.ThermalFrame,
-        frameNumber: Int
+        frameNumber: Int,
     ): ThermalFrameData {
         val imageFilename = "thermal_real_${thermalFrame.timestamp}.png"
-        
+
         return ThermalFrameData(
             timestampNs = thermalFrame.timestamp,
             timestampMs = System.currentTimeMillis(),
@@ -68,7 +68,7 @@ class ThermalDataProcessor {
             minTemperature = thermalFrame.minTemp,
             maxTemperature = thermalFrame.maxTemp,
             averageTemperature = thermalFrame.avgTemp,
-            imageFilename = imageFilename
+            imageFilename = imageFilename,
         )
     }
 
@@ -79,7 +79,7 @@ class ThermalDataProcessor {
         timestampNs: Long,
         timestampMs: Long,
         frameNumber: Int,
-        baseTemp: Float
+        baseTemp: Float,
     ): ThermalFrameData {
         val minTemp = baseTemp - 5.0f
         val maxTemp = baseTemp + 15.0f
@@ -94,7 +94,7 @@ class ThermalDataProcessor {
             minTemperature = minTemp,
             maxTemperature = maxTemp,
             averageTemperature = avgTemp,
-            imageFilename = imageFilename
+            imageFilename = imageFilename,
         )
     }
 
@@ -105,10 +105,10 @@ class ThermalDataProcessor {
         thermalData: ThermalFrameData,
         timestampNs: Long,
         timestampMs: Long,
-        frameNumber: Int
+        frameNumber: Int,
     ): ThermalFrameData {
         val imageFilename = "thermal_$timestampNs.png"
-        
+
         return ThermalFrameData(
             timestampNs = timestampNs,
             timestampMs = timestampMs,
@@ -117,7 +117,7 @@ class ThermalDataProcessor {
             minTemperature = thermalData.minTemperature,
             maxTemperature = thermalData.maxTemperature,
             averageTemperature = thermalData.averageTemperature,
-            imageFilename = imageFilename
+            imageFilename = imageFilename,
         )
     }
 
@@ -194,11 +194,13 @@ class ThermalDataProcessor {
         frameCount: Int,
         targetFps: Int,
         frameProcessingTimeSum: Long,
-        frameTimeWindow: List<Long>
+        frameTimeWindow: List<Long>,
     ): ThermalPerformanceMetrics {
         val avgProcessingTime = if (frameCount > 0) {
             frameProcessingTimeSum / frameCount.toDouble() / 1_000_000.0
-        } else 0.0
+        } else {
+            0.0
+        }
 
         val actualFps = if (frameTimeWindow.size >= 2) {
             // Calculate FPS over the entire frame window
@@ -212,7 +214,7 @@ class ThermalDataProcessor {
             frameCount = frameCount,
             targetFps = targetFps,
             averageProcessingTimeMs = avgProcessingTime,
-            actualFps = actualFps
+            actualFps = actualFps,
         )
     }
 
@@ -241,18 +243,22 @@ class ThermalDataProcessor {
     fun getThermalStatistics(
         frameCount: Int,
         totalProcessingTime: Long,
-        frameTimeWindow: List<Long>
+        frameTimeWindow: List<Long>,
     ): Map<String, Any> {
         return mapOf(
             "totalFramesProcessed" to frameCount,
             "totalProcessingTimeMs" to totalProcessingTime / 1_000_000.0,
             "averageProcessingTimeMs" to if (frameCount > 0) {
                 totalProcessingTime / frameCount.toDouble() / 1_000_000.0
-            } else 0.0,
+            } else {
+                0.0
+            },
             "currentFps" to if (frameTimeWindow.size >= 2) {
                 val timeSpan = (frameTimeWindow.last() - frameTimeWindow.first()) / 1_000_000_000.0
                 (frameTimeWindow.size - 1) / timeSpan
-            } else 0.0
+            } else {
+                0.0
+            },
         )
     }
 }

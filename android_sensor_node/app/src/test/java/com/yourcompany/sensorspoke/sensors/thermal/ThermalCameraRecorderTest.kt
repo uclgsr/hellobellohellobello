@@ -17,19 +17,19 @@ class ThermalCameraRecorderTest {
                 val mockContext = mockk<Context>(relaxed = true)
                 val recorder = ThermalCameraRecorder(mockContext)
                 recorder.start(tmp)
-                
+
                 // Check for the correct CSV file name that the implementation creates
                 val csv = File(tmp, "thermal_data.csv")
                 assertThat(csv.exists()).isTrue()
-                
+
                 val firstLine = csv.bufferedReader().use { it.readLine() }
                 assertThat(firstLine).isNotNull()
-                
+
                 // Check for the actual header format from the implementation
                 assertThat(firstLine!!.startsWith("timestamp_ns,timestamp_ms,frame_number")).isTrue()
                 assertThat(firstLine.contains("temperature_celsius")).isTrue()
                 assertThat(firstLine.contains("filename")).isTrue()
-                
+
                 recorder.stop()
             } finally {
                 tmp.deleteRecursively()

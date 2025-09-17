@@ -22,7 +22,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.FileWriter
 import kotlin.math.sqrt
-import com.yourcompany.sensorspoke.sensors.thermal.RealTopdonIntegration
 
 /**
  * Thermal camera recorder with Topdon TC001 integration and simulation fallback.
@@ -37,15 +36,18 @@ class ThermalCameraRecorder(
         private const val TOPDON_VENDOR_ID = 0x4d54 // Topdon TC001 vendor ID
         private const val TC001_PRODUCT_ID_1 = 0x0100 // TC001 product ID variant 1
         private const val TC001_PRODUCT_ID_2 = 0x0200 // TC001 product ID variant 2
+        private const val MAX_FPS = 25 // Maximum thermal camera frame rate
     }
 
     private var csvWriter: BufferedWriter? = null
     private var csvFile: File? = null
     private var thermalImagesDir: File? = null
     private var recordingJob: Job? = null
+    private var initializationJob: Job? = null
     private var topdonIntegration: TopdonThermalIntegration? = null
     private var realTopdonIntegration: RealTopdonIntegration? = null
     private var frameCount = 0
+    private var targetFps = 10 // Default 10 FPS
 
     // Reusable coroutine scope for thermal recording operations
     private val thermalScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -157,7 +159,7 @@ class ThermalCameraRecorder(
         initializationJob = CoroutineScope(Dispatchers.IO).launch {
             try {
                 realTopdonIntegration = RealTopdonIntegration(context)
-                
+
                 val success = realTopdonIntegration!!.initialize()
                 if (success) {
                     Log.i(TAG, "Real Topdon TC001 integration initialized successfully")
@@ -188,7 +190,7 @@ class ThermalCameraRecorder(
                     handleRealThermalFrame(thermalFrame)
                 }
             }
-            
+
             if (success) {
                 Log.i(TAG, "Real thermal streaming started successfully")
             } else {
@@ -199,7 +201,7 @@ class ThermalCameraRecorder(
 
     private fun initializeStubTopdonIntegration() {
         topdonIntegration = TopdonThermalIntegration(context)
-        
+
         if (topdonIntegration!!.initialize() == TopdonResult.SUCCESS) {
             configureTopdonDevice()
             Log.i(TAG, "Stub Topdon integration initialized for simulation mode")
@@ -225,14 +227,14 @@ class ThermalCameraRecorder(
         return ThermalPerformanceMetrics(
             frameCount = frameCount,
             targetFps = targetFps,
-            averageProcessingTimeMs = avgProcessingTime
+            averageProcessingTimeMs = avgProcessingTime,
         )
     }
 
     data class ThermalPerformanceMetrics(
         val frameCount: Int,
         val targetFps: Int,
-        val averageProcessingTimeMs: Double
+        val averageProcessingTimeMs: Double,
     )
 
     private fun isTopdonTC001Device(device: UsbDevice): Boolean {
@@ -261,16 +263,8 @@ class ThermalCameraRecorder(
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during thermal recording: ${e.message}", e)
                     delay(1000) // Wait longer on error
-
                 }
-                Log.i(TAG, "Thermal performance: Frame $frameCount, Avg processing: ${"%.2f".format(avgProcessingTime)}ms, Actual FPS: ${"%.1f".format(actualFps)}")
-                frameProcessingTimeSum = 0L
             }
-            lastFrameTime = frameEndTime
-
-            Log.d(TAG, "Captured real thermal frame: $frameCount, center: ${"%.2f".format(centerTemp)}°C, range: ${"%.2f".format(minTemp)}-${"%.2f".format(maxTemp)}°C")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error handling real thermal frame: ${e.message}", e)
         }
     }
 
@@ -414,7 +408,7 @@ class ThermalCameraRecorder(
                 topdonIntegration?.disconnect()
                 topdonIntegration?.cleanup()
                 topdonIntegration = null
-                
+
                 // Cancel the thermal scope to clean up all coroutines
                 thermalScope.cancel()
 

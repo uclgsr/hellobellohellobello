@@ -188,7 +188,7 @@ class FileManagerFragment : Fragment() {
             }.time
 
             val oldSessions = sessionList.filter { it.dateTime.before(cutoffDate) }
-            
+
             // Option 2: Size-based cleanup if storage is low
             val context = requireContext()
             val sessionsDir = File(context.getExternalFilesDir(null), "sessions")
@@ -196,31 +196,33 @@ class FileManagerFragment : Fragment() {
             val availableBytes = statsFs.availableBytes
             val totalBytes = statsFs.totalBytes
             val usagePercent = ((totalBytes - availableBytes).toFloat() / totalBytes * 100f).toInt()
-            
+
             val shouldCleanupBySize = usagePercent > 80 // If storage > 80% full
             val sizeMB = sessionList.sumOf { it.sizeBytes } / (1024 * 1024)
-            
-            android.util.Log.i("FileManager", "Cleanup analysis - Storage: ${usagePercent}% used, Sessions: ${sessionList.size} (${sizeMB}MB), Old sessions: ${oldSessions.size}")
+
+            android.util.Log.i("FileManager", "Cleanup analysis - Storage: $usagePercent% used, Sessions: ${sessionList.size} (${sizeMB}MB), Old sessions: ${oldSessions.size}")
 
             if (oldSessions.isEmpty() && !shouldCleanupBySize) {
-                Toast.makeText(requireContext(), 
-                    "No cleanup needed. Sessions: ${sessionList.size}, Storage: ${usagePercent}% used", 
-                    Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    requireContext(),
+                    "No cleanup needed. Sessions: ${sessionList.size}, Storage: $usagePercent% used",
+                    Toast.LENGTH_LONG,
+                ).show()
                 return
             }
 
             val sessionsToDelete = mutableListOf<SessionInfo>()
-            
+
             // Add old sessions
             sessionsToDelete.addAll(oldSessions)
-            
+
             // If storage is still critical, add more sessions starting with largest/oldest
             if (shouldCleanupBySize && sessionsToDelete.size < sessionList.size) {
                 val remainingSessions = sessionList.filter { !sessionsToDelete.contains(it) }
                 val sortedByAgeAndSize = remainingSessions.sortedWith(
-                    compareBy<SessionInfo> { it.dateTime }.thenByDescending { it.sizeBytes }
+                    compareBy<SessionInfo> { it.dateTime }.thenByDescending { it.sizeBytes },
                 )
-                
+
                 // Add more sessions until we have reasonable cleanup target
                 val maxAdditionalSessions = (sessionList.size * 0.3).toInt() // Clean up to 30% more if needed
                 sessionsToDelete.addAll(sortedByAgeAndSize.take(maxAdditionalSessions))
@@ -230,15 +232,15 @@ class FileManagerFragment : Fragment() {
                 Toast.makeText(requireContext(), "No sessions selected for cleanup", Toast.LENGTH_SHORT).show()
                 return
             }
-            
+
             val totalSizeToDeleteMB = sessionsToDelete.sumOf { it.sizeBytes } / (1024 * 1024)
 
             // Show confirmation dialog with detailed info
             val confirmMessage = buildString {
                 append("Cleanup ${sessionsToDelete.size} sessions?\n\n")
-                append("• Age-based: ${oldSessions.size} sessions older than ${defaultCleanupDays} days\n")
+                append("• Age-based: ${oldSessions.size} sessions older than $defaultCleanupDays days\n")
                 if (shouldCleanupBySize) {
-                    append("• Storage-based: Additional sessions (storage ${usagePercent}% full)\n")
+                    append("• Storage-based: Additional sessions (storage $usagePercent% full)\n")
                 }
                 append("• Total space to free: ${totalSizeToDeleteMB}MB\n")
                 append("• Remaining sessions: ${sessionList.size - sessionsToDelete.size}")
@@ -252,13 +254,12 @@ class FileManagerFragment : Fragment() {
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
-                
         } catch (e: Exception) {
             android.util.Log.e("FileManager", "Error in cleanup analysis: ${e.message}", e)
             Toast.makeText(requireContext(), "Error analyzing sessions for cleanup: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
-    
+
     private fun performCleanup(sessionsToDelete: List<SessionInfo>) {
         try {
             var deletedCount = 0
@@ -292,10 +293,9 @@ class FileManagerFragment : Fragment() {
             }
 
             Toast.makeText(requireContext(), resultMessage, Toast.LENGTH_LONG).show()
-            
+
             // Refresh the session list
             loadSessions()
-            
         } catch (e: Exception) {
             android.util.Log.e("FileManager", "Error during cleanup: ${e.message}", e)
             Toast.makeText(requireContext(), "Cleanup failed: ${e.message}", Toast.LENGTH_LONG).show()

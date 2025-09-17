@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * ShimmerManager handles device lifecycle management and connection state.
  * Separates device management concerns from data recording logic.
- * 
+ *
  * This class is responsible for:
  * - Device discovery and connection management
  * - Connection state monitoring
@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * - Error handling and recovery
  */
 class ShimmerManager(
-    private val context: Context?
+    private val context: Context?,
 ) {
     companion object {
         private const val TAG = "ShimmerManager"
@@ -43,7 +43,7 @@ class ShimmerManager(
         SCANNING,
         CONNECTING,
         CONNECTED,
-        ERROR
+        ERROR,
     }
 
     /**
@@ -54,7 +54,7 @@ class ShimmerManager(
         val name: String,
         val batteryLevel: Int = -1,
         val firmwareVersion: String = "unknown",
-        val isSimulated: Boolean = false
+        val isSimulated: Boolean = false,
     )
 
     /**
@@ -63,7 +63,7 @@ class ShimmerManager(
     fun initialize(): Boolean {
         return try {
             Log.i(TAG, "Initializing ShimmerManager")
-            
+
             // In a real implementation, this would initialize the Shimmer SDK
             // For now, we'll set up simulation mode
             _connectionState.value = ConnectionState.DISCONNECTED
@@ -72,9 +72,9 @@ class ShimmerManager(
                 name = "Simulated Shimmer",
                 batteryLevel = 85,
                 firmwareVersion = "Sim_1.0",
-                isSimulated = true
+                isSimulated = true,
             )
-            
+
             isInitialized = true
             Log.i(TAG, "ShimmerManager initialized successfully")
             true
@@ -96,11 +96,11 @@ class ShimmerManager(
 
         Log.i(TAG, "Starting device scan")
         _connectionState.value = ConnectionState.SCANNING
-        
+
         // In a real implementation, this would start BLE scanning
         // For simulation, we'll immediately "find" our simulated device
         _connectionState.value = ConnectionState.DISCONNECTED
-        
+
         return true
     }
 
@@ -115,11 +115,11 @@ class ShimmerManager(
 
         Log.i(TAG, "Connecting to device: $deviceId")
         _connectionState.value = ConnectionState.CONNECTING
-        
+
         // In a real implementation, this would establish BLE connection
         // For simulation, we'll immediately connect
         _connectionState.value = ConnectionState.CONNECTED
-        
+
         return true
     }
 
@@ -142,11 +142,11 @@ class ShimmerManager(
         }
 
         Log.i(TAG, "Configuring device with sampling rate: ${samplingRate}Hz")
-        
+
         // In a real implementation, this would send configuration commands
         // For simulation, we'll just update our data rate
         _dataRate.value = samplingRate
-        
+
         return true
     }
 

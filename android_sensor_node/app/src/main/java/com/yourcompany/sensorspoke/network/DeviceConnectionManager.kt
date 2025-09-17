@@ -10,16 +10,16 @@ import kotlinx.coroutines.flow.combine
 /**
  * DeviceConnectionManager provides unified device status management across all sensor types.
  * This addresses the separation of concerns requirement by centralizing device state management.
- * 
+ *
  * This manager coordinates the connection status of:
  * - Shimmer GSR sensors
- * - RGB cameras  
+ * - RGB cameras
  * - Thermal cameras
  * - Audio devices
  * - Network connections to PC hub
  */
 class DeviceConnectionManager(
-    private val context: Context?
+    private val context: Context?,
 ) {
     companion object {
         private const val TAG = "DeviceConnectionManager"
@@ -57,7 +57,7 @@ class DeviceConnectionManager(
         CONNECTING,
         CONNECTED,
         ERROR,
-        NOT_AVAILABLE
+        NOT_AVAILABLE,
     }
 
     /**
@@ -67,7 +67,7 @@ class DeviceConnectionManager(
         NOT_READY,
         PARTIALLY_READY,
         READY,
-        ERROR
+        ERROR,
     }
 
     /**
@@ -81,7 +81,7 @@ class DeviceConnectionManager(
         val errorMessage: String? = null,
         val batteryLevel: Int? = null,
         val dataRate: Double? = null,
-        val isRequired: Boolean = true
+        val isRequired: Boolean = true,
     )
 
     init {
@@ -91,7 +91,7 @@ class DeviceConnectionManager(
             rgbCameraState,
             thermalCameraState,
             audioDeviceState,
-            networkState
+            networkState,
         ) { shimmer, rgb, thermal, audio, network ->
             calculateOverallState(shimmer, rgb, thermal, audio, network)
         }.also { flow ->
@@ -167,10 +167,10 @@ class DeviceConnectionManager(
         rgb: DeviceState,
         thermal: DeviceState,
         audio: DeviceState,
-        network: DeviceState
+        network: DeviceState,
     ): OverallSystemState {
         val states = listOf(shimmer, rgb, thermal, audio, network)
-        
+
         return when {
             states.any { it == DeviceState.ERROR } -> OverallSystemState.ERROR
             states.all { it == DeviceState.CONNECTED } -> OverallSystemState.READY
@@ -188,9 +188,9 @@ class DeviceConnectionManager(
             _rgbCameraState.value,
             _thermalCameraState.value,
             _audioDeviceState.value,
-            _networkState.value
+            _networkState.value,
         )
-        
+
         if (_overallState.value != newState) {
             Log.i(TAG, "Overall system state changed: ${_overallState.value} -> $newState")
             _overallState.value = newState
@@ -206,7 +206,7 @@ class DeviceConnectionManager(
             _rgbCameraState.value,
             _thermalCameraState.value,
             _audioDeviceState.value,
-            _networkState.value
+            _networkState.value,
         ).count { it == DeviceState.CONNECTED }
     }
 
@@ -222,7 +222,7 @@ class DeviceConnectionManager(
      */
     fun isReadyForRecording(): Boolean {
         return _overallState.value == OverallSystemState.READY ||
-               _overallState.value == OverallSystemState.PARTIALLY_READY
+            _overallState.value == OverallSystemState.PARTIALLY_READY
     }
 
     /**
@@ -234,7 +234,7 @@ class DeviceConnectionManager(
             "rgb_camera" to _rgbCameraState.value,
             "thermal_camera" to _thermalCameraState.value,
             "audio_device" to _audioDeviceState.value,
-            "network" to _networkState.value
+            "network" to _networkState.value,
         )
     }
 
