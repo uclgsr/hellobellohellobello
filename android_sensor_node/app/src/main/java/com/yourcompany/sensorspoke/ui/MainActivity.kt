@@ -193,10 +193,47 @@ class MainActivity : AppCompatActivity() {
             requestAllPermissions()
         }
 
-        // Initialize sensor status indicators
-        updateSensorStatus()
+        // Initialize sensor status indicators with realistic initial states
+        initializeSensorStatusIndicators()
 
         updateStatusText("Ready to connect")
+    }
+
+    /**
+     * Initialize sensor status indicators with default states
+     */
+    private fun initializeSensorStatusIndicators() {
+        // Initialize with default sensor names for display
+        rgbSensorStatus?.updateStatus("RGB", SensorStatusIndicator.SensorStatus(
+            name = "RGB Camera",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Offline"
+        ))
+        
+        thermalSensorStatus?.updateStatus("Thermal", SensorStatusIndicator.SensorStatus(
+            name = "Thermal Camera",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Offline"
+        ))
+        
+        gsrSensorStatus?.updateStatus("GSR", SensorStatusIndicator.SensorStatus(
+            name = "GSR Sensor",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Disconnected"
+        ))
+        
+        pcSensorStatus?.updateStatus("PC", SensorStatusIndicator.SensorStatus(
+            name = "PC Link",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Not Connected"
+        ))
+        
+        // Then update with ViewModel data
+        updateSensorStatus()
     }
 
     /**
