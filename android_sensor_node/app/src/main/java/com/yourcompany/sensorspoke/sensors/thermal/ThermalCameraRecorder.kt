@@ -10,6 +10,8 @@ import com.yourcompany.sensorspoke.sensors.SensorRecorder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -40,16 +42,19 @@ class ThermalCameraRecorder(
     private var recordingJob: Job? = null
     private var topdonIntegration: TopdonThermalIntegration? = null
     private var frameCount = 0
+    
+    // Reusable coroutine scope for thermal recording operations
+    private val thermalScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    override suspend fun start(sessionDirectory: File) {
-        Log.i(TAG, "Starting thermal camera recording in session: ${sessionDirectory.absolutePath}")
+    override suspend fun start(sessionDir: File) {
+        Log.i(TAG, "Starting thermal camera recording in session: ${sessionDir.absolutePath}")
 
         // Check for USB permissions and Topdon device
         if (!hasUsbPermissionForTopdonDevice()) {
             Log.w(TAG, "USB permission not granted for Topdon TC001 - starting simulation mode")
         }
 
-        initialize(sessionDirectory)
+        initialize(sessionDir)
         startRecording()
     }
 
@@ -59,13 +64,13 @@ class ThermalCameraRecorder(
         cleanup()
     }
 
-    private suspend fun initialize(sessionDirectory: File): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun initialize(sessionDir: File): Boolean = withContext(Dispatchers.IO) {
         try {
             // Create directories
-            thermalImagesDir = File(sessionDirectory, "thermal_images").apply { mkdirs() }
+            thermalImagesDir = File(sessionDir, "thermal_images").apply { mkdirs() }
 
             // Create CSV file for thermal data logging
-            csvFile = File(sessionDirectory, "thermal_data.csv")
+            csvFile = File(sessionDir, "thermal_data.csv")
             csvWriter = BufferedWriter(FileWriter(csvFile!!))
 
             // Write enhanced CSV header with additional metadata
@@ -137,7 +142,7 @@ class ThermalCameraRecorder(
     }
 
     private suspend fun startRecording() {
-        recordingJob = CoroutineScope(Dispatchers.IO).launch {
+        recordingJob = thermalScope.launch {
             Log.i(TAG, "Starting thermal recording loop")
 
             while (isActive) {
@@ -286,6 +291,9 @@ class ThermalCameraRecorder(
                 topdonIntegration?.disconnect()
                 topdonIntegration?.cleanup()
                 topdonIntegration = null
+                
+                // Cancel the thermal scope to clean up all coroutines
+                thermalScope.cancel()
 
                 Log.i(TAG, "Thermal recording cleanup completed")
             } catch (e: Exception) {
@@ -515,3 +523,4 @@ class TopdonThermalIntegration(private val context: Context) {
         Log.d(TAG, "Cleanup completed")
     }
 }
+
