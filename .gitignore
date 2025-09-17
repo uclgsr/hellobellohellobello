@@ -76,3 +76,6 @@ pc_controller_data/
 **/runtime-logs/
 blocked.jsonl
 blocked.md
+!/.github/workflows/
+!/.github/workflows/
+!/.github/actions/
