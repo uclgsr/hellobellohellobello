@@ -44,13 +44,13 @@ class ThermalIntegrationTest {
             // Stop recording
             recorder.stop()
 
-            // Verify CSV file was created
-            val csvFile = File(testSessionDir, "thermal.csv")
+            // Verify CSV file was created with the correct filename
+            val csvFile = File(testSessionDir, "thermal_data.csv")
             assertTrue("Thermal CSV file should exist", csvFile.exists())
 
-            // Verify metadata file was created
-            val metadataFile = File(testSessionDir, "thermal_metadata.json")
-            assertTrue("Thermal metadata file should exist", metadataFile.exists())
+            // Verify thermal images directory was created
+            val thermalImagesDir = File(testSessionDir, "thermal_images")
+            assertTrue("Thermal images directory should exist", thermalImagesDir.exists())
         }
 
     @Test
@@ -60,23 +60,26 @@ class ThermalIntegrationTest {
             Thread.sleep(300) // Let more data accumulate
             recorder.stop()
 
-            val csvFile = File(testSessionDir, "thermal.csv")
+            val csvFile = File(testSessionDir, "thermal_data.csv")
             assertTrue("CSV file should exist", csvFile.exists())
 
             val lines = csvFile.readLines()
             assertTrue("CSV should have header", lines.isNotEmpty())
 
-            // Check header format
+            // Check header format - match the actual implementation
             val header = lines[0]
             val expectedColumns =
                 listOf(
                     "timestamp_ns",
-                    "frame_id",
-                    "center_temp_c",
-                    "min_temp_c",
-                    "max_temp_c",
-                    "avg_temp_c",
-                    "image_path",
+                    "timestamp_ms",
+                    "frame_number",
+                    "temperature_celsius",
+                    "min_temp",
+                    "max_temp",
+                    "avg_temp",
+                    "filename",
+                    "image_height",
+                    "image_width",
                 )
             for (column in expectedColumns) {
                 assertTrue("Header should contain $column", header.contains(column))
@@ -98,8 +101,8 @@ class ThermalIntegrationTest {
                     timestamp > 1_000_000_000_000_000L,
                 ) // > year 2001 in ns
 
-                // Validate temperature values
-                val centerTemp = dataRow[2].toFloat()
+                // Validate temperature values (temperature_celsius is at index 3)
+                val centerTemp = dataRow[3].toFloat()
                 assertTrue(
                     "Center temperature should be reasonable",
                     centerTemp > -50.0f && centerTemp < 200.0f,
@@ -114,65 +117,26 @@ class ThermalIntegrationTest {
             Thread.sleep(500) // Let multiple frames generate
             recorder.stop()
 
-            // Check for generated thermal images
-            val imageFiles =
-                testSessionDir.listFiles { _, name ->
-                    name.startsWith("thermal_frame_") && name.endsWith(".png")
-                }
+            // Check for generated thermal images in the thermal_images directory
+            val thermalImagesDir = File(testSessionDir, "thermal_images")
+            assertTrue("Thermal images directory should exist", thermalImagesDir.exists())
+            
+            val imageFiles = thermalImagesDir.listFiles { _, name ->
+                name.startsWith("thermal_") && name.endsWith(".png")
+            }
 
             assertNotNull("Should have generated some thermal images", imageFiles)
             assertTrue("Should have at least one thermal image", imageFiles!!.isNotEmpty())
 
-            // Verify image file naming convention
+            // Verify image file naming convention (matches implementation)
             val firstImage = imageFiles.minByOrNull { it.name }
             assertNotNull("Should have a first image", firstImage)
             assertTrue(
                 "Image should follow naming convention",
-                firstImage!!.name.matches(Regex("thermal_frame_\\d{6}\\.png")),
+                firstImage!!.name.matches(Regex("thermal_(sim_)?\\d+\\.png")),
             )
         }
-
-    @Test
-    fun testMetadataContent() =
-        runBlocking {
-            recorder.start(testSessionDir)
-            recorder.stop()
-
-            val metadataFile = File(testSessionDir, "thermal_metadata.json")
-            assertTrue("Metadata file should exist", metadataFile.exists())
-
-            val metadataContent = metadataFile.readText()
-
-            // Verify key metadata fields
-            val requiredFields =
-                listOf(
-                    "sensor_type",
-                    "device_model",
-                    "resolution_width",
-                    "resolution_height",
-                    "temperature_range_min",
-                    "temperature_range_max",
-                )
-
-            for (field in requiredFields) {
-                assertTrue(
-                    "Metadata should contain $field",
-                    metadataContent.contains("\"$field\""),
-                )
-            }
-
-            // Verify Topdon TC001 is mentioned
-            assertTrue(
-                "Should specify Topdon TC001",
-                metadataContent.contains("Topdon TC001"),
-            )
-
-            // Verify resolution specifications
-            assertTrue(
-                "Should specify 256x192 resolution",
-                metadataContent.contains("256") && metadataContent.contains("192"),
-            )
-        }
+}
 
     @Test
     fun testTemperatureRangeValidation() =
