@@ -98,6 +98,41 @@ class MainViewModel : ViewModel() {
                 updateUiState { it.copy(currentSessionId = sessionId) }
             }
         }
+
+        // If orchestrator is RecordingController, observe additional features
+        if (orchestrator is com.yourcompany.sensorspoke.controller.RecordingController) {
+            // Observe sensor states
+            viewModelScope.launch {
+                orchestrator.sensorStates.collect { sensorStates ->
+                    val statusMap = sensorStates.mapValues { (sensorName, state) ->
+                        val isActive = state == com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.RECORDING
+                        val isHealthy = state != com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.ERROR
+                        val statusMessage = when (state) {
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.IDLE -> "Ready"
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.STARTING -> "Starting..."
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.RECORDING -> "Recording"
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.STOPPING -> "Stopping..."
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.STOPPED -> "Stopped"
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.ERROR -> "Error"
+                        }
+                        SensorStatus(sensorName, isActive, isHealthy, System.currentTimeMillis(), statusMessage)
+                    }
+                    _sensorStatus.value = statusMap
+                }
+            }
+
+            // Observe session start results for partial failure notifications
+            viewModelScope.launch {
+                orchestrator.lastSessionResult.collect { result ->
+                    result?.let {
+                        if (it.isPartialSuccess) {
+                            val failedSensors = it.failedSensors.keys.joinToString(", ")
+                            _statusMessage.value = "Recording started (${failedSensors} failed)"
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**

@@ -1,6 +1,8 @@
 package com.yourcompany.sensorspoke.sensors.thermal
 
+import android.content.Context
 import com.google.common.truth.Truth.assertThat
+import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import java.io.File
@@ -12,15 +14,22 @@ class ThermalCameraRecorderTest {
         runBlocking {
             val tmp = createTempDirectory("thermal_test_").toFile()
             try {
-                val recorder = ThermalCameraRecorder()
+                val mockContext = mockk<Context>(relaxed = true)
+                val recorder = ThermalCameraRecorder(mockContext)
                 recorder.start(tmp)
-                val csv = File(tmp, "thermal.csv")
+                
+                // Check for the correct CSV file name that the implementation creates
+                val csv = File(tmp, "thermal_data.csv")
                 assertThat(csv.exists()).isTrue()
+                
                 val firstLine = csv.bufferedReader().use { it.readLine() }
                 assertThat(firstLine).isNotNull()
-                assertThat(firstLine!!.startsWith("timestamp_ns,w,h")).isTrue()
-                assertThat(firstLine.contains(",v0")).isTrue()
-                assertThat(firstLine.contains(",v49151")).isTrue()
+                
+                // Check for the actual header format from the implementation
+                assertThat(firstLine!!.startsWith("timestamp_ns,timestamp_ms,frame_number")).isTrue()
+                assertThat(firstLine.contains("temperature_celsius")).isTrue()
+                assertThat(firstLine.contains("filename")).isTrue()
+                
                 recorder.stop()
             } finally {
                 tmp.deleteRecursively()

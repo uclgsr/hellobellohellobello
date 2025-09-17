@@ -180,41 +180,125 @@ class FileManagerFragment : Fragment() {
 
     private fun cleanupOldSessions() {
         try {
-            val cutoffDate =
-                Calendar
-                    .getInstance()
-                    .apply {
-                        add(Calendar.DAY_OF_MONTH, -7) // Keep sessions from last 7 days
-                    }.time
+            // Enhanced cleanup with multiple options
+            // Option 1: Age-based cleanup (configurable - default 30 days as mentioned in problem statement)
+            val defaultCleanupDays = 30
+            val cutoffDate = Calendar.getInstance().apply {
+                add(Calendar.DAY_OF_MONTH, -defaultCleanupDays)
+            }.time
 
             val oldSessions = sessionList.filter { it.dateTime.before(cutoffDate) }
+            
+            // Option 2: Size-based cleanup if storage is low
+            val context = requireContext()
+            val sessionsDir = File(context.getExternalFilesDir(null), "sessions")
+            val statsFs = android.os.StatFs(sessionsDir.path)
+            val availableBytes = statsFs.availableBytes
+            val totalBytes = statsFs.totalBytes
+            val usagePercent = ((totalBytes - availableBytes).toFloat() / totalBytes * 100f).toInt()
+            
+            val shouldCleanupBySize = usagePercent > 80 // If storage > 80% full
+            val sizeMB = sessionList.sumOf { it.sizeBytes } / (1024 * 1024)
+            
+            android.util.Log.i("FileManager", "Cleanup analysis - Storage: ${usagePercent}% used, Sessions: ${sessionList.size} (${sizeMB}MB), Old sessions: ${oldSessions.size}")
 
-            if (oldSessions.isEmpty()) {
-                Toast.makeText(requireContext(), "No old sessions to cleanup", Toast.LENGTH_SHORT).show()
+            if (oldSessions.isEmpty() && !shouldCleanupBySize) {
+                Toast.makeText(requireContext(), 
+                    "No cleanup needed. Sessions: ${sessionList.size}, Storage: ${usagePercent}% used", 
+                    Toast.LENGTH_LONG).show()
                 return
             }
 
+            val sessionsToDelete = mutableListOf<SessionInfo>()
+            
+            // Add old sessions
+            sessionsToDelete.addAll(oldSessions)
+            
+            // If storage is still critical, add more sessions starting with largest/oldest
+            if (shouldCleanupBySize && sessionsToDelete.size < sessionList.size) {
+                val remainingSessions = sessionList.filter { !sessionsToDelete.contains(it) }
+                val sortedByAgeAndSize = remainingSessions.sortedWith(
+                    compareBy<SessionInfo> { it.dateTime }.thenByDescending { it.sizeBytes }
+                )
+                
+                // Add more sessions until we have reasonable cleanup target
+                val maxAdditionalSessions = (sessionList.size * 0.3).toInt() // Clean up to 30% more if needed
+                sessionsToDelete.addAll(sortedByAgeAndSize.take(maxAdditionalSessions))
+            }
+
+            if (sessionsToDelete.isEmpty()) {
+                Toast.makeText(requireContext(), "No sessions selected for cleanup", Toast.LENGTH_SHORT).show()
+                return
+            }
+            
+            val totalSizeToDeleteMB = sessionsToDelete.sumOf { it.sizeBytes } / (1024 * 1024)
+
+            // Show confirmation dialog with detailed info
+            val confirmMessage = buildString {
+                append("Cleanup ${sessionsToDelete.size} sessions?\n\n")
+                append("• Age-based: ${oldSessions.size} sessions older than ${defaultCleanupDays} days\n")
+                if (shouldCleanupBySize) {
+                    append("• Storage-based: Additional sessions (storage ${usagePercent}% full)\n")
+                }
+                append("• Total space to free: ${totalSizeToDeleteMB}MB\n")
+                append("• Remaining sessions: ${sessionList.size - sessionsToDelete.size}")
+            }
+
+            android.app.AlertDialog.Builder(requireContext())
+                .setTitle("Cleanup Old Sessions")
+                .setMessage(confirmMessage)
+                .setPositiveButton("Delete") { _, _ ->
+                    performCleanup(sessionsToDelete)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+                
+        } catch (e: Exception) {
+            android.util.Log.e("FileManager", "Error in cleanup analysis: ${e.message}", e)
+            Toast.makeText(requireContext(), "Error analyzing sessions for cleanup: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    private fun performCleanup(sessionsToDelete: List<SessionInfo>) {
+        try {
             var deletedCount = 0
-            oldSessions.forEach { session ->
+            var deletedSizeMB = 0L
+            var errorCount = 0
+
+            sessionsToDelete.forEach { session ->
                 try {
+                    val sizeMB = session.sizeBytes / (1024 * 1024)
                     if (session.directory.deleteRecursively()) {
                         deletedCount++
+                        deletedSizeMB += sizeMB
+                        android.util.Log.d("FileManager", "Deleted session: ${session.name} (${sizeMB}MB)")
+                    } else {
+                        errorCount++
+                        android.util.Log.w("FileManager", "Failed to delete session: ${session.name}")
                     }
                 } catch (e: Exception) {
-                    // Continue with other sessions
+                    errorCount++
+                    android.util.Log.e("FileManager", "Error deleting session ${session.name}: ${e.message}", e)
                 }
             }
 
-            Toast
-                .makeText(
-                    requireContext(),
-                    "Deleted $deletedCount old sessions",
-                    Toast.LENGTH_SHORT,
-                ).show()
+            val resultMessage = buildString {
+                append("Cleanup completed:\n")
+                append("• Deleted: $deletedCount sessions (${deletedSizeMB}MB)\n")
+                if (errorCount > 0) {
+                    append("• Errors: $errorCount sessions\n")
+                }
+                append("• Storage freed: ${deletedSizeMB}MB")
+            }
 
-            loadSessions() // Refresh the list
+            Toast.makeText(requireContext(), resultMessage, Toast.LENGTH_LONG).show()
+            
+            // Refresh the session list
+            loadSessions()
+            
         } catch (e: Exception) {
-            Toast.makeText(requireContext(), "Cleanup error: ${e.message}", Toast.LENGTH_SHORT).show()
+            android.util.Log.e("FileManager", "Error during cleanup: ${e.message}", e)
+            Toast.makeText(requireContext(), "Cleanup failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
