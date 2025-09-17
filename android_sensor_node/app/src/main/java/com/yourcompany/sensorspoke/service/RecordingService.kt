@@ -10,12 +10,17 @@ import android.hardware.camera2.CameraManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Base64
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.yourcompany.sensorspoke.R
+import com.yourcompany.sensorspoke.controller.RecordingController
 import com.yourcompany.sensorspoke.network.ConnectionManager
 import com.yourcompany.sensorspoke.network.FileTransferManager
 import com.yourcompany.sensorspoke.network.NetworkClient
 import com.yourcompany.sensorspoke.network.TimeSyncService
+import com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
+import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
+import com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder
 import com.yourcompany.sensorspoke.utils.PreviewBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +64,12 @@ class RecordingService : Service() {
     private var timeSyncService: TimeSyncService? = null
     private var connectionManager: ConnectionManager? = null
 
+    // Enhanced recording controller and sensor integration
+    private var recordingController: RecordingController? = null
+    private var rgbRecorder: RgbCameraRecorder? = null
+    private var thermalRecorder: ThermalCameraRecorder? = null
+    private var gsrRecorder: ShimmerRecorder? = null
+
     // FR8: track current session state to support rejoin notification
     private var currentSessionId: String? = null
     private var isRecording: Boolean = false
@@ -66,6 +77,9 @@ class RecordingService : Service() {
     override fun onCreate() {
         super.onCreate()
         networkClient = NetworkClient(applicationContext)
+
+        // Initialize RecordingController and sensor recorders
+        initializeRecordingSystem()
 
         // Phase 3: Initialize advanced networking components
         timeSyncService = TimeSyncService(applicationContext)
@@ -111,9 +125,62 @@ class RecordingService : Service() {
         timeSyncService?.cleanup()
         connectionManager?.cleanup()
 
+        // Cleanup recording system
+        cleanupRecordingSystem()
+
         previewListener?.let { PreviewBus.unsubscribe(it) }
         previewListener = null
         scope.cancel()
+    }
+
+    /**
+     * Initialize the recording controller and sensor recorders
+     */
+    private fun initializeRecordingSystem() {
+        try {
+            // Initialize RecordingController
+            recordingController = RecordingController(applicationContext)
+
+            // Initialize sensor recorders
+            rgbRecorder = RgbCameraRecorder(applicationContext)
+            thermalRecorder = ThermalCameraRecorder(applicationContext)  
+            gsrRecorder = ShimmerRecorder(applicationContext)
+
+            // Register sensors with the controller
+            recordingController?.apply {
+                register("rgb", rgbRecorder!!, isRequired = false) // RGB camera is optional
+                register("thermal", thermalRecorder!!, isRequired = false) // Thermal camera is optional
+                register("gsr", gsrRecorder!!, isRequired = false) // GSR sensor is optional
+            }
+
+            Log.i("RecordingService", "Recording system initialized with ${recordingController?.getRegisteredSensors()?.size ?: 0} sensors")
+        } catch (e: Exception) {
+            Log.e("RecordingService", "Failed to initialize recording system: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Cleanup the recording system
+     */
+    private fun cleanupRecordingSystem() {
+        try {
+            // Stop any ongoing recording
+            if (isRecording) {
+                scope.launch {
+                    recordingController?.stopSession()
+                }
+            }
+
+            // Cleanup sensor recorders
+            rgbRecorder = null
+            thermalRecorder = null
+            gsrRecorder = null
+            recordingController = null
+
+            Log.i("RecordingService", "Recording system cleaned up")
+        } catch (e: Exception) {
+            Log.e("RecordingService", "Error during recording system cleanup: ${e.message}", e)
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -209,37 +276,84 @@ class RecordingService : Service() {
 
                         "start_recording" -> {
                             val sessionId = obj.optString("session_id", "")
-                            // Forward to UI via broadcast
-                            val intent =
-                                Intent(ACTION_START_RECORDING)
-                                    .putExtra(EXTRA_SESSION_ID, sessionId)
-                                    .setPackage("com.yourcompany.sensorspoke") // Fix lint: UnsafeImplicitIntentLaunch
-                            sendBroadcast(intent)
-                            // FR8: update local session state for rejoin purposes
-                            if (sessionId.isNotEmpty()) currentSessionId = sessionId
-                            isRecording = true
-                            val response = JSONObject().put("ack_id", id).put("status", "ok")
-                            if (isV1) {
-                                response.put("v", 1).put("type", "ack")
-                                safeWriteFrame(writer, response)
-                            } else {
-                                safeWriteLine(writer, response.toString())
+                            
+                            scope.launch {
+                                try {
+                                    // Use the enhanced recording controller to start session
+                                    recordingController?.startSession(sessionId.ifEmpty { null })
+                                    
+                                    // FR8: update local session state for rejoin purposes
+                                    currentSessionId = recordingController?.currentSessionId?.value
+                                    isRecording = true
+                                    
+                                    // Update notification to show recording status
+                                    updateNotificationForRecording(currentSessionId)
+                                    
+                                    val response = JSONObject().put("ack_id", id).put("status", "ok")
+                                        .put("session_id", currentSessionId ?: "")
+                                    if (isV1) {
+                                        response.put("v", 1).put("type", "ack")
+                                        safeWriteFrame(writer, response)
+                                    } else {
+                                        safeWriteLine(writer, response.toString())
+                                    }
+                                    
+                                    Log.i("RecordingService", "Recording started successfully for session: $currentSessionId")
+                                    
+                                } catch (e: Exception) {
+                                    Log.e("RecordingService", "Failed to start recording: ${e.message}", e)
+                                    
+                                    val response = JSONObject()
+                                        .put("ack_id", id)
+                                        .put("status", "error")
+                                        .put("message", "Failed to start recording: ${e.message}")
+                                    if (isV1) {
+                                        response.put("v", 1).put("type", "error").put("code", "E_START_FAILED")
+                                        safeWriteFrame(writer, response)
+                                    } else {
+                                        safeWriteLine(writer, response.toString())
+                                    }
+                                }
                             }
                         }
 
                         "stop_recording" -> {
-                            val intent =
-                                Intent(ACTION_STOP_RECORDING)
-                                    .setPackage("com.yourcompany.sensorspoke") // Fix lint: UnsafeImplicitIntentLaunch
-                            sendBroadcast(intent)
-                            // FR8: update local session state — session ended but keep id for rejoin-triggered transfer
-                            isRecording = false
-                            val response = JSONObject().put("ack_id", id).put("status", "ok")
-                            if (isV1) {
-                                response.put("v", 1).put("type", "ack")
-                                safeWriteFrame(writer, response)
-                            } else {
-                                safeWriteLine(writer, response.toString())
+                            scope.launch {
+                                try {
+                                    // Use the enhanced recording controller to stop session
+                                    recordingController?.stopSession()
+                                    
+                                    // FR8: update local session state — session ended but keep id for rejoin-triggered transfer
+                                    isRecording = false
+                                    
+                                    // Update notification to show idle status
+                                    updateNotificationForIdle()
+                                    
+                                    val response = JSONObject().put("ack_id", id).put("status", "ok")
+                                        .put("session_id", currentSessionId ?: "")
+                                    if (isV1) {
+                                        response.put("v", 1).put("type", "ack")
+                                        safeWriteFrame(writer, response)
+                                    } else {
+                                        safeWriteLine(writer, response.toString())
+                                    }
+                                    
+                                    Log.i("RecordingService", "Recording stopped successfully for session: $currentSessionId")
+                                    
+                                } catch (e: Exception) {
+                                    Log.e("RecordingService", "Failed to stop recording: ${e.message}", e)
+                                    
+                                    val response = JSONObject()
+                                        .put("ack_id", id)
+                                        .put("status", "error") 
+                                        .put("message", "Failed to stop recording: ${e.message}")
+                                    if (isV1) {
+                                        response.put("v", 1).put("type", "error").put("code", "E_STOP_FAILED")
+                                        safeWriteFrame(writer, response)
+                                    } else {
+                                        safeWriteLine(writer, response.toString())
+                                    }
+                                }
                             }
                         }
 
@@ -437,10 +551,22 @@ class RecordingService : Service() {
         result.put("android_sdk", Build.VERSION.SDK_INT)
         result.put("android_release", Build.VERSION.RELEASE ?: "")
         result.put("service_port", serverPort)
-        // Sensor availability (software capability flags)
-        result.put("has_rgb", true)
-        result.put("has_thermal", true)
-        result.put("has_gsr", true)
+        
+        // Enhanced sensor availability reporting
+        val controller = recordingController
+        if (controller != null) {
+            val sensorStatus = controller.getSensorStatusReport()
+            result.put("has_rgb", sensorStatus.containsKey("rgb"))
+            result.put("has_thermal", sensorStatus.containsKey("thermal"))
+            result.put("has_gsr", sensorStatus.containsKey("gsr"))
+            result.put("sensor_status", JSONObject(sensorStatus))
+        } else {
+            // Fallback to basic capability reporting
+            result.put("has_rgb", true)
+            result.put("has_thermal", true)
+            result.put("has_gsr", true)
+        }
+        
         val cameras = JSONArray()
         try {
             val cm = getSystemService(CAMERA_SERVICE) as CameraManager
@@ -461,5 +587,44 @@ class RecordingService : Service() {
         }
         result.put("cameras", cameras)
         return result
+    }
+
+    /**
+     * Update notification to show recording status
+     */
+    private fun updateNotificationForRecording(sessionId: String?) {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "recording_service_channel"
+        
+        val notification: Notification =
+            NotificationCompat
+                .Builder(this, channelId)
+                .setContentTitle("Recording in Progress")
+                .setContentText("Session: ${sessionId ?: "Unknown"}")
+                .setSmallIcon(R.drawable.ic_notification_recording)
+                .setOngoing(true)
+                .setProgress(0, 0, true) // Indeterminate progress
+                .build()
+        
+        nm.notify(1001, notification)
+    }
+
+    /**
+     * Update notification to show idle status
+     */
+    private fun updateNotificationForIdle() {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "recording_service_channel"
+        
+        val notification: Notification =
+            NotificationCompat
+                .Builder(this, channelId)
+                .setContentTitle(getString(R.string.notification_title))
+                .setContentText(getString(R.string.notification_text))
+                .setSmallIcon(R.drawable.ic_notification_recording)
+                .setOngoing(true)
+                .build()
+        
+        nm.notify(1001, notification)
     }
 }
