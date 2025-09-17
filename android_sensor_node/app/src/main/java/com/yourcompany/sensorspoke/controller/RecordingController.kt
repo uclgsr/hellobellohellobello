@@ -567,7 +567,7 @@ class RecordingController(
                     .put("recorders", recordersArray)
                     .put("expected_files", expectedFilesArray)
                     .put("storage_info", storageInfoObject)
-                    .put("estimated_session_size_mb", calculateEstimatedSessionSize())
+                    .put("estimated_session_size_mb", 1000) // Estimate 1GB per session
                     .put("session_status", "STARTED")
                     .put("synchronization_reference", "System time: System.currentTimeMillis() + System.nanoTime()")
                     .put("timezone", java.util.TimeZone.getDefault().id)
