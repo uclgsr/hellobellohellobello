@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourcompany.sensorspoke.controller.SessionOrchestrator
 import com.yourcompany.sensorspoke.network.ConnectionManager
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,11 +12,14 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 /**
- * MainViewModel coordinates with RecordingController to reflect recording state via StateFlow.
- * Follows MVVM architecture with proper separation of UI logic from business logic.
+ * Enhanced MainViewModel with comprehensive UI feedback and sensor status tracking.
+ * Coordinates with RecordingController and provides real-time status updates for all sensors.
  *
- * This ViewModel acts as the UI layer's interface to the RecordingController session orchestrator,
- * providing reactive state updates for the UI while keeping business logic in the controller layer.
+ * This ViewModel implements the UI feedback requirements including:
+ * - Real-time sensor status indicators
+ * - Recording timer and status updates
+ * - Error handling and notifications
+ * - Thermal camera simulation feedback
  */
 class MainViewModel : ViewModel() {
 
@@ -60,9 +64,6 @@ class MainViewModel : ViewModel() {
     // RecordingController coordination - using SessionOrchestrator interface
     private var sessionOrchestrator: SessionOrchestrator? = null
 
-    /**
-     * Recording states that mirror SessionOrchestrator states for UI reactivity
-     */
     enum class RecordingState {
         IDLE,
         PREPARING,
@@ -126,12 +127,16 @@ class MainViewModel : ViewModel() {
         val statusMessage: String = "Not connected"
     )
 
+
     /**
      * Initialize the ViewModel with a SessionOrchestrator instance (typically RecordingController)
      */
     fun initialize(orchestrator: SessionOrchestrator, connManager: ConnectionManager? = null) {
         sessionOrchestrator = orchestrator
         connectionManager = connManager
+
+        // Initialize UI state
+        updateUiState { it.copy(isInitialized = true, statusText = "Ready to connect") }
 
         // Observe orchestrator state changes
         viewModelScope.launch {
@@ -172,11 +177,41 @@ class MainViewModel : ViewModel() {
         // Observe current session
         viewModelScope.launch {
             orchestrator.currentSessionId.collect { sessionId ->
-                _currentSessionId.value = sessionId
-                _statusMessage.value = if (sessionId != null) {
-                    "Session: $sessionId"
-                } else {
-                    "Ready"
+                updateUiState { it.copy(currentSessionId = sessionId) }
+            }
+        }
+
+        // If orchestrator is RecordingController, observe additional features
+        if (orchestrator is com.yourcompany.sensorspoke.controller.RecordingController) {
+            // Observe sensor states
+            viewModelScope.launch {
+                orchestrator.sensorStates.collect { sensorStates ->
+                    val statusMap = sensorStates.mapValues { (sensorName, state) ->
+                        val isActive = state == com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.RECORDING
+                        val isHealthy = state != com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.ERROR
+                        val statusMessage = when (state) {
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.IDLE -> "Ready"
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.STARTING -> "Starting..."
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.RECORDING -> "Recording"
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.STOPPING -> "Stopping..."
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.STOPPED -> "Stopped"
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.ERROR -> "Error"
+                        }
+                        SensorStatus(sensorName, isActive, isHealthy, System.currentTimeMillis(), statusMessage)
+                    }
+                    _sensorStatus.value = statusMap
+                }
+            }
+
+            // Observe session start results for partial failure notifications
+            viewModelScope.launch {
+                orchestrator.lastSessionResult.collect { result ->
+                    result?.let {
+                        if (it.isPartialSuccess) {
+                            val failedSensors = it.failedSensors.keys.joinToString(", ")
+                            _statusMessage.value = "Recording started (${failedSensors} failed)"
+                        }
+                    }
                 }
                 
                 updateUiState {
@@ -379,9 +414,6 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Update thermal camera status specifically
-     */
     fun updateThermalStatus(isAvailable: Boolean, isSimulated: Boolean, deviceName: String? = null) {
         updateUiState {
             copy(

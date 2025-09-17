@@ -23,6 +23,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -36,13 +37,16 @@ import com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
 import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
 import com.yourcompany.sensorspoke.service.RecordingService
 import com.yourcompany.sensorspoke.ui.adapters.MainPagerAdapter
+import com.yourcompany.sensorspoke.ui.components.SensorStatusIndicator
 import com.yourcompany.sensorspoke.ui.dialogs.QuickStartDialog
+import com.yourcompany.sensorspoke.ui.models.SensorStatus
 import com.yourcompany.sensorspoke.ui.navigation.NavigationController
 import com.yourcompany.sensorspoke.ui.navigation.ThermalNavigationState
 import com.yourcompany.sensorspoke.utils.PermissionManager
 import com.yourcompany.sensorspoke.utils.UserExperience
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -540,6 +544,149 @@ class MainActivity : AppCompatActivity() {
         }))
     }
 
+    /**
+     * Initialize sensor status indicators with default states
+     */
+    private fun initializeSensorStatusIndicators() {
+        // Initialize with default sensor names for display
+        rgbSensorStatus?.updateStatus("RGB", SensorStatusIndicator.SensorStatus(
+            name = "RGB Camera",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Offline"
+        ))
+        
+        thermalSensorStatus?.updateStatus("Thermal", SensorStatusIndicator.SensorStatus(
+            name = "Thermal Camera",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Offline"
+        ))
+        
+        gsrSensorStatus?.updateStatus("GSR", SensorStatusIndicator.SensorStatus(
+            name = "GSR Sensor",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Disconnected"
+        ))
+        
+        pcSensorStatus?.updateStatus("PC", SensorStatusIndicator.SensorStatus(
+            name = "PC Link",
+            isActive = false,
+            isHealthy = false,
+            statusMessage = "Not Connected"
+        ))
+        
+        // Then update with ViewModel data
+        updateSensorStatus()
+    }
+
+    /**
+     * Initialize the ViewModel with the recording controller
+     */
+    private fun initializeViewModel() {
+        lifecycleScope.launch {
+            val controller = ensureController()
+            vm.initialize(controller)
+        }
+    }
+
+    /**
+     * Observe UI state changes and update the interface accordingly
+     */
+    private fun observeUiState() {
+        lifecycleScope.launch {
+            vm.uiState.collect { state ->
+                // Update status text
+                statusText?.text = state.statusText
+                
+                // Update recording timer
+                if (state.isRecording && state.recordingDurationSeconds > 0) {
+                    recordingTimer?.visibility = View.VISIBLE
+                    recordingTimer?.text = formatRecordingTime(state.recordingDurationSeconds)
+                } else {
+                    recordingTimer?.visibility = View.GONE
+                }
+                
+                // Update button states
+                btnStartRecording?.isEnabled = state.startButtonEnabled
+                btnStopRecording?.isEnabled = state.stopButtonEnabled
+                
+                // Update button text based on recording state
+                btnStartRecording?.text = if (state.isRecording) "Recording..." else "Start Recording"
+                
+                // Update sensor status indicators
+                rgbSensorStatus?.updateStatus("RGB Camera", state.cameraStatus.toSensorStatusIndicator())
+                thermalSensorStatus?.updateStatus("Thermal", state.thermalStatus.toSensorStatusIndicator())
+                gsrSensorStatus?.updateStatus("GSR", state.shimmerStatus.toSensorStatusIndicator())
+                pcSensorStatus?.updateStatus("PC Link", state.pcStatus.toSensorStatusIndicator())
+                
+                // Handle error dialog
+                if (state.showErrorDialog && !state.errorMessage.isNullOrEmpty()) {
+                    showErrorDialog(state.errorMessage)
+                }
+                
+                // Handle thermal simulation feedback
+                if (state.thermalIsSimulated && state.isThermalConnected) {
+                    showThermalSimulationOverlay()
+                }
+            }
+        }
+    }
+
+    /**
+     * Format recording time in HH:MM:SS format
+     */
+    private fun formatRecordingTime(seconds: Long): String {
+        val hours = TimeUnit.SECONDS.toHours(seconds)
+        val minutes = TimeUnit.SECONDS.toMinutes(seconds) % 60
+        val secs = seconds % 60
+        return String.format("%02d:%02d:%02d", hours, minutes, secs)
+    }
+
+    /**
+     * Convert SensorStatus to SensorStatusIndicator.SensorStatus
+     */
+    private fun SensorStatus.toSensorStatusIndicator(): SensorStatusIndicator.SensorStatus {
+        return SensorStatusIndicator.SensorStatus(
+            name = this.name,
+            isActive = this.isActive,
+            isHealthy = this.isHealthy,
+            lastUpdate = this.lastUpdate,
+            statusMessage = this.statusMessage
+        )
+    }
+
+    /**
+     * Show error dialog with user-friendly message
+     */
+    private fun showErrorDialog(message: String) {
+        AlertDialog.Builder(this)
+            .setTitle("Error")
+            .setMessage(message)
+            .setPositiveButton("OK") { _, _ ->
+                vm.clearError()
+            }
+            .setOnDismissListener {
+                vm.clearError() 
+            }
+            .show()
+    }
+
+    /**
+     * Show thermal simulation overlay when thermal camera is in simulation mode
+     */
+    private fun showThermalSimulationOverlay() {
+        rootLayout?.let { layout ->
+            val snackbar = Snackbar.make(
+                layout, 
+                "Thermal Camera Simulation (device not found)", 
+                Snackbar.LENGTH_LONG
+            )
+            snackbar.show()
+        }
+    }
+
     private fun setupToolbar() {
         supportActionBar?.setDisplayShowTitleEnabled(true)
         supportActionBar?.title = "Sensor Spoke"
@@ -619,6 +766,7 @@ class MainActivity : AppCompatActivity() {
             // Enhanced UI feedback during stop operation
             vm.updateUiState { copy(statusText = "Stopping recording...") }
             btnStopRecording?.isEnabled = false
+
             stopRecording()
         }
     }
@@ -753,17 +901,6 @@ class MainActivity : AppCompatActivity() {
         return coordinator
     }
 
-    // Remove old recording methods - now handled by enhanced methods above
-    @Deprecated("Use enhanced startRecording method")
-    private fun startRecordingOld() {
-        // This method has been replaced by the enhanced startRecording method
-    }
-
-    @Deprecated("Use enhanced stopRecording method") 
-    private fun stopRecordingOld() {
-        // This method has been replaced by the enhanced stopRecording method
-    }
-
     private fun showQuickStartGuide() {
         QuickStartDialog.show(this) {
             // Mark first launch as complete
@@ -889,9 +1026,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Request all necessary permissions for multi-modal recording
-     */
     private fun requestAllPermissions() {
         vm.updateUiState { copy(statusText = "Requesting permissions...") }
 
@@ -914,9 +1048,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Check if we're running under test conditions
-     */
+    fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showUserFriendlyError(message: String, context: String = "") {
+        val fullMessage = if (context.isNotEmpty()) {
+            "Error in $context: $message"
+        } else {
+            message
+        }
+        showToast(fullMessage)
+        vm.showError(fullMessage)
+    }
+
     private fun isRunningUnderTest(): Boolean {
         return try {
             Class.forName("androidx.test.espresso.Espresso")
