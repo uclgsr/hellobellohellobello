@@ -16,6 +16,18 @@
     <!-- Control background -->
     <color name="control_background">#FAFAFA</color>
 
+    <!-- Sensor status colors -->
+    <color name="sensor_status_background">#ECEFF1</color>
+    <color name="sensor_status_text">#37474F</color>
+    <color name="sensor_connected">#4CAF50</color>
+    <color name="sensor_disconnected">#F44336</color>
+    <color name="sensor_simulated">#FF9800</color>
+    <color name="sensor_inactive">#9E9E9E</color>
+
+    <!-- Recording status colors -->
+    <color name="recording_time_background">#FFCDD2</color>
+    <color name="recording_time_text">#B71C1C</color>
+
     <!-- Material Design colors -->
     <color name="primary">#2196F3</color>
     <color name="primary_variant">#1976D2</color>
