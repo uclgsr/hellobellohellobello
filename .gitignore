@@ -77,5 +77,4 @@ pc_controller_data/
 blocked.jsonl
 blocked.md
 !/.github/workflows/
-!/.github/workflows/
 !/.github/actions/
