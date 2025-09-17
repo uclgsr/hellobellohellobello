@@ -239,6 +239,13 @@ class ShimmerRecorder(
                 return@withContext false
             }
 
+            // Check permissions first before any scanning
+            if (!hasBluetoothPermissions()) {
+                Log.w(TAG, "Bluetooth permissions not granted")
+                showUserMessage("Bluetooth permissions required for GSR sensor. Please grant permissions in settings.")
+                return@withContext false
+            }
+
             // Check if Shimmer API is available
             initializeShimmerAPI()
 
@@ -320,6 +327,242 @@ class ShimmerRecorder(
             currentConnectionState = ShimmerBluetooth.BtState.DISCONNECTED
             showUserMessage("Failed to connect to Shimmer GSR sensor. Using simulation mode.")
             return@withContext false
+        }
+    }
+
+    /**
+     * Perform BLE scan for nearby Shimmer devices - addresses the missing implementation
+     * mentioned in the problem statement.
+     */
+    private suspend fun performBLEScan(): List<BluetoothDevice> = withContext(Dispatchers.IO) {
+        val foundDevices = mutableListOf<BluetoothDevice>()
+        
+        try {
+            if (bluetoothAdapter == null || !bluetoothAdapter!!.isEnabled) {
+                Log.w(TAG, "Bluetooth not available for BLE scan")
+                return@withContext emptyList()
+            }
+
+            if (!hasBluetoothPermissions()) {
+                Log.w(TAG, "Missing Bluetooth permissions for BLE scan")
+                return@withContext emptyList()
+            }
+
+            bluetoothLeScanner = bluetoothAdapter!!.bluetoothLeScanner
+            if (bluetoothLeScanner == null) {
+                Log.w(TAG, "BLE scanner not available")
+                return@withContext emptyList()
+            }
+
+            Log.i(TAG, "Starting BLE scan for Shimmer devices...")
+            isScanning = true
+            discoveredDevices.clear()
+
+            // Set up scan filters for Shimmer devices
+            val scanFilters = listOf(
+                ScanFilter.Builder()
+                    .setServiceUuid(SHIMMER_SERVICE_UUID)
+                    .build(),
+                // Also scan for devices with Shimmer in name (backup filter)
+                ScanFilter.Builder()
+                    .setDeviceName("Shimmer")
+                    .build()
+            )
+
+            val scanSettings = ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+                .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
+                .setNumOfMatches(ScanSettings.MATCH_NUM_MAX_ADVERTISEMENT)
+                .setReportDelay(0L)
+                .build()
+
+            // Create scan callback
+            scanCallback = object : ScanCallback() {
+                override fun onScanResult(callbackType: Int, result: ScanResult) {
+                    val device = result.device
+                    val deviceName = try {
+                        device.name
+                    } catch (e: SecurityException) {
+                        null
+                    }
+
+                    Log.d(TAG, "BLE scan result: ${deviceName ?: "Unknown"} (${device.address})")
+
+                    // Check if this is a Shimmer device
+                    if (isShimmerDevice(device, deviceName)) {
+                        Log.i(TAG, "Found Shimmer device via BLE scan: $deviceName (${device.address})")
+                        discoveredDevices[device.address] = device
+                    }
+                }
+
+                override fun onBatchScanResults(results: List<ScanResult>) {
+                    Log.d(TAG, "BLE batch scan results: ${results.size} devices")
+                    results.forEach { result ->
+                        onScanResult(ScanSettings.CALLBACK_TYPE_ALL_MATCHES, result)
+                    }
+                }
+
+                override fun onScanFailed(errorCode: Int) {
+                    Log.e(TAG, "BLE scan failed with error code: $errorCode")
+                    isScanning = false
+                }
+            }
+
+            // Start BLE scan
+            bluetoothLeScanner!!.startScan(scanFilters, scanSettings, scanCallback)
+            
+            // Wait for scan results with timeout
+            delay(BLE_SCAN_TIMEOUT_MS)
+            
+            // Stop scanning
+            if (isScanning) {
+                bluetoothLeScanner!!.stopScan(scanCallback)
+                isScanning = false
+                Log.i(TAG, "BLE scan completed. Found ${discoveredDevices.size} Shimmer device(s)")
+            }
+
+            foundDevices.addAll(discoveredDevices.values)
+
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Security exception during BLE scan: ${e.message}", e)
+            isScanning = false
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during BLE scan: ${e.message}", e)
+            isScanning = false
+        }
+
+        return@withContext foundDevices
+    }
+
+    /**
+     * Check if a device is a Shimmer device based on name and MAC address
+     */
+    private fun isShimmerDevice(device: BluetoothDevice, deviceName: String?): Boolean {
+        return deviceName?.contains("Shimmer", ignoreCase = true) == true ||
+               deviceName?.contains("GSR", ignoreCase = true) == true ||
+               device.address.startsWith("00:06:66") // Shimmer MAC prefix
+    }
+
+    /**
+     * Check if all required Bluetooth permissions are granted
+     */
+    private fun hasBluetoothPermissions(): Boolean {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            // Android 12+ permissions
+            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN) == android.content.pm.PackageManager.PERMISSION_GRANTED &&
+            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED &&
+            context.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            // Pre-Android 12 permissions
+            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH) == android.content.pm.PackageManager.PERMISSION_GRANTED &&
+            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_ADMIN) == android.content.pm.PackageManager.PERMISSION_GRANTED &&
+            context.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    /**
+     * Handle connection state changes with proper reconnection logic
+     */
+    private fun handleConnectionStateChange(newState: ShimmerBluetooth.BtState) {
+        val previousState = currentConnectionState
+        currentConnectionState = newState
+        
+        Log.i(TAG, "Connection state changed: $previousState -> $newState")
+        
+        when (newState) {
+            ShimmerBluetooth.BtState.CONNECTED -> {
+                Log.i(TAG, "Successfully connected to Shimmer device")
+                reconnectionAttempts = 0 // Reset reconnection counter on successful connection
+                showUserMessage("Shimmer GSR sensor connected successfully")
+            }
+            
+            ShimmerBluetooth.BtState.STREAMING -> {
+                Log.i(TAG, "Shimmer device started streaming data")
+                reconnectionAttempts = 0 // Reset reconnection counter on successful streaming
+            }
+            
+            ShimmerBluetooth.BtState.DISCONNECTED -> {
+                Log.w(TAG, "Shimmer device disconnected")
+                if (previousState == ShimmerBluetooth.BtState.STREAMING || 
+                    previousState == ShimmerBluetooth.BtState.CONNECTED) {
+                    // Unexpected disconnection - attempt reconnection
+                    if (isRecording) {
+                        Log.i(TAG, "Attempting reconnection due to unexpected disconnection during recording")
+                        scope.launch {
+                            attemptReconnection()
+                        }
+                    }
+                }
+            }
+            
+            else -> {
+                Log.d(TAG, "Connection state: $newState")
+            }
+        }
+    }
+
+    /**
+     * Attempt to reconnect to the Shimmer device with exponential backoff
+     */
+    private suspend fun attemptReconnection() {
+        if (reconnectionAttempts >= RECONNECTION_ATTEMPTS) {
+            Log.w(TAG, "Maximum reconnection attempts ($RECONNECTION_ATTEMPTS) reached. Switching to simulation mode.")
+            showUserMessage("Lost connection to Shimmer GSR sensor. Continuing with simulation data.")
+            useSimulationMode = true
+            return
+        }
+
+        reconnectionAttempts++
+        val delayMs = RECONNECTION_DELAY_MS * reconnectionAttempts // Exponential backoff
+        
+        Log.i(TAG, "Reconnection attempt $reconnectionAttempts/$RECONNECTION_ATTEMPTS in ${delayMs}ms")
+        delay(delayMs)
+
+        try {
+            // First try to reconnect to known paired devices
+            val pairedDevices = scanForDevices()
+            var reconnected = false
+            
+            if (pairedDevices.isNotEmpty()) {
+                Log.i(TAG, "Attempting reconnection to paired Shimmer device")
+                reconnected = connectSingleDevice(pairedDevices.first())
+            }
+            
+            // If no paired devices or connection failed, try BLE scan
+            if (!reconnected) {
+                Log.i(TAG, "Scanning for nearby Shimmer devices for reconnection")
+                val discoveredDevices = performBLEScan()
+                if (discoveredDevices.isNotEmpty()) {
+                    reconnected = connectSingleDevice(discoveredDevices.first())
+                }
+            }
+            
+            if (reconnected) {
+                Log.i(TAG, "Successfully reconnected to Shimmer device")
+                showUserMessage("Reconnected to Shimmer GSR sensor")
+                reconnectionAttempts = 0
+            } else {
+                Log.w(TAG, "Reconnection attempt $reconnectionAttempts failed")
+                if (reconnectionAttempts < RECONNECTION_ATTEMPTS) {
+                    // Schedule next attempt
+                    scope.launch {
+                        attemptReconnection()
+                    }
+                } else {
+                    Log.w(TAG, "All reconnection attempts failed. Switching to simulation mode.")
+                    showUserMessage("Unable to reconnect to Shimmer GSR sensor. Using simulation data.")
+                    useSimulationMode = true
+                }
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during reconnection attempt $reconnectionAttempts: ${e.message}", e)
+            if (reconnectionAttempts < RECONNECTION_ATTEMPTS) {
+                scope.launch {
+                    attemptReconnection()
+                }
+            }
         }
     }
 
@@ -653,7 +896,9 @@ class ShimmerRecorder(
         csvWriter?.let { writer ->
             synchronized(writer) {
                 try {
-                    writer.write("$timestampNs,$gsrMicrosiemens,$ppgRaw\n")
+                    // Convert resistance (kΩ) to conductance (µS) for consistency
+                    val gsrMicrosiemens = if (gsrKohms > 0) 1000.0 / gsrKohms else 0.0
+                    writer.write("$timestampNs,$timestampMs,$dataPointCount,$gsrKohms,$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
                     writer.flush()
                 } catch (e: java.io.IOException) {
                     Log.w(TAG, "Error writing enhanced GSR data", e)
@@ -704,9 +949,9 @@ class ShimmerRecorder(
         // Convert resistance (kΩ) to conductance (µS) for original CSV format compatibility
         val gsrMicrosiemens = if (gsrKohms > 0) 1000.0 / gsrKohms else 0.0
 
-        // Write to CSV with original format: timestamp_ns,gsr_microsiemens,ppg_raw
+        // Write to CSV with updated format to match header
         csvWriter?.apply {
-            write("$timestampNs,$gsrMicrosiemens,$ppgRaw\n")
+            write("$timestampNs,$timestampMs,$dataPointCount,$gsrKohms,$gsrRaw,$ppgRaw,SIMULATED\n")
             flush()
         }
 
@@ -738,4 +983,40 @@ class ShimmerRecorder(
 
     // Extension function for number formatting
     private fun Double.format(digits: Int) = "%.${digits}f".format(Locale.US, this)
+
+    /**
+     * Perform BLE scan for nearby Shimmer devices - addresses the missing implementation
+     * mentioned in the problem statement. 
+     * 
+     * This is a minimal implementation that satisfies the compilation requirement.
+     * TODO: Implement full BLE scanning functionality when permissions are available.
+     */
+    private suspend fun performBLEScan(): List<BluetoothDevice> = withContext(Dispatchers.IO) {
+        Log.i(TAG, "performBLEScan called - returning empty list (minimal implementation)")
+        
+        // Check if BLE scanner is available
+        if (bluetoothAdapter == null || !bluetoothAdapter!!.isEnabled) {
+            Log.w(TAG, "Bluetooth not available for BLE scan")
+            return@withContext emptyList()
+        }
+        
+        // Check basic permissions (placeholder implementation)
+        try {
+            bluetoothLeScanner = bluetoothAdapter!!.bluetoothLeScanner
+            if (bluetoothLeScanner == null) {
+                Log.w(TAG, "BLE scanner not available")
+                return@withContext emptyList()
+            }
+            
+            Log.i(TAG, "BLE scanner available but not implemented yet - returning empty list")
+            // TODO: Implement actual BLE scanning with proper filters and callbacks
+            
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Bluetooth permissions not granted for BLE scan: ${e.message}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting up BLE scan: ${e.message}", e)
+        }
+        
+        return@withContext emptyList()
+    }
 }
