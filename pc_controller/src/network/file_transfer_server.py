@@ -45,7 +45,7 @@ class _Header:
         session_id = str(obj.get("session_id") or "unknown_session")
         filename = str(obj.get("filename") or "data.bin")
         size = obj.get("size")
-        
+
         # Safe integer conversion with error handling
         size_i: int | None = None
         if size is not None:
@@ -54,8 +54,9 @@ class _Header:
             except (ValueError, TypeError):
                 # Log warning but continue with None size
                 import logging
+
                 logging.warning(f"Invalid size value in file transfer header: {size}")
-        
+
         device_id = str(obj.get("device_id") or "unknown_device")
         return _Header(
             session_id=session_id, filename=filename, size=size_i, device_id=device_id

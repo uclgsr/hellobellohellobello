@@ -287,7 +287,9 @@ def generate_self_signed_cert(
         .public_key(private_key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.datetime.now(datetime.UTC))
-        .not_valid_after(datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=days))
+        .not_valid_after(
+            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=days)
+        )
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName(hostname)]),
             critical=False,

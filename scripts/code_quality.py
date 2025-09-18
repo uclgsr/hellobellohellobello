@@ -4,6 +4,7 @@ Code quality analyzer and fixer for the Multi-Modal Sensor Platform.
 This script sets up linting tools and fixes common code quality issues.
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -177,6 +178,11 @@ def create_config_files():
     print("\n" + "=" * 50)
     print("Creating configuration files...")
     print("=" * 50)
+    
+    # Check if pyproject.toml already exists with good configuration
+    if os.path.exists("pyproject.toml"):
+        print("✅ pyproject.toml already exists - using existing configuration")
+        return
 
     # Create pyproject.toml for tool configuration
     pyproject_content = """[tool.ruff]

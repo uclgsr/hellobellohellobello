@@ -165,7 +165,7 @@ def calibrate_camera(
         image_paths, board_size, square_size
     )
 
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
+    ret, mtx, dist, _rvecs, _tvecs = cv2.calibrateCamera(
         objpoints, imgpoints, image_size, None, None
     )
     if not ret:
