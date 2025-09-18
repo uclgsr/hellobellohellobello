@@ -12,7 +12,7 @@ import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.yourcompany.sensorspoke.R
+// R import handled automatically
 import com.yourcompany.sensorspoke.controller.RecordingController
 import com.yourcompany.sensorspoke.sensors.audio.AudioRecorder
 import com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder

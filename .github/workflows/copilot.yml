@@ -1,84 +1,184 @@
-name: Copilot SWE Agent (Container + Cache + Clean Artifacts)
+name: Enhanced Copilot SWE Agent (Optimized with Comprehensive Caching)
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "dev" ]
+    branches: [ "dev", "main", "master" ]
   pull_request:
-    branches: [ "dev" ]
+    branches: [ "dev", "main", "master" ]
 
 jobs:
   copilot:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-
-    # Use your prebuilt container image with Java, Gradle, Android SDK, Node.js
-    container:
-      image: ghcr.io/your-org/ci-image:latest
-      options: --user 1001
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better caching
 
-      # Cache Gradle wrapper and dependencies
-      - name: Cache Gradle
+      # Set up Java with caching
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Enhanced Gradle caching with multiple cache keys
+      - name: Cache Gradle Wrapper and Dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
+            ~/.gradle/daemon
             ~/.gradle/build-cache
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+            .gradle/caches
+            .gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle.properties') }}-${{ hashFiles('**/build.gradle.kts', '**/settings.gradle.kts') }}
           restore-keys: |
+            ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-
             ${{ runner.os }}-gradle-
 
-      # Cache Android build cache
-      - name: Cache Android build-cache
+      # Enhanced Android build cache with SDK components
+      - name: Cache Android SDK and Build Cache
         uses: actions/cache@v4
         with:
-          path: ~/.android/build-cache
-          key: ${{ runner.os }}-android-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          path: |
+            ~/.android/build-cache
+            ~/.android/avd/*
+            ~/.android/adb*
+            ${{ github.workspace }}/.android/build-cache
+            ${{ github.workspace }}/android_sensor_node/.gradle
+            ${{ github.workspace }}/android_sensor_node/app/.gradle
+            ${{ github.workspace }}/android_sensor_node/app/build/intermediates
+          key: ${{ runner.os }}-android-${{ hashFiles('**/build.gradle.kts', '**/gradle.properties', 'android_sensor_node/**/*.gradle*') }}-${{ hashFiles('android_sensor_node/app/src/**/*.kt', 'android_sensor_node/app/src/**/*.java') }}
           restore-keys: |
+            ${{ runner.os }}-android-${{ hashFiles('**/build.gradle.kts', '**/gradle.properties') }}-
             ${{ runner.os }}-android-
 
-      # Cache Node.js dependencies
-      - name: Cache Node.js
+      # Cache compiled Kotlin/Java classes
+      - name: Cache Build Outputs and Compiled Classes
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/build/classes
+            **/build/kotlin
+            **/build/tmp
+            **/build/generated
+            android_sensor_node/app/build/intermediates/javac
+            android_sensor_node/app/build/intermediates/compile_and_runtime_not_namespaced_r_class_jar
+            android_sensor_node/app/build/intermediates/compile_r_class_jar
+          key: ${{ runner.os }}-build-classes-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-classes-
+
+      # Cache Node.js dependencies (for any JS tooling)
+      - name: Cache Node.js Dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.npm
             ~/.cache/yarn
             **/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}
+            ~/.cache/pip
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json', '**/yarn.lock', '**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # Cache project build outputs (incremental compilation)
-      - name: Cache Project Build Outputs
+      # Cache Python dependencies and virtual environments
+      - name: Cache Python Dependencies
         uses: actions/cache@v4
         with:
-          path: "**/build"
-          key: ${{ runner.os }}-build-${{ github.sha }}
+          path: |
+            ~/.cache/pip
+            ~/.local/lib/python*
+            **/venv
+            **/.venv
+          key: ${{ runner.os }}-python-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/setup.py') }}
           restore-keys: |
-            ${{ runner.os }}-build-
+            ${{ runner.os }}-python-
 
-      # Run Gradle build (container already has JDK, Node, Android SDK installed)
-      - name: Build with Gradle
-        run: ./gradlew build --no-daemon --stacktrace
+      # Cache Kotlin compiler and language server caches
+      - name: Cache Kotlin Compiler and Tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.konan
+            ~/.kotlin
+            ~/.m2/repository/org/jetbrains/kotlin
+            ~/.cache/JetBrains
+          key: ${{ runner.os }}-kotlin-${{ hashFiles('**/build.gradle.kts') }}
+          restore-keys: |
+            ${{ runner.os }}-kotlin-
 
-      # Ensure artifact placeholders exist to avoid warnings
-      - name: Ensure log placeholders exist
+      # Grant execute permission for gradlew
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # Gradle validation for faster feedback
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v2
+
+      # Pre-compile check with dependency resolution only (fast feedback)
+      - name: Resolve Dependencies (Fast Check)
+        run: ./gradlew dependencies --no-daemon --parallel
+        continue-on-error: true
+
+      # Main build with enhanced performance options
+      - name: Build with Gradle (Enhanced Performance)
+        run: |
+          ./gradlew clean build \
+            --no-daemon \
+            --parallel \
+            --build-cache \
+            --configuration-cache \
+            --stacktrace \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -Pkotlin.incremental=true \
+            -Dorg.gradle.jvmargs="-Xmx4g -XX:+HeapDumpOnOutOfMemoryError" \
+            -Dorg.gradle.daemon=false
+        env:
+          GRADLE_OPTS: "-Xmx4g -XX:+HeapDumpOnOutOfMemoryError"
+
+      # Generate build report for debugging
+      - name: Generate Build Report
+        if: failure()
+        run: |
+          ./gradlew build --scan --no-daemon || true
+          find . -name "*.log" -type f -exec echo "=== {} ===" \; -exec cat {} \; || true
+
+      # Ensure artifact directories exist
+      - name: Ensure log and artifact directories exist
         run: |
           mkdir -p /home/runner/work/_temp/runtime-logs
-          touch /home/runner/work/_temp/runtime-logs/blocked.jsonl
-          touch /home/runner/work/_temp/runtime-logs/blocked.md
+          mkdir -p build/reports
+          mkdir -p android_sensor_node/app/build/reports
+          touch /home/runner/work/_temp/runtime-logs/build.log
+          touch /home/runner/work/_temp/runtime-logs/test-results.xml
+          echo "Build completed at $(date)" > /home/runner/work/_temp/runtime-logs/build.log
 
-      # Upload logs (will always succeed, no warnings)
-      - name: Upload Copilot logs
+      # Enhanced artifact upload with build outputs
+      - name: Upload Build Artifacts and Logs
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: results
+          name: build-results-${{ github.run_number }}
           path: |
-            /home/runner/work/_temp/runtime-logs/blocked.jsonl
-            /home/runner/work/_temp/runtime-logs/blocked.md
+            /home/runner/work/_temp/runtime-logs/
+            build/reports/
+            android_sensor_node/app/build/reports/
+            android_sensor_node/app/build/outputs/
+            *.log
           if-no-files-found: ignore
+          retention-days: 7
+
+      # Optional: Upload APK if build succeeds
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: app-debug-${{ github.run_number }}
+          path: android_sensor_node/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
+          retention-days: 14

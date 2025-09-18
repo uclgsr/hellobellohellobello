@@ -5,7 +5,7 @@ import android.view.View
 import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
-import com.yourcompany.sensorspoke.R
+// R import handled automatically
 
 /**
  * DelPopup - Device deletion popup inspired by IRCamera

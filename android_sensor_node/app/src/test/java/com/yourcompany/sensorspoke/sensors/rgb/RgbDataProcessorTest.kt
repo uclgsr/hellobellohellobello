@@ -1,6 +1,10 @@
 package com.yourcompany.sensorspoke.sensors.rgb
 
-import org.junit.Assert.*
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import java.io.File
@@ -35,8 +39,12 @@ class RgbDataProcessorTest {
         val actualVideoStartTime = 600000000L
 
         val frameData = dataProcessor.createFrameData(
-            timestampNs, timestampMs, frameNumber, imageFile,
-            videoStartTime, actualVideoStartTime
+            timestampNs,
+            timestampMs,
+            frameNumber,
+            imageFile,
+            videoStartTime,
+            actualVideoStartTime,
         )
 
         assertEquals("Timestamp in nanoseconds should match", timestampNs, frameData.timestampNs)
@@ -44,7 +52,7 @@ class RgbDataProcessorTest {
         assertEquals("Frame number should match", frameNumber, frameData.frameNumber)
         assertEquals("Filename should match", "test_frame.jpg", frameData.filename)
         assertEquals("File size should be 0 for non-existent file", 0L, frameData.fileSizeBytes)
-        
+
         // Video relative time should be calculated correctly
         val expectedVideoRelativeTime = ((timestampNs - actualVideoStartTime) / 1_000_000).toInt()
         assertEquals("Video relative time should be calculated correctly", expectedVideoRelativeTime, frameData.videoRelativeTimeMs)
@@ -61,7 +69,7 @@ class RgbDataProcessorTest {
             videoRelativeTimeMs = 500,
             estimatedVideoFrame = 15,
             syncQuality = 0.95,
-            actualVideoOffsetMs = 400
+            actualVideoOffsetMs = 400,
         )
 
         val csvLine = dataProcessor.formatFrameDataForCsv(frameData)
@@ -104,7 +112,10 @@ class RgbDataProcessorTest {
         val frameCount = 30
 
         val stats = dataProcessor.getTimingStatistics(
-            videoStartTime, actualVideoStartTime, frameTimestampOffset, frameCount
+            videoStartTime,
+            actualVideoStartTime,
+            frameTimestampOffset,
+            frameCount,
         )
 
         assertEquals("Video start time should match", videoStartTime, stats["videoStartTime"])
@@ -124,8 +135,12 @@ class RgbDataProcessorTest {
         val actualVideoStartTime = 0L
 
         val frameData = dataProcessor.createFrameData(
-            timestampNs, timestampMs, frameNumber, imageFile,
-            videoStartTime, actualVideoStartTime
+            timestampNs,
+            timestampMs,
+            frameNumber,
+            imageFile,
+            videoStartTime,
+            actualVideoStartTime,
         )
 
         assertEquals("Video relative time should be 0", 0, frameData.videoRelativeTimeMs)
@@ -144,8 +159,12 @@ class RgbDataProcessorTest {
         val actualVideoStartTime = 500000000L
 
         val frameData = dataProcessor.createFrameData(
-            timestampNs, timestampMs, frameNumber, imageFile,
-            videoStartTime, actualVideoStartTime
+            timestampNs,
+            timestampMs,
+            frameNumber,
+            imageFile,
+            videoStartTime,
+            actualVideoStartTime,
         )
 
         val expectedVideoFrame = ((frameData.videoRelativeTimeMs * 30.0) / 1000.0).toInt()

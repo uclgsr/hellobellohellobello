@@ -4,10 +4,17 @@ import android.content.Context
 import android.util.Log
 import com.yourcompany.sensorspoke.network.DeviceConnectionManager
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
@@ -16,12 +23,13 @@ import kotlin.random.Random
 class ShimmerRecorder(
     private val context: Context,
     private val shimmerManager: ShimmerManager? = null,
-    private val deviceConnectionManager: DeviceConnectionManager? = null
+    private val deviceConnectionManager: DeviceConnectionManager? = null,
 ) : SensorRecorder {
     companion object {
         private const val TAG = "ShimmerRecorder"
         private const val SAMPLING_RATE_HZ = 128.0
         private const val SAMPLE_INTERVAL_MS = 7L // ~128Hz
+        private const val GSR_RANGE_12BIT = 4095 // 12-bit ADC range (0-4095)
     }
 
     // Data processing utility
@@ -50,30 +58,45 @@ class ShimmerRecorder(
         STARTING,
         RECORDING,
         STOPPING,
-        ERROR
+        ERROR,
     }
 
-
     override suspend fun start(sessionDir: File) {
-        Log.i(TAG, "Starting GSR recording in session: ${sessionDir.absolutePath}")
+        Log.i(TAG, "Starting enhanced GSR recording in session: ${sessionDir.absolutePath}")
         _recordingStatus.value = RecordingStatus.STARTING
 
         try {
-            // Initialize ShimmerManager if available
+            // Initialize enhanced ShimmerManager if available
             shimmerManager?.let { manager ->
                 if (!manager.initialize()) {
-                    throw RuntimeException("Failed to initialize ShimmerManager")
+                    throw RuntimeException("Failed to initialize enhanced ShimmerManager")
                 }
                 
-                // Update device connection manager
+                // Start scanning for Shimmer devices
+                manager.startScanning()
+                
+                // Wait a bit for scanning to find devices, then try to connect
+                delay(3000)
+                
+                // Try to connect to first discovered device or fallback
+                val discoveredDevices = manager.discoveredDevices.value
+                if (discoveredDevices.isNotEmpty()) {
+                    val targetDevice = discoveredDevices.first()
+                    Log.i(TAG, "Attempting to connect to discovered device: ${targetDevice.name}")
+                    manager.connectToDevice(targetDevice.address)
+                } else {
+                    Log.w(TAG, "No Shimmer devices discovered, will use simulation mode")
+                }
+                
+                // Update device connection manager with enhanced state
                 deviceConnectionManager?.updateShimmerState(
                     DeviceConnectionManager.DeviceState.CONNECTING,
                     DeviceConnectionManager.DeviceDetails(
-                        deviceType = "Shimmer3 GSR+",
-                        deviceName = "GSR Sensor",
+                        deviceType = "Enhanced Shimmer3 GSR+",
+                        deviceName = "GSR Sensor with BLE",
                         connectionState = DeviceConnectionManager.DeviceState.CONNECTING,
-                        isRequired = true
-                    )
+                        isRequired = true,
+                    ),
                 )
             }
 
@@ -89,33 +112,33 @@ class ShimmerRecorder(
             startRecordingLoop()
 
             _recordingStatus.value = RecordingStatus.RECORDING
-            
+
             // Update device connection state to connected
             deviceConnectionManager?.updateShimmerState(
                 DeviceConnectionManager.DeviceState.CONNECTED,
                 DeviceConnectionManager.DeviceDetails(
-                    deviceType = "Shimmer3 GSR+",
-                    deviceName = "GSR Sensor",
+                    deviceType = "Enhanced Shimmer3 GSR+",
+                    deviceName = "GSR Sensor with BLE",
                     connectionState = DeviceConnectionManager.DeviceState.CONNECTED,
                     dataRate = SAMPLING_RATE_HZ,
-                    isRequired = true
-                )
+                    isRequired = true,
+                ),
             )
 
-            Log.i(TAG, "GSR recording started successfully")
+            Log.i(TAG, "Enhanced GSR recording started successfully")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start GSR recording: ${e.message}", e)
+            Log.e(TAG, "Failed to start enhanced GSR recording: ${e.message}", e)
             _recordingStatus.value = RecordingStatus.ERROR
-            
+
             deviceConnectionManager?.updateShimmerState(
                 DeviceConnectionManager.DeviceState.ERROR,
                 DeviceConnectionManager.DeviceDetails(
-                    deviceType = "Shimmer3 GSR+",
-                    deviceName = "GSR Sensor",
+                    deviceType = "Enhanced Shimmer3 GSR+",
+                    deviceName = "GSR Sensor with BLE",
                     connectionState = DeviceConnectionManager.DeviceState.ERROR,
                     errorMessage = e.message,
-                    isRequired = true
-                )
+                    isRequired = true,
+                ),
             )
             throw e
         }
@@ -124,9 +147,9 @@ class ShimmerRecorder(
     override suspend fun stop() {
         Log.i(TAG, "Stopping GSR recording")
         _recordingStatus.value = RecordingStatus.STOPPING
-        
+
         isRecording = false
-        
+
         try {
             // Stop recording job and wait for completion
             recordingJob?.apply {
@@ -155,17 +178,18 @@ class ShimmerRecorder(
 
             // Cancel scope
             scope.cancel()
-            
+
             _recordingStatus.value = RecordingStatus.IDLE
             _dataRate.value = 0.0
-            
-            Log.i(TAG, "GSR recording stopped, ${dataPointCount} samples recorded")
+
+            Log.i(TAG, "GSR recording stopped, $dataPointCount samples recorded")
         } catch (e: Exception) {
             Log.e(TAG, "Error during GSR recording stop: ${e.message}", e)
             _recordingStatus.value = RecordingStatus.ERROR
             throw e
         }
     }
+
     /**
      * Start the recording loop - renamed for clarity
      */
@@ -173,36 +197,41 @@ class ShimmerRecorder(
         recordingJob = scope.launch {
             try {
                 Log.d(TAG, "Starting GSR data recording loop")
-                
+
                 while (isActive && isRecording) {
-                    // Generate simulated sensor sample using data processor format
-                    val sample = generateSimulatedSample()
-                    
-                    // Use data processor for consistent CSV formatting
-                    csvWriter?.apply {
-                        write(dataProcessor.formatSampleForCsv(sample, dataPointCount) + "\n")
-                        
-                        // Flush every 50 samples for data integrity
-                        if (dataPointCount % 50 == 0) {
-                            flush()
+                    try {
+                        // Generate simulated sensor sample using data processor format
+                        val sample = generateSimulatedSample()
+
+                        // Use data processor for consistent CSV formatting
+                        csvWriter?.apply {
+                            write(dataProcessor.formatSampleForCsv(sample, dataPointCount) + "\n")
+
+                            // Flush every 50 samples for data integrity
+                            if (dataPointCount % 50 == 0) {
+                                flush()
+                            }
                         }
+
+                        dataPointCount++
+
+                        // Update data rate for UI
+                        if (dataPointCount % 128 == 0) {
+                            val currentRate = calculateCurrentDataRate()
+                            _dataRate.value = currentRate
+
+                            Log.d(TAG, "GSR sample $dataPointCount: ${"%.2f".format(sample.gsrKohms)} kΩ (raw: ${sample.gsrRaw12bit}), Rate: ${"%.1f".format(currentRate)} Hz")
+                        }
+
+                        delay(SAMPLE_INTERVAL_MS)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error in enhanced Shimmer recording: ${e.message}", e)
+                        delay(100)
                     }
-                    
-                    dataPointCount++
-                    
-                    // Update data rate for UI
-                    if (dataPointCount % 128 == 0) {
-                        val currentRate = calculateCurrentDataRate()
-                        _dataRate.value = currentRate
-                        
-                        Log.d(TAG, "GSR sample $dataPointCount: ${"%.2f".format(sample.gsrKohms)} kΩ (raw: ${sample.gsrRaw12bit}), Rate: ${"%.1f".format(currentRate)} Hz")
-                    }
-                    
-                    delay(SAMPLE_INTERVAL_MS)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error in enhanced Shimmer recording: ${e.message}", e)
-                    delay(100)
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in GSR recording loop: ${e.message}", e)
+                _recordingStatus.value = RecordingStatus.ERROR
             }
         }
     }
@@ -237,19 +266,14 @@ class ShimmerRecorder(
         csvWriter?.let { writer ->
             synchronized(writer) {
                 try {
-                    writer.write("$timestampNs,$timestampMs,$dataPointCount,${gsrKohms.format(6)},$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
+                    val gsrKohmsFormatted = "%.6f".format(gsrKohms)
+                    writer.write("$timestampNs,$timestampMs,$dataPointCount,$gsrKohmsFormatted,$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
                     writer.flush()
                 } catch (e: java.io.IOException) {
                     Log.w(TAG, "Error writing enhanced GSR data", e)
                 } catch (e: Exception) {
                     Log.w(TAG, "Unexpected error writing enhanced GSR data", e)
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error in GSR recording loop: ${e.message}", e)
-                _recordingStatus.value = RecordingStatus.ERROR
-            } finally {
-                // Final flush on completion
-                csvWriter?.flush()
             }
         }
 
@@ -257,7 +281,8 @@ class ShimmerRecorder(
 
         // Log progress at 1-second intervals (128 samples at 128Hz)
         if (dataPointCount % 128 == 0) {
-            Log.d(TAG, "Enhanced Shimmer data point $dataPointCount: GSR=${gsrKohms.format(3)}kΩ ($gsrRaw12bit/4095), PPG=$ppgRaw")
+            val gsrKohmsFormatted = "%.3f".format(gsrKohms)
+            Log.d(TAG, "Enhanced Shimmer data point $dataPointCount: GSR=${gsrKohmsFormatted}kΩ ($gsrRaw12bit/4095), PPG=$ppgRaw")
         }
     }
 
@@ -267,14 +292,14 @@ class ShimmerRecorder(
     private fun generateSimulatedSample(): ShimmerDataProcessor.SensorSample {
         val timestampNs = System.nanoTime()
         val timestampMs = System.currentTimeMillis()
-        
+
         // Simulate realistic GSR data with proper 12-bit range
         val gsrRaw = Random.nextInt(512, 3584) // 12-bit ADC range subset
         val gsrKohms = (gsrRaw / 4095.0) * 1000.0 // Convert to kOhms
-        
+
         // Simulate PPG data
         val ppgRaw = Random.nextInt(1500, 2500)
-        
+
         return ShimmerDataProcessor.SensorSample(
             timestampNs = timestampNs,
             timestampMs = timestampMs,
@@ -282,7 +307,7 @@ class ShimmerRecorder(
             gsrRaw12bit = gsrRaw,
             ppgRaw = ppgRaw,
             connectionStatus = "SIMULATED",
-            dataIntegrity = "OK"
+            dataIntegrity = "OK",
         )
     }
 
@@ -306,7 +331,7 @@ class ShimmerRecorder(
             samplesRecorded = dataPointCount,
             targetSamplingRate = SAMPLING_RATE_HZ,
             actualDataRate = _dataRate.value,
-            recordingStatus = _recordingStatus.value
+            recordingStatus = _recordingStatus.value,
         )
     }
 
@@ -318,6 +343,6 @@ class ShimmerRecorder(
         val samplesRecorded: Int,
         val targetSamplingRate: Double,
         val actualDataRate: Double,
-        val recordingStatus: RecordingStatus
+        val recordingStatus: RecordingStatus,
     )
 }

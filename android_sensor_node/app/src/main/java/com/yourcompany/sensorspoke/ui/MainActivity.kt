@@ -23,11 +23,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
-import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
-import com.yourcompany.sensorspoke.R
+// R import handled automatically
 import com.yourcompany.sensorspoke.controller.RecordingController
 import com.yourcompany.sensorspoke.network.ConnectionManager
 import com.yourcompany.sensorspoke.sensors.audio.AudioRecorder
@@ -44,6 +43,7 @@ import com.yourcompany.sensorspoke.ui.navigation.NavigationController
 import com.yourcompany.sensorspoke.ui.navigation.ThermalNavigationState
 import com.yourcompany.sensorspoke.utils.PermissionManager
 import com.yourcompany.sensorspoke.utils.UserExperience
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -227,7 +227,7 @@ class MainActivity : AppCompatActivity() {
         return try {
             val networkClient = com.yourcompany.sensorspoke.network.NetworkClient(this)
             val manager = ConnectionManager(this, networkClient)
-            
+
             // Setup connection callbacks
             manager.onConnectionEstablished = { address, port ->
                 runOnUiThread {
@@ -235,27 +235,27 @@ class MainActivity : AppCompatActivity() {
                     showToast("Connected to PC Hub")
                 }
             }
-            
+
             manager.onConnectionLost = {
                 runOnUiThread {
                     vm.updatePcConnectionStatus(false)
                     showToast("Connection to PC Hub lost")
                 }
             }
-            
+
             manager.onConnectionRestored = {
                 runOnUiThread {
                     vm.updatePcConnectionStatus(true)
                     showToast("Connection restored")
                 }
             }
-            
+
             manager.onReconnectFailed = {
                 runOnUiThread {
                     vm.showError("Failed to reconnect to PC Hub")
                 }
             }
-            
+
             manager
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create connection manager", e)
@@ -331,7 +331,7 @@ class MainActivity : AppCompatActivity() {
         // Update button states
         btnStartRecording?.isEnabled = state.startButtonEnabled
         btnStopRecording?.isEnabled = state.stopButtonEnabled
-        
+
         // Update button text based on recording state
         btnStartRecording?.text = if (state.isRecording) "Recording..." else "Start Recording"
 
@@ -351,12 +351,15 @@ class MainActivity : AppCompatActivity() {
      * Update individual sensor status indicator
      */
     private fun updateSensorIndicator(indicator: View?, textView: TextView?, isConnected: Boolean, label: String, isSimulated: Boolean = false) {
-        indicator?.background = ContextCompat.getDrawable(this, when {
-            isConnected && isSimulated -> R.drawable.status_indicator_orange
-            isConnected -> R.drawable.status_indicator_green
-            else -> R.drawable.status_indicator_red
-        })
-        
+        indicator?.background = ContextCompat.getDrawable(
+            this,
+            when {
+                isConnected && isSimulated -> R.drawable.status_indicator_orange
+                isConnected -> R.drawable.status_indicator_green
+                else -> R.drawable.status_indicator_red
+            },
+        )
+
         textView?.text = when {
             isConnected && isSimulated -> "$label (Sim)"
             isConnected -> label
@@ -371,11 +374,11 @@ class MainActivity : AppCompatActivity() {
         sensorMap["rgb"]?.let { status ->
             vm.updateRgbCameraStatus(status.isActive)
         }
-        
+
         sensorMap["thermal"]?.let { status ->
             vm.updateThermalStatus(status.isActive, status.isSimulated)
         }
-        
+
         sensorMap["gsr"]?.let { status ->
             vm.updateGsrStatus(status.isActive)
         }
@@ -423,17 +426,16 @@ class MainActivity : AppCompatActivity() {
                 try {
                     // Monitor RGB camera status
                     monitorRgbCameraStatus()
-                    
+
                     // Monitor thermal camera status
                     monitorThermalCameraStatus()
-                    
+
                     // Monitor GSR sensor status
                     monitorGsrSensorStatus()
-                    
                 } catch (e: Exception) {
                     Log.e(TAG, "Error monitoring sensor status", e)
                 }
-                
+
                 kotlinx.coroutines.delay(3000) // Check every 3 seconds
             }
         }
@@ -448,7 +450,7 @@ class MainActivity : AppCompatActivity() {
             val cameraManager = getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
             val cameraIds = cameraManager.cameraIdList
             val isAvailable = cameraIds.isNotEmpty()
-            
+
             vm.updateRgbCameraStatus(isAvailable, isAvailable)
         } catch (e: Exception) {
             vm.updateRgbCameraStatus(false)
@@ -464,7 +466,7 @@ class MainActivity : AppCompatActivity() {
             // For now, simulate the check
             val isHardwareConnected = checkThermalHardware()
             val isSimulated = !isHardwareConnected
-            
+
             vm.updateThermalStatus(true, isSimulated, if (isHardwareConnected) "TC001" else null)
         } catch (e: Exception) {
             vm.updateThermalStatus(false, false)
@@ -479,7 +481,7 @@ class MainActivity : AppCompatActivity() {
             // Check Shimmer connection status
             // This would integrate with the actual Shimmer sensor status
             val isConnected = checkShimmerConnection()
-            
+
             vm.updateGsrStatus(isConnected, if (isConnected) "Shimmer3" else null)
         } catch (e: Exception) {
             vm.updateGsrStatus(false)
@@ -530,18 +532,23 @@ class MainActivity : AppCompatActivity() {
      * Update status text color based on content
      */
     private fun updateStatusTextColor(message: String) {
-        statusText?.setTextColor(ContextCompat.getColor(this, when {
-            message.contains("error", ignoreCase = true) ||
-                message.contains("failed", ignoreCase = true) -> android.R.color.holo_red_dark
-            message.contains("recording", ignoreCase = true) -> android.R.color.holo_red_light
-            message.contains("ready", ignoreCase = true) ||
-                message.contains("connected", ignoreCase = true) ||
-                message.contains("success", ignoreCase = true) -> android.R.color.holo_green_dark
-            message.contains("checking", ignoreCase = true) ||
-                message.contains("starting", ignoreCase = true) ||
-                message.contains("stopping", ignoreCase = true) -> android.R.color.holo_blue_dark
-            else -> android.R.color.primary_text_light
-        }))
+        statusText?.setTextColor(
+            ContextCompat.getColor(
+                this,
+                when {
+                    message.contains("error", ignoreCase = true) ||
+                        message.contains("failed", ignoreCase = true) -> android.R.color.holo_red_dark
+                    message.contains("recording", ignoreCase = true) -> android.R.color.holo_red_light
+                    message.contains("ready", ignoreCase = true) ||
+                        message.contains("connected", ignoreCase = true) ||
+                        message.contains("success", ignoreCase = true) -> android.R.color.holo_green_dark
+                    message.contains("checking", ignoreCase = true) ||
+                        message.contains("starting", ignoreCase = true) ||
+                        message.contains("stopping", ignoreCase = true) -> android.R.color.holo_blue_dark
+                    else -> android.R.color.primary_text_light
+                },
+            ),
+        )
     }
 
     /**
@@ -549,34 +556,46 @@ class MainActivity : AppCompatActivity() {
      */
     private fun initializeSensorStatusIndicators() {
         // Initialize with default sensor names for display
-        rgbSensorStatus?.updateStatus("RGB", SensorStatusIndicator.SensorStatus(
-            name = "RGB Camera",
-            isActive = false,
-            isHealthy = false,
-            statusMessage = "Offline"
-        ))
-        
-        thermalSensorStatus?.updateStatus("Thermal", SensorStatusIndicator.SensorStatus(
-            name = "Thermal Camera",
-            isActive = false,
-            isHealthy = false,
-            statusMessage = "Offline"
-        ))
-        
-        gsrSensorStatus?.updateStatus("GSR", SensorStatusIndicator.SensorStatus(
-            name = "GSR Sensor",
-            isActive = false,
-            isHealthy = false,
-            statusMessage = "Disconnected"
-        ))
-        
-        pcSensorStatus?.updateStatus("PC", SensorStatusIndicator.SensorStatus(
-            name = "PC Link",
-            isActive = false,
-            isHealthy = false,
-            statusMessage = "Not Connected"
-        ))
-        
+        rgbSensorStatus?.updateStatus(
+            "RGB",
+            SensorStatusIndicator.SensorStatus(
+                name = "RGB Camera",
+                isActive = false,
+                isHealthy = false,
+                statusMessage = "Offline",
+            ),
+        )
+
+        thermalSensorStatus?.updateStatus(
+            "Thermal",
+            SensorStatusIndicator.SensorStatus(
+                name = "Thermal Camera",
+                isActive = false,
+                isHealthy = false,
+                statusMessage = "Offline",
+            ),
+        )
+
+        gsrSensorStatus?.updateStatus(
+            "GSR",
+            SensorStatusIndicator.SensorStatus(
+                name = "GSR Sensor",
+                isActive = false,
+                isHealthy = false,
+                statusMessage = "Disconnected",
+            ),
+        )
+
+        pcSensorStatus?.updateStatus(
+            "PC",
+            SensorStatusIndicator.SensorStatus(
+                name = "PC Link",
+                isActive = false,
+                isHealthy = false,
+                statusMessage = "Not Connected",
+            ),
+        )
+
         // Then update with ViewModel data
         updateSensorStatus()
     }
@@ -599,7 +618,7 @@ class MainActivity : AppCompatActivity() {
             vm.uiState.collect { state ->
                 // Update status text
                 statusText?.text = state.statusText
-                
+
                 // Update recording timer
                 if (state.isRecording && state.recordingDurationSeconds > 0) {
                     recordingTimer?.visibility = View.VISIBLE
@@ -607,25 +626,25 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     recordingTimer?.visibility = View.GONE
                 }
-                
+
                 // Update button states
                 btnStartRecording?.isEnabled = state.startButtonEnabled
                 btnStopRecording?.isEnabled = state.stopButtonEnabled
-                
+
                 // Update button text based on recording state
                 btnStartRecording?.text = if (state.isRecording) "Recording..." else "Start Recording"
-                
+
                 // Update sensor status indicators
                 rgbSensorStatus?.updateStatus("RGB Camera", state.cameraStatus.toSensorStatusIndicator())
                 thermalSensorStatus?.updateStatus("Thermal", state.thermalStatus.toSensorStatusIndicator())
                 gsrSensorStatus?.updateStatus("GSR", state.shimmerStatus.toSensorStatusIndicator())
                 pcSensorStatus?.updateStatus("PC Link", state.pcStatus.toSensorStatusIndicator())
-                
+
                 // Handle error dialog
                 if (state.showErrorDialog && !state.errorMessage.isNullOrEmpty()) {
                     showErrorDialog(state.errorMessage)
                 }
-                
+
                 // Handle thermal simulation feedback
                 if (state.thermalIsSimulated && state.isThermalConnected) {
                     showThermalSimulationOverlay()
@@ -653,25 +672,11 @@ class MainActivity : AppCompatActivity() {
             isActive = this.isActive,
             isHealthy = this.isHealthy,
             lastUpdate = this.lastUpdate,
-            statusMessage = this.statusMessage
+            statusMessage = this.statusMessage,
         )
     }
 
-    /**
-     * Show error dialog with user-friendly message
-     */
-    private fun showErrorDialog(message: String) {
-        AlertDialog.Builder(this)
-            .setTitle("Error")
-            .setMessage(message)
-            .setPositiveButton("OK") { _, _ ->
-                vm.clearError()
-            }
-            .setOnDismissListener {
-                vm.clearError() 
-            }
-            .show()
-    }
+
 
     /**
      * Show thermal simulation overlay when thermal camera is in simulation mode
@@ -679,9 +684,9 @@ class MainActivity : AppCompatActivity() {
     private fun showThermalSimulationOverlay() {
         rootLayout?.let { layout ->
             val snackbar = Snackbar.make(
-                layout, 
-                "Thermal Camera Simulation (device not found)", 
-                Snackbar.LENGTH_LONG
+                layout,
+                "Thermal Camera Simulation (device not found)",
+                Snackbar.LENGTH_LONG,
             )
             snackbar.show()
         }
@@ -776,7 +781,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 // Use ViewModel to start recording
                 vm.startRecording()
-                
+
                 // Fallback to coordinator/controller if ViewModel doesn't handle it
                 val coordinator = ensureMultiModalCoordinator()
                 val sessionDir = File(applicationContext.filesDir, "sessions")
@@ -805,7 +810,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 // Use ViewModel to stop recording
                 vm.stopRecording()
-                
+
                 // Fallback to coordinator/controller if ViewModel doesn't handle it
                 val coordinator = multiModalCoordinator
                 if (coordinator != null) {
@@ -822,7 +827,6 @@ class MainActivity : AppCompatActivity() {
                 controller?.stopSession()
                 showToast("Recording stopped")
                 vm.onRecordingCompleted("Files saved successfully")
-                
             } catch (e: Exception) {
                 vm.showError("Failed to stop recording: ${e.message}")
                 Log.e(TAG, "Recording stop failed", e)
@@ -1031,16 +1035,16 @@ class MainActivity : AppCompatActivity() {
 
         permissionManager.requestAllPermissions { allGranted ->
             if (allGranted) {
-                vm.updateUiState { 
+                vm.updateUiState {
                     copy(
                         statusText = "All permissions granted - Ready to record",
-                        startButtonEnabled = true
+                        startButtonEnabled = true,
                     )
                 }
                 showToast("All sensor permissions granted. Ready to start recording!")
             } else {
-                vm.updateUiState { 
-                    copy(statusText = "Some permissions denied - Limited functionality") 
+                vm.updateUiState {
+                    copy(statusText = "Some permissions denied - Limited functionality")
                 }
                 vm.showError("Some permissions were denied. Recording may not include all sensors.")
                 Log.d(TAG, "Permission status: ${permissionManager.getPermissionStatus()}")

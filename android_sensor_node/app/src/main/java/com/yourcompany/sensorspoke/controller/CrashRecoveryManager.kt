@@ -7,7 +7,7 @@ import java.io.File
 
 /**
  * CrashRecoveryManager handles detection and recovery of interrupted recording sessions.
- * 
+ *
  * This manager is responsible for:
  * - Detecting unfinished sessions on app startup
  * - Marking crashed sessions appropriately
@@ -39,7 +39,7 @@ class CrashRecoveryManager(
      */
     suspend fun performRecovery(): RecoveryResult {
         Log.i(TAG, "Starting crash recovery process")
-        
+
         val errors = mutableListOf<String>()
         val crashedSessions = mutableListOf<String>()
         var scannedCount = 0
@@ -54,13 +54,13 @@ class CrashRecoveryManager(
             val sessionDirs = sessionsRoot.listFiles { file -> file.isDirectory } ?: emptyArray()
             scannedCount = sessionDirs.size
 
-            Log.i(TAG, "Scanning ${scannedCount} session directories for crashed sessions")
+            Log.i(TAG, "Scanning $scannedCount session directories for crashed sessions")
 
             for (sessionDir in sessionDirs) {
                 try {
                     val sessionId = sessionDir.name
                     val recoveryResult = recoverSession(sessionDir)
-                    
+
                     if (recoveryResult.wasCrashed) {
                         crashedSessions.add(sessionId)
                         Log.w(TAG, "Recovered crashed session: $sessionId")
@@ -74,7 +74,6 @@ class CrashRecoveryManager(
 
             // Create recovery marker to track that recovery was performed
             createRecoveryMarker(crashedSessions.size)
-
         } catch (e: Exception) {
             val error = "Fatal error during crash recovery: ${e.message}"
             errors.add(error)
@@ -85,7 +84,7 @@ class CrashRecoveryManager(
             totalSessionsScanned = scannedCount,
             crashedSessionsFound = crashedSessions.size,
             crashedSessionIds = crashedSessions,
-            recoveryErrors = errors
+            recoveryErrors = errors,
         )
 
         Log.i(TAG, "Crash recovery completed: $result")
@@ -97,7 +96,7 @@ class CrashRecoveryManager(
      */
     private fun recoverSession(sessionDir: File): SessionRecoveryResult {
         val metadataFile = File(sessionDir, "session_metadata.json")
-        
+
         if (!metadataFile.exists()) {
             // No metadata file - might be a partial session, mark as crashed
             createCrashedMetadata(sessionDir, "NO_METADATA")
@@ -108,7 +107,7 @@ class CrashRecoveryManager(
             val metadata = metadataFile.readText(Charsets.UTF_8)
             val json = JSONObject(metadata)
             val status = json.optString("session_status", "UNKNOWN")
-            
+
             when (status) {
                 "STARTED" -> {
                     // Session was started but never completed - mark as crashed
@@ -138,16 +137,16 @@ class CrashRecoveryManager(
         try {
             val crashTimestamp = System.currentTimeMillis()
             val dateFormatter = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
-            
+
             val updatedMetadata = originalMetadata
                 .put("session_status", "CRASHED")
                 .put("crash_detected_at", crashTimestamp)
                 .put("crash_reason", reason)
                 .put("recovery_timestamp", dateFormatter.format(java.util.Date(crashTimestamp)))
                 .put("recovery_note", "Session was interrupted and recovered on app restart")
-            
+
             metadataFile.writeText(updatedMetadata.toString(2), Charsets.UTF_8)
-            
+
             Log.i(TAG, "Marked session as crashed: ${metadataFile.parentFile?.name}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to mark session as crashed: ${e.message}", e)
@@ -162,7 +161,7 @@ class CrashRecoveryManager(
             val metadataFile = File(sessionDir, "session_metadata.json")
             val crashTimestamp = System.currentTimeMillis()
             val dateFormatter = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
-            
+
             val metadata = JSONObject()
                 .put("session_id", sessionDir.name)
                 .put("session_status", "CRASHED")
@@ -170,9 +169,9 @@ class CrashRecoveryManager(
                 .put("crash_reason", reason)
                 .put("recovery_timestamp", dateFormatter.format(java.util.Date(crashTimestamp)))
                 .put("recovery_note", "Session directory found without proper metadata - marked as crashed during recovery")
-            
+
             metadataFile.writeText(metadata.toString(2), Charsets.UTF_8)
-            
+
             Log.i(TAG, "Created crashed metadata for session: ${sessionDir.name}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create crashed metadata: ${e.message}", e)
@@ -186,14 +185,14 @@ class CrashRecoveryManager(
         try {
             val sessionsRoot = getSessionsRoot()
             val markerFile = File(sessionsRoot, RECOVERY_MARKER_FILE)
-            
+
             val marker = JSONObject()
                 .put("last_recovery_timestamp", System.currentTimeMillis())
                 .put("crashed_sessions_recovered", crashedSessionCount)
                 .put("recovery_version", "1.0")
-            
+
             markerFile.writeText(marker.toString(2), Charsets.UTF_8)
-            
+
             Log.d(TAG, "Created recovery marker file")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create recovery marker: ${e.message}", e)
@@ -217,12 +216,12 @@ class CrashRecoveryManager(
         return try {
             val sessionsRoot = getSessionsRoot()
             val markerFile = File(sessionsRoot, RECOVERY_MARKER_FILE)
-            
+
             if (markerFile.exists()) {
                 val marker = JSONObject(markerFile.readText(Charsets.UTF_8))
                 RecoveryInfo(
                     lastRecoveryTimestamp = marker.getLong("last_recovery_timestamp"),
-                    crashedSessionsRecovered = marker.getInt("crashed_sessions_recovered")
+                    crashedSessionsRecovered = marker.getInt("crashed_sessions_recovered"),
                 )
             } else {
                 null
@@ -238,14 +237,14 @@ class CrashRecoveryManager(
      */
     suspend fun cleanupOldCrashedSessions(olderThanDays: Int = 30): Int {
         Log.i(TAG, "Cleaning up crashed sessions older than $olderThanDays days")
-        
+
         val cutoffTime = System.currentTimeMillis() - (olderThanDays * 24 * 60 * 60 * 1000L)
         var cleanedCount = 0
-        
+
         try {
             val sessionsRoot = getSessionsRoot()
             val sessionDirs = sessionsRoot.listFiles { file -> file.isDirectory } ?: return 0
-            
+
             for (sessionDir in sessionDirs) {
                 try {
                     val metadataFile = File(sessionDir, "session_metadata.json")
@@ -253,7 +252,7 @@ class CrashRecoveryManager(
                         val metadata = JSONObject(metadataFile.readText(Charsets.UTF_8))
                         val status = metadata.optString("session_status", "")
                         val crashTime = metadata.optLong("crash_detected_at", 0L)
-                        
+
                         if (status == "CRASHED" && crashTime > 0 && crashTime < cutoffTime) {
                             if (sessionDir.deleteRecursively()) {
                                 cleanedCount++
@@ -268,7 +267,7 @@ class CrashRecoveryManager(
         } catch (e: Exception) {
             Log.e(TAG, "Error during cleanup: ${e.message}", e)
         }
-        
+
         Log.i(TAG, "Cleaned up $cleanedCount old crashed sessions")
         return cleanedCount
     }

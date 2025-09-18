@@ -1,7 +1,11 @@
 package com.yourcompany.sensorspoke.network
 
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
@@ -39,7 +43,7 @@ class DeviceConnectionManagerTest {
             connectionState = DeviceConnectionManager.DeviceState.CONNECTED,
             batteryLevel = 80,
             dataRate = 128.0,
-            isRequired = true
+            isRequired = true,
         )
 
         deviceManager.updateShimmerState(DeviceConnectionManager.DeviceState.CONNECTED, deviceDetails)
@@ -89,22 +93,22 @@ class DeviceConnectionManagerTest {
         deviceManager.updateThermalCameraState(DeviceConnectionManager.DeviceState.ERROR)
 
         val summary = deviceManager.getDeviceStateSummary()
-        
+
         assertEquals("Summary should contain all devices", 5, summary.size)
         assertEquals(
             "Shimmer state should be correct",
             DeviceConnectionManager.DeviceState.CONNECTED,
-            summary["shimmer"]
+            summary["shimmer"],
         )
         assertEquals(
             "RGB camera state should be correct",
             DeviceConnectionManager.DeviceState.CONNECTING,
-            summary["rgb_camera"]
+            summary["rgb_camera"],
         )
         assertEquals(
             "Thermal camera state should be correct",
             DeviceConnectionManager.DeviceState.ERROR,
-            summary["thermal_camera"]
+            summary["thermal_camera"],
         )
     }
 

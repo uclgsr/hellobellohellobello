@@ -1,6 +1,10 @@
 package com.yourcompany.sensorspoke.sensors.gsr
 
-import org.junit.Assert.*
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
@@ -33,7 +37,7 @@ class ShimmerDataProcessorTest {
             gsrRaw12bit = 2048,
             ppgRaw = 1500,
             connectionStatus = "CONNECTED",
-            dataIntegrity = "OK"
+            dataIntegrity = "OK",
         )
 
         assertEquals("Timestamp in nanoseconds should match", 1000000000L, sample.timestampNs)
@@ -54,7 +58,7 @@ class ShimmerDataProcessorTest {
             gsrRaw12bit = 2048,
             ppgRaw = 1500,
             connectionStatus = "CONNECTED",
-            dataIntegrity = "OK"
+            dataIntegrity = "OK",
         )
 
         val csvLine = dataProcessor.formatSampleForCsv(sample, 1)
@@ -62,7 +66,7 @@ class ShimmerDataProcessorTest {
         assertEquals("CSV formatted line should match expected format", expectedLine, csvLine)
     }
 
-    @Test 
+    @Test
     fun testCsvFormattingWithPrecision() {
         val sample = ShimmerDataProcessor.SensorSample(
             timestampNs = 1234567890123456L,
@@ -71,11 +75,11 @@ class ShimmerDataProcessorTest {
             gsrRaw12bit = 3000,
             ppgRaw = 2500,
             connectionStatus = "CONNECTED",
-            dataIntegrity = "OK"
+            dataIntegrity = "OK",
         )
 
         val csvLine = dataProcessor.formatSampleForCsv(sample, 42)
-        
+
         // Check that GSR value is formatted to 3 decimal places
         assertTrue("CSV should contain properly formatted GSR value", csvLine.contains("123.457"))
         assertTrue("CSV should contain sample number", csvLine.contains("42"))
@@ -92,7 +96,7 @@ class ShimmerDataProcessorTest {
             gsrRaw12bit = 4095, // Maximum 12-bit value
             ppgRaw = 2000,
             connectionStatus = "CONNECTED",
-            dataIntegrity = "OK"
+            dataIntegrity = "OK",
         )
 
         assertTrue("GSR raw value should be within 12-bit range", sample.gsrRaw12bit <= 4095)

@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourcompany.sensorspoke.controller.SessionOrchestrator
 import com.yourcompany.sensorspoke.network.ConnectionManager
-
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -94,24 +94,24 @@ class MainViewModel : ViewModel() {
         val isThermalConnected: Boolean = false,
         val isShimmerConnected: Boolean = false,
         val isPcConnected: Boolean = false,
-        
+
         // Recording state
         val isRecording: Boolean = false,
         val isInitialized: Boolean = false,
         val recordingElapsedTime: String = "00:00",
-        
+
         // Status and messages
         val statusText: String = "Initializing...",
         val errorMessage: String? = null,
         val showErrorDialog: Boolean = false,
-        
+
         // Thermal camera specific
         val thermalStatus: ThermalStatus = ThermalStatus(),
-        
+
         // Button states
         val startButtonEnabled: Boolean = false,
         val stopButtonEnabled: Boolean = false,
-        
+
         // Preview availability
         val rgbPreviewAvailable: Boolean = false,
         val thermalPreviewAvailable: Boolean = false,
@@ -124,9 +124,8 @@ class MainViewModel : ViewModel() {
         val isAvailable: Boolean = false,
         val isSimulated: Boolean = false,
         val deviceName: String? = null,
-        val statusMessage: String = "Not connected"
+        val statusMessage: String = "Not connected",
     )
-
 
     /**
      * Initialize the ViewModel with a SessionOrchestrator instance (typically RecordingController)
@@ -147,10 +146,10 @@ class MainViewModel : ViewModel() {
                     SessionOrchestrator.State.RECORDING -> RecordingState.RECORDING
                     SessionOrchestrator.State.STOPPING -> RecordingState.STOPPING
                 }
-                
+
                 _recordingState.value = newRecordingState
                 _isRecording.value = orchestratorState == SessionOrchestrator.State.RECORDING
-                
+
                 updateUiState {
                     copy(
                         isRecording = orchestratorState == SessionOrchestrator.State.RECORDING,
@@ -161,10 +160,10 @@ class MainViewModel : ViewModel() {
                             SessionOrchestrator.State.PREPARING -> "Preparing to record..."
                             SessionOrchestrator.State.RECORDING -> "Recording in progress..."
                             SessionOrchestrator.State.STOPPING -> "Stopping recording..."
-                        }
+                        },
                     )
                 }
-                
+
                 // Handle recording timing
                 if (orchestratorState == SessionOrchestrator.State.RECORDING) {
                     startRecordingTimer()
@@ -209,20 +208,20 @@ class MainViewModel : ViewModel() {
                     result?.let {
                         if (it.isPartialSuccess) {
                             val failedSensors = it.failedSensors.keys.joinToString(", ")
-                            _statusMessage.value = "Recording started (${failedSensors} failed)"
+                            _statusMessage.value = "Recording started ($failedSensors failed)"
                         }
                     }
                 }
-                
+
                 updateUiState {
                     copy(statusText = if (sessionId != null) "Session: $sessionId" else "Ready")
                 }
             }
         }
-        
+
         // Initialize connection monitoring if available
         connManager?.let { setupConnectionMonitoring(it) }
-        
+
         // Initialize sensor status
         initializeSensorStatus()
     }
@@ -244,7 +243,7 @@ class MainViewModel : ViewModel() {
                             "Reconnecting to PC Hub..."
                         } else {
                             "Not connected to PC Hub"
-                        }
+                        },
                     )
                 }
                 kotlinx.coroutines.delay(2000) // Check every 2 seconds
@@ -260,16 +259,16 @@ class MainViewModel : ViewModel() {
             "rgb" to SensorStatus("RGB Camera", false, false),
             "thermal" to SensorStatus("Thermal Camera", false, false),
             "gsr" to SensorStatus("GSR Sensor", false, false),
-            "audio" to SensorStatus("Audio", false, false)
+            "audio" to SensorStatus("Audio", false, false),
         )
         _sensorStatus.value = initialSensors
-        
+
         updateUiState {
             copy(
                 isCameraConnected = false,
                 isThermalConnected = false,
                 isShimmerConnected = false,
-                isInitialized = false
+                isInitialized = false,
             )
         }
     }
@@ -279,20 +278,20 @@ class MainViewModel : ViewModel() {
      */
     private fun startRecordingTimer() {
         _recordingStartTime.value = System.currentTimeMillis()
-        
+
         viewModelScope.launch {
             while (_isRecording.value) {
                 val elapsed = System.currentTimeMillis() - _recordingStartTime.value
                 _recordingElapsedTime.value = elapsed
-                
+
                 val minutes = TimeUnit.MILLISECONDS.toMinutes(elapsed)
                 val seconds = TimeUnit.MILLISECONDS.toSeconds(elapsed) % 60
                 val timeString = "%02d:%02d".format(minutes, seconds)
-                
+
                 updateUiState {
                     copy(recordingElapsedTime = timeString)
                 }
-                
+
                 kotlinx.coroutines.delay(1000) // Update every second
             }
         }
@@ -358,7 +357,7 @@ class MainViewModel : ViewModel() {
         val currentStatus = _sensorStatus.value.toMutableMap()
         currentStatus[sensorName] = status
         _sensorStatus.value = currentStatus
-        
+
         // Update main UI state based on sensor status
         updateUiState {
             copy(
@@ -368,10 +367,10 @@ class MainViewModel : ViewModel() {
                 thermalStatus = ThermalStatus(
                     isAvailable = currentStatus["thermal"]?.isActive == true,
                     isSimulated = currentStatus["thermal"]?.isSimulated == true,
-                    statusMessage = currentStatus["thermal"]?.statusMessage ?: "Not connected"
+                    statusMessage = currentStatus["thermal"]?.statusMessage ?: "Not connected",
                 ),
                 isInitialized = currentStatus.values.any { it.isActive },
-                startButtonEnabled = !isRecording && currentStatus.values.any { it.isActive }
+                startButtonEnabled = !isRecording && currentStatus.values.any { it.isActive },
             )
         }
     }
@@ -385,7 +384,7 @@ class MainViewModel : ViewModel() {
         updateUiState {
             copy(
                 errorMessage = message,
-                showErrorDialog = true
+                showErrorDialog = true,
             )
         }
     }
@@ -409,7 +408,7 @@ class MainViewModel : ViewModel() {
         updateUiState {
             copy(
                 errorMessage = null,
-                showErrorDialog = false
+                showErrorDialog = false,
             )
         }
     }
@@ -426,20 +425,23 @@ class MainViewModel : ViewModel() {
                         !isAvailable -> "Not connected"
                         isSimulated -> "Simulation mode (hardware not found)"
                         else -> "Connected to ${deviceName ?: "thermal camera"}"
-                    }
+                    },
                 ),
-                thermalPreviewAvailable = isAvailable
+                thermalPreviewAvailable = isAvailable,
             )
         }
-        
+
         // Also update in sensor status
-        updateSensorStatus("thermal", SensorStatus(
-            name = "Thermal Camera",
-            isActive = isAvailable,
-            isHealthy = isAvailable,
-            isSimulated = isSimulated,
-            statusMessage = if (isSimulated) "Simulation mode" else "Connected"
-        ))
+        updateSensorStatus(
+            "thermal",
+            SensorStatus(
+                name = "Thermal Camera",
+                isActive = isAvailable,
+                isHealthy = isAvailable,
+                isSimulated = isSimulated,
+                statusMessage = if (isSimulated) "Simulation mode" else "Connected",
+            ),
+        )
     }
 
     /**
@@ -449,16 +451,19 @@ class MainViewModel : ViewModel() {
         updateUiState {
             copy(
                 isCameraConnected = isConnected,
-                rgbPreviewAvailable = previewAvailable
+                rgbPreviewAvailable = previewAvailable,
             )
         }
-        
-        updateSensorStatus("rgb", SensorStatus(
-            name = "RGB Camera",
-            isActive = isConnected,
-            isHealthy = isConnected,
-            statusMessage = if (isConnected) "Connected" else "Not connected"
-        ))
+
+        updateSensorStatus(
+            "rgb",
+            SensorStatus(
+                name = "RGB Camera",
+                isActive = isConnected,
+                isHealthy = isConnected,
+                statusMessage = if (isConnected) "Connected" else "Not connected",
+            ),
+        )
     }
 
     /**
@@ -468,13 +473,16 @@ class MainViewModel : ViewModel() {
         updateUiState {
             copy(isShimmerConnected = isConnected)
         }
-        
-        updateSensorStatus("gsr", SensorStatus(
-            name = "GSR Sensor",
-            isActive = isConnected,
-            isHealthy = isConnected,
-            statusMessage = if (isConnected) "Connected to ${deviceName ?: "Shimmer"}" else "Not connected"
-        ))
+
+        updateSensorStatus(
+            "gsr",
+            SensorStatus(
+                name = "GSR Sensor",
+                isActive = isConnected,
+                isHealthy = isConnected,
+                statusMessage = if (isConnected) "Connected to ${deviceName ?: "Shimmer"}" else "Not connected",
+            ),
+        )
     }
 
     /**
@@ -488,7 +496,7 @@ class MainViewModel : ViewModel() {
                     "Connected to PC Hub${serverInfo?.let { " ($it)" } ?: ""}"
                 } else {
                     "Not connected to PC Hub"
-                }
+                },
             )
         }
     }
@@ -503,7 +511,7 @@ class MainViewModel : ViewModel() {
                 isRecording = false,
                 startButtonEnabled = isInitialized,
                 stopButtonEnabled = false,
-                recordingElapsedTime = "00:00"
+                recordingElapsedTime = "00:00",
             )
         }
     }

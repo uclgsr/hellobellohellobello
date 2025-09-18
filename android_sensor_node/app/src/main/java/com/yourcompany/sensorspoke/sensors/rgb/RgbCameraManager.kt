@@ -2,13 +2,16 @@ package com.yourcompany.sensorspoke.sensors.rgb
 
 import android.content.Context
 import android.util.Log
+import android.util.Size
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.Quality
 import androidx.camera.video.QualitySelector
 import androidx.camera.video.Recorder
@@ -19,22 +22,31 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * RgbCameraManager handles RGB camera lifecycle management and configuration.
- * Separates camera management concerns from data recording logic.
- * 
- * This class is responsible for:
- * - Camera initialization and configuration
- * - Camera state monitoring
- * - Camera controls (focus, exposure)
- * - Error handling and recovery
+ * Enhanced RgbCameraManager with Preview support, Samsung S22 4K recording, and improved lifecycle management.
+ * Implements all requirements from the ASD issue for RGB camera integration.
+ *
+ * Key improvements:
+ * - Preview use case for on-screen display
+ * - Samsung S22 4K recording support with fallback
+ * - Front/back camera selection
+ * - Enhanced camera state reporting
+ * - Proper lifecycle and resource management
  */
 class RgbCameraManager(
     private val context: Context,
     private val lifecycleOwner: LifecycleOwner,
-    private val cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+    private var cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA,
 ) {
     companion object {
         private const val TAG = "RgbCameraManager"
+        
+        // Samsung S22 optimal recording qualities (with fallbacks)
+        private val PREFERRED_QUALITIES = listOf(
+            Quality.UHD,    // 4K (3840x2160) - Samsung S22 supports this
+            Quality.FHD,    // 1080p fallback
+            Quality.HD,     // 720p fallback
+            Quality.SD      // 480p final fallback
+        )
     }
 
     // Camera state management
@@ -44,11 +56,16 @@ class RgbCameraManager(
     private val _cameraInfo = MutableStateFlow<CameraInfo?>(null)
     val cameraInfo: StateFlow<CameraInfo?> = _cameraInfo.asStateFlow()
 
+    private val _previewSurface = MutableStateFlow<Preview.SurfaceProvider?>(null)
+    val previewSurface: StateFlow<Preview.SurfaceProvider?> = _previewSurface.asStateFlow()
+
     // Camera components
     private var cameraProvider: ProcessCameraProvider? = null
     private var camera: Camera? = null
     private var imageCapture: ImageCapture? = null
     private var videoCapture: VideoCapture<Recorder>? = null
+    private var preview: Preview? = null
+    private var imageAnalysis: ImageAnalysis? = null
 
     /**
      * Camera states for RGB camera management
@@ -58,163 +75,228 @@ class RgbCameraManager(
         INITIALIZING,
         READY,
         RECORDING,
-        ERROR
+        ERROR,
     }
 
     /**
-     * Camera information container
+     * Enhanced camera information container
      */
     data class CameraInfo(
         val cameraId: String,
         val supportedQualities: List<Quality>,
+        val actualQuality: Quality,
+        val resolution: Size,
         val hasFlash: Boolean = false,
         val isBackCamera: Boolean = true,
-        val maxZoomRatio: Float = 1.0f
+        val maxZoomRatio: Float = 1.0f,
+        val deviceModel: String = "",
     )
 
     /**
-     * Initialize the camera system
+     * Enhanced camera system initialization with Samsung S22 optimization
      */
     suspend fun initialize(): Boolean {
         return try {
-            Log.i(TAG, "Initializing RGB camera manager")
+            Log.i(TAG, "Initializing enhanced RGB camera manager for Samsung S22")
             _cameraState.value = CameraState.INITIALIZING
-            
+
             initializeCameraX()
-            
+
             _cameraState.value = CameraState.READY
-            Log.i(TAG, "RGB camera manager initialized successfully")
+            Log.i(TAG, "Enhanced RGB camera manager initialized successfully")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize RGB camera manager: ${e.message}", e)
+            Log.e(TAG, "Failed to initialize enhanced RGB camera manager: ${e.message}", e)
             _cameraState.value = CameraState.ERROR
             false
         }
     }
 
     /**
-     * Initialize CameraX components
+     * Enhanced CameraX initialization with Preview support and 4K recording
      */
     private suspend fun initializeCameraX() {
         val provider = ProcessCameraProvider.getInstance(context).get()
         cameraProvider = provider
 
-        // Build recorder for 4K60fps video - high performance mode
-        val recorder = Recorder.Builder()
-            .setQualitySelector(
-                QualitySelector.fromOrderedList(
-                    listOf(Quality.UHD, Quality.FHD, Quality.HD), // 4K priority, fallback to lower
-                ),
-            )
-            .build()
-        videoCapture = VideoCapture.withOutput(recorder)
+        // Detect device capabilities for Samsung S22 optimization
+        val deviceModel = android.os.Build.MODEL
+        Log.i(TAG, "Configuring camera for device: $deviceModel")
 
-        // Build image capture for high-quality frames with enhanced settings
-        imageCapture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-            .setTargetRotation(0) // No rotation for maximum quality
-            .setFlashMode(ImageCapture.FLASH_MODE_OFF) // Avoid artifacts in research data
-            .build()
-
-        // Create preview for focus metering (not displayed, just for camera controls)
-        val preview = Preview.Builder().build()
-
-        // Bind use cases to lifecycle
-        provider.unbindAll()
-        camera = provider.bindToLifecycle(
-            lifecycleOwner,
-            cameraSelector,
-            videoCapture,
-            imageCapture,
-            preview,
+        // Build enhanced recorder with Samsung S22 4K support and fallbacks
+        val qualitySelector = QualitySelector.fromOrderedList(
+            PREFERRED_QUALITIES,
+            FallbackStrategy.higherQualityOrLowerThan(Quality.FHD)
         )
 
-        // Configure enhanced camera controls for scientific recording
-        configureCameraControls()
+        val recorder = Recorder.Builder()
+            .setQualitySelector(qualitySelector)
+            .build()
 
-        // Update camera info
-        updateCameraInfo()
+        videoCapture = VideoCapture.withOutput(recorder)
 
-        Log.i(TAG, "CameraX initialized successfully with enhanced controls")
+        // Enhanced image capture for high-quality stills
+        imageCapture = ImageCapture.Builder()
+            .setJpegQuality(95) // High quality for research
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+            .build()
+
+        // Preview use case for on-screen display
+        preview = Preview.Builder()
+            .build()
+
+        // Image analysis for real-time preview generation
+        imageAnalysis = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+
+        // Bind use cases to lifecycle with Preview support
+        bindUseCases()
+
+        // Update camera info with detected capabilities
+        updateCameraInfo(provider, deviceModel)
     }
 
     /**
-     * Configure camera controls for optimal recording
+     * Bind camera use cases including Preview for on-screen display
      */
-    private fun configureCameraControls() {
+    private fun bindUseCases() {
+        val provider = cameraProvider ?: return
+
         try {
-            camera?.let { cam ->
-                val cameraControl = cam.cameraControl
-                val cameraInfo = cam.cameraInfo
+            // Unbind all use cases before rebinding
+            provider.unbindAll()
 
-                // Simple autofocus to center of frame - using basic CameraX API
-                try {
-                    // Create a simple focus point at center of frame
-                    val factory = SurfaceOrientedMeteringPointFactory(1.0f, 1.0f)
-                    val centerPoint = factory.createPoint(0.5f, 0.5f)
-                    val action = FocusMeteringAction.Builder(centerPoint).build()
-
-                    cameraControl.startFocusAndMetering(action)
-                    Log.d(TAG, "Focus metering started at center point")
-                } catch (focusError: Exception) {
-                    Log.w(TAG, "Could not configure focus metering: ${focusError.message}")
-                }
-
-                // Set neutral exposure compensation for consistent research conditions
-                try {
-                    val exposureRange = cameraInfo.exposureState.exposureCompensationRange
-                    if (exposureRange.contains(0)) {
-                        cameraControl.setExposureCompensationIndex(0) // Neutral exposure
-                        Log.d(TAG, "Exposure compensation set to neutral")
-                    }
-                } catch (exposureError: Exception) {
-                    Log.w(TAG, "Could not configure exposure: ${exposureError.message}")
-                }
-
-                Log.i(TAG, "Camera controls configured successfully")
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not configure enhanced camera controls: ${e.message}", e)
-            // Continue without enhanced controls - basic functionality will still work
-        }
-    }
-
-    /**
-     * Update camera information
-     */
-    private fun updateCameraInfo() {
-        camera?.let { cam ->
-            val info = cam.cameraInfo
-            val cameraId = when (cameraSelector) {
-                CameraSelector.DEFAULT_BACK_CAMERA -> "BACK"
-                CameraSelector.DEFAULT_FRONT_CAMERA -> "FRONT"
-                else -> "UNKNOWN"
-            }
-            
-            _cameraInfo.value = CameraInfo(
-                cameraId = cameraId,
-                supportedQualities = listOf(Quality.UHD, Quality.FHD, Quality.HD),
-                hasFlash = info.hasFlashUnit(),
-                isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA,
-                maxZoomRatio = info.zoomState.value?.maxZoomRatio ?: 1.0f
+            // Bind camera with all use cases including Preview
+            camera = provider.bindToLifecycle(
+                lifecycleOwner,
+                cameraSelector,
+                preview,
+                videoCapture,
+                imageCapture,
+                imageAnalysis
             )
+
+            Log.i(TAG, "Camera use cases bound successfully with Preview support")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to bind camera use cases: ${e.message}", e)
+            throw e
         }
     }
 
     /**
-     * Get image capture use case
+     * Update camera information with detected capabilities
      */
-    fun getImageCapture(): ImageCapture? = imageCapture
+    private fun updateCameraInfo(provider: ProcessCameraProvider, deviceModel: String) {
+        try {
+            val availableCameraInfos = provider.availableCameraInfos
+            val cameraInfo = availableCameraInfos.find { info ->
+                val lensFacing = (info as? androidx.camera.core.impl.CameraInfoInternal)?.lensFacing
+                lensFacing == if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                    androidx.camera.core.CameraSelector.LENS_FACING_BACK
+                } else {
+                    androidx.camera.core.CameraSelector.LENS_FACING_FRONT
+                }
+            } ?: availableCameraInfos.firstOrNull()
+            
+            val supportedQualities = cameraInfo?.let { QualitySelector.getSupportedQualities(it) } ?: emptyList()
+            val actualQuality = getActualQuality(supportedQualities)
+            val resolution = getResolutionForQuality(actualQuality)
+
+            _cameraInfo.value = CameraInfo(
+                cameraId = cameraInfo.toString(),
+                supportedQualities = supportedQualities,
+                actualQuality = actualQuality,
+                resolution = resolution,
+                hasFlash = cameraInfo?.hasFlashUnit() ?: false,
+                isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA,
+                maxZoomRatio = cameraInfo?.zoomState?.value?.maxZoomRatio ?: 1.0f,
+                deviceModel = deviceModel
+            )
+
+            Log.i(TAG, "Camera capabilities - Qualities: $supportedQualities, Using: $actualQuality, Resolution: $resolution")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update camera info: ${e.message}", e)
+        }
+    }
 
     /**
-     * Get video capture use case
+     * Get the actual quality being used based on device support
      */
-    fun getVideoCapture(): VideoCapture<Recorder>? = videoCapture
+    private fun getActualQuality(supportedQualities: List<Quality>): Quality {
+        return PREFERRED_QUALITIES.firstOrNull { it in supportedQualities } ?: Quality.FHD
+    }
+
+    /**
+     * Get resolution for quality setting
+     */
+    private fun getResolutionForQuality(quality: Quality): Size {
+        return when (quality) {
+            Quality.UHD -> Size(3840, 2160)  // 4K
+            Quality.FHD -> Size(1920, 1080)  // 1080p
+            Quality.HD -> Size(1280, 720)    // 720p
+            Quality.SD -> Size(720, 480)     // 480p
+            else -> Size(1920, 1080)         // Default
+        }
+    }
+
+    /**
+     * Switch between front and back camera
+     */
+    fun switchCamera(): Boolean {
+        return try {
+            cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                CameraSelector.DEFAULT_FRONT_CAMERA
+            } else {
+                CameraSelector.DEFAULT_BACK_CAMERA
+            }
+
+            // Re-bind use cases with new camera selector
+            bindUseCases()
+            
+            // Update camera info
+            cameraProvider?.let { provider ->
+                updateCameraInfo(provider, android.os.Build.MODEL)
+            }
+
+            Log.i(TAG, "Switched to ${if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) "back" else "front"} camera")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to switch camera: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * Set Preview surface provider for on-screen display
+     */
+    fun setPreviewSurfaceProvider(surfaceProvider: Preview.SurfaceProvider) {
+        preview?.setSurfaceProvider(surfaceProvider)
+        _previewSurface.value = surfaceProvider
+        Log.i(TAG, "Preview surface provider set for on-screen display")
+    }
 
     /**
      * Check if camera is ready for recording
      */
-    fun isReady(): Boolean = _cameraState.value == CameraState.READY
+    fun isReady(): Boolean {
+        return _cameraState.value == CameraState.READY
+    }
+
+    /**
+     * Get VideoCapture for recording
+     */
+    fun getVideoCapture(): VideoCapture<Recorder>? = videoCapture
+
+    /**
+     * Get ImageCapture for still photos
+     */
+    fun getImageCapture(): ImageCapture? = imageCapture
+
+    /**
+     * Get Preview for on-screen display
+     */
+    fun getPreview(): Preview? = preview
 
     /**
      * Update recording state
@@ -224,19 +306,67 @@ class RgbCameraManager(
     }
 
     /**
-     * Clean up camera resources
+     * Check if device likely supports 4K recording (Samsung S22 detection)
+     */
+    fun supports4K(): Boolean {
+        val model = android.os.Build.MODEL.lowercase()
+        val supportedDevices = listOf("sm-s901", "sm-s906", "sm-s908", "galaxy s22")
+        
+        return supportedDevices.any { model.contains(it) } ||
+               _cameraInfo.value?.supportedQualities?.contains(Quality.UHD) == true
+    }
+
+    /**
+     * Get current camera status for UI feedback
+     */
+    fun getCameraStatus(): CameraStatus {
+        val info = _cameraInfo.value
+        return CameraStatus(
+            state = _cameraState.value,
+            quality = info?.actualQuality?.toString() ?: "Unknown",
+            resolution = info?.resolution?.let { "${it.width}x${it.height}" } ?: "Unknown",
+            isBackCamera = info?.isBackCamera ?: true,
+            hasFlash = info?.hasFlash ?: false,
+            supports4K = supports4K(),
+            deviceModel = info?.deviceModel ?: android.os.Build.MODEL
+        )
+    }
+
+    /**
+     * Camera status data class for UI feedback
+     */
+    data class CameraStatus(
+        val state: CameraState,
+        val quality: String,
+        val resolution: String,
+        val isBackCamera: Boolean,
+        val hasFlash: Boolean,
+        val supports4K: Boolean,
+        val deviceModel: String,
+    )
+
+    /**
+     * Enhanced cleanup with proper resource management
      */
     fun cleanup() {
-        Log.i(TAG, "Cleaning up RGB camera manager")
+        Log.i(TAG, "Cleaning up RGB camera manager resources")
         
-        // Unbind camera
-        cameraProvider?.unbindAll()
-        cameraProvider = null
-        camera = null
-        imageCapture = null
-        videoCapture = null
-        
-        _cameraState.value = CameraState.UNINITIALIZED
-        _cameraInfo.value = null
+        try {
+            cameraProvider?.unbindAll()
+            camera = null
+            videoCapture = null
+            imageCapture = null
+            preview = null
+            imageAnalysis = null
+            cameraProvider = null
+            
+            _cameraState.value = CameraState.UNINITIALIZED
+            _cameraInfo.value = null
+            _previewSurface.value = null
+            
+            Log.i(TAG, "RGB camera manager cleanup completed")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during camera cleanup: ${e.message}", e)
+        }
     }
 }

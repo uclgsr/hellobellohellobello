@@ -10,34 +10,34 @@ data class MainUiState(
     val isInitialized: Boolean = false,
     val currentSessionId: String? = null,
     val recordingDurationSeconds: Long = 0,
-    
+
     // Sensor connection states
     val isCameraConnected: Boolean = false,
     val isThermalConnected: Boolean = false,
     val isShimmerConnected: Boolean = false,
     val isPcConnected: Boolean = false,
-    
+
     // Sensor status details
     val cameraStatus: SensorStatus = SensorStatus("RGB Camera", false, false, "Offline"),
     val thermalStatus: SensorStatus = SensorStatus("Thermal Camera", false, false, "Offline"),
     val shimmerStatus: SensorStatus = SensorStatus("GSR Sensor", false, false, "Disconnected"),
     val pcStatus: SensorStatus = SensorStatus("PC Link", false, false, "Not Connected"),
-    
+
     // UI feedback states
     val statusText: String = "Initializing...",
     val errorMessage: String? = null,
     val showErrorDialog: Boolean = false,
     val showProgress: Boolean = false,
     val progressMessage: String = "",
-    
+
     // Button states
     val startButtonEnabled: Boolean = false,
     val stopButtonEnabled: Boolean = false,
-    
+
     // Preview states
     val rgbPreviewAvailable: Boolean = false,
     val thermalPreviewAvailable: Boolean = false,
-    val thermalIsSimulated: Boolean = false
+    val thermalIsSimulated: Boolean = false,
 )
 
 /**
@@ -48,5 +48,5 @@ data class SensorStatus(
     val isActive: Boolean,
     val isHealthy: Boolean,
     val statusMessage: String,
-    val lastUpdate: Long = System.currentTimeMillis()
+    val lastUpdate: Long = System.currentTimeMillis(),
 )

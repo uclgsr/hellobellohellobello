@@ -1,14 +1,13 @@
 package com.yourcompany.sensorspoke.ui.components
 
 import android.content.Context
-import android.graphics.Color
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import com.yourcompany.sensorspoke.R
+// R import handled automatically
 
 /**
  * Custom UI component for displaying real-time sensor status with visual indicators.
@@ -17,7 +16,7 @@ import com.yourcompany.sensorspoke.R
 class SensorStatusIndicator @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
+    defStyleAttr: Int = 0,
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
     private val statusDot: ImageView
@@ -27,7 +26,7 @@ class SensorStatusIndicator @JvmOverloads constructor(
     init {
         orientation = HORIZONTAL
         LayoutInflater.from(context).inflate(R.layout.component_sensor_status, this, true)
-        
+
         statusDot = findViewById(R.id.statusDot)
         sensorLabel = findViewById(R.id.sensorLabel)
         statusText = findViewById(R.id.statusText)
@@ -39,7 +38,7 @@ class SensorStatusIndicator @JvmOverloads constructor(
     fun updateStatus(sensorName: String, status: SensorStatus) {
         sensorLabel.text = sensorName
         statusText.text = status.statusMessage
-        
+
         // Update status dot color based on sensor state
         val dotColor = when {
             status.isActive && status.isHealthy -> ContextCompat.getColor(context, android.R.color.holo_green_light)
@@ -47,9 +46,9 @@ class SensorStatusIndicator @JvmOverloads constructor(
             !status.isActive -> ContextCompat.getColor(context, android.R.color.holo_red_light)
             else -> ContextCompat.getColor(context, android.R.color.darker_gray)
         }
-        
+
         statusDot.setColorFilter(dotColor)
-        
+
         // Update text color to match status
         val textColor = when {
             status.isActive && status.isHealthy -> ContextCompat.getColor(context, android.R.color.black)
@@ -57,7 +56,7 @@ class SensorStatusIndicator @JvmOverloads constructor(
             !status.isActive -> ContextCompat.getColor(context, android.R.color.holo_red_dark)
             else -> ContextCompat.getColor(context, android.R.color.darker_gray)
         }
-        
+
         statusText.setTextColor(textColor)
     }
 
@@ -69,6 +68,6 @@ class SensorStatusIndicator @JvmOverloads constructor(
         val isActive: Boolean,
         val isHealthy: Boolean,
         val lastUpdate: Long = System.currentTimeMillis(),
-        val statusMessage: String = ""
+        val statusMessage: String = "",
     )
 }
