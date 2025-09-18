@@ -223,19 +223,7 @@ class ThermalCameraRecorder(
      */
     private suspend fun initializeRealTopdonHardware(): Boolean {
         return try {
-            // Check for TC001 device and USB permissions
-            val tc001Device = findTC001Device()
-            if (tc001Device == null) {
-                Log.w(TAG, "No Topdon TC001 device found")
-                return false
-            }
-            
-            if (!usbManager.hasPermission(tc001Device)) {
-                Log.w(TAG, "No USB permission for TC001 device, requesting permission")
-                // Permission will be handled by USB receiver
-                requestUsbPermissionForDevice(tc001Device)
-                return false
-            }
+            Log.i(TAG, "Initializing real Topdon TC001 hardware integration")
             
             // Initialize RealTopdonIntegration with IRCamera library
             realTopdonIntegration = RealTopdonIntegration(context)
@@ -244,18 +232,29 @@ class ThermalCameraRecorder(
             if (initSuccess) {
                 Log.i(TAG, "RealTopdonIntegration initialized successfully")
                 
-                // Observe connection status
-                realTopdonIntegration!!.connectionStatus.observeForever { status ->
-                    _connectionStatus.value = when (status) {
-                        RealTopdonIntegration.ConnectionStatus.DISCONNECTED -> ConnectionStatus.DISCONNECTED
-                        RealTopdonIntegration.ConnectionStatus.CONNECTING -> ConnectionStatus.CONNECTING
-                        RealTopdonIntegration.ConnectionStatus.CONNECTED -> ConnectionStatus.CONNECTED
-                        RealTopdonIntegration.ConnectionStatus.STREAMING -> ConnectionStatus.STREAMING
-                        RealTopdonIntegration.ConnectionStatus.ERROR -> ConnectionStatus.ERROR
+                // Set up frame callback
+                realTopdonIntegration!!.setFrameCallback(object : RealTopdonIntegration.ThermalFrameCallback {
+                    override fun onThermalFrame(frame: ThermalFrame) {
+                        processThermalFrame(frame)
                     }
-                }
+                    
+                    override fun onConnectionStatusChanged(status: ConnectionStatus) {
+                        updateConnectionStatus(status)
+                    }
+                    
+                    override fun onError(error: String) {
+                        Log.e(TAG, "Thermal integration error: $error")
+                    }
+                })
                 
-                true
+                // Try to connect to device
+                if (realTopdonIntegration!!.connectDevice()) {
+                    Log.i(TAG, "Successfully connected to TC001 device")
+                    true
+                } else {
+                    Log.w(TAG, "Failed to connect to TC001 device")
+                    false
+                }
             } else {
                 Log.w(TAG, "Failed to initialize RealTopdonIntegration")
                 realTopdonIntegration = null
@@ -273,25 +272,97 @@ class ThermalCameraRecorder(
      */
     private fun initializeFallbackSimulation() {
         Log.i(TAG, "Initializing enhanced simulation mode for thermal camera")
-        topdonIntegration = TopdonThermalIntegration(context)
-        topdonIntegration!!.initialize()
+        // Use simulation mode - generate mock thermal data
+        isUsingRealHardware = false
     }
 
     /**
-     * Find Topdon TC001 device in USB devices
+     * Update connection status from integration
      */
-    private fun findTC001Device(): UsbDevice? {
-        return usbManager.deviceList.values.find { device ->
-            isTopdonTC001Device(device)
+    private fun updateConnectionStatus(status: ConnectionStatus) {
+        val thermalStatus = when (status) {
+            ConnectionStatus.DISCONNECTED -> ThermalConnectionStatus.DISCONNECTED
+            ConnectionStatus.INITIALIZED -> ThermalConnectionStatus.INITIALIZING  
+            ConnectionStatus.CONNECTING -> ThermalConnectionStatus.CONNECTING
+            ConnectionStatus.CONNECTED -> ThermalConnectionStatus.CONNECTED
+            ConnectionStatus.STREAMING -> ThermalConnectionStatus.STREAMING
+            ConnectionStatus.DEVICE_NOT_FOUND -> ThermalConnectionStatus.DEVICE_NOT_FOUND
+            ConnectionStatus.PERMISSION_DENIED -> ThermalConnectionStatus.PERMISSION_DENIED
+            ConnectionStatus.ERROR -> ThermalConnectionStatus.ERROR
+        }
+        _connectionStatus.value = thermalStatus
+    }
+
+    /**
+     * Process thermal frame from real integration or simulation
+     */
+    private fun processThermalFrame(frame: ThermalFrame) {
+        thermalScope.launch {
+            try {
+                // Save thermal image
+                val imageFilename = "thermal_frame_${System.nanoTime()}.png"
+                val imageFile = File(thermalImagesDir, imageFilename)
+                saveThermalFrame(frame, imageFile)
+                
+                // Write CSV data with real hardware indication
+                val hardwareType = if (frame.isRealHardware) "REAL" else "SIMULATION"
+                val csvLine = "${frame.timestamp},${System.currentTimeMillis()},${frame.frameNumber}," +
+                        "${frame.averageTemperature},${frame.minTemperature},${frame.maxTemperature}," +
+                        "${frame.averageTemperature},$imageFilename,${frame.width},${frame.height},$hardwareType\n"
+                
+                csvWriter?.write(csvLine)
+                csvWriter?.flush()
+                
+                frameCount++
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error processing thermal frame: ${e.message}", e)
+            }
         }
     }
 
     /**
-     * Check if device is a Topdon TC001
+     * Save thermal frame as PNG image
      */
-    private fun isTopdonTC001Device(device: UsbDevice): Boolean {
-        return device.vendorId == TOPDON_VENDOR_ID && 
-               (device.productId == TC001_PRODUCT_ID_1 || device.productId == TC001_PRODUCT_ID_2)
+    private fun saveThermalFrame(frame: ThermalFrame, imageFile: File) {
+        try {
+            val bitmap = createThermalBitmap(frame)
+            FileOutputStream(imageFile).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving thermal frame: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Create bitmap from thermal frame data
+     */
+    private fun createThermalBitmap(frame: ThermalFrame): Bitmap {
+        val bitmap = Bitmap.createBitmap(frame.width, frame.height, Bitmap.Config.ARGB_8888)
+        
+        val tempRange = frame.maxTemperature - frame.minTemperature
+        
+        for (y in 0 until frame.height) {
+            for (x in 0 until frame.width) {
+                val temp = frame.temperatureMatrix[y][x]
+                val normalizedTemp = if (tempRange > 0) {
+                    (temp - frame.minTemperature) / tempRange
+                } else {
+                    0.5f
+                }
+                
+                // Create color based on temperature (blue = cold, red = hot)
+                val red = (255 * normalizedTemp).toInt().coerceIn(0, 255)
+                val blue = (255 * (1 - normalizedTemp)).toInt().coerceIn(0, 255)
+                val green = 0
+                
+                val color = Color.rgb(red, green, blue)
+                bitmap.setPixel(x, y, color)
+            }
+        }
+        
+        return bitmap
     }
 
     /**
@@ -428,17 +499,15 @@ class ThermalCameraRecorder(
      */
     private suspend fun startRealHardwareRecording() {
         realTopdonIntegration?.let { integration ->
-            val streamingStarted = integration.startStreaming { thermalFrame ->
-                thermalScope.launch {
-                    processRealThermalFrame(thermalFrame)
-                }
-            }
+            val streamingStarted = integration.startStreaming()
             
             if (streamingStarted) {
                 Log.i(TAG, "Real thermal hardware streaming started successfully")
+                _connectionStatus.value = ThermalConnectionStatus.STREAMING
             } else {
                 Log.w(TAG, "Failed to start real thermal streaming, falling back to simulation")
                 isUsingRealHardware = false
+                _connectionStatus.value = ThermalConnectionStatus.ERROR
                 startSimulationRecording()
             }
         }
@@ -448,6 +517,8 @@ class ThermalCameraRecorder(
      * Start recording with simulation
      */
     private suspend fun startSimulationRecording() {
+        Log.i(TAG, "Starting simulation thermal recording")
+        
         while (thermalScope.isActive && _recordingStatus.value == RecordingStatus.RECORDING) {
             try {
                 captureSimulatedFrame()
@@ -457,6 +528,56 @@ class ThermalCameraRecorder(
                 delay(1000) // Wait longer on error
             }
         }
+    }
+
+    /**
+     * Capture simulated thermal frame
+     */
+    private suspend fun captureSimulatedFrame() {
+        val timestamp = TimeManager.nowNanos()
+        frameCount++
+        
+        // Generate simulated thermal frame
+        val simulatedFrame = ThermalFrame(
+            width = 256,
+            height = 192,
+            temperatureMatrix = generateSimulatedThermalData(),
+            minTemperature = 15.0f + Random.nextFloat() * 5.0f,
+            maxTemperature = 35.0f + Random.nextFloat() * 10.0f,
+            averageTemperature = 25.0f + Random.nextFloat() * 5.0f,
+            timestamp = timestamp,
+            frameNumber = frameCount,
+            isRealHardware = false
+        )
+        
+        // Process the simulated frame
+        processThermalFrame(simulatedFrame)
+    }
+
+    /**
+     * Generate simulated thermal data matrix
+     */
+    private fun generateSimulatedThermalData(): Array<FloatArray> {
+        val width = 256
+        val height = 192  
+        val data = Array(height) { FloatArray(width) }
+        
+        val baseTemp = 20.0f + Random.nextFloat() * 10.0f
+        
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                // Create some thermal patterns
+                val centerX = width / 2.0f
+                val centerY = height / 2.0f
+                val distance = sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY))
+                val maxDistance = sqrt(centerX * centerX + centerY * centerY)
+                
+                val tempVariation = (1.0f - distance / maxDistance) * 8.0f
+                data[y][x] = baseTemp + tempVariation + Random.nextFloat() * 2.0f - 1.0f
+            }
+        }
+        
+        return data
     }
 
     /**
