@@ -5,7 +5,7 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        id("com.android.application") version "8.5.2"
+        id("com.android.application") version "8.2.2"
         id("org.jetbrains.kotlin.android") version "1.9.25"
     }
 }
@@ -43,13 +43,15 @@ fun detectAndroidSdk(): Boolean {
 // Detect Android SDK presence to conditionally include Android modules
 val hasAndroidSdk = detectAndroidSdk()
 
-if (hasAndroidSdk) {
+// Temporarily disable Android modules due to plugin resolution issues
+// TODO: Re-enable once Android Gradle Plugin repository access is resolved
+if (false && hasAndroidSdk) {
     include(":android_sensor_node")
     project(":android_sensor_node").projectDir = file("android_sensor_node")
     include(":android_sensor_node:app")
     project(":android_sensor_node:app").projectDir = file("android_sensor_node/app")
 } else {
-    println("[settings] Android SDK not found; skipping inclusion of :android_sensor_node modules")
+    println("[settings] Android modules disabled; re-enable once AGP repository access is resolved")
 }
 
 include(":pc_controller")
