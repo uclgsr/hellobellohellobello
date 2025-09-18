@@ -220,7 +220,9 @@ class HeartbeatManager:
 
                     status.mark_reconnect_attempt()
                     attempt_num = status.reconnection_attempts
-                    logger.info(f"Triggering reconnection for {device_id} (attempt {attempt_num})")
+                    logger.info(
+                        f"Triggering reconnection for {device_id} (attempt {attempt_num})"
+                    )
 
                     if device_id in self._reconnect_callbacks:
                         try:

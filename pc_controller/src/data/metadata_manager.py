@@ -306,9 +306,12 @@ class SessionMetadataManager:
                 data = json.load(f)
 
             # Convert back to dataclasses
-            data["devices"] = [DeviceInfo(**device_data) for device_data in data.get("devices", [])]
+            data["devices"] = [
+                DeviceInfo(**device_data) for device_data in data.get("devices", [])
+            ]
             data["sensor_configs"] = [
-                SensorConfig(**config_data) for config_data in data.get("sensor_configs", [])
+                SensorConfig(**config_data)
+                for config_data in data.get("sensor_configs", [])
             ]
 
             metadata = SessionMetadata(**data)
@@ -351,8 +354,10 @@ class SessionMetadataManager:
                 # Add flattened pixel values for thermal data
                 **{
                     f"v{i}": f"Temperature value at pixel {i}"
-                    for i in range(0, 49152, 1000)[:50]  # 256x192 = 49152 pixels, sample every 1000
-                }
+                    for i in range(0, 49152, 1000)[
+                        :50
+                    ]  # 256x192 = 49152 pixels, sample every 1000
+                },
             },
         }
 

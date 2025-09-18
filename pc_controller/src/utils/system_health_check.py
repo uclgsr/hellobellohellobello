@@ -30,9 +30,11 @@ import psutil
 
 try:
     from PyQt6.QtCore import QObject, pyqtSignal
+
     HAS_QT = True
 except ImportError:
     HAS_QT = False
+
     class QObject:
         def __init__(self):
             pass
@@ -44,6 +46,7 @@ except ImportError:
 @dataclass
 class HealthCheckResult:
     """Container for system health check results."""
+
     component: str
     status: str  # "pass", "warning", "fail"
     message: str
@@ -58,6 +61,7 @@ class HealthCheckResult:
 @dataclass
 class SystemHealthReport:
     """Complete system health assessment report."""
+
     overall_status: str  # "healthy", "warning", "critical"
     check_timestamp: str
     system_info: dict[str, Any]
@@ -84,7 +88,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
 
     def emit_progress(self, percent: int, message: str):
         """Emit progress or print to console."""
-        if HAS_QT and hasattr(self, 'health_check_progress'):
+        if HAS_QT and hasattr(self, "health_check_progress"):
             self.health_check_progress.emit(percent, message)
         else:
             print(f"[{percent}%] {message}")
@@ -116,11 +120,11 @@ class SystemHealthChecker(QObject if HAS_QT else object):
                 result = await check_func()
                 results.append(result)
             except Exception as e:
-                results.append(HealthCheckResult(
-                    component=name,
-                    status="fail",
-                    message=f"Check failed: {e!s}"
-                ))
+                results.append(
+                    HealthCheckResult(
+                        component=name, status="fail", message=f"Check failed: {e!s}"
+                    )
+                )
 
         self.emit_progress(90, "Analyzing results...")
 
@@ -135,12 +139,12 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             check_timestamp=datetime.now(UTC).isoformat(),
             system_info=system_info,
             check_results=results,
-            recommendations=recommendations
+            recommendations=recommendations,
         )
 
         self.emit_progress(100, "Health check completed")
 
-        if HAS_QT and hasattr(self, 'health_check_completed'):
+        if HAS_QT and hasattr(self, "health_check_completed"):
             self.health_check_completed.emit(asdict(report))
 
         return report
@@ -158,7 +162,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             "hostname": socket.gethostname(),
             "cpu_count": psutil.cpu_count(),
             "memory_total_gb": round(psutil.virtual_memory().total / (1024**3), 2),
-            "disk_total_gb": round(psutil.disk_usage('/').total / (1024**3), 2),
+            "disk_total_gb": round(psutil.disk_usage("/").total / (1024**3), 2),
         }
 
     async def _check_hardware_connectivity(self) -> HealthCheckResult:
@@ -169,19 +173,26 @@ class SystemHealthChecker(QObject if HAS_QT else object):
         # Check serial ports
         try:
             import serial.tools.list_ports
+
             ports = list(serial.tools.list_ports.comports())
-            port_info = [{"port": p.device, "description": p.description} for p in ports]
+            port_info = [
+                {"port": p.device, "description": p.description} for p in ports
+            ]
             details["serial_ports"] = port_info
             if len(ports) == 0:
-                issues.append("No serial ports detected - Shimmer devices may not be connectable")
+                issues.append(
+                    "No serial ports detected - Shimmer devices may not be connectable"
+                )
         except ImportError:
             issues.append("pyserial not available for hardware detection")
 
         # Check USB devices
         try:
-            result = subprocess.run(['lsusb'], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                ["lsusb"], capture_output=True, text=True, timeout=5
+            )
             if result.returncode == 0:
-                usb_count = len(result.stdout.strip().split('\n'))
+                usb_count = len(result.stdout.strip().split("\n"))
                 details["usb_devices_count"] = usb_count
                 if usb_count < 3:  # Usually have at least a few system devices
                     issues.append("Very few USB devices detected")
@@ -191,6 +202,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
         # Check camera devices
         try:
             import cv2
+
             camera_count = 0
             for i in range(5):  # Check first 5 camera indices
                 cap = cv2.VideoCapture(i)
@@ -213,7 +225,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             component="Hardware Connectivity",
             status=status,
             message=message,
-            details={"issues": issues, **details}
+            details={"issues": issues, **details},
         )
 
     async def _check_network_connectivity(self) -> HealthCheckResult:
@@ -224,13 +236,9 @@ class SystemHealthChecker(QObject if HAS_QT else object):
         # Get network interfaces
         interfaces = psutil.net_if_addrs()
         active_interfaces = [
-            {
-                "name": interface_name,
-                "ip": addr.address,
-                "netmask": addr.netmask
-            }
+            {"name": interface_name, "ip": addr.address, "netmask": addr.netmask}
             for interface_name, addresses in interfaces.items()
-            if not interface_name.startswith('lo')  # Skip loopback
+            if not interface_name.startswith("lo")  # Skip loopback
             for addr in addresses
             if addr.family == socket.AF_INET  # IPv4
         ]
@@ -265,7 +273,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             component="Network Connectivity",
             status=status,
             message=message,
-            details={"issues": issues, **details}
+            details={"issues": issues, **details},
         )
 
     async def _check_storage_health(self) -> HealthCheckResult:
@@ -274,7 +282,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
         issues = []
 
         # Check disk usage
-        disk_usage = psutil.disk_usage('/')
+        disk_usage = psutil.disk_usage("/")
         free_gb = disk_usage.free / (1024**3)
         used_percent = (disk_usage.used / disk_usage.total) * 100
 
@@ -296,7 +304,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
         try:
             test_data = b"0" * (1024 * 1024)  # 1MB test
             start_time = time.time()
-            with open(test_file, 'wb') as f:
+            with open(test_file, "wb") as f:
                 f.write(test_data)
                 f.flush()
                 os.fsync(f.fileno())
@@ -312,8 +320,10 @@ class SystemHealthChecker(QObject if HAS_QT else object):
         except Exception as e:
             issues.append(f"Storage write test failed: {e!s}")
 
-        status = "fail" if any("critical" in issue.lower() for issue in issues) else (
-            "warning" if issues else "pass"
+        status = (
+            "fail"
+            if any("critical" in issue.lower() for issue in issues)
+            else ("warning" if issues else "pass")
         )
         message = f"Storage: {free_gb:.1f}GB free, {len(issues)} issues"
 
@@ -321,7 +331,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             component="Storage Health",
             status=status,
             message=message,
-            details={"issues": issues, **details}
+            details={"issues": issues, **details},
         )
 
     async def _check_memory_status(self) -> HealthCheckResult:
@@ -342,8 +352,10 @@ class SystemHealthChecker(QObject if HAS_QT else object):
         if memory.available < 1024**3:  # Less than 1GB available
             issues.append(f"Low available memory: {memory.available / (1024**3):.1f}GB")
 
-        status = "fail" if any("critical" in issue.lower() for issue in issues) else (
-            "warning" if issues else "pass"
+        status = (
+            "fail"
+            if any("critical" in issue.lower() for issue in issues)
+            else ("warning" if issues else "pass")
         )
         message = f"Memory: {memory.percent:.1f}% used, {len(issues)} issues"
 
@@ -351,7 +363,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             component="Memory Status",
             status=status,
             message=message,
-            details={"issues": issues, **details}
+            details={"issues": issues, **details},
         )
 
     async def _check_process_health(self) -> HealthCheckResult:
@@ -361,9 +373,9 @@ class SystemHealthChecker(QObject if HAS_QT else object):
 
         # Check for high CPU processes
         high_cpu_processes = []
-        for proc in psutil.process_iter(['pid', 'name', 'cpu_percent']):
+        for proc in psutil.process_iter(["pid", "name", "cpu_percent"]):
             try:
-                if proc.info['cpu_percent'] > 50:
+                if proc.info["cpu_percent"] > 50:
                     high_cpu_processes.append(proc.info)
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
@@ -386,7 +398,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             component="Process Health",
             status=status,
             message=message,
-            details={"issues": issues, **details}
+            details={"issues": issues, **details},
         )
 
     async def _check_performance(self) -> HealthCheckResult:
@@ -420,7 +432,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             component="Performance",
             status=status,
             message=message,
-            details={"issues": issues, **details}
+            details={"issues": issues, **details},
         )
 
     async def _check_dependencies(self) -> HealthCheckResult:
@@ -430,14 +442,20 @@ class SystemHealthChecker(QObject if HAS_QT else object):
 
         # Check Python modules
         required_modules = [
-            'PyQt6', 'numpy', 'opencv-python', 'pandas', 'h5py',
-            'pyqtgraph', 'zeroconf', 'psutil'
+            "PyQt6",
+            "numpy",
+            "opencv-python",
+            "pandas",
+            "h5py",
+            "pyqtgraph",
+            "zeroconf",
+            "psutil",
         ]
 
         missing_modules = []
         for module in required_modules:
             try:
-                __import__(module.lower().replace('-', '_'))
+                __import__(module.lower().replace("-", "_"))
             except ImportError:
                 missing_modules.append(module)
 
@@ -445,11 +463,12 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             issues.append(f"Missing Python modules: {', '.join(missing_modules)}")
 
         details["missing_modules"] = missing_modules
-        details["python_path"] = sys.executable if 'sys' in globals() else "Unknown"
+        details["python_path"] = sys.executable if "sys" in globals() else "Unknown"
 
         # Check native backend
         try:
             from pc_controller.native_backend import __version__, shimmer_capi_enabled
+
             details["native_backend_version"] = __version__
             details["shimmer_capi_enabled"] = shimmer_capi_enabled
             if not shimmer_capi_enabled:
@@ -458,13 +477,15 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             issues.append("Native backend not available")
 
         status = "fail" if missing_modules else ("warning" if issues else "pass")
-        message = f"Dependencies: {len(missing_modules)} missing, {len(issues)} total issues"
+        message = (
+            f"Dependencies: {len(missing_modules)} missing, {len(issues)} total issues"
+        )
 
         return HealthCheckResult(
             component="Dependencies",
             status=status,
             message=message,
-            details={"issues": issues, **details}
+            details={"issues": issues, **details},
         )
 
     async def _check_temporal_accuracy(self) -> HealthCheckResult:
@@ -479,7 +500,9 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             await asyncio.sleep(0.001)  # 1ms sleep
 
         # Calculate timing statistics
-        intervals = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps)-1)]
+        intervals = [
+            timestamps[i + 1] - timestamps[i] for i in range(len(timestamps) - 1)
+        ]
         mean_interval = sum(intervals) / len(intervals) / 1_000_000  # Convert to ms
 
         details["mean_interval_ms"] = round(mean_interval, 3)
@@ -502,8 +525,10 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             await asyncio.sleep(0.01)
 
         # This is a basic check - in production you'd want more sophisticated analysis
-        status = "fail" if any("Poor" in issue for issue in issues) else (
-            "warning" if issues else "pass"
+        status = (
+            "fail"
+            if any("Poor" in issue for issue in issues)
+            else ("warning" if issues else "pass")
         )
         message = f"Temporal accuracy: {accuracy:.3f}ms deviation, {len(issues)} issues"
 
@@ -511,7 +536,7 @@ class SystemHealthChecker(QObject if HAS_QT else object):
             component="Temporal Synchronization",
             status=status,
             message=message,
-            details={"issues": issues, **details}
+            details={"issues": issues, **details},
         )
 
     def _determine_overall_status(self, results: list[HealthCheckResult]) -> str:
@@ -531,22 +556,31 @@ class SystemHealthChecker(QObject if HAS_QT else object):
         recommendations = []
 
         for result in results:
-            has_issues = (result.status in ["fail", "warning"] and
-                          result.details and "issues" in result.details)
+            has_issues = (
+                result.status in ["fail", "warning"]
+                and result.details
+                and "issues" in result.details
+            )
             if has_issues:
                 for issue in result.details["issues"]:
                     if "memory" in issue.lower():
                         msg = "Consider closing unnecessary applications to free memory"
                         recommendations.append(msg)
                     elif "disk" in issue.lower():
-                        recommendations.append("Free up disk space or add additional storage")
+                        recommendations.append(
+                            "Free up disk space or add additional storage"
+                        )
                     elif "network" in issue.lower():
-                        recommendations.append("Check network configuration and connectivity")
+                        recommendations.append(
+                            "Check network configuration and connectivity"
+                        )
                     elif "missing" in issue.lower():
                         msg = "Install missing dependencies with: pip install -r requirements.txt"
                         recommendations.append(msg)
                     elif "hardware" in issue.lower():
-                        recommendations.append("Check hardware connections and device drivers")
+                        recommendations.append(
+                            "Check hardware connections and device drivers"
+                        )
                     elif "timing" in issue.lower():
                         msg = "Consider system optimization for real-time performance"
                         recommendations.append(msg)
@@ -564,14 +598,14 @@ class SystemHealthChecker(QObject if HAS_QT else object):
                 return {k: convert_numpy(v) for k, v in obj.items()}
             elif isinstance(obj, list):
                 return [convert_numpy(item) for item in obj]
-            elif hasattr(obj, 'tolist'):  # numpy array
+            elif hasattr(obj, "tolist"):  # numpy array
                 return obj.tolist()
             else:
                 return obj
 
         report_data = convert_numpy(report_data)
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(report_data, f, indent=2, default=str)
 
 
@@ -583,7 +617,9 @@ def main():
     description = "System Health Check for Multi-Modal Physiological Sensing Platform"
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--output", "-o", help="Output file for health report (JSON)")
-    parser.add_argument("--quiet", "-q", action="store_true", help="Quiet mode - minimal output")
+    parser.add_argument(
+        "--quiet", "-q", action="store_true", help="Quiet mode - minimal output"
+    )
 
     args = parser.parse_args()
 
@@ -599,7 +635,9 @@ def main():
         if not args.quiet:
             print(f"\nOverall System Status: {report.overall_status.upper()}")
             print(f"Checks completed: {len(report.check_results)}")
-            print(f"Issues found: {sum(1 for r in report.check_results if r.status != 'pass')}")
+            print(
+                f"Issues found: {sum(1 for r in report.check_results if r.status != 'pass')}"
+            )
 
             if report.recommendations:
                 print("\nRecommendations:")

@@ -22,17 +22,23 @@ import numpy as np
 
 try:
     from PyQt6.QtCore import QObject, pyqtSignal
+
     HAS_QT = True
 except ImportError:
     HAS_QT = False
+
     class QObject:
-        def __init__(self): pass
-    def pyqtSignal(*args): return lambda: None
+        def __init__(self):
+            pass
+
+    def pyqtSignal(*args):
+        return lambda: None
 
 
 @dataclass
 class CalibrationResult:
     """Container for camera calibration results."""
+
     camera_matrix: np.ndarray
     distortion_coeffs: np.ndarray
     rotation_vectors: list[np.ndarray] = None
@@ -47,6 +53,7 @@ class CalibrationResult:
 @dataclass
 class StereoCalibrationResult:
     """Container for stereo calibration results."""
+
     left_camera: CalibrationResult
     right_camera: CalibrationResult
     rotation_matrix: np.ndarray = None
@@ -86,9 +93,11 @@ class CameraCalibrator(QObject if HAS_QT else object):
         self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
         # Detection parameters
-        self.detection_flags = (cv2.CALIB_CB_ADAPTIVE_THRESH +
-                              cv2.CALIB_CB_NORMALIZE_IMAGE +
-                              cv2.CALIB_CB_FAST_CHECK)
+        self.detection_flags = (
+            cv2.CALIB_CB_ADAPTIVE_THRESH
+            + cv2.CALIB_CB_NORMALIZE_IMAGE
+            + cv2.CALIB_CB_FAST_CHECK
+        )
 
         # Storage for calibration points
         self.object_points = []  # 3D points in world coordinates
@@ -99,18 +108,24 @@ class CameraCalibrator(QObject if HAS_QT else object):
 
     def _prepare_object_points(self):
         """Prepare 3D object points for the calibration pattern."""
-        self.objp = np.zeros((self.pattern_size[0] * self.pattern_size[1], 3), np.float32)
-        self.objp[:, :2] = np.mgrid[0:self.pattern_size[0], 0:self.pattern_size[1]].T.reshape(-1, 2)
+        self.objp = np.zeros(
+            (self.pattern_size[0] * self.pattern_size[1], 3), np.float32
+        )
+        self.objp[:, :2] = np.mgrid[
+            0 : self.pattern_size[0], 0 : self.pattern_size[1]
+        ].T.reshape(-1, 2)
         self.objp *= self.square_size_mm
 
     def emit_progress(self, percent: int, message: str):
         """Emit progress signal or print to console."""
-        if HAS_QT and hasattr(self, 'progress_updated'):
+        if HAS_QT and hasattr(self, "progress_updated"):
             self.progress_updated.emit(percent, message)
         else:
             print(f"[{percent}%] {message}")
 
-    def collect_calibration_images(self, image_dir: Path, camera_type: str = "rgb") -> list[Path]:
+    def collect_calibration_images(
+        self, image_dir: Path, camera_type: str = "rgb"
+    ) -> list[Path]:
         """
         Collect and validate calibration images from a directory.
 
@@ -124,7 +139,7 @@ class CameraCalibrator(QObject if HAS_QT else object):
         self.emit_progress(0, f"Collecting {camera_type} calibration images...")
 
         # Common image extensions
-        extensions = ['*.jpg', '*.jpeg', '*.png', '*.bmp', '*.tiff', '*.tif']
+        extensions = ["*.jpg", "*.jpeg", "*.png", "*.bmp", "*.tiff", "*.tif"]
 
         image_paths = []
         for ext in extensions:
@@ -183,7 +198,7 @@ class CameraCalibrator(QObject if HAS_QT else object):
                     )
                     corner_points.append(corners_refined)
 
-                    if HAS_QT and hasattr(self, 'pattern_detected'):
+                    if HAS_QT and hasattr(self, "pattern_detected"):
                         self.pattern_detected.emit(len(corner_points))
 
                     total_count = len(corner_points)
@@ -196,11 +211,14 @@ class CameraCalibrator(QObject if HAS_QT else object):
                 self.emit_progress(progress, f"Error processing {img_path.name}: {e}")
                 continue
 
-        self.emit_progress(80, f"Pattern detection complete: {len(corner_points)} valid images")
+        self.emit_progress(
+            80, f"Pattern detection complete: {len(corner_points)} valid images"
+        )
         return corner_points, image_size
 
-    def calibrate_single_camera(self, image_paths: list[Path],
-                               camera_name: str = "camera") -> CalibrationResult | None:
+    def calibrate_single_camera(
+        self, image_paths: list[Path], camera_name: str = "camera"
+    ) -> CalibrationResult | None:
         """
         Perform single camera calibration.
 
@@ -218,8 +236,10 @@ class CameraCalibrator(QObject if HAS_QT else object):
 
         if len(corner_points) < 5:
             count = len(corner_points)
-            error_msg = f"Insufficient valid calibration images ({count}). Need at least 5."
-            if HAS_QT and hasattr(self, 'error_occurred'):
+            error_msg = (
+                f"Insufficient valid calibration images ({count}). Need at least 5."
+            )
+            if HAS_QT and hasattr(self, "error_occurred"):
                 self.error_occurred.emit(error_msg)
             else:
                 print(f"Error: {error_msg}")
@@ -233,13 +253,17 @@ class CameraCalibrator(QObject if HAS_QT else object):
         try:
             # Calibrate camera
             ret, camera_matrix, dist_coeffs, rvecs, tvecs = cv2.calibrateCamera(
-                object_points, corner_points, image_size, None, None,
-                flags=cv2.CALIB_FIX_PRINCIPAL_POINT
+                object_points,
+                corner_points,
+                image_size,
+                None,
+                None,
+                flags=cv2.CALIB_FIX_PRINCIPAL_POINT,
             )
 
             if not ret:
                 error_msg = "Camera calibration failed - numerical issues"
-                if HAS_QT and hasattr(self, 'error_occurred'):
+                if HAS_QT and hasattr(self, "error_occurred"):
                     self.error_occurred.emit(error_msg)
                 return None
 
@@ -249,7 +273,9 @@ class CameraCalibrator(QObject if HAS_QT else object):
                 proj_points, _ = cv2.projectPoints(
                     object_points[i], rvecs[i], tvecs[i], camera_matrix, dist_coeffs
                 )
-                error = cv2.norm(corner_points[i], proj_points, cv2.NORM_L2) / len(proj_points)
+                error = cv2.norm(corner_points[i], proj_points, cv2.NORM_L2) / len(
+                    proj_points
+                )
                 total_error += error
 
             mean_error = total_error / len(object_points)
@@ -261,22 +287,24 @@ class CameraCalibrator(QObject if HAS_QT else object):
                 rotation_vectors=rvecs,
                 translation_vectors=tvecs,
                 reprojection_error=mean_error,
-                calibration_timestamp=time.strftime('%Y-%m-%d %H:%M:%S'),
+                calibration_timestamp=time.strftime("%Y-%m-%d %H:%M:%S"),
                 image_size=image_size,
                 pattern_size=self.pattern_size,
-                square_size_mm=self.square_size_mm
+                square_size_mm=self.square_size_mm,
             )
 
-            self.emit_progress(100, f"Calibration complete! Error: {mean_error:.4f} pixels")
+            self.emit_progress(
+                100, f"Calibration complete! Error: {mean_error:.4f} pixels"
+            )
 
-            if HAS_QT and hasattr(self, 'calibration_completed'):
+            if HAS_QT and hasattr(self, "calibration_completed"):
                 self.calibration_completed.emit(result)
 
             return result
 
         except Exception as e:
             error_msg = f"Calibration error: {e!s}"
-            if HAS_QT and hasattr(self, 'error_occurred'):
+            if HAS_QT and hasattr(self, "error_occurred"):
                 self.error_occurred.emit(error_msg)
             else:
                 print(f"Error: {error_msg}")
@@ -286,17 +314,17 @@ class CameraCalibrator(QObject if HAS_QT else object):
         """Save calibration result to JSON file."""
         # Convert numpy arrays to lists for JSON serialization
         result_dict = {
-            'camera_matrix': result.camera_matrix.tolist(),
-            'distortion_coeffs': result.distortion_coeffs.tolist(),
-            'reprojection_error': float(result.reprojection_error),
-            'calibration_timestamp': result.calibration_timestamp,
-            'image_size': result.image_size,
-            'pattern_size': result.pattern_size,
-            'square_size_mm': result.square_size_mm
+            "camera_matrix": result.camera_matrix.tolist(),
+            "distortion_coeffs": result.distortion_coeffs.tolist(),
+            "reprojection_error": float(result.reprojection_error),
+            "calibration_timestamp": result.calibration_timestamp,
+            "image_size": result.image_size,
+            "pattern_size": result.pattern_size,
+            "square_size_mm": result.square_size_mm,
         }
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(result_dict, f, indent=2)
 
         print(f"Calibration saved to {output_path}")
@@ -308,21 +336,22 @@ class CameraCalibrator(QObject if HAS_QT else object):
                 data = json.load(f)
 
             return CalibrationResult(
-                camera_matrix=np.array(data['camera_matrix']),
-                distortion_coeffs=np.array(data['distortion_coeffs']),
-                reprojection_error=data['reprojection_error'],
-                calibration_timestamp=data['calibration_timestamp'],
-                image_size=tuple(data['image_size']),
-                pattern_size=tuple(data['pattern_size']),
-                square_size_mm=data['square_size_mm']
+                camera_matrix=np.array(data["camera_matrix"]),
+                distortion_coeffs=np.array(data["distortion_coeffs"]),
+                reprojection_error=data["reprojection_error"],
+                calibration_timestamp=data["calibration_timestamp"],
+                image_size=tuple(data["image_size"]),
+                pattern_size=tuple(data["pattern_size"]),
+                square_size_mm=data["square_size_mm"],
             )
         except Exception as e:
             print(f"Error loading calibration: {e}")
             return None
 
 
-def calibrate_camera_from_directory(image_dir: Path, camera_type: str = "rgb",
-                                   output_dir: Path | None = None) -> CalibrationResult | None:
+def calibrate_camera_from_directory(
+    image_dir: Path, camera_type: str = "rgb", output_dir: Path | None = None
+) -> CalibrationResult | None:
     """
     Convenience function for command-line camera calibration.
 
@@ -350,19 +379,29 @@ def calibrate_camera_from_directory(image_dir: Path, camera_type: str = "rgb",
     return result
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Command line interface
     import argparse
 
-    parser = argparse.ArgumentParser(description='Camera calibration utility')
-    parser.add_argument('image_dir', help='Directory containing calibration images')
-    parser.add_argument('--camera-type', choices=['rgb', 'thermal'], default='rgb',
-                       help='Type of camera to calibrate')
-    parser.add_argument('--output-dir', help='Directory to save calibration results')
-    parser.add_argument('--pattern-size', nargs=2, type=int, default=[9, 6],
-                       help='Checkerboard pattern size (width height)')
-    parser.add_argument('--square-size', type=float, default=25.0,
-                       help='Checkerboard square size in mm')
+    parser = argparse.ArgumentParser(description="Camera calibration utility")
+    parser.add_argument("image_dir", help="Directory containing calibration images")
+    parser.add_argument(
+        "--camera-type",
+        choices=["rgb", "thermal"],
+        default="rgb",
+        help="Type of camera to calibrate",
+    )
+    parser.add_argument("--output-dir", help="Directory to save calibration results")
+    parser.add_argument(
+        "--pattern-size",
+        nargs=2,
+        type=int,
+        default=[9, 6],
+        help="Checkerboard pattern size (width height)",
+    )
+    parser.add_argument(
+        "--square-size", type=float, default=25.0, help="Checkerboard square size in mm"
+    )
 
     args = parser.parse_args()
 
