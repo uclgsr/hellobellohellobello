@@ -280,17 +280,7 @@ class ThermalCameraRecorder(
      * Update connection status from integration
      */
     private fun updateConnectionStatus(status: ConnectionStatus) {
-        val thermalStatus = when (status) {
-            ConnectionStatus.DISCONNECTED -> ThermalConnectionStatus.DISCONNECTED
-            ConnectionStatus.INITIALIZED -> ThermalConnectionStatus.INITIALIZING  
-            ConnectionStatus.CONNECTING -> ThermalConnectionStatus.CONNECTING
-            ConnectionStatus.CONNECTED -> ThermalConnectionStatus.CONNECTED
-            ConnectionStatus.STREAMING -> ThermalConnectionStatus.STREAMING
-            ConnectionStatus.DEVICE_NOT_FOUND -> ThermalConnectionStatus.DEVICE_NOT_FOUND
-            ConnectionStatus.PERMISSION_DENIED -> ThermalConnectionStatus.PERMISSION_DENIED
-            ConnectionStatus.ERROR -> ThermalConnectionStatus.ERROR
-        }
-        _connectionStatus.value = thermalStatus
+        _connectionStatus.value = status
     }
 
     /**
