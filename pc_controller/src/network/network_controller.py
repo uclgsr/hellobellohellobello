@@ -26,7 +26,7 @@ from dataclasses import dataclass
 
 from core.device_manager import DeviceManager
 from data.data_aggregator import get_local_ip
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 from zeroconf import IPVersion, ServiceBrowser, Zeroconf
 
 from ..config import get as cfg_get

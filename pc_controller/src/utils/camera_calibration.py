@@ -27,9 +27,11 @@ try:
 except ImportError:
     HAS_QT = False
 
-    class QObject:
+    class _DummyQObject:
         def __init__(self):
             pass
+
+    QObject = _DummyQObject  # type: ignore
 
     def pyqtSignal(*args):
         return lambda: None
@@ -41,8 +43,8 @@ class CalibrationResult:
 
     camera_matrix: np.ndarray
     distortion_coeffs: np.ndarray
-    rotation_vectors: list[np.ndarray] = None
-    translation_vectors: list[np.ndarray] = None
+    rotation_vectors: list[np.ndarray] | None = None
+    translation_vectors: list[np.ndarray] | None = None
     reprojection_error: float = 0.0
     calibration_timestamp: str = ""
     image_size: tuple[int, int] = (0, 0)
@@ -141,7 +143,7 @@ class CameraCalibrator(QObject if HAS_QT else object):
         # Common image extensions
         extensions = ["*.jpg", "*.jpeg", "*.png", "*.bmp", "*.tiff", "*.tif"]
 
-        image_paths = []
+        image_paths: list[Path] = []
         for ext in extensions:
             image_paths.extend(image_dir.glob(ext))
             image_paths.extend(image_dir.glob(ext.upper()))

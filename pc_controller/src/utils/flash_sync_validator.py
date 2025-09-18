@@ -472,7 +472,8 @@ class FlashSyncValidator(QObject if HAS_QT else object):
                 [
                     "",
                     "PERFORMANCE STATISTICS:",
-                    f"  Success Rate: {success_rate:.1f}% ({passed_events}/{len(result.flash_events)})",
+                    f"  Success Rate: {success_rate:.1f}% "
+                    f"({passed_events}/{len(result.flash_events)})",
                     f"  Tests Passed: {passed_events}",
                     f"  Tests Failed: {len(result.flash_events) - passed_events}",
                 ]

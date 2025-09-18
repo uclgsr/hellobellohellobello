@@ -24,9 +24,11 @@ try:
 except ImportError:
     HAS_QT = False
 
-    class QObject:
+    class _DummyQObject:
         def __init__(self):
             pass
+
+    QObject = _DummyQObject  # type: ignore
 
     def pyqtSignal(*args):
         return lambda: None

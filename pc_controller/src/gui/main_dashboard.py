@@ -188,7 +188,7 @@ class DeviceWidget(QFrame):
         self.findChild(QLabel).setText(f"<b>{device_status.device_name}</b>")
 
         # Update connection status
-        status_color = {
+        _status_color = {
             "online": "green",
             "offline": "red",
             "reconnecting": "orange",
@@ -390,7 +390,8 @@ class MainDashboard(QMainWindow):
         except ImportError:
             # Fallback if PyQtGraph not available
             placeholder = QLabel(
-                "Real-time sensor data visualization\n(PyQtGraph not available - install for live plots)"
+                "Real-time sensor data visualization\n"
+                "(PyQtGraph not available - install for live plots)"
             )
             placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
             placeholder.setStyleSheet("border: 2px dashed gray; padding: 50px;")

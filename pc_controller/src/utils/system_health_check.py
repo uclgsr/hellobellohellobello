@@ -35,9 +35,11 @@ try:
 except ImportError:
     HAS_QT = False
 
-    class QObject:
+    class _DummyQObject:
         def __init__(self):
             pass
+
+    QObject = _DummyQObject  # type: ignore
 
     def pyqtSignal(*args):
         return lambda: None
@@ -50,7 +52,7 @@ class HealthCheckResult:
     component: str
     status: str  # "pass", "warning", "fail"
     message: str
-    details: dict[str, Any] = None
+    details: dict[str, Any] | None = None
     timestamp: str = ""
 
     def __post_init__(self):

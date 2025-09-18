@@ -214,7 +214,7 @@ class SessionDemo:
         try:
             while time.time() - start_time < duration_seconds:
                 # Simulate receiving data from connected devices
-                for device_id, connection in self.connected_devices.items():
+                for connection in self.connected_devices.values():
                     if connection["session_active"]:
                         device_name = connection["device"]["name"]
                         capabilities = connection["device"]["capabilities"]
@@ -252,7 +252,7 @@ class SessionDemo:
                     device_name = connection["device"]["name"]
 
                     # In real implementation, send stop command via TCP
-                    stop_command = {
+                    _stop_command = {
                         "id": int(time.time()),
                         "command": "stop_recording",
                         "session_id": session_id,
@@ -340,7 +340,7 @@ class SessionDemo:
 
 📊 Data Collection Status:
    ✅ Multi-sensor recording completed
-   ✅ Time synchronization applied  
+   ✅ Time synchronization applied
    ✅ Data aggregation successful
    ✅ Export formats generated
 
@@ -352,7 +352,7 @@ class SessionDemo:
 
 🚀 System Ready for:
    - Real hardware integration (Shimmer3, Topdon TC001)
-   - Research data collection workflows  
+   - Research data collection workflows
    - Machine learning analysis pipelines
    - Additional sensor integration
 

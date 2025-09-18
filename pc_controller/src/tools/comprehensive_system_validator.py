@@ -177,7 +177,7 @@ class SystemValidator:
         report.append("")
 
         # Summary by type
-        issue_counts = {}
+        issue_counts: dict[str, int] = {}
         for issue in self.issues:
             issue_counts[issue.issue_type] = issue_counts.get(issue.issue_type, 0) + 1
 
@@ -190,10 +190,10 @@ class SystemValidator:
         high_priority = [i for i in self.issues if i.severity == "HIGH"]
         if high_priority:
             report.append("🚨 HIGH PRIORITY ISSUES:")
-            for issue in high_priority[:10]:  # Show top 10
-                report.append(
-                    f"   {issue.file_path}:{issue.line_number} - {issue.description}"
-                )
+            report.extend(
+                f"   {issue.file_path}:{issue.line_number} - {issue.description}"
+                for issue in high_priority[:10]  # Show top 10
+            )
             report.append("")
 
         # System status

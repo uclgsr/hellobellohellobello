@@ -801,7 +801,8 @@ class GUIManager(QMainWindow):
                 QMessageBox.information(
                     self,
                     "No Connected Devices",
-                    "No devices are currently connected. Please connect to devices before using Flash Sync.",
+                    "No devices are currently connected. "
+                    "Please connect to devices before using Flash Sync.",
                 )
                 return
 
@@ -827,8 +828,10 @@ class GUIManager(QMainWindow):
             QMessageBox.information(
                 self,
                 "Flash Sync Sent",
-                f"Flash synchronization signal sent to {len(connected_devices)} device(s):\n\n{device_list}\n\n"
-                f"All connected cameras should have flashed simultaneously for timing verification.",
+                f"Flash synchronization signal sent to {len(connected_devices)} device(s):\n\n"
+                f"{device_list}\n\n"
+                f"All connected cameras should have flashed simultaneously "
+                f"for timing verification.",
             )
 
         except Exception as exc:
@@ -842,7 +845,7 @@ class GUIManager(QMainWindow):
         try:
             # Flash local video widgets
             original_webcam_style = self.webcam_widget.view.styleSheet()
-            original_gsr_style = self.gsr_widget.styleSheet()
+            _original_gsr_style = self.gsr_widget.styleSheet()
 
             # Apply flash effect
             flash_style = (
