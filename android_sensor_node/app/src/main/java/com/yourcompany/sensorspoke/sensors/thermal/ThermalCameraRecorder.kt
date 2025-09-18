@@ -534,7 +534,7 @@ class ThermalCameraRecorder(
      * Capture simulated thermal frame
      */
     private suspend fun captureSimulatedFrame() {
-        val timestamp = TimeManager.nowNanos()
+        val timestamp = System.nanoTime()
         frameCount++
         
         // Generate simulated thermal frame
