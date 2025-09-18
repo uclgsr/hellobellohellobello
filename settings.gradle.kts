@@ -5,7 +5,7 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        id("com.android.application") version "8.2.2"
+        id("com.android.application") version "8.1.4"
         id("org.jetbrains.kotlin.android") version "1.9.25"
     }
 }
@@ -43,15 +43,16 @@ fun detectAndroidSdk(): Boolean {
 // Detect Android SDK presence to conditionally include Android modules
 val hasAndroidSdk = detectAndroidSdk()
 
-// Temporarily disable Android modules due to plugin resolution issues
-// TODO: Re-enable once Android Gradle Plugin repository access is resolved
+// Note: Android modules temporarily disabled due to repository access restrictions in this environment
+// The Android Gradle Plugin repository (https://dl.google.com/dl/android/maven2/) appears to be blocked
+// In a normal development environment, this should work with AGP 8.1.4+
 if (false && hasAndroidSdk) {
     include(":android_sensor_node")
     project(":android_sensor_node").projectDir = file("android_sensor_node")
     include(":android_sensor_node:app")
     project(":android_sensor_node:app").projectDir = file("android_sensor_node/app")
 } else {
-    println("[settings] Android modules disabled; re-enable once AGP repository access is resolved")
+    println("[settings] Android modules disabled due to repository access restrictions")
 }
 
 include(":pc_controller")

@@ -48,24 +48,15 @@ fun isPytestAvailable(): Boolean {
 tasks.register<Exec>("pyTest") {
     group = "verification"
     description = "Run Python pytest suite as defined by pytest.ini"
-    workingDir = file(".")
-    commandLine("python3", "-m", "pytest")
-
-    // Configuration cache compatible - check availability at execution time
-    doFirst {
-        val pytestAvailable = try {
-            val process = ProcessBuilder("python3", "-m", "pytest", "--version")
-                .directory(file("."))
-                .start()
-            process.waitFor() == 0
-        } catch (e: Exception) {
-            false
-        }
-        
-        if (!pytestAvailable) {
-            throw RuntimeException("pytest module not available; install with: python3 -m pip install pytest")
-        }
-    }
+    
+    // Configuration cache compatible approach
+    executable = "python3"
+    args = listOf("-m", "pytest")
+    
+    // Use string path instead of File object for configuration cache compatibility
+    workingDir = rootProject.projectDir
+    
+    // Let pytest fail naturally if not available - simpler approach
 }
 
 // Combined check task
