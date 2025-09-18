@@ -43,16 +43,13 @@ fun detectAndroidSdk(): Boolean {
 // Detect Android SDK presence to conditionally include Android modules
 val hasAndroidSdk = detectAndroidSdk()
 
-// Note: Android modules temporarily disabled due to repository access restrictions in this environment
-// The Android Gradle Plugin repository (https://dl.google.com/dl/android/maven2/) appears to be blocked
-// In a normal development environment, this should work with AGP 8.1.4+
-if (false && hasAndroidSdk) {
+if (hasAndroidSdk) {
     include(":android_sensor_node")
     project(":android_sensor_node").projectDir = file("android_sensor_node")
     include(":android_sensor_node:app")
     project(":android_sensor_node:app").projectDir = file("android_sensor_node/app")
 } else {
-    println("[settings] Android modules disabled due to repository access restrictions")
+    println("[settings] Android SDK not found; skipping inclusion of :android_sensor_node modules")
 }
 
 include(":pc_controller")
