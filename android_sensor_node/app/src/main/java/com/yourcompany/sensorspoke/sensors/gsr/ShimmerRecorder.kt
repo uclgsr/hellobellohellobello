@@ -266,7 +266,8 @@ class ShimmerRecorder(
         csvWriter?.let { writer ->
             synchronized(writer) {
                 try {
-                    writer.write("$timestampNs,$timestampMs,$dataPointCount,${"%.6f".format(gsrKohms)},$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
+                    val gsrKohmsFormatted = "%.6f".format(gsrKohms)
+                    writer.write("$timestampNs,$timestampMs,$dataPointCount,$gsrKohmsFormatted,$gsrRaw12bit,$ppgRaw,$connectionStatus\n")
                     writer.flush()
                 } catch (e: java.io.IOException) {
                     Log.w(TAG, "Error writing enhanced GSR data", e)
@@ -280,7 +281,8 @@ class ShimmerRecorder(
 
         // Log progress at 1-second intervals (128 samples at 128Hz)
         if (dataPointCount % 128 == 0) {
-            Log.d(TAG, "Enhanced Shimmer data point $dataPointCount: GSR=${"%.3f".format(gsrKohms)}kΩ ($gsrRaw12bit/4095), PPG=$ppgRaw")
+            val gsrKohmsFormatted = "%.3f".format(gsrKohms)
+            Log.d(TAG, "Enhanced Shimmer data point $dataPointCount: GSR=${gsrKohmsFormatted}kΩ ($gsrRaw12bit/4095), PPG=$ppgRaw")
         }
     }
 
