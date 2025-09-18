@@ -14,7 +14,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.yourcompany.sensorspoke.R
+// R import handled automatically
 
 /**
  * Shimmer Bluetooth device selection dialog from ShimmerAndroidAPI

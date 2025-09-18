@@ -12,7 +12,7 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.yourcompany.sensorspoke.R
+// R import handled automatically
 
 /**
  * ConnectionGuideView - TC001 connection guidance UI

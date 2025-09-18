@@ -16,7 +16,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.yourcompany.sensorspoke.R
+// R import handled automatically
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001ConnectType
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001UIController
 import com.yourcompany.sensorspoke.ui.MainActivity

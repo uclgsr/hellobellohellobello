@@ -122,7 +122,7 @@ jobs:
 
       # Pre-compile check with dependency resolution only (fast feedback)
       - name: Resolve Dependencies (Fast Check)
-        run: ./gradlew resolveDependencies --no-daemon --parallel
+        run: ./gradlew dependencies --no-daemon --parallel
         continue-on-error: true
 
       # Main build with enhanced performance options

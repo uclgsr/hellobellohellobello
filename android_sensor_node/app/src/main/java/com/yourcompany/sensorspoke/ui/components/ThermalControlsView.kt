@@ -11,7 +11,7 @@ import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
-import com.yourcompany.sensorspoke.R
+// R import handled automatically
 import com.yourcompany.sensorspoke.sensors.thermal.TopdonThermalPalette
 import java.util.Locale
 
