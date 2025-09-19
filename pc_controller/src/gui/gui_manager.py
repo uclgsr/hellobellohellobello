@@ -251,7 +251,7 @@ class DeviceWidget(QWidget):
                     # Update title to show sample rate
                     expected_samples = 128 * 0.05  # 128 Hz * 50ms update interval
                     rate_percentage = min(100, (samples_added / expected_samples) * 100)
-                    self.title.setText(f"{self.title.text().split(' (')[0]} ({rate_percentage:.0f}% rate)")
+                    self.title.setText(f"{self.base_title} ({rate_percentage:.0f}% rate)")
             self._last_sample_count = len(self._values)
 
 
