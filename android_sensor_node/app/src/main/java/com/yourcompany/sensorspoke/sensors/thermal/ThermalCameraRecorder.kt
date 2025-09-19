@@ -29,7 +29,9 @@ import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
 import java.io.FileWriter
+import kotlin.math.pow
 import kotlin.math.sqrt
+import kotlin.random.Random
 
 /**
  * Enhanced thermal camera recorder with real Topdon TC001 integration using IRCamera library.
@@ -54,6 +56,14 @@ class ThermalCameraRecorder(
         private const val TC001_PRODUCT_ID_2 = 0x0200 // TC001 product ID variant 2
         private const val MAX_FPS = 25 // Maximum thermal camera frame rate
         private const val USB_PERMISSION_ACTION = "com.yourcompany.sensorspoke.USB_PERMISSION"
+    }
+
+    /**
+     * Check if USB device is a Topdon TC001 thermal camera
+     */
+    private fun isTopdonTC001Device(device: UsbDevice): Boolean {
+        return device.vendorId == TOPDON_VENDOR_ID && 
+               (device.productId == TC001_PRODUCT_ID_1 || device.productId == TC001_PRODUCT_ID_2)
     }
 
     private var csvWriter: BufferedWriter? = null
@@ -489,15 +499,17 @@ class ThermalCameraRecorder(
      */
     private suspend fun startRealHardwareRecording() {
         realTopdonIntegration?.let { integration ->
-            val streamingStarted = integration.startStreaming()
+            val streamingStarted = integration.startStreaming { frame ->
+                processThermalFrame(frame)
+            }
             
             if (streamingStarted) {
                 Log.i(TAG, "Real thermal hardware streaming started successfully")
-                _connectionStatus.value = ThermalConnectionStatus.STREAMING
+                _connectionStatus.value = ConnectionStatus.STREAMING
             } else {
                 Log.w(TAG, "Failed to start real thermal streaming, falling back to simulation")
                 isUsingRealHardware = false
-                _connectionStatus.value = ThermalConnectionStatus.ERROR
+                _connectionStatus.value = ConnectionStatus.ERROR
                 startSimulationRecording()
             }
         }
@@ -529,13 +541,15 @@ class ThermalCameraRecorder(
         
         // Generate simulated thermal frame
         val simulatedFrame = ThermalFrame(
+            timestamp = timestamp,
             width = 256,
             height = 192,
             temperatureMatrix = generateSimulatedThermalData(),
-            minTemperature = 15.0f + Random.nextFloat() * 5.0f,
-            maxTemperature = 35.0f + Random.nextFloat() * 10.0f,
-            averageTemperature = 25.0f + Random.nextFloat() * 5.0f,
-            timestamp = timestamp,
+            minTemp = 15.0f + Random.nextFloat() * 5.0f,
+            maxTemp = 35.0f + Random.nextFloat() * 10.0f,
+            avgTemp = 25.0f + Random.nextFloat() * 5.0f,
+            rotation = 0,
+            isValid = true,
             frameNumber = frameCount,
             isRealHardware = false
         )
@@ -547,10 +561,10 @@ class ThermalCameraRecorder(
     /**
      * Generate simulated thermal data matrix
      */
-    private fun generateSimulatedThermalData(): Array<FloatArray> {
+    private fun generateSimulatedThermalData(): FloatArray {
         val width = 256
         val height = 192  
-        val data = Array(height) { FloatArray(width) }
+        val data = FloatArray(width * height)
         
         val baseTemp = 20.0f + Random.nextFloat() * 10.0f
         
@@ -559,11 +573,12 @@ class ThermalCameraRecorder(
                 // Create some thermal patterns
                 val centerX = width / 2.0f
                 val centerY = height / 2.0f
-                val distance = sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY))
-                val maxDistance = sqrt(centerX * centerX + centerY * centerY)
+                val distance = kotlin.math.sqrt((x - centerX).pow(2) + (y - centerY).pow(2))
+                val normalizedDistance = (distance / kotlin.math.sqrt(centerX.pow(2) + centerY.pow(2))).coerceIn(0.0f, 1.0f)
                 
-                val tempVariation = (1.0f - distance / maxDistance) * 8.0f
-                data[y][x] = baseTemp + tempVariation + Random.nextFloat() * 2.0f - 1.0f
+                // Create a temperature gradient from center outward
+                val temp = baseTemp + (5.0f * (1.0f - normalizedDistance)) + Random.nextFloat() * 2.0f - 1.0f
+                data[y * width + x] = temp
             }
         }
         
@@ -598,40 +613,6 @@ class ThermalCameraRecorder(
             
         } catch (e: Exception) {
             Log.e(TAG, "Error processing real thermal frame: ${e.message}", e)
-        }
-    }
-
-    /**
-     * Capture simulated thermal frame
-     */
-    private suspend fun captureSimulatedFrame() {
-        frameCount++
-        val timestampNs = TimeManager.nowNanos()
-        val timestampMs = System.currentTimeMillis()
-        
-        // Generate enhanced simulation data
-        val thermalData = topdonIntegration?.captureThermalFrame()
-        
-        if (thermalData != null) {
-            try {
-                // Save simulated thermal image
-                val imageFileName = "thermal_sim_${timestampNs}.png"
-                val imageFile = File(thermalImagesDir, imageFileName)
-                FileOutputStream(imageFile).use { out ->
-                    thermalData.thermalBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                }
-                
-                // Write CSV data
-                csvWriter?.apply {
-                    write("$timestampNs,$timestampMs,$frameCount,${thermalData.centerTemperature},${thermalData.minTemperature},${thermalData.maxTemperature},${thermalData.averageTemperature},$imageFileName,192,256,SIMULATION\n")
-                    flush()
-                }
-                
-                Log.d(TAG, "Captured simulated thermal frame $frameCount: center=${String.format("%.2f", thermalData.centerTemperature)}°C, range=${String.format("%.2f", thermalData.minTemperature)}-${String.format("%.2f", thermalData.maxTemperature)}°C")
-                
-            } catch (e: Exception) {
-                Log.e(TAG, "Error processing simulated thermal frame: ${e.message}", e)
-            }
         }
     }
 

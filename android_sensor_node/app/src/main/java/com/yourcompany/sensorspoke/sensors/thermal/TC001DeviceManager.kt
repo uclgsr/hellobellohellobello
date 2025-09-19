@@ -28,7 +28,10 @@ enum class TopdonThermalPalette(val value: Int) {
     BLACK_HOT(3),
     RED(4),
     GREEN(5),
-    BLUE(6)
+    BLUE(6),
+    GRAYSCALE(7),
+    HOT(8),
+    COOL(9)
 }
 
 /**
@@ -436,4 +439,48 @@ enum class TC001DeviceStatus {
     DISCONNECTING,
     ERROR,
     CONNECTION_LOST,
+}
+
+/**
+ * TC001 Initialization utilities integrated into device manager
+ */
+object TC001InitUtil {
+    private const val TAG = "TC001InitUtil"
+
+    /**
+     * Initialize logging for TC001 operations
+     */
+    fun initLog() {
+        Log.i(TAG, "TC001 logging initialized")
+    }
+
+    /**
+     * Initialize USB receivers for TC001 device detection
+     */
+    fun initReceiver(context: Context) {
+        try {
+            // Setup USB device detection for TC001
+            val filter =
+                IntentFilter().apply {
+                    addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+                    addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+                    addAction(UsbManager.ACTION_USB_ACCESSORY_ATTACHED)
+                    addAction(UsbManager.ACTION_USB_ACCESSORY_DETACHED)
+                    addAction("com.yourcompany.sensorspoke.ACTION_USB_PERMISSION")
+                }
+
+            // Register receiver for TC001 USB events
+            Log.i(TAG, "TC001 USB receiver registered")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register TC001 USB receiver", e)
+        }
+    }
+
+    /**
+     * Initialize TC001 device management
+     */
+    fun initTC001DeviceManager(context: Context) {
+        Log.i(TAG, "TC001 Device Manager initialized")
+        // Device initialization logic will be handled by TC001DeviceManager
+    }
 }

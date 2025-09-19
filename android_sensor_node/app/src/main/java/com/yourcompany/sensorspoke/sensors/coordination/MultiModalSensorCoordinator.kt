@@ -9,7 +9,6 @@ import com.yourcompany.sensorspoke.sensors.audio.AudioRecorder
 // import com.yourcompany.sensorspoke.sensors.gsr.ShimmerGSRIntegrationManager
 import com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder
 import com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001SensorIntegrationManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

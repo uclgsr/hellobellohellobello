@@ -7,7 +7,7 @@ import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.cardview.widget.CardView
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationState
+import com.yourcompany.sensorspoke.sensors.thermal.TC001IntegrationState
 
 /**
  * TC001SystemStatusView - Comprehensive thermal system status display

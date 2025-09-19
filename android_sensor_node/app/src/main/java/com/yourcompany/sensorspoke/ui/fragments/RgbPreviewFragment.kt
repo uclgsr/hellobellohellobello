@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-// R import handled automatically
+import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.utils.PreviewBus
 
 /**

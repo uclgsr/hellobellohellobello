@@ -9,6 +9,7 @@ enum class ConnectionStatus {
     DISCONNECTED,
     CONNECTING,
     CONNECTED,
+    STREAMING,
     ERROR
 }
 
@@ -24,8 +25,14 @@ data class ThermalFrame(
     val maxTemp: Float,
     val avgTemp: Float,
     val rotation: Int = 0,
-    val isValid: Boolean = true
+    val isValid: Boolean = true,
+    val frameNumber: Int = 0,
+    val isRealHardware: Boolean = false
 ) {
+    // Compatibility properties for existing code
+    val minTemperature: Float get() = minTemp
+    val maxTemperature: Float get() = maxTemp
+    val averageTemperature: Float get() = avgTemp
     // Generated bitmap for visualization
     var bitmap: Bitmap? = null
         private set

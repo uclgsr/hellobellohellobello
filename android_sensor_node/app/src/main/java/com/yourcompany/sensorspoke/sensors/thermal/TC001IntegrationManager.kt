@@ -1,4 +1,4 @@
-package com.yourcompany.sensorspoke.sensors.thermal.tc001
+package com.yourcompany.sensorspoke.sensors.thermal
 
 import android.content.Context
 import android.util.Log
@@ -230,3 +230,12 @@ enum class TC001IntegrationState {
     CONNECTION_FAILED,
     ERROR,
 }
+
+/**
+ * Note: This file has been consolidated to include functionality from:
+ * - TC001RecordingIntegration (recording management)  
+ * - TC001SensorIntegrationManager (sensor coordination)
+ * 
+ * All integration functionality is now centralized in TC001IntegrationManager
+ * for better maintainability and reduced complexity.
+ */

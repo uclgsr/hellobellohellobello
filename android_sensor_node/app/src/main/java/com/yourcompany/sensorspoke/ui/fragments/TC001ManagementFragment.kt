@@ -10,19 +10,19 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-// R import handled automatically
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001CalibrationManager
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001CalibrationType
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DataExporter
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DiagnosticSystem
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DiagnosticTestResult
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001ExportFormat
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001HealthStatus
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationManager
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationState
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001PerformanceMetrics
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001PerformanceMonitor
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001SystemHealth
+import com.yourcompany.sensorspoke.R
+import com.yourcompany.sensorspoke.sensors.thermal.TC001CalibrationManager
+import com.yourcompany.sensorspoke.sensors.thermal.TC001CalibrationType
+import com.yourcompany.sensorspoke.sensors.thermal.TC001DataExporter
+import com.yourcompany.sensorspoke.sensors.thermal.TC001DiagnosticSystem
+import com.yourcompany.sensorspoke.sensors.thermal.TC001DiagnosticTestResult
+import com.yourcompany.sensorspoke.sensors.thermal.TC001ExportFormat
+import com.yourcompany.sensorspoke.sensors.thermal.TC001HealthStatus
+import com.yourcompany.sensorspoke.sensors.thermal.TC001IntegrationManager
+import com.yourcompany.sensorspoke.sensors.thermal.TC001IntegrationState
+import com.yourcompany.sensorspoke.sensors.thermal.TC001PerformanceMetrics
+import com.yourcompany.sensorspoke.sensors.thermal.TC001PerformanceMonitor
+import com.yourcompany.sensorspoke.sensors.thermal.TC001SystemHealth
 import kotlinx.coroutines.launch
 import java.util.Locale
 
