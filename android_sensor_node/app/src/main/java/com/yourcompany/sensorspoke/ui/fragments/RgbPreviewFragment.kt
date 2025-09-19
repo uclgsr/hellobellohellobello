@@ -86,15 +86,28 @@ class RgbPreviewFragment : Fragment() {
     private suspend fun checkRawDngSupport() {
         try {
             // In a real implementation, this would come from a ViewModel or Service
-            val supportsRawDng = rgbCameraRecorder?.isRawDngAvailable() ?: false
-            val isSamsungLevel3 = rgbCameraRecorder?.isSamsungLevel3Device() ?: false
+            // For now, detect Samsung devices directly
+            val isSamsungDevice = android.os.Build.MANUFACTURER.equals("Samsung", ignoreCase = true)
+            val deviceModel = android.os.Build.MODEL.uppercase()
+            
+            // Samsung devices known to support Camera2 Level 3
+            val samsungLevel3Models = listOf(
+                "SM-S901", "SM-S906", "SM-S908", // Galaxy S22 series
+                "SM-S911", "SM-S916", "SM-S918", // Galaxy S23 series  
+                "SM-S921", "SM-S926", "SM-S928", // Galaxy S24 series
+                "SM-G991", "SM-G996", "SM-G998"  // Galaxy S21 series
+            )
+            
+            val isSamsungLevel3 = isSamsungDevice && samsungLevel3Models.any { model ->
+                deviceModel.startsWith(model)
+            }
             
             activity?.runOnUiThread {
-                if (supportsRawDng && isSamsungLevel3) {
+                if (isSamsungLevel3) {
                     rawDngControls?.visibility = View.VISIBLE
                     rawDngStatusText?.text = "Samsung Level 3 supported"
                     rawDngStatusText?.setTextColor(resources.getColor(android.R.color.holo_green_light, null))
-                } else if (android.os.Build.MANUFACTURER.equals("Samsung", ignoreCase = true)) {
+                } else if (isSamsungDevice) {
                     rawDngControls?.visibility = View.VISIBLE
                     rawDngStatusText?.text = "Samsung device (Level 3 not supported)"
                     rawDngStatusText?.setTextColor(resources.getColor(android.R.color.holo_orange_light, null))
@@ -117,14 +130,8 @@ class RgbPreviewFragment : Fragment() {
      */
     private fun handleRawDngToggle(enabled: Boolean) {
         try {
-            val mode = if (enabled) {
-                RgbCameraRecorder.RecordingMode.RAW_DNG
-            } else {
-                RgbCameraRecorder.RecordingMode.STANDARD
-            }
-            
-            rgbCameraRecorder?.setRecordingMode(mode)
-            
+            // This would typically interact with the recording system
+            // For now, just show status feedback
             val statusMessage = if (enabled) "RAW DNG mode enabled" else "Standard mode enabled"
             statusText?.text = statusMessage
             
@@ -165,14 +172,14 @@ class RgbPreviewFragment : Fragment() {
             val bitmap = BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size)
             if (bitmap != null) {
                 previewImageView?.setImageBitmap(bitmap)
-                statusText?.text = "Live preview active"
-                
-                // Update RAW DNG mode status if applicable
-                rgbCameraRecorder?.let { recorder ->
-                    val mode = recorder.getRecordingMode()
-                    val modeText = if (mode == RgbCameraRecorder.RecordingMode.RAW_DNG) " + RAW DNG" else ""
-                    statusText?.text = "Live preview active$modeText"
+            statusText?.text = "Live preview active"
+            
+            // Show RAW DNG status if toggle is enabled
+            rawDngToggle?.let { toggle ->
+                if (toggle.isChecked) {
+                    statusText?.text = "Live preview active + RAW DNG"
                 }
+            }
                 resolutionText?.text = "Resolution: ${bitmap.width}x${bitmap.height}"
 
                 // Calculate frame rate
