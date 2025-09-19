@@ -151,7 +151,8 @@ class ShimmerInterface:
                             self._buf_ts.append(float(t))
                             self._buf_vals.append(float(v))
                             self._samples_processed += 1
-            except Exception:
+            except Exception as e:
+                print(f"ShimmerInterface: Native loop failed ({e}), falling back to simulation")
                 # If native loop errors persistently, downgrade to simulation
                 self._use_native = False
                 self._native_backend_active = False
