@@ -66,19 +66,17 @@ class TestOrchestrator:
         self.results: list[TestResult] = []
         self.start_time = time.time()
 
-        # Paths
         self.pc_controller_src = Path("pc_controller/src")
         self.pc_controller_tests = Path("pc_controller/tests")
         self.android_app = Path("android_sensor_node/app")
 
-        # Report directory
         self.report_dir = Path(".test_reports")
         self.report_dir.mkdir(exist_ok=True)
 
         # Performance: Configure parallel execution
         self.max_workers = getattr(args, 'jobs', None) or multiprocessing.cpu_count()
         if args.ci:
-            self.max_workers = min(self.max_workers, 4)  # Limit in CI
+            self.max_workers = min(self.max_workers, 4)
         self.use_parallel = getattr(args, 'parallel', True)
 
     def log(self, message: str, level: str = "INFO") -> None:
@@ -99,7 +97,6 @@ class TestOrchestrator:
         start_time = time.time()
 
         try:
-            # Set environment for headless testing
             env = os.environ.copy()
             env.update(
                 {
@@ -148,19 +145,16 @@ class TestOrchestrator:
     ) -> list[TestResult]:
         """Run multiple commands in parallel for better performance."""
         if not self.use_parallel or len(commands) == 1:
-            # Fall back to sequential execution
             return [self.run_command(cmd, name) for cmd, name in commands]
 
         max_workers = max_workers or self.max_workers
         results = []
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all commands
             future_to_command = {
                 executor.submit(self.run_command, cmd, name): (cmd, name) for cmd, name in commands
             }
 
-            # Collect results as they complete
             for future in concurrent.futures.as_completed(future_to_command):
                 try:
                     result = future.result()
@@ -177,7 +171,6 @@ class TestOrchestrator:
         self.log("=== Code Quality Checks ===")
 
         checks = [
-            # Ruff linting with caching
             (
                 [
                     sys.executable,
@@ -191,7 +184,6 @@ class TestOrchestrator:
                 + (["--fix"] if self.args.fix else []),
                 "Ruff Linting",
             ),
-            # Black formatting check
             (
                 (
                     [
@@ -207,7 +199,6 @@ class TestOrchestrator:
                 ),
                 "Black Formatting",
             ),
-            # isort import sorting
             (
                 (
                     [
@@ -223,7 +214,6 @@ class TestOrchestrator:
                 ),
                 "Import Sorting",
             ),
-            # MyPy type checking with caching
             (
                 [
                     sys.executable,
@@ -276,7 +266,7 @@ class TestOrchestrator:
             "--tb=short",
             "--timeout=60",
             "-n",
-            "auto",  # Use pytest-xdist for parallel execution
+            "auto",
         ]
 
         if self.args.coverage:
@@ -290,16 +280,15 @@ class TestOrchestrator:
             )
 
         if self.args.fast:
-            pytest_cmd.extend(["-x", "-k", "not slow and not integration"])  # Skip slow tests
+            pytest_cmd.extend(["-x", "-k", "not slow and not integration"])
 
         if self.args.ci:
             pytest_cmd.extend(["-q", "--tb=short"])  # Quiet mode for CI
         else:
-            pytest_cmd.extend(["--tb=long"])  # More verbose in dev
+            pytest_cmd.extend(["--tb=long"])
 
         result = self.run_command(pytest_cmd, "Python Unit Tests", timeout=600)
 
-        # Extract coverage if available
         if self.args.coverage and "coverage.xml" in Path.cwd().iterdir():
             try:
                 import xml.etree.ElementTree as ET
@@ -397,7 +386,6 @@ class TestOrchestrator:
         passed = sum(1 for r in self.results if r.success)
         failed = len(self.results) - passed
 
-        # JSON report
         report_data = {
             "summary": {
                 "total_tests": len(self.results),
@@ -413,7 +401,7 @@ class TestOrchestrator:
                     "success": r.success,
                     "duration": r.duration,
                     "coverage": r.coverage,
-                    "error": r.error[:500] if r.error else None,  # Truncate long errors
+                    "error": r.error[:500] if r.error else None,
                 }
                 for r in self.results
             ],
@@ -423,7 +411,6 @@ class TestOrchestrator:
         json_report.write_text(json.dumps(report_data, indent=2))
         self.log(f"JSON report saved to {json_report}")
 
-        # Console summary
         print("\n" + "=" * 60)
         print("🏁 TESTING PIPELINE SUMMARY")
         print("=" * 60)
@@ -448,21 +435,17 @@ class TestOrchestrator:
         self.log("🚀 Starting Testing Pipeline")
 
         try:
-            # Always run these
             self.run_configuration_validation()
             self.run_code_quality_checks()
             self.run_python_tests()
 
-            # Conditional tests
             self.run_security_scanning()
             self.run_integration_tests()
             self.run_performance_tests()
             self.run_android_tests()
 
-            # Generate reports
             self.generate_report()
 
-            # Return exit code
             failed_tests = [r for r in self.results if not r.success]
             if failed_tests:
                 return 1

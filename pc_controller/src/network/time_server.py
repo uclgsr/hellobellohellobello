@@ -32,7 +32,6 @@ class TimeSyncProtocol(asyncio.DatagramProtocol):
         self.transport = transport
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
-        # Capture high-resolution monotonic timestamp immediately
         ts_ns = time.monotonic_ns()
         payload = str(ts_ns).encode("ascii")
         if self.transport is not None:
@@ -76,7 +75,6 @@ class TimeSyncServer:
         transport, protocol = await loop.create_datagram_endpoint(
             lambda: TimeSyncProtocol(), local_addr=(self._host, self._port)
         )
-        # If port=0 was passed, store the actual bound port for testability
         sockname = transport.get_extra_info("sockname")
         if isinstance(sockname, tuple) and len(sockname) >= 2:
             with contextlib.suppress(Exception):

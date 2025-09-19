@@ -22,7 +22,6 @@ class DelPopup(
     }
 
     private fun setupPopup() {
-        // Create popup content programmatically since we don't have the exact layout
         val layout =
             ConstraintLayout(context).apply {
                 layoutParams =

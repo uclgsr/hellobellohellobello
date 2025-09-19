@@ -523,7 +523,6 @@ def save_mermaid_files():
 
     base_dir = Path(__file__).parent.parent
 
-    # Create directories
     diagrams = {
         'chapter1_introduction': {'conceptual_overview.md': generate_conceptual_overview_mermaid()},
         'chapter3_requirements': {

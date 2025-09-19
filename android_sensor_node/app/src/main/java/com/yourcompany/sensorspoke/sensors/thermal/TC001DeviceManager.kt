@@ -49,22 +49,19 @@ class TC001DeviceManager(
 ) {
     companion object {
         private const val TAG = "TC001DeviceManager"
-        private const val DEVICE_SCAN_INTERVAL_MS = 5000L // 5 seconds
-        private const val CONNECTION_TIMEOUT_MS = 10000L // 10 seconds
+        private const val DEVICE_SCAN_INTERVAL_MS = 5000L
+        private const val CONNECTION_TIMEOUT_MS = 10000L
         private const val MAX_RECONNECTION_ATTEMPTS = 3
 
-        // Enhanced TC001 device identification - Real IRCamera values
-        private const val TOPDON_VENDOR_ID = 0x4d54 // Actual Topdon vendor ID from IRCamera
-        private const val TC001_PRODUCT_ID = 0x0100 // Actual TC001 product ID from IRCamera
+        private const val TOPDON_VENDOR_ID = 0x4d54
+        private const val TC001_PRODUCT_ID = 0x0100
 
-        // TC001 Enhanced specifications for IRCamera integration
         const val THERMAL_WIDTH_MAX = 256
         const val THERMAL_HEIGHT_MAX = 192
-        const val FRAME_RATE_MAX = 30 // Enhanced frame rate
-        const val TEMPERATURE_PRECISION = 0.1f // ±0.1°C precision target
+        const val FRAME_RATE_MAX = 30
+        const val TEMPERATURE_PRECISION = 0.1f
     }
 
-    // Device state management
     private val _deviceState = MutableLiveData<TC001DeviceState>()
     val deviceState: LiveData<TC001DeviceState> = _deviceState
 
@@ -74,7 +71,6 @@ class TC001DeviceManager(
     private val _deviceStatus = MutableLiveData<TC001DeviceStatus>()
     val deviceStatus: LiveData<TC001DeviceStatus> = _deviceStatus
 
-    // Internal state
     private var isScanning = false
     private var scanningJob: Job? = null
     private var connectionJob: Job? = null
@@ -82,7 +78,6 @@ class TC001DeviceManager(
     private var currentDevice: TC001Device? = null
     private var deviceCapabilities: TC001DeviceCapabilities? = null
 
-    // Enhanced device discovery and management
     private val usbManager: UsbManager by lazy {
         context.getSystemService(Context.USB_SERVICE) as UsbManager
     }
@@ -113,7 +108,6 @@ class TC001DeviceManager(
                         val discoveredDevices = performDeviceScan()
                         _connectedDevices.postValue(discoveredDevices)
 
-                        // Auto-connect to first available device if none connected
                         if (currentDevice == null && discoveredDevices.isNotEmpty()) {
                             val primaryDevice = discoveredDevices.first()
                             Log.i(TAG, "Auto-connecting to discovered device: ${primaryDevice.serialNumber}")
@@ -186,7 +180,6 @@ class TC001DeviceManager(
                     try {
                         Log.i(TAG, "Attempting connection to TC001 device: ${device.serialNumber}")
 
-                        // Simulate connection process with timeout
                         val connectionResult =
                             withTimeout(CONNECTION_TIMEOUT_MS) {
                                 performDeviceConnection(device)
@@ -218,7 +211,6 @@ class TC001DeviceManager(
                     }
                 }
 
-            // Wait for connection job to complete
             connectionJob?.join()
 
             currentDevice != null
@@ -241,7 +233,6 @@ class TC001DeviceManager(
 
                 Log.i(TAG, "Disconnecting from TC001 device: ${device.serialNumber}")
 
-                // Perform device-specific disconnection
                 performDeviceDisconnection(device)
 
                 currentDevice = null
@@ -270,7 +261,7 @@ class TC001DeviceManager(
             }
 
             reconnectionAttempts++
-            val backoffDelay = (1000L * reconnectionAttempts) // Linear backoff
+            val backoffDelay = (1000L * reconnectionAttempts)
 
             Log.i(TAG, "Attempting reconnection #$reconnectionAttempts after ${backoffDelay}ms delay")
             delay(backoffDelay)
@@ -301,12 +292,8 @@ class TC001DeviceManager(
      */
     fun getCurrentDevice(): TC001Device? = currentDevice
 
-    // Private helper methods
     private fun isTC001Device(usbDevice: UsbDevice): Boolean {
-        // In production: Check actual Topdon vendor/product IDs
-        // return usbDevice.vendorId == TOPDON_VENDOR_ID && usbDevice.productId == TC001_PRODUCT_ID
 
-        // For demonstration: Accept thermal camera-like devices
         val deviceName = usbDevice.deviceName?.lowercase() ?: ""
         val productName = usbDevice.productName?.lowercase() ?: ""
 
@@ -328,18 +315,15 @@ class TC001DeviceManager(
         )
 
     private suspend fun performDeviceConnection(device: TC001Device): Boolean {
-        // In production: Perform actual TC001 device connection
-        delay(1000) // Simulate connection time
-        return true // Simulate successful connection
+        delay(1000)
+        return true
     }
 
     private suspend fun performDeviceDisconnection(device: TC001Device) {
-        // In production: Perform actual TC001 device disconnection
-        delay(500) // Simulate disconnection time
+        delay(500)
     }
 
     private fun queryDeviceCapabilities(device: TC001Device): TC001DeviceCapabilities {
-        // In production: Query actual device capabilities from TC001
         return TC001DeviceCapabilities(
             maxResolution = Pair(THERMAL_WIDTH_MAX, THERMAL_HEIGHT_MAX),
             maxFrameRate = FRAME_RATE_MAX,
@@ -354,7 +338,6 @@ class TC001DeviceManager(
     }
 
     private fun queryBasicCapabilities(usbDevice: UsbDevice): TC001DeviceCapabilities {
-        // Basic capabilities for discovered device
         return TC001DeviceCapabilities(
             maxResolution = Pair(256, 192),
             maxFrameRate = 25,
@@ -371,12 +354,10 @@ class TC001DeviceManager(
     private fun determineModelName(usbDevice: UsbDevice): String = usbDevice.productName ?: "TC001"
 
     private fun queryFirmwareVersion(usbDevice: UsbDevice): String {
-        // In production: Query actual firmware version
         return "1.4.2"
     }
 
     private fun queryHardwareRevision(usbDevice: UsbDevice): String {
-        // In production: Query actual hardware revision
         return "Rev C"
     }
 
@@ -397,7 +378,6 @@ class TC001DeviceManager(
     }
 }
 
-// Enhanced data classes for TC001 device management
 data class TC001Device(
     val usbDevice: UsbDevice,
     val serialNumber: String,
@@ -459,7 +439,6 @@ object TC001InitUtil {
      */
     fun initReceiver(context: Context) {
         try {
-            // Setup USB device detection for TC001
             val filter =
                 IntentFilter().apply {
                     addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
@@ -469,7 +448,6 @@ object TC001InitUtil {
                     addAction("com.yourcompany.sensorspoke.ACTION_USB_PERMISSION")
                 }
 
-            // Register receiver for TC001 USB events
             Log.i(TAG, "TC001 USB receiver registered")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to register TC001 USB receiver", e)
@@ -481,6 +459,5 @@ object TC001InitUtil {
      */
     fun initTC001DeviceManager(context: Context) {
         Log.i(TAG, "TC001 Device Manager initialized")
-        // Device initialization logic will be handled by TC001DeviceManager
     }
 }

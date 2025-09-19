@@ -46,21 +46,21 @@ class DeviceStatus:
     device_name: str
     ip_address: str
     port: int
-    connection_state: str  # 'online', 'offline', 'reconnecting'
+    connection_state: str
     last_heartbeat: datetime
     battery_level: int
     storage_free_mb: int
     session_id: str | None
     recording_status: str
     sensor_capabilities: list[str]
-    sync_quality: str  # 'excellent', 'good', 'fair', 'poor'
+    sync_quality: str
 
 
 class DeviceDiscoveryThread(QThread):
     """Background thread for device discovery via NSD/Zeroconf"""
 
-    device_found = pyqtSignal(str, str, int)  # device_id, ip, port
-    device_lost = pyqtSignal(str)  # device_id
+    device_found = pyqtSignal(str, str, int)
+    device_lost = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -85,11 +85,10 @@ class DeviceDiscoveryThread(QThread):
             def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
                 info = zc.get_service_info(type_, name)
                 if info:
-                    # Extract device info from service
                     device_id = name.split(".")[0]
                     addresses = info.parsed_addresses()
                     if addresses:
-                        ip = addresses[0]  # Use first available address
+                        ip = addresses[0]
                         port = info.port
                         logger.info(f"Discovered Android device: {device_id} at {ip}:{port}")
                         self.discovery_thread.device_found.emit(device_id, ip, port)
@@ -109,24 +108,20 @@ class DeviceDiscoveryThread(QThread):
                         ip = addresses[0]
                         port = info.port
                         logger.info(f"Android device updated: {device_id} at {ip}:{port}")
-                        # Re-emit device found to update any cached information
                         self.discovery_thread.device_found.emit(device_id, ip, port)
 
         try:
             zeroconf = Zeroconf()
             listener = AndroidServiceListener(self)
             
-            # Browse for Android sensor node services
-            # This matches the service type advertised by Android devices
             service_type = "_gsr-controller._tcp.local."
             browser = ServiceBrowser(zeroconf, service_type, listener)
             
             logger.info(f"Browsing for services of type: {service_type}")
             
-            # Keep the discovery running
             while self.running:
                 import time
-                time.sleep(1)  # Check every second
+                time.sleep(1)
                 
         except Exception as e:
             logger.error(f"Zeroconf discovery error: {e}, falling back to simulation")
@@ -145,15 +140,14 @@ class DeviceDiscoveryThread(QThread):
 
         logger.info("Running device discovery simulation")
         while self.running:
-            time.sleep(5)  # Discovery interval
-            # Simulate finding devices with realistic data
+            time.sleep(5)
             device_ids = [
                 "android_device_001",
                 "android_device_002", 
                 "android_device_003",
             ]
             for device_id in device_ids:
-                if random.random() > 0.7:  # Randomly discover devices
+                if random.random() > 0.7:
                     ip = f"192.168.1.{100 + random.randint(1, 50)}"
                     port = 8080 + random.randint(0, 10)
                     self.device_found.emit(device_id, ip, port)
@@ -180,15 +174,12 @@ class DeviceWidget(QFrame):
 
         layout = QVBoxLayout(self)
 
-        # Device header
         header_layout = QHBoxLayout()
 
-        # Device name and status
         name_label = QLabel(f"<b>{self.device_status.device_name}</b>")
         name_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         header_layout.addWidget(name_label)
 
-        # Connection status indicator
         status_color = {
             "online": "green",
             "offline": "red",
@@ -202,7 +193,6 @@ class DeviceWidget(QFrame):
         header_layout.addStretch()
         layout.addLayout(header_layout)
 
-        # Device info grid
         info_layout = QGridLayout()
 
         info_layout.addWidget(QLabel("IP Address:"), 0, 0)
@@ -232,7 +222,6 @@ class DeviceWidget(QFrame):
 
         layout.addLayout(info_layout)
 
-        # Control buttons
         button_layout = QHBoxLayout()
 
         self.connect_btn = QPushButton("Connect")
@@ -253,17 +242,14 @@ class DeviceWidget(QFrame):
     def update_status(self, device_status: DeviceStatus):
         """Update device status display"""
         self.device_status = device_status
-        # Update UI elements based on new status
         self.findChild(QLabel).setText(f"<b>{device_status.device_name}</b>")
 
-        # Update connection status
         _status_color = {
             "online": "green",
             "offline": "red",
             "reconnecting": "orange",
         }.get(device_status.connection_state, "gray")
 
-        # Update button states
         self.connect_btn.setEnabled(device_status.connection_state == "offline")
         self.disconnect_btn.setEnabled(device_status.connection_state == "online")
         self.flash_sync_btn.setEnabled(device_status.connection_state == "online")
@@ -280,11 +266,9 @@ class SessionControlWidget(QWidget):
         """Set up session control UI"""
         layout = QVBoxLayout(self)
 
-        # Session info
         session_group = QGroupBox("Session Control")
         session_layout = QVBoxLayout(session_group)
 
-        # Session ID input
         id_layout = QHBoxLayout()
         id_layout.addWidget(QLabel("Session ID:"))
         self.session_id_input = QLineEdit()
@@ -292,7 +276,6 @@ class SessionControlWidget(QWidget):
         id_layout.addWidget(self.session_id_input)
         session_layout.addLayout(id_layout)
 
-        # Control buttons
         control_layout = QHBoxLayout()
 
         self.start_session_btn = QPushButton("Start Session")
@@ -317,7 +300,6 @@ class SessionControlWidget(QWidget):
         session_layout.addLayout(control_layout)
         layout.addWidget(session_group)
 
-        # Session status
         status_group = QGroupBox("Session Status")
         status_layout = QVBoxLayout(status_group)
 
@@ -347,44 +329,35 @@ class MainDashboard(QMainWindow):
         self.setWindowTitle("Multi-Modal Physiological Sensing Platform - PC Hub")
         self.setMinimumSize(1200, 800)
 
-        # Central widget with tabs
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         layout = QVBoxLayout(central_widget)
 
-        # Tab widget
         self.tab_widget = QTabWidget()
         layout.addWidget(self.tab_widget)
 
-        # Device Management tab
         self.setup_device_tab()
 
-        # Session Management tab
         self.setup_session_tab()
 
-        # Data Visualization tab
         self.setup_visualization_tab()
 
-        # System Logs tab
         self.setup_logs_tab()
 
-        # Status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("PC Hub started - Ready for device connections")
 
-        # Update timer
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update_dashboard)
-        self.update_timer.start(1000)  # Update every second
+        self.update_timer.start(1000)
 
     def setup_device_tab(self):
         """Set up device management tab"""
         device_widget = QWidget()
         layout = QVBoxLayout(device_widget)
 
-        # Device list header
         header_layout = QHBoxLayout()
         header_layout.addWidget(QLabel("<h2>Connected Devices</h2>"))
         header_layout.addStretch()
@@ -395,7 +368,6 @@ class MainDashboard(QMainWindow):
 
         layout.addLayout(header_layout)
 
-        # Scrollable device list
         scroll_area = QScrollArea()
         self.device_list_widget = QWidget()
         self.device_list_layout = QVBoxLayout(self.device_list_widget)
@@ -410,11 +382,9 @@ class MainDashboard(QMainWindow):
         session_widget = QWidget()
         layout = QHBoxLayout(session_widget)
 
-        # Session control
         self.session_control = SessionControlWidget()
         layout.addWidget(self.session_control)
 
-        # Session history
         history_group = QGroupBox("Session History")
         history_layout = QVBoxLayout(history_group)
 
@@ -436,18 +406,15 @@ class MainDashboard(QMainWindow):
 
         layout.addWidget(QLabel("<h2>Real-Time Sensor Data</h2>"))
 
-        # Real-time sensor data visualization with PyQtGraph
         try:
             import pyqtgraph as pg
 
-            # Create plot widget
             plot_widget = pg.PlotWidget()
             plot_widget.setBackground("w")
             plot_widget.setLabel("left", "GSR (μS)", color="black")
             plot_widget.setLabel("bottom", "Time (s)", color="black")
             plot_widget.showGrid(x=True, y=True)
 
-            # Add sample data
             import numpy as np
 
             x = np.linspace(0, 10, 100)
@@ -457,7 +424,6 @@ class MainDashboard(QMainWindow):
             layout.addWidget(plot_widget)
 
         except ImportError:
-            # Fallback if PyQtGraph not available
             placeholder = QLabel(
                 "Real-time sensor data visualization\n"
                 "(PyQtGraph not available - install for live plots)"
@@ -480,7 +446,6 @@ class MainDashboard(QMainWindow):
         self.log_text.setFont(QFont("Courier", 9))
         layout.addWidget(self.log_text)
 
-        # Log controls
         log_controls = QHBoxLayout()
 
         clear_btn = QPushButton("Clear Logs")
@@ -510,17 +475,14 @@ class MainDashboard(QMainWindow):
     def refresh_device_discovery(self):
         """Refresh device discovery"""
         logger.info("Refreshing device discovery")
-        # Stop and restart discovery thread
         if self.discovery_thread:
             self.discovery_thread.stop()
 
-        # Start new discovery thread
         self.discovery_thread = DeviceDiscoveryThread()
         self.discovery_thread.device_found.connect(self.on_device_found)
         self.discovery_thread.device_lost.connect(self.on_device_lost)
         self.discovery_thread.start()
 
-        # Clear current devices to force refresh
         self.devices.clear()
         self.update_device_list()
 
@@ -528,7 +490,6 @@ class MainDashboard(QMainWindow):
         """Handle discovered device"""
         logger.info(f"Device discovered: {device_id} at {ip_address}:{port}")
 
-        # Create device status
         device_status = DeviceStatus(
             device_id=device_id,
             device_name=f"Android Device {device_id[-3:]}",
@@ -556,23 +517,19 @@ class MainDashboard(QMainWindow):
 
     def update_device_list(self):
         """Update the device list display"""
-        # Clear existing widgets
         for i in reversed(range(self.device_list_layout.count())):
             child = self.device_list_layout.itemAt(i).widget()
             if child:
                 child.setParent(None)
 
-        # Add device widgets
         for device_status in self.devices.values():
             device_widget = DeviceWidget(device_status)
             self.device_list_layout.addWidget(device_widget)
 
-        # Add stretch to push devices to top
         self.device_list_layout.addStretch()
 
     def update_dashboard(self):
         """Update dashboard with latest information"""
-        # Update status bar
         device_count = len(self.devices)
         online_count = sum(
             1 for d in self.devices.values() if d.connection_state == "online"
@@ -600,10 +557,8 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Multi-Modal Physiological Sensing Platform")
 
-    # Set application style
     app.setStyle("Fusion")
 
-    # Create and show main window
     dashboard = MainDashboard()
     dashboard.show()
 

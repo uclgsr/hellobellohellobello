@@ -106,7 +106,6 @@ class HeartbeatManager:
         was_healthy = self._devices[device_id].is_healthy
         self._devices[device_id].update_heartbeat()
 
-        # If device came back online, trigger callback
         if not was_healthy and self._devices[device_id].is_healthy:
             if device_id in self._device_online_callbacks:
                 try:
@@ -199,7 +198,6 @@ class HeartbeatManager:
                 was_healthy = status.is_healthy
                 status.mark_missed()
 
-                # If device just went offline, trigger callback
                 if was_healthy and not status.is_healthy:
                     logger.warning(
                         f"Device {device_id} went offline "
@@ -213,7 +211,6 @@ class HeartbeatManager:
                                 f"Error in device offline callback for {device_id}: {e}"
                             )
 
-                # Trigger reconnection if not at max attempts and enough time has passed
                 if status.reconnection_attempts < self.max_reconnect_attempts and (
                     current_time_ns - status.last_reconnect_attempt_ns
                 ) > int(self.reconnect_backoff_s * 1_000_000_000):

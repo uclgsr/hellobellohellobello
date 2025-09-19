@@ -14,13 +14,12 @@ def show_enhanced_gui_features():
     print("=" * 80)
     print()
     
-    # Main window layout
     print("┌─────────────────────────────────────┬──────────────────────────────┐")
     print("│           DEVICE GRID               │        DEVICE DISCOVERY     │")
     print("├─────────────────────────────────────┤──────────────────────────────┤")
     print("│ ┌─────────────────┐ ┌──────────────┐│ Discovered Devices:          │")  
-    print("│ │  Local Webcam   │ │ Shimmer GSR  ││ ● Android Device #1 (Ready)  │")
-    print("│ │ [●]             │ │ (Local) 98%  ││ ● Android Device #2 (Ready)  │")
+    print("│ │  Local Webcam   │ │ Shimmer GSR  ││ ● Android Device
+    print("│ │ [●]             │ │ (Local) 98%  ││ ● Android Device
     print("│ │ 640x480 @ 30fps │ │ ╭─╮╭─╮╭─╮    ││                              │")
     print("│ │                 │ │ │ ││ ││ │    ││ Connected Devices:           │")
     print("│ │                 │ │ ╰─╯╰─╯╰─╯    ││ ✓ Demo Device (sensor_node)  │")
@@ -28,7 +27,7 @@ def show_enhanced_gui_features():
     print("│                     └──────────────┘│                              │")
     print("│ ┌─────────────────┐ ┌──────────────┐│ Session Status:              │")
     print("│ │ Remote Camera   │ │ Remote GSR   ││ ● Session: demo_123          │") 
-    print("│ │ (Android #1)    │ │ (Android #1) ││ ● Recording: Active          │")
+    print("│ │ (Android
     print("│ │ [📱]            │ │ ╭──╮╭─╮      ││ ● Duration: 00:02:34         │")
     print("│ │ Thermal Overlay │ │ │  ││ │      ││                              │")
     print("│ │                 │ │ ╰──╯╰─╯      ││ [Start Recording]            │")
@@ -40,7 +39,6 @@ def show_enhanced_gui_features():
     print("TABS: [Dashboard] [Logs] [Playback] [Settings]")
     print()
     
-    # Show key enhancements
     print("🔧 ENHANCED FEATURES ACTIVE:")
     print("├─ Real-time GSR Visualization")
     print("│  └─ PyQtGraph with auto-scaling, scrolling window, sample rate indicators")  
@@ -58,7 +56,6 @@ def show_enhanced_gui_features():
     print("   └─ HDF5 structured export with metadata and multi-device aggregation")
     print()
     
-    # Show live data flow
     print("📊 LIVE DATA FLOW:")
     print("Android Device → TCP Server → Device Widget → Real-time Plot")
     print("     │                │            │")
@@ -67,7 +64,6 @@ def show_enhanced_gui_features():
     print("     └─ Thermal Data   └─ Commands  └─ Rate Indicator")
     print()
     
-    # Show security status
     print("🔒 SECURITY STATUS:")
     print("├─ TLS Client Context: Ready (PC_TLS_ENABLE configurable)")
     print("├─ TLS Server Context: Ready (Certificate-based)")

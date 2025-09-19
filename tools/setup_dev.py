@@ -65,7 +65,6 @@ class DevSetup:
         """Install required Python dependencies."""
         self.log("Installing Python development dependencies...")
 
-        # Core requirements
         requirements_file = self.project_root / "pc_controller" / "requirements.txt"
         if requirements_file.exists():
             if not self.run_command(
@@ -74,7 +73,6 @@ class DevSetup:
             ):
                 return False
 
-        # Development tools
         dev_tools = [
             "pre-commit>=3.0.0",
             "ruff>=0.12.0",
@@ -99,7 +97,6 @@ class DevSetup:
         """Install and configure pre-commit hooks."""
         self.log("Setting up pre-commit hooks...")
 
-        # Check if pre-commit is available
         if not self.check_command("pre-commit"):
             self.log("pre-commit not found in PATH, trying to install...", "ERROR")
             if not self.run_command(
@@ -107,11 +104,9 @@ class DevSetup:
             ):
                 return False
 
-        # Install hooks
         if not self.run_command(["pre-commit", "install"], "Installing pre-commit hooks"):
             return False
 
-        # Install commit-msg hook for conventional commits
         if not self.run_command(
             ["pre-commit", "install", "--hook-type", "commit-msg"], "Installing commit-msg hook"
         ):
@@ -119,7 +114,6 @@ class DevSetup:
                 "Failed to install commit-msg hook, but pre-commit hooks are installed", "ERROR"
             )
 
-        # Update hooks to latest versions
         if not self.run_command(["pre-commit", "autoupdate"], "Updating pre-commit hooks"):
             self.log("Failed to update hooks, but they are installed", "ERROR")
 
@@ -131,7 +125,6 @@ class DevSetup:
 
         success = True
 
-        # Check Python version
         python_version = sys.version_info
         if python_version < (3, 11):
             self.log(
@@ -144,7 +137,6 @@ class DevSetup:
                 f"Python {python_version.major}.{python_version.minor} is compatible", "SUCCESS"
             )
 
-        # Check required tools
         required_tools = ["pre-commit", "git"]
         for tool in required_tools:
             if self.check_command(tool):
@@ -153,7 +145,6 @@ class DevSetup:
                 self.log(f"{tool} is not available", "ERROR")
                 success = False
 
-        # Check Python packages
         python_packages = ["ruff", "mypy", "black", "isort", "pytest", "bandit"]
         for package in python_packages:
             try:
@@ -179,7 +170,6 @@ class DevSetup:
                 self.log(f"Configuration file {config_file} is missing", "ERROR")
                 success = False
 
-        # Validate project structure
         required_dirs = [
             "pc_controller/src",
             "pc_controller/tests",
@@ -201,10 +191,8 @@ class DevSetup:
         """Test pre-commit hooks on a sample file."""
         self.log("Testing pre-commit hooks...")
 
-        # Run pre-commit on all files (dry run)
         if not self.run_command(["pre-commit", "run", "--all-files"], "Testing pre-commit hooks"):
             self.log("Pre-commit hooks found issues, but this is normal for first run", "ERROR")
-            # Don't fail here as pre-commit may find and fix issues
 
         return True
 
@@ -248,7 +236,6 @@ class DevSetup:
 
         self.log("VSCode settings created", "SUCCESS")
 
-        # VSCode extensions recommendations
         vscode_extensions = {
             "recommendations": [
                 "ms-python.python",
@@ -275,11 +262,9 @@ class DevSetup:
         success = True
 
         try:
-            # Install dependencies (unless hooks-only)
             if not self.args.hooks_only and not self.install_python_dependencies():
                 success = False
 
-            # Install pre-commit hooks
             if not self.install_pre_commit_hooks():
                 success = False
 
@@ -290,7 +275,6 @@ class DevSetup:
             if not self.args.reinstall and not self.validate_setup():
                 success = False
 
-            # Test hooks
             if not self.test_pre_commit_hooks():
                 success = False
 

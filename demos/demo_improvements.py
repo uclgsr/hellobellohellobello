@@ -15,7 +15,6 @@ def demo_user_experience_enhancements():
     print("USER EXPERIENCE ENHANCEMENTS DEMO")
     print("=" * 60)
 
-    # Import our user experience module
     from pc_controller.src.core.user_experience import (
         ErrorMessageTranslator,
         StatusIndicator,
@@ -26,7 +25,6 @@ def demo_user_experience_enhancements():
     print("\n1. USER-FRIENDLY ERROR MESSAGES")
     print("-" * 40)
 
-    # Demo error message translation
     errors = [
         ConnectionRefusedError("Connection refused"),
         FileNotFoundError("calibration.json not found"),
@@ -43,7 +41,6 @@ def demo_user_experience_enhancements():
     print("\n2. FILE LOCATION INDICATORS")
     print("-" * 40)
 
-    # Demo file location indicators
     locations = [
         ("/home/user/data/session_20241221", "Session data"),
         ("/export/results", "Exported files"),
@@ -57,7 +54,6 @@ def demo_user_experience_enhancements():
     print("\n3. DEVICE STATUS FORMATTING")
     print("-" * 40)
 
-    # Demo device status indicators
     devices = [
         ("Android-1", "connected", {"battery": 85, "signal_strength": 92}),
         ("Android-2", "connected", {"battery": 15, "signal_strength": 45}),
@@ -98,7 +94,6 @@ def demo_calibration_workflow():
     for key, value in calibration_params.items():
         print(f"  {key}: {value}")
 
-    # Demo calibration results structure
     print("\n2. CALIBRATION RESULTS FORMAT")
     print("-" * 40)
 
@@ -151,7 +146,6 @@ def demo_export_enhancements():
     print("2. EXPORT WORKFLOW SIMULATION")
     print("-" * 40)
 
-    # Simulate export workflow
     session_data = {
         "session_id": "20241221_143000",
         "duration_seconds": 300,

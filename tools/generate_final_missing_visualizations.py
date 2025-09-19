@@ -13,7 +13,6 @@ from pathlib import Path
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
-# Set up matplotlib for publication quality
 plt.style.use('seaborn-v0_8')
 plt.rcParams.update(
     {
@@ -35,11 +34,9 @@ def ensure_directory_exists(path):
 def generate_chapter2_mermaid_diagrams():
     """Generate Chapter 2 physiological process diagrams in Mermaid format."""
 
-    # Create directory
     output_dir = Path("docs/diagrams/mermaid/chapter2_background")
     ensure_directory_exists(output_dir)
 
-    # 1. Physiology of GSR diagram
     gsr_diagram = """graph TD
     subgraph "Sympathetic Nervous System Activation"
         A[Stress Stimulus] --> B[Sympathetic Chain]
@@ -78,7 +75,6 @@ def generate_chapter2_mermaid_diagrams():
     with open(output_dir / "physiology_gsr.md", "w") as f:
         f.write(f"```mermaid\n{gsr_diagram}\n```")
 
-    # 2. Thermal Cues of Stress diagram
     thermal_diagram = """graph TD
     subgraph "Thermal Stress Response"
         A[Psychological Stress] --> B[Hypothalamic-Pituitary-Adrenal Axis]
@@ -131,7 +127,6 @@ def generate_chapter3_requirements_tables():
     output_dir = Path("images/chapter3_requirements")
     ensure_directory_exists(output_dir)
 
-    # 1. Functional Requirements Table
     func_requirements = {
         'ID': ['FR1', 'FR2', 'FR3', 'FR4', 'FR5', 'FR6', 'FR7', 'FR8'],
         'Requirement': [
@@ -171,7 +166,6 @@ def generate_chapter3_requirements_tables():
     ax.axis('tight')
     ax.axis('off')
 
-    # Create table
     table_data = [
         [
             func_requirements['ID'][i],
@@ -199,21 +193,20 @@ def generate_chapter3_requirements_tables():
     table.set_fontsize(9)
     table.scale(1, 2.5)
 
-    # Style the table
     for i in range(len(table_data) + 1):
         for j in range(5):
             cell = table[i, j]
-            if i == 0:  # Header
-                cell.set_facecolor('#4CAF50')
+            if i == 0:
+                cell.set_facecolor('
                 cell.set_text_props(weight='bold', color='white')
             else:
-                if j == 3:  # Priority column
+                if j == 3:
                     if 'Critical' in table_data[i - 1][j]:
-                        cell.set_facecolor('#ffebee')
+                        cell.set_facecolor('
                     elif 'High' in table_data[i - 1][j]:
-                        cell.set_facecolor('#fff3e0')
-                elif j == 4:  # Status column
-                    cell.set_facecolor('#e8f5e8')
+                        cell.set_facecolor('
+                elif j == 4:
+                    cell.set_facecolor('
 
     plt.title('Table 3.1: Functional Requirements Summary', fontsize=14, fontweight='bold', pad=20)
     plt.savefig(
@@ -225,7 +218,6 @@ def generate_chapter3_requirements_tables():
     )
     plt.close()
 
-    # 2. Non-Functional Requirements Table
     nonfunc_requirements = {
         'ID': ['NFR1', 'NFR2', 'NFR3', 'NFR4', 'NFR5', 'NFR6', 'NFR7', 'NFR8'],
         'Category': [
@@ -265,7 +257,6 @@ def generate_chapter3_requirements_tables():
     ax.axis('tight')
     ax.axis('off')
 
-    # Create table
     table_data = []
     for i in range(len(nonfunc_requirements['ID'])):
         acceptance_criteria = nonfunc_requirements['Acceptance Criteria'][i]
@@ -296,28 +287,27 @@ def generate_chapter3_requirements_tables():
     table.set_fontsize(8)
     table.scale(1, 2.8)
 
-    # Style the table
     for i in range(len(table_data) + 1):
         for j in range(5):
             cell = table[i, j]
-            if i == 0:  # Header
-                cell.set_facecolor('#2196F3')
+            if i == 0:
+                cell.set_facecolor('
                 cell.set_text_props(weight='bold', color='white')
             else:
-                if j == 1:  # Category column
+                if j == 1:
                     category_colors = {
-                        'Performance': '#fff3e0',
-                        'Accuracy': '#e8f5e8',
-                        'Scalability': '#f3e5f5',
-                        'Reliability': '#e0f2f1',
-                        'Security': '#ffebee',
-                        'Usability': '#e3f2fd',
-                        'Maintainability': '#f9fbe7',
-                        'Compatibility': '#fce4ec',
+                        'Performance': '
+                        'Accuracy': '
+                        'Scalability': '
+                        'Reliability': '
+                        'Security': '
+                        'Usability': '
+                        'Maintainability': '
+                        'Compatibility': '
                     }
-                    cell.set_facecolor(category_colors.get(table_data[i - 1][j], '#f5f5f5'))
-                elif j == 4:  # Status column
-                    cell.set_facecolor('#e8f5e8')
+                    cell.set_facecolor(category_colors.get(table_data[i - 1][j], '
+                elif j == 4:
+                    cell.set_facecolor('
 
     plt.title(
         'Table 3.2: Non-Functional Requirements Summary', fontsize=14, fontweight='bold', pad=20
@@ -342,7 +332,6 @@ def generate_chapter4_gui_screenshots():
     output_dir = Path("images/chapter4_implementation")
     ensure_directory_exists(output_dir)
 
-    # Create placeholder screenshots
     screenshots = [
         ("pc_controller_main_interface.png", "PC Controller - Main Dashboard Interface"),
         ("android_app_main_screen.png", "Android Sensor Node - Main Application Screen"),
@@ -353,17 +342,14 @@ def generate_chapter4_gui_screenshots():
     for filename, title in screenshots:
         fig, ax = plt.subplots(figsize=(12, 8))
 
-        # Create a mock GUI layout
-        ax.add_patch(mpatches.Rectangle((0.05, 0.85), 0.9, 0.1, facecolor='#2196F3', alpha=0.8))
+        ax.add_patch(mpatches.Rectangle((0.05, 0.85), 0.9, 0.1, facecolor='
         ax.text(
             0.5, 0.9, title, ha='center', va='center', fontsize=16, color='white', weight='bold'
         )
 
-        # Add mock interface elements
         if "pc_controller" in filename:
-            # PC Controller layout
             ax.add_patch(
-                mpatches.Rectangle((0.05, 0.6), 0.4, 0.2, facecolor='#f5f5f5', edgecolor='black')
+                mpatches.Rectangle((0.05, 0.6), 0.4, 0.2, facecolor='
             )
             ax.text(
                 0.25,
@@ -374,7 +360,7 @@ def generate_chapter4_gui_screenshots():
             )
 
             ax.add_patch(
-                mpatches.Rectangle((0.55, 0.6), 0.4, 0.2, facecolor='#e8f5e8', edgecolor='black')
+                mpatches.Rectangle((0.55, 0.6), 0.4, 0.2, facecolor='
             )
             ax.text(
                 0.75,
@@ -385,7 +371,7 @@ def generate_chapter4_gui_screenshots():
             )
 
             ax.add_patch(
-                mpatches.Rectangle((0.05, 0.1), 0.9, 0.45, facecolor='#fff', edgecolor='black')
+                mpatches.Rectangle((0.05, 0.1), 0.9, 0.45, facecolor='
             )
             ax.text(
                 0.5,
@@ -396,10 +382,9 @@ def generate_chapter4_gui_screenshots():
             )
 
         elif "android_app" in filename:
-            # Android app layout
             ax.add_patch(
                 mpatches.Rectangle(
-                    (0.2, 0.6), 0.6, 0.2, facecolor='#4CAF50', alpha=0.3, edgecolor='black'
+                    (0.2, 0.6), 0.6, 0.2, facecolor='
                 )
             )
             ax.text(
@@ -411,7 +396,7 @@ def generate_chapter4_gui_screenshots():
             )
 
             ax.add_patch(
-                mpatches.Rectangle((0.1, 0.3), 0.35, 0.25, facecolor='#f0f0f0', edgecolor='black')
+                mpatches.Rectangle((0.1, 0.3), 0.35, 0.25, facecolor='
             )
             ax.text(
                 0.275,
@@ -422,7 +407,7 @@ def generate_chapter4_gui_screenshots():
             )
 
             ax.add_patch(
-                mpatches.Rectangle((0.55, 0.3), 0.35, 0.25, facecolor='#f0f0f0', edgecolor='black')
+                mpatches.Rectangle((0.55, 0.3), 0.35, 0.25, facecolor='
             )
             ax.text(
                 0.725,
@@ -433,7 +418,7 @@ def generate_chapter4_gui_screenshots():
             )
 
             ax.add_patch(
-                mpatches.Rectangle((0.1, 0.05), 0.8, 0.2, facecolor='#fff3e0', edgecolor='black')
+                mpatches.Rectangle((0.1, 0.05), 0.8, 0.2, facecolor='
             )
             ax.text(
                 0.5,
@@ -446,7 +431,7 @@ def generate_chapter4_gui_screenshots():
         elif "session_config" in filename:
             # Session configuration dialog
             ax.add_patch(
-                mpatches.Rectangle((0.15, 0.5), 0.7, 0.3, facecolor='#f9f9f9', edgecolor='black')
+                mpatches.Rectangle((0.15, 0.5), 0.7, 0.3, facecolor='
             )
             ax.text(
                 0.5,
@@ -457,7 +442,7 @@ def generate_chapter4_gui_screenshots():
             )
 
             ax.add_patch(
-                mpatches.Rectangle((0.15, 0.2), 0.7, 0.25, facecolor='#e8f5e8', edgecolor='black')
+                mpatches.Rectangle((0.15, 0.2), 0.7, 0.25, facecolor='
             )
             ax.text(
                 0.5,
@@ -469,9 +454,8 @@ def generate_chapter4_gui_screenshots():
             )
 
         else:
-            # Real-time monitoring view
             ax.add_patch(
-                mpatches.Rectangle((0.05, 0.4), 0.9, 0.4, facecolor='#f5f5f5', edgecolor='black')
+                mpatches.Rectangle((0.05, 0.4), 0.9, 0.4, facecolor='
             )
             ax.text(
                 0.5,
@@ -485,7 +469,7 @@ def generate_chapter4_gui_screenshots():
             )
 
             ax.add_patch(
-                mpatches.Rectangle((0.05, 0.05), 0.9, 0.3, facecolor='#fff', edgecolor='black')
+                mpatches.Rectangle((0.05, 0.05), 0.9, 0.3, facecolor='
             )
             ax.text(
                 0.5,

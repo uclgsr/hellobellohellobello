@@ -8,9 +8,9 @@ import sys
 from pathlib import Path
 
 try:
-    import tomllib  # Python 3.11+
+    import tomllib
 except ImportError:
-    import tomli as tomllib  # Fallback for older Python
+    import tomli as tomllib
 
 
 def validate_pyproject_toml() -> list[str]:
@@ -21,7 +21,6 @@ def validate_pyproject_toml() -> list[str]:
         with open("pyproject.toml", "rb") as f:
             config = tomllib.load(f)
 
-        # Check required sections
         required_sections = ["project", "build-system", "tool.ruff", "tool.mypy"]
         for section in required_sections:
             keys = section.split(".")
@@ -50,7 +49,6 @@ def validate_pyproject_toml() -> list[str]:
                 if "python_version" not in mypy_config:
                     errors.append("MyPy config missing python_version")
 
-        # Check project metadata
         if "project" in config:
             project = config["project"]
             required_fields = ["name", "version", "description", "requires-python"]
@@ -80,7 +78,6 @@ def validate_pytest_ini() -> list[str]:
 
         content = pytest_ini.read_text()
 
-        # Check for required sections
         if "[pytest]" not in content:
             errors.append("pytest.ini missing [pytest] section")
 
@@ -110,7 +107,6 @@ def validate_pre_commit_config() -> list[str]:
         with open(".pre-commit-config.yaml") as f:
             config = yaml.safe_load(f)
 
-        # Check for repos
         if "repos" not in config:
             errors.append("Pre-commit config missing repos section")
             return errors
@@ -147,7 +143,6 @@ def validate_requirements_consistency() -> list[str]:
     errors = []
 
     try:
-        # Read requirements.txt
         requirements_file = Path("pc_controller/requirements.txt")
         if not requirements_file.exists():
             errors.append("pc_controller/requirements.txt not found")
@@ -156,12 +151,10 @@ def validate_requirements_consistency() -> list[str]:
         requirements = set()
         for line in requirements_file.read_text().splitlines():
             line = line.strip()
-            if line and not line.startswith("#"):
-                # Extract package name (before version specifiers)
+            if line and not line.startswith("
                 package = line.split(">=")[0].split("==")[0].split("<")[0].split(">")[0]
                 requirements.add(package.lower())
 
-        # Read pyproject.toml dependencies
         with open("pyproject.toml", "rb") as f:
             config = tomllib.load(f)
 
@@ -171,7 +164,6 @@ def validate_requirements_consistency() -> list[str]:
                 package = dep.split(">=")[0].split("==")[0].split("<")[0].split(">")[0]
                 pyproject_deps.add(package.lower())
 
-            # Check for inconsistencies
             only_in_requirements = requirements - pyproject_deps
             only_in_pyproject = pyproject_deps - requirements
 
@@ -202,7 +194,6 @@ def main() -> int:
 
     all_errors = []
 
-    # Run all validations
     validations = [
         ("pyproject.toml", validate_pyproject_toml),
         ("pytest.ini", validate_pytest_ini),
