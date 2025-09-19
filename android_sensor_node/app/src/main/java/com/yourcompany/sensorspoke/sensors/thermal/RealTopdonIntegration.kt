@@ -43,6 +43,15 @@ class RealTopdonIntegration(private val context: Context) {
         private const val KELVIN_TO_CELSIUS = 273.15f
     }
 
+    /**
+     * Callback interface for thermal frame data
+     */
+    interface ThermalFrameCallback {
+        fun onThermalFrame(frame: ThermalFrame)
+        fun onConnectionStatusChanged(status: ConnectionStatus)
+        fun onError(error: String)
+    }
+
     // State management
     private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
@@ -53,6 +62,7 @@ class RealTopdonIntegration(private val context: Context) {
     private var usbDevice: UsbDevice? = null
     private var isStreaming = false
     private var frameCallback: ((ThermalFrame) -> Unit)? = null
+    private var thermalFrameCallback: ThermalFrameCallback? = null
     private var frameNumber = 0
 
     // Coroutine scope for async operations
@@ -74,6 +84,42 @@ class RealTopdonIntegration(private val context: Context) {
         GRAYSCALE,
         HOT,
         COOL,
+    }
+
+    /**
+     * Set callback for thermal frame events
+     */
+    fun setFrameCallback(callback: ThermalFrameCallback) {
+        thermalFrameCallback = callback
+        Log.d(TAG, "Thermal frame callback set")
+    }
+
+    /**
+     * Connect to TC001 device
+     */
+    fun connectDevice(): Boolean {
+        return try {
+            Log.i(TAG, "Attempting to connect to TC001 device")
+            
+            val device = scanForTC001Hardware()
+            if (device != null) {
+                usbDevice = device
+                _connectionStatus.value = ConnectionStatus.CONNECTED
+                thermalFrameCallback?.onConnectionStatusChanged(ConnectionStatus.CONNECTED)
+                Log.i(TAG, "Successfully connected to TC001 device")
+                true
+            } else {
+                _connectionStatus.value = ConnectionStatus.DISCONNECTED
+                thermalFrameCallback?.onConnectionStatusChanged(ConnectionStatus.DISCONNECTED)
+                Log.w(TAG, "No TC001 device found")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error connecting to device: ${e.message}", e)
+            _connectionStatus.value = ConnectionStatus.ERROR
+            thermalFrameCallback?.onError("Connection failed: ${e.message}")
+            false
+        }
     }
 
     /**
@@ -185,7 +231,9 @@ class RealTopdonIntegration(private val context: Context) {
                         captureSimulatedFrame()
                     }
                     
+                    // Send to both callback interfaces for compatibility
                     frameCallback?.invoke(frame)
+                    thermalFrameCallback?.onThermalFrame(frame)
                     _thermalFrame.value = frame
                     
                     delay(100) // ~10 FPS
@@ -221,7 +269,9 @@ class RealTopdonIntegration(private val context: Context) {
             maxTemp = maxTemp,
             avgTemp = avgTemp,
             rotation = 0,
-            isValid = true
+            isValid = true,
+            frameNumber = ++frameNumber,
+            isRealHardware = true
         )
     }
 
@@ -246,7 +296,9 @@ class RealTopdonIntegration(private val context: Context) {
             maxTemp = maxTemp,
             avgTemp = avgTemp,
             rotation = 0,
-            isValid = true
+            isValid = true,
+            frameNumber = ++frameNumber,
+            isRealHardware = false
         )
     }
 
