@@ -63,6 +63,9 @@ class RgbCameraManager(
     private var videoCapture: VideoCapture<Recorder>? = null
     private var preview: Preview? = null
     private var imageAnalysis: ImageAnalysis? = null
+    
+    // RAW DNG support via Camera2 API
+    private var camera2RawDngManager: Camera2RawDngManager? = null
 
     /**
      * Camera states for RGB camera management
@@ -76,7 +79,7 @@ class RgbCameraManager(
     }
 
     /**
-     * Enhanced camera information container
+     * Enhanced camera information container with RAW DNG support
      */
     data class CameraInfo(
         val cameraId: String,
@@ -87,17 +90,23 @@ class RgbCameraManager(
         val isBackCamera: Boolean = true,
         val maxZoomRatio: Float = 1.0f,
         val deviceModel: String = "",
+        val supportsRawDng: Boolean = false,
+        val isSamsungLevel3Device: Boolean = false,
     )
 
     /**
-     * Enhanced camera system initialization with Samsung S22 optimization
+     * Enhanced camera system initialization with Samsung S22 optimization and RAW DNG support
      */
     suspend fun initialize(): Boolean {
         return try {
-            Log.i(TAG, "Initializing enhanced RGB camera manager for Samsung S22")
+            Log.i(TAG, "Initializing enhanced RGB camera manager with RAW DNG support")
             _cameraState.value = CameraState.INITIALIZING
 
+            // Initialize CameraX for standard video/photo capture
             initializeCameraX()
+            
+            // Initialize Camera2 RAW DNG manager for Samsung devices
+            initializeCamera2RawDng()
 
             _cameraState.value = CameraState.READY
             Log.i(TAG, "Enhanced RGB camera manager initialized successfully")
@@ -147,6 +156,26 @@ class RgbCameraManager(
 
         updateCameraInfo(provider, deviceModel)
     }
+    
+    /**
+     * Initialize Camera2 RAW DNG manager for Samsung devices
+     */
+    private suspend fun initializeCamera2RawDng() {
+        try {
+            camera2RawDngManager = Camera2RawDngManager(context)
+            val rawInitialized = camera2RawDngManager?.initialize() == true
+            
+            if (rawInitialized) {
+                val rawStatus = camera2RawDngManager?.getCamera2Status()
+                Log.i(TAG, "Camera2 RAW DNG initialized: Samsung Level 3: ${rawStatus.supportsCamera2Level3}, RAW DNG: ${rawStatus.supportsRawDng}")
+            } else {
+                Log.i(TAG, "Camera2 RAW DNG not available on this device")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Camera2 RAW DNG initialization failed: ${e.message}")
+            camera2RawDngManager = null
+        }
+    }
 
     /**
      * Bind camera use cases including Preview for on-screen display
@@ -174,7 +203,7 @@ class RgbCameraManager(
     }
 
     /**
-     * Update camera information with detected capabilities
+     * Update camera information with detected capabilities including RAW DNG support
      */
     private fun updateCameraInfo(provider: ProcessCameraProvider, deviceModel: String) {
         try {
@@ -191,6 +220,11 @@ class RgbCameraManager(
             val supportedQualities = cameraInfo?.let { QualitySelector.getSupportedQualities(it) } ?: emptyList()
             val actualQuality = getActualQuality(supportedQualities)
             val resolution = getResolutionForQuality(actualQuality)
+            
+            // Get RAW DNG capabilities from Camera2 manager
+            val camera2Status = camera2RawDngManager?.getCamera2Status()
+            val supportsRawDng = camera2Status?.supportsRawDng ?: false
+            val isSamsungLevel3Device = camera2Status?.supportsCamera2Level3 ?: false
 
             _cameraInfo.value = CameraInfo(
                 cameraId = cameraInfo.toString(),
@@ -200,10 +234,13 @@ class RgbCameraManager(
                 hasFlash = cameraInfo?.hasFlashUnit() ?: false,
                 isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA,
                 maxZoomRatio = cameraInfo?.zoomState?.value?.maxZoomRatio ?: 1.0f,
-                deviceModel = deviceModel
+                deviceModel = deviceModel,
+                supportsRawDng = supportsRawDng,
+                isSamsungLevel3Device = isSamsungLevel3Device
             )
 
             Log.i(TAG, "Camera capabilities - Qualities: $supportedQualities, Using: $actualQuality, Resolution: $resolution")
+            Log.i(TAG, "RAW DNG support - Enabled: $supportsRawDng, Samsung Level 3: $isSamsungLevel3Device")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update camera info: ${e.message}", e)
         }
@@ -284,6 +321,25 @@ class RgbCameraManager(
      * Get Preview for on-screen display
      */
     fun getPreview(): Preview? = preview
+    
+    /**
+     * Get Camera2 RAW DNG manager
+     */
+    fun getCamera2RawDngManager(): Camera2RawDngManager? = camera2RawDngManager
+    
+    /**
+     * Check if device supports RAW DNG capture
+     */
+    fun supportsRawDng(): Boolean {
+        return _cameraInfo.value?.supportsRawDng == true
+    }
+    
+    /**
+     * Check if device is Samsung with Camera2 Level 3 support
+     */
+    fun isSamsungLevel3Device(): Boolean {
+        return _cameraInfo.value?.isSamsungLevel3Device == true
+    }
 
     /**
      * Update recording state
@@ -304,7 +360,7 @@ class RgbCameraManager(
     }
 
     /**
-     * Get current camera status for UI feedback
+     * Get current camera status for UI feedback including RAW DNG support
      */
     fun getCameraStatus(): CameraStatus {
         val info = _cameraInfo.value
@@ -315,12 +371,14 @@ class RgbCameraManager(
             isBackCamera = info?.isBackCamera ?: true,
             hasFlash = info?.hasFlash ?: false,
             supports4K = supports4K(),
-            deviceModel = info?.deviceModel ?: android.os.Build.MODEL
+            deviceModel = info?.deviceModel ?: android.os.Build.MODEL,
+            supportsRawDng = info?.supportsRawDng ?: false,
+            isSamsungLevel3Device = info?.isSamsungLevel3Device ?: false
         )
     }
 
     /**
-     * Camera status data class for UI feedback
+     * Camera status data class for UI feedback with RAW DNG support
      */
     data class CameraStatus(
         val state: CameraState,
@@ -330,15 +388,18 @@ class RgbCameraManager(
         val hasFlash: Boolean,
         val supports4K: Boolean,
         val deviceModel: String,
+        val supportsRawDng: Boolean,
+        val isSamsungLevel3Device: Boolean,
     )
 
     /**
-     * Enhanced cleanup with proper resource management
+     * Enhanced cleanup with proper resource management including Camera2 RAW DNG
      */
     fun cleanup() {
         Log.i(TAG, "Cleaning up RGB camera manager resources")
         
         try {
+            // Cleanup CameraX resources
             cameraProvider?.unbindAll()
             camera = null
             videoCapture = null
@@ -346,6 +407,10 @@ class RgbCameraManager(
             preview = null
             imageAnalysis = null
             cameraProvider = null
+            
+            // Cleanup Camera2 RAW DNG manager
+            camera2RawDngManager?.cleanup()
+            camera2RawDngManager = null
             
             _cameraState.value = CameraState.UNINITIALIZED
             _cameraInfo.value = null
