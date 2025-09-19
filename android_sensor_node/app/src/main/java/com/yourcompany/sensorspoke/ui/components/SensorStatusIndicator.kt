@@ -7,7 +7,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-// R import handled automatically
+import com.yourcompany.sensorspoke.R
 
 /**
  * Custom UI component for displaying real-time sensor status with visual indicators.
