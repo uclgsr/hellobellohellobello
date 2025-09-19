@@ -1,3 +1,5 @@
+[![Copilot](https://github.com/uclgsr/hellobellohellobello/actions/workflows/copilot-swe-agent/copilot/badge.svg)](https://github.com/uclgsr/hellobellohellobello/actions/workflows/copilot-swe-agent/copilot)
+
 # Multi-Modal Physiological Sensing Platform
 
 This repository contains a hub-and-spoke research platform for synchronous, multi-modal data collection with **production-ready hardware integration**.
