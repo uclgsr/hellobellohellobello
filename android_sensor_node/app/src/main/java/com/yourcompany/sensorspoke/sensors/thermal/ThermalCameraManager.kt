@@ -5,9 +5,13 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
 import com.yourcompany.sensorspoke.utils.PermissionManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * ThermalCameraManager handles thermal camera lifecycle management and configuration.
@@ -44,7 +48,11 @@ class ThermalCameraManager(
 
     // Camera integration components
     private var realTopdonIntegration: RealTopdonIntegration? = null
+    private var topdonIntegration: TopdonThermalIntegration? = null // Legacy simulation integration
     private var targetFps = DEFAULT_FPS
+    
+    // Coroutine scope for async operations
+    private val managerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     /**
      * Camera states for thermal camera management
@@ -269,10 +277,12 @@ class ThermalCameraManager(
     fun cleanup() {
         Log.i(TAG, "Cleaning up thermal camera manager")
 
-        // Clean up real integration
-        realTopdonIntegration?.let {
-            it.stopStreaming()
-            it.disconnect()
+        // Clean up real integration using coroutine scope
+        realTopdonIntegration?.let { integration ->
+            managerScope.launch {
+                integration.stopStreaming()
+                integration.disconnect()
+            }
             realTopdonIntegration = null
         }
 

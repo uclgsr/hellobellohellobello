@@ -44,15 +44,15 @@ class RealTopdonIntegration(private val context: Context) {
     }
 
     // State management
-    private val _connectionStatus = MutableStateFlow(ThermalDataStructures.ConnectionStatus.DISCONNECTED)
-    val connectionStatus: StateFlow<ThermalDataStructures.ConnectionStatus> = _connectionStatus.asStateFlow()
+    private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+    val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
 
-    private val _thermalFrame = MutableStateFlow<ThermalDataStructures.ThermalFrame?>(null)
-    val thermalFrame: StateFlow<ThermalDataStructures.ThermalFrame?> = _thermalFrame.asStateFlow()
+    private val _thermalFrame = MutableStateFlow<ThermalFrame?>(null)
+    val thermalFrame: StateFlow<ThermalFrame?> = _thermalFrame.asStateFlow()
 
     private var usbDevice: UsbDevice? = null
     private var isStreaming = false
-    private var frameCallback: ((ThermalDataStructures.ThermalFrame) -> Unit)? = null
+    private var frameCallback: ((ThermalFrame) -> Unit)? = null
     private var frameNumber = 0
 
     // Coroutine scope for async operations
@@ -80,7 +80,7 @@ class RealTopdonIntegration(private val context: Context) {
      * Initialize and attempt to connect to TC001 thermal camera
      */
     suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
-        _connectionStatus.value = ThermalDataStructures.ConnectionStatus.CONNECTING
+        _connectionStatus.value = ConnectionStatus.CONNECTING
 
         try {
             Log.i(TAG, "Initializing TC001 thermal camera connection")
@@ -90,16 +90,16 @@ class RealTopdonIntegration(private val context: Context) {
             if (device != null) {
                 Log.i(TAG, "TC001 hardware detected: ${device.deviceName}")
                 usbDevice = device
-                _connectionStatus.value = ThermalDataStructures.ConnectionStatus.CONNECTED
+                _connectionStatus.value = ConnectionStatus.CONNECTED
                 return@withContext true
             }
 
             Log.w(TAG, "No TC001 hardware found, will use simulation")
-            _connectionStatus.value = ThermalDataStructures.ConnectionStatus.DISCONNECTED
+            _connectionStatus.value = ConnectionStatus.DISCONNECTED
             return@withContext false
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize thermal camera: ${e.message}", e)
-            _connectionStatus.value = ThermalDataStructures.ConnectionStatus.ERROR
+            _connectionStatus.value = ConnectionStatus.ERROR
             return@withContext false
         }
     }
@@ -107,12 +107,12 @@ class RealTopdonIntegration(private val context: Context) {
     /**
      * Start thermal data streaming
      */
-    suspend fun startStreaming(callback: (ThermalDataStructures.ThermalFrame) -> Unit): Boolean {
+    suspend fun startStreaming(callback: (ThermalFrame) -> Unit): Boolean {
         return try {
             Log.i(TAG, "Starting thermal data streaming")
             frameCallback = callback
             isStreaming = true
-            _connectionStatus.value = ThermalDataStructures.ConnectionStatus.STREAMING
+            _connectionStatus.value = ConnectionStatus.STREAMING
             
             // Start frame capture loop
             startFrameCaptureLoop()
@@ -131,9 +131,9 @@ class RealTopdonIntegration(private val context: Context) {
         isStreaming = false
         frameCallback = null
         _connectionStatus.value = if (usbDevice != null) 
-            ThermalDataStructures.ConnectionStatus.CONNECTED 
+            ConnectionStatus.CONNECTED 
         else 
-            ThermalDataStructures.ConnectionStatus.DISCONNECTED
+            ConnectionStatus.DISCONNECTED
     }
 
     /**
@@ -143,7 +143,7 @@ class RealTopdonIntegration(private val context: Context) {
         Log.i(TAG, "Disconnecting from TC001")
         stopStreaming()
         usbDevice = null
-        _connectionStatus.value = ThermalDataStructures.ConnectionStatus.DISCONNECTED
+        _connectionStatus.value = ConnectionStatus.DISCONNECTED
     }
 
     /**
@@ -201,56 +201,52 @@ class RealTopdonIntegration(private val context: Context) {
      * Capture real thermal frame from TC001 hardware
      * TODO: Replace with actual IRCamera integration
      */
-    private fun captureRealThermalFrame(): ThermalDataStructures.ThermalFrame {
+    private fun captureRealThermalFrame(): ThermalFrame {
         // For now, generate realistic data based on TC001 specs
         // This should be replaced with actual IRCamera UVCCamera calls
-        val temperatureMatrix = Array(TC001_HEIGHT) { 
-            FloatArray(TC001_WIDTH) { 
-                20.0f + Random.nextFloat() * 15.0f // 20-35°C range
-            }
+        val temperatureMatrix = FloatArray(TC001_WIDTH * TC001_HEIGHT) { 
+            20.0f + Random.nextFloat() * 15.0f // 20-35°C range
         }
 
-        val minTemp = temperatureMatrix.flatMap { it.asIterable() }.minOrNull() ?: 20.0f
-        val maxTemp = temperatureMatrix.flatMap { it.asIterable() }.maxOrNull() ?: 35.0f
-        val avgTemp = temperatureMatrix.flatMap { it.asIterable() }.average().toFloat()
+        val minTemp = temperatureMatrix.minOrNull() ?: 20.0f
+        val maxTemp = temperatureMatrix.maxOrNull() ?: 35.0f
+        val avgTemp = temperatureMatrix.average().toFloat()
 
-        return ThermalDataStructures.ThermalFrame(
+        return ThermalFrame(
+            timestamp = System.nanoTime(),
             width = TC001_WIDTH,
             height = TC001_HEIGHT,
             temperatureMatrix = temperatureMatrix,
-            minTemperature = minTemp,
-            maxTemperature = maxTemp,
-            averageTemperature = avgTemp,
-            timestamp = System.nanoTime(),
-            frameNumber = ++frameNumber,
-            isRealHardware = true
+            minTemp = minTemp,
+            maxTemp = maxTemp,
+            avgTemp = avgTemp,
+            rotation = 0,
+            isValid = true
         )
     }
 
     /**
      * Capture simulated thermal frame for testing
      */
-    private fun captureSimulatedFrame(): ThermalDataStructures.ThermalFrame {
-        val temperatureMatrix = Array(TC001_HEIGHT) { 
-            FloatArray(TC001_WIDTH) { 
-                25.0f + Random.nextFloat() * 10.0f // 25-35°C range
-            }
+    private fun captureSimulatedFrame(): ThermalFrame {
+        val temperatureMatrix = FloatArray(TC001_WIDTH * TC001_HEIGHT) { 
+            25.0f + Random.nextFloat() * 10.0f // 25-35°C range
         }
 
-        val minTemp = temperatureMatrix.flatMap { it.asIterable() }.minOrNull() ?: 25.0f
-        val maxTemp = temperatureMatrix.flatMap { it.asIterable() }.maxOrNull() ?: 35.0f
-        val avgTemp = temperatureMatrix.flatMap { it.asIterable() }.average().toFloat()
+        val minTemp = temperatureMatrix.minOrNull() ?: 25.0f
+        val maxTemp = temperatureMatrix.maxOrNull() ?: 35.0f
+        val avgTemp = temperatureMatrix.average().toFloat()
 
-        return ThermalDataStructures.ThermalFrame(
+        return ThermalFrame(
+            timestamp = System.nanoTime(),
             width = TC001_WIDTH,
             height = TC001_HEIGHT,
             temperatureMatrix = temperatureMatrix,
-            minTemperature = minTemp,
-            maxTemperature = maxTemp,
-            averageTemperature = avgTemp,
-            timestamp = System.nanoTime(),
-            frameNumber = ++frameNumber,
-            isRealHardware = false
+            minTemp = minTemp,
+            maxTemp = maxTemp,
+            avgTemp = avgTemp,
+            rotation = 0,
+            isValid = true
         )
     }
 

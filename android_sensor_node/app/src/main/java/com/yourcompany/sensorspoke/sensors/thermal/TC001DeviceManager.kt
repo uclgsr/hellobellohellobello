@@ -28,7 +28,10 @@ enum class TopdonThermalPalette(val value: Int) {
     BLACK_HOT(3),
     RED(4),
     GREEN(5),
-    BLUE(6)
+    BLUE(6),
+    GRAYSCALE(7),
+    HOT(8),
+    COOL(9)
 }
 
 /**

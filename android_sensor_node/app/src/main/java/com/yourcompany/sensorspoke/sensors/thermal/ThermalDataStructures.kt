@@ -9,6 +9,7 @@ enum class ConnectionStatus {
     DISCONNECTED,
     CONNECTING,
     CONNECTED,
+    STREAMING,
     ERROR
 }
 
