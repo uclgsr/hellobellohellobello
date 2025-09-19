@@ -56,8 +56,10 @@ tasks.register("buildRelease") {
     
     if (hasAndroidSdk) {
         dependsOn(
-            ":android_sensor_node:app:assembleRelease",
-            ":android_sensor_node:app:testReleaseUnitTest"
+            ":android_sensor_node:app:assembleFullRelease",
+            ":android_sensor_node:app:assembleLiteRelease",
+            ":android_sensor_node:app:testFullReleaseUnitTest",
+            ":android_sensor_node:app:testLiteReleaseUnitTest"
         )
     }
     dependsOn(":pc_controller:assemblePcController")
@@ -128,8 +130,10 @@ tasks.register("checkAll") {
     
     if (hasAndroidSdk) {
         dependsOn(
-            ":android_sensor_node:app:testDebugUnitTest",
-            ":android_sensor_node:app:lintDebug"
+            ":android_sensor_node:app:testFullDebugUnitTest",
+            ":android_sensor_node:app:testLiteDebugUnitTest",
+            ":android_sensor_node:app:lintFullDebug",
+            ":android_sensor_node:app:lintLiteDebug"
         )
     }
     
@@ -160,7 +164,10 @@ tasks.register("packageAll") {
     
     dependsOn(":pc_controller:assemblePcController")
     if (hasAndroidSdk) {
-        dependsOn(":android_sensor_node:app:assembleRelease")
+        dependsOn(
+            ":android_sensor_node:app:assembleFullRelease",
+            ":android_sensor_node:app:assembleLiteRelease"
+        )
     }
     
     doFirst {
