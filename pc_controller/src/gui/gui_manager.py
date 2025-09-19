@@ -240,8 +240,8 @@ class DeviceWidget(QWidget):
             # Keep only last 10 seconds visible on X-axis for smooth scrolling
             if x.size > 0:
                 x_latest = x[-1]
-                x_window = max(10.0, x_latest)  # At least 10 seconds visible
-                self.view.setXRange(x_latest - x_window, x_latest + 0.5, padding=0)
+                x_window = self._buf_seconds
+                self.view.setXRange(max(0, x_latest - x_window), x_latest + 0.5, padding=0)
             
             # Add visual indicators for data quality
             if hasattr(self, '_last_sample_count'):
