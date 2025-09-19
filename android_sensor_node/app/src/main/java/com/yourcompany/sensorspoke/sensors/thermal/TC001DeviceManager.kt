@@ -440,18 +440,9 @@ enum class TC001DeviceStatus {
     ERROR,
     CONNECTION_LOST,
 }
-package com.yourcompany.sensorspoke.sensors.thermal
-
-import android.content.Context
-import android.content.IntentFilter
-import android.hardware.usb.UsbManager
-import android.util.Log
 
 /**
- * TC001 Initialization Utility
- *
- * Handles initialization of TC001 thermal camera components including
- * USB permissions, device discovery, and logging setup
+ * TC001 Initialization utilities integrated into device manager
  */
 object TC001InitUtil {
     private const val TAG = "TC001InitUtil"
