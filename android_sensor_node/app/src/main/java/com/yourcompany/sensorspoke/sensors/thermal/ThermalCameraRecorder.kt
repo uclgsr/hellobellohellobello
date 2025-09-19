@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
@@ -31,18 +32,6 @@ import java.io.FileWriter
 import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.random.Random
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.BufferedWriter
-import java.io.File
-import java.io.FileOutputStream
-import java.io.FileWriter
-import kotlin.math.sqrt
 
 /**
  * Enhanced thermal camera recorder with real Topdon TC001 integration using IRCamera library.
@@ -552,13 +541,15 @@ class ThermalCameraRecorder(
         
         // Generate simulated thermal frame
         val simulatedFrame = ThermalFrame(
+            timestamp = timestamp,
             width = 256,
             height = 192,
             temperatureMatrix = generateSimulatedThermalData(),
-            minTemperature = 15.0f + Random.nextFloat() * 5.0f,
-            maxTemperature = 35.0f + Random.nextFloat() * 10.0f,
-            averageTemperature = 25.0f + Random.nextFloat() * 5.0f,
-            timestamp = timestamp,
+            minTemp = 15.0f + Random.nextFloat() * 5.0f,
+            maxTemp = 35.0f + Random.nextFloat() * 10.0f,
+            avgTemp = 25.0f + Random.nextFloat() * 5.0f,
+            rotation = 0,
+            isValid = true,
             frameNumber = frameCount,
             isRealHardware = false
         )
