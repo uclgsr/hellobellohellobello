@@ -135,12 +135,22 @@ class RgbCameraRecorder(
 
             // Ensure directories
             val framesDir = File(sessionDir, "frames").apply { mkdirs() }
+            
+            // Create RAW DNG directory if in RAW mode
+            val rawDngDir = if (recordingMode == RecordingMode.RAW_DNG) {
+                File(sessionDir, "raw_dng").apply { mkdirs() }
+            } else null
 
             // Open CSV for frame metadata using data processor
             csvFile = File(sessionDir, "rgb_frames.csv")
             csvWriter = BufferedWriter(FileWriter(csvFile!!, true))
             if (csvFile!!.length() == 0L) {
-                csvWriter!!.write(dataProcessor.getCsvHeader() + "\n")
+                val header = if (recordingMode == RecordingMode.RAW_DNG) {
+                    dataProcessor.getCsvHeader() + ",raw_dng_file"
+                } else {
+                    dataProcessor.getCsvHeader()
+                }
+                csvWriter!!.write(header + "\n")
                 csvWriter!!.flush()
             }
 
@@ -148,7 +158,7 @@ class RgbCameraRecorder(
             startVideoRecording(File(sessionDir, "video.mp4"))
 
             // Start frame capture process
-            startFrameCapture(framesDir)
+            startFrameCapture(framesDir, rawDngDir)
 
             // Start synchronization monitoring
             startSyncMonitoring()
@@ -286,13 +296,13 @@ class RgbCameraRecorder(
         Log.i(TAG, "Video recording started: ${videoFileWithTimestamp.absolutePath} at timestamp $sessionStartTs")
     }
 
-    private fun startFrameCapture(framesDir: File) {
+    private fun startFrameCapture(framesDir: File, rawDngDir: File?) {
         captureJob = scope.launch {
-            Log.i(TAG, "Starting frame capture loop")
+            Log.i(TAG, "Starting frame capture loop with mode: $recordingMode")
 
             while (isActive) {
                 try {
-                    captureFrame(framesDir)
+                    captureFrame(framesDir, rawDngDir)
                     delay(33) // ~30 FPS for high-quality data capture
                 } catch (e: Exception) {
                     Log.e(TAG, "Error capturing frame: ${e.message}", e)
@@ -337,7 +347,7 @@ class RgbCameraRecorder(
         }
     }
 
-    private suspend fun captureFrame(framesDir: File) {
+    private suspend fun captureFrame(framesDir: File, rawDngDir: File?) {
         val timestampNs = TimeManager.nowNanos()
         val timestampMs = System.currentTimeMillis()
         frameCount++
@@ -359,6 +369,13 @@ class RgbCameraRecorder(
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     try {
+                        var rawDngFilename: String? = null
+                        
+                        // Capture RAW DNG if in RAW mode and directory exists
+                        if (recordingMode == RecordingMode.RAW_DNG && rawDngDir != null) {
+                            rawDngFilename = captureRawDngFrame(timestampNs, rawDngDir)
+                        }
+
                         // Create frame data using data processor
                         val frameData = dataProcessor.createFrameData(
                             timestampNs,
@@ -369,22 +386,63 @@ class RgbCameraRecorder(
                             actualVideoStartTime,
                         )
 
-                        // Write to CSV using data processor
+                        // Write to CSV using data processor with optional RAW DNG filename
                         csvWriter?.apply {
-                            write(dataProcessor.formatFrameDataForCsv(frameData) + "\n")
+                            val csvLine = if (rawDngFilename != null) {
+                                dataProcessor.formatFrameDataForCsv(frameData) + ",$rawDngFilename"
+                            } else {
+                                dataProcessor.formatFrameDataForCsv(frameData)
+                            }
+                            write(csvLine + "\n")
                             flush()
                         }
 
                         // Generate preview for UI
                         dataProcessor.generatePreview(outputFile, timestampNs)
 
-                        Log.d(TAG, "Captured frame: ${frameData.filename} (${frameData.fileSizeBytes} bytes) - Video time: ${frameData.videoRelativeTimeMs}ms, Est. frame: ${frameData.estimatedVideoFrame}, Sync quality: ${"%.3f".format(frameData.syncQuality)}")
+                        val modeInfo = if (recordingMode == RecordingMode.RAW_DNG) " + RAW DNG" else ""
+                        Log.d(TAG, "Captured frame$modeInfo: ${frameData.filename} (${frameData.fileSizeBytes} bytes) - Video time: ${frameData.videoRelativeTimeMs}ms, Est. frame: ${frameData.estimatedVideoFrame}, Sync quality: ${"%.3f".format(frameData.syncQuality)}")
                     } catch (e: Exception) {
                         Log.e(TAG, "Error processing captured frame: ${e.message}", e)
                     }
                 }
             },
         )
+    }
+
+    /**
+     * Capture RAW DNG frame using Camera2 API for Samsung devices
+     */
+    private fun captureRawDngFrame(timestampNs: Long, rawDngDir: File): String? {
+        return try {
+            val rawDngManager = rgbCameraManager.getCamera2RawDngManager()
+            if (rawDngManager == null) {
+                Log.w(TAG, "Camera2 RAW DNG manager not available")
+                return null
+            }
+            
+            val rawFilename = "raw_${timestampNs}_${frameCount}.dng"
+            val rawOutputFile = File(rawDngDir, rawFilename)
+            
+            // Launch RAW DNG capture in background (non-blocking)
+            scope.launch {
+                try {
+                    val success = rawDngManager.captureRawDng(rawOutputFile)
+                    if (success) {
+                        Log.d(TAG, "RAW DNG captured: $rawFilename")
+                    } else {
+                        Log.w(TAG, "RAW DNG capture failed: $rawFilename")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error capturing RAW DNG: ${e.message}", e)
+                }
+            }
+            
+            rawFilename
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initiating RAW DNG capture: ${e.message}", e)
+            null
+        }
     }
 
     /**

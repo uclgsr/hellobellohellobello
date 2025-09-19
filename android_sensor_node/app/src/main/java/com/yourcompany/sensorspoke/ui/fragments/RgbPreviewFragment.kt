@@ -93,12 +93,12 @@ class RgbPreviewFragment : Fragment() {
                 return
             }
             
-            // Initialize camera manager to get capabilities
-            val cameraManager = recorder.getCameraManager()
-            cameraManager.initialize()
-            
+            // Get capabilities from recorder without initializing camera directly
             val supportsRawDng = recorder.supportsRawDng()
             val isSamsungLevel3 = recorder.isSamsungLevel3Device()
+            
+            // Get camera status (this will initialize camera if needed)
+            val cameraManager = recorder.getCameraManager()
             val cameraStatus = cameraManager.getCameraStatus()
             
             activity?.runOnUiThread {
