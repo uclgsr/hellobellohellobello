@@ -1,4 +1,4 @@
-package com.yourcompany.sensorspoke.sensors.thermal.tc001
+package com.yourcompany.sensorspoke.sensors.thermal
 
 import android.content.Context
 import android.hardware.usb.UsbDevice

@@ -16,9 +16,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.sensors.thermal.TopdonThermalPalette
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationManager
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationState
-import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001TemperatureData
+import com.yourcompany.sensorspoke.sensors.thermal.TC001IntegrationManager
+import com.yourcompany.sensorspoke.sensors.thermal.TC001IntegrationState
+import com.yourcompany.sensorspoke.sensors.thermal.TC001TemperatureData
 import com.yourcompany.sensorspoke.ui.components.TC001SystemStatusView
 import com.yourcompany.sensorspoke.ui.components.ThermalControlsView
 import com.yourcompany.sensorspoke.ui.navigation.ThermalNavigationState

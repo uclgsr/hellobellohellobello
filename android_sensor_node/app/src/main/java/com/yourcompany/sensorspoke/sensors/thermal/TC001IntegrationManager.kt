@@ -1,4 +1,488 @@
-package com.yourcompany.sensorspoke.sensors.thermal.tc001
+package com.yourcompany.sensorspoke.sensors.thermal
+
+import android.content.Context
+import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+
+/**
+ * TC001IntegrationManager - Comprehensive thermal integration coordinator
+ *
+ * Coordinates all TC001 components for seamless thermal camera operation:
+ * - Device connection management via TC001Connector
+ * - Real-time data processing via TC001DataManager
+ * - UI state management via TC001UIController
+ * - System initialization via TC001InitUtil
+ *
+ * This manager ensures all TC001 components work together harmoniously
+ * and provides a single integration point for the thermal camera system.
+ */
+class TC001IntegrationManager(
+    private val context: Context,
+) {
+    companion object {
+        private const val TAG = "TC001IntegrationManager"
+    }
+
+    // Component instances
+    private var tc001Connector: TC001Connector? = null
+    private var tc001DataManager: TC001DataManager? = null
+    private var tc001UIController: TC001UIController? = null
+
+    // Integration state
+    private val _integrationState = MutableLiveData<TC001IntegrationState>()
+    val integrationState: LiveData<TC001IntegrationState> = _integrationState
+
+    private val _systemStatus = MutableLiveData<String>()
+    val systemStatus: LiveData<String> = _systemStatus
+
+    private val integrationScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var isInitialized = false
+
+    init {
+        _integrationState.value = TC001IntegrationState.UNINITIALIZED
+        _systemStatus.value = "TC001 System Uninitialized"
+    }
+
+    /**
+     * Initialize complete TC001 integration system
+     */
+    suspend fun initializeSystem(): Boolean =
+        withContext(Dispatchers.IO) {
+            if (isInitialized) {
+                Log.w(TAG, "TC001 system already initialized")
+                return@withContext true
+            }
+
+            try {
+                _integrationState.postValue(TC001IntegrationState.INITIALIZING)
+                _systemStatus.postValue("Initializing TC001 System...")
+
+                // Step 1: Initialize TC001 utilities
+                TC001InitUtil.initLog()
+                TC001InitUtil.initReceiver(context)
+                TC001InitUtil.initTC001DeviceManager(context)
+
+                // Step 2: Initialize connector
+                tc001Connector = TC001Connector(context)
+
+                // Step 3: Initialize data manager
+                tc001DataManager = TC001DataManager(context)
+
+                // Step 4: Initialize UI controller
+                tc001UIController = TC001UIController()
+
+                // Step 5: Setup component integration
+                setupComponentIntegration()
+
+                isInitialized = true
+                _integrationState.postValue(TC001IntegrationState.INITIALIZED)
+                _systemStatus.postValue("TC001 System Ready")
+
+                Log.i(TAG, "TC001 integration system initialized successfully")
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize TC001 system", e)
+                _integrationState.postValue(TC001IntegrationState.ERROR)
+                _systemStatus.postValue("TC001 System Error: ${e.message}")
+                false
+            }
+        }
+
+    /**
+     * Start complete TC001 system (discovery + processing)
+     */
+    suspend fun startSystem(): Boolean =
+        withContext(Dispatchers.IO) {
+            if (!isInitialized) {
+                Log.e(TAG, "Cannot start system - not initialized")
+                return@withContext false
+            }
+
+            try {
+                _integrationState.postValue(TC001IntegrationState.STARTING)
+                _systemStatus.postValue("Starting TC001 System...")
+
+                // Start device discovery and connection
+                val connectionResult = tc001Connector?.connect() ?: false
+
+                if (connectionResult) {
+                    // Start thermal data processing
+                    tc001DataManager?.startProcessing()
+
+                    _integrationState.postValue(TC001IntegrationState.RUNNING)
+                    _systemStatus.postValue("TC001 System Running")
+
+                    Log.i(TAG, "TC001 system started successfully")
+                    true
+                } else {
+                    _integrationState.postValue(TC001IntegrationState.CONNECTION_FAILED)
+                    _systemStatus.postValue("TC001 Connection Failed")
+
+                    Log.w(TAG, "TC001 system start failed - no device connection")
+                    false
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error starting TC001 system", e)
+                _integrationState.postValue(TC001IntegrationState.ERROR)
+                _systemStatus.postValue("TC001 System Error: ${e.message}")
+                false
+            }
+        }
+
+    /**
+     * Stop complete TC001 system
+     */
+    suspend fun stopSystem() =
+        withContext(Dispatchers.IO) {
+            try {
+                _integrationState.postValue(TC001IntegrationState.STOPPING)
+                _systemStatus.postValue("Stopping TC001 System...")
+
+                // Stop data processing
+                tc001DataManager?.stopProcessing()
+
+                // Disconnect device
+                tc001Connector?.disconnect()
+
+                _integrationState.postValue(TC001IntegrationState.INITIALIZED)
+                _systemStatus.postValue("TC001 System Stopped")
+
+                Log.i(TAG, "TC001 system stopped successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping TC001 system", e)
+                _integrationState.postValue(TC001IntegrationState.ERROR)
+            }
+        }
+
+    /**
+     * Setup integration between TC001 components
+     */
+    private fun setupComponentIntegration() {
+        // Connect connector state to UI controller
+        tc001Connector?.connectionState?.observeForever { state ->
+            tc001UIController?.updateDeviceConnection(state == TC001ConnectionState.CONNECTED)
+        }
+
+        // Connect data manager to UI controller for temperature updates
+        tc001DataManager?.temperatureData?.observeForever { tempData ->
+            tempData?.let {
+                tc001UIController?.updateCurrentTemperature(it.centerTemperature)
+            }
+        }
+
+        Log.i(TAG, "TC001 component integration setup complete")
+    }
+
+    /**
+     * Get component instances for external use
+     */
+    fun getConnector(): TC001Connector? = tc001Connector
+
+    fun getDataManager(): TC001DataManager? = tc001DataManager
+
+    fun getUIController(): TC001UIController? = tc001UIController
+
+    /**
+     * Check if system is ready for use
+     */
+    fun isSystemReady(): Boolean =
+        isInitialized &&
+            _integrationState.value == TC001IntegrationState.RUNNING
+
+    /**
+     * Cleanup all TC001 integration resources
+     */
+    fun cleanup() {
+        integrationScope.cancel()
+
+        runBlocking {
+            stopSystem()
+        }
+
+        tc001DataManager?.cleanup()
+        tc001Connector?.cleanup()
+
+        isInitialized = false
+        _integrationState.value = TC001IntegrationState.UNINITIALIZED
+        _systemStatus.value = "TC001 System Cleaned Up"
+
+        Log.i(TAG, "TC001 integration manager cleanup completed")
+    }
+}
+
+/**
+ * TC001 integration system states
+ */
+enum class TC001IntegrationState {
+    UNINITIALIZED,
+    INITIALIZING,
+    INITIALIZED,
+    STARTING,
+    RUNNING,
+    STOPPING,
+    CONNECTION_FAILED,
+    ERROR,
+}
+package com.yourcompany.sensorspoke.sensors.thermal
+
+import android.content.Context
+import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import com.yourcompany.sensorspoke.controller.RecordingController
+import com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+
+/**
+ * TC001RecordingIntegration - Bridge between TC001 system and main recording pipeline
+ *
+ * This component ensures that TC001 thermal data is properly integrated into
+ * the main sensor recording system, providing:
+ * - Seamless integration with RecordingController
+ * - Synchronized data recording with other sensors
+ * - Professional thermal data export and storage
+ * - Real-time data streaming to PC Hub via PreviewBus
+ */
+class TC001RecordingIntegration(
+    private val context: Context,
+    private val recordingController: RecordingController,
+) {
+    companion object {
+        private const val TAG = "TC001RecordingIntegration"
+    }
+
+    private var tc001IntegrationManager: TC001IntegrationManager? = null
+    private var thermalRecorder: ThermalCameraRecorder? = null
+    private var integrationScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    private val _recordingStatus = MutableLiveData<TC001RecordingStatus>()
+    val recordingStatus: LiveData<TC001RecordingStatus> = _recordingStatus
+
+    private val _thermalStats = MutableLiveData<TC001RecordingStats>()
+    val thermalStats: LiveData<TC001RecordingStats> = _thermalStats
+
+    private var currentSessionId: String? = null
+    private var framesSaved = 0
+    private var dataPointsRecorded = 0
+    private var sessionStartTime = 0L
+
+    /**
+     * Initialize TC001 recording integration
+     */
+    suspend fun initialize(): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                // Initialize TC001 integration manager
+                tc001IntegrationManager = TC001IntegrationManager(context)
+                val initResult = tc001IntegrationManager!!.initializeSystem()
+
+                if (!initResult) {
+                    Log.e(TAG, "Failed to initialize TC001 integration manager")
+                    return@withContext false
+                }
+
+                // Initialize thermal recorder and register with recording controller
+                thermalRecorder = ThermalCameraRecorder(context)
+                recordingController.register("thermal_tc001", thermalRecorder!!)
+
+                // Setup integration observers
+                setupIntegrationObservers()
+
+                _recordingStatus.postValue(TC001RecordingStatus.READY)
+                Log.i(TAG, "TC001 recording integration initialized successfully")
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize TC001 recording integration", e)
+                _recordingStatus.postValue(TC001RecordingStatus.ERROR)
+                false
+            }
+        }
+
+    /**
+     * Start TC001 recording session
+     */
+    suspend fun startRecording(sessionId: String, sessionDirectory: File): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                currentSessionId = sessionId
+                sessionStartTime = System.nanoTime()
+                framesSaved = 0
+                dataPointsRecorded = 0
+
+                // Start TC001 system
+                val startResult = tc001IntegrationManager?.startSystem() ?: false
+                if (!startResult) {
+                    Log.e(TAG, "Failed to start TC001 system")
+                    return@withContext false
+                }
+
+                // Start thermal recorder using the public interface
+                thermalRecorder?.start(sessionDirectory)
+
+                _recordingStatus.postValue(TC001RecordingStatus.RECORDING)
+                Log.i(TAG, "TC001 recording session started: $sessionId")
+
+                // Start data monitoring for statistics
+                startDataMonitoring()
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start TC001 recording", e)
+                _recordingStatus.postValue(TC001RecordingStatus.ERROR)
+                false
+            }
+        }
+
+    /**
+     * Stop TC001 recording session
+     */
+    suspend fun stopRecording(): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                // Stop thermal recorder using public interface
+                thermalRecorder?.stop()
+
+                // Stop TC001 system
+                tc001IntegrationManager?.stopSystem()
+
+                // Calculate final statistics
+                val recordingDuration = (System.nanoTime() - sessionStartTime) / 1_000_000_000.0
+                val finalStats =
+                    TC001RecordingStats(
+                        sessionId = currentSessionId ?: "unknown",
+                        recordingDuration = recordingDuration,
+                        framesSaved = framesSaved,
+                        dataPointsRecorded = dataPointsRecorded,
+                        averageFrameRate = framesSaved / recordingDuration,
+                    )
+                _thermalStats.postValue(finalStats)
+
+                _recordingStatus.postValue(TC001RecordingStatus.COMPLETED)
+                Log.i(TAG, "TC001 recording session completed: ${finalStats.sessionId}")
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to stop TC001 recording", e)
+                _recordingStatus.postValue(TC001RecordingStatus.ERROR)
+                false
+            }
+        }
+
+    /**
+     * Setup observers for TC001 integration components
+     */
+    private fun setupIntegrationObservers() {
+        tc001IntegrationManager?.let { manager ->
+            // Monitor thermal data for recording statistics
+            manager.getDataManager()?.temperatureData?.observeForever { tempData ->
+                tempData?.let {
+                    dataPointsRecorded++
+                    updateRecordingStats()
+                }
+            }
+
+            // Monitor thermal bitmaps for frame statistics
+            manager.getDataManager()?.thermalBitmap?.observeForever { bitmap ->
+                bitmap?.let {
+                    framesSaved++
+                    updateRecordingStats()
+                }
+            }
+        }
+    }
+
+    /**
+     * Start monitoring data flow for recording statistics
+     */
+    private fun startDataMonitoring() {
+        integrationScope.launch {
+            while (_recordingStatus.value == TC001RecordingStatus.RECORDING) {
+                try {
+                    updateRecordingStats()
+                    delay(1000) // Update stats every second
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in data monitoring", e)
+                    break
+                }
+            }
+        }
+    }
+
+    /**
+     * Update recording statistics
+     */
+    private fun updateRecordingStats() {
+        currentSessionId?.let { sessionId ->
+            val currentTime = System.nanoTime()
+            val recordingDuration = (currentTime - sessionStartTime) / 1_000_000_000.0
+
+            val stats =
+                TC001RecordingStats(
+                    sessionId = sessionId,
+                    recordingDuration = recordingDuration,
+                    framesSaved = framesSaved,
+                    dataPointsRecorded = dataPointsRecorded,
+                    averageFrameRate = if (recordingDuration > 0) framesSaved / recordingDuration else 0.0,
+                )
+            _thermalStats.postValue(stats)
+        }
+    }
+
+    /**
+     * Get current TC001 integration manager for external access
+     */
+    fun getTC001IntegrationManager(): TC001IntegrationManager? = tc001IntegrationManager
+
+    /**
+     * Check if TC001 system is ready for recording
+     */
+    fun isTC001Ready(): Boolean = tc001IntegrationManager?.isSystemReady() ?: false
+
+    /**
+     * Cleanup TC001 recording integration
+     */
+    fun cleanup() {
+        integrationScope.cancel()
+        tc001IntegrationManager?.cleanup()
+
+        Log.i(TAG, "TC001 recording integration cleaned up")
+    }
+}
+
+/**
+ * TC001 recording status states
+ */
+enum class TC001RecordingStatus {
+    UNINITIALIZED,
+    READY,
+    RECORDING,
+    COMPLETED,
+    ERROR,
+}
+
+/**
+ * TC001 recording statistics data
+ */
+data class TC001RecordingStats(
+    val sessionId: String,
+    val recordingDuration: Double, // seconds
+    val framesSaved: Int,
+    val dataPointsRecorded: Int,
+    val averageFrameRate: Double,
+)
+package com.yourcompany.sensorspoke.sensors.thermal
 
 import android.content.Context
 import android.util.Log
