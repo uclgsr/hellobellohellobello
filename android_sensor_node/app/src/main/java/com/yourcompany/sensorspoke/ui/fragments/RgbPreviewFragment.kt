@@ -110,7 +110,7 @@ class RgbPreviewFragment : Fragment() {
                 } else if (isSamsungDevice) {
                     rawDngControls?.visibility = View.VISIBLE
                     rawDngStatusText?.text = "Samsung device (Level 3 not supported)"
-                    rawDngStatusText?.setTextColor(resources.getColor(android.R.color.holo_orange_light, null))
+                    rawDngStatusText?.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.holo_orange_light))
                     rawDngToggle?.isEnabled = false
                 } else {
                     rawDngControls?.visibility = View.GONE
