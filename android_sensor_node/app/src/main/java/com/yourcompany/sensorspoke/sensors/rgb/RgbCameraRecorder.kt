@@ -49,6 +49,14 @@ class RgbCameraRecorder(
     companion object {
         private const val TAG = "RgbCameraRecorder"
     }
+    
+    /**
+     * Recording modes for the camera system
+     */
+    enum class RecordingMode {
+        STANDARD,   // CameraX video + JPEG frames
+        RAW_DNG     // CameraX + Camera2 RAW DNG parallel capture
+    }
 
     // Mutable camera selector for switching between front/back
     private var cameraSelector: CameraSelector = initialCameraSelector
@@ -56,6 +64,9 @@ class RgbCameraRecorder(
     // Manager classes for separation of concerns
     private val rgbCameraManager = cameraManager ?: RgbCameraManager(context, lifecycleOwner, cameraSelector)
     private val dataProcessor = RgbDataProcessor()
+    
+    // RAW DNG recording state
+    private var recordingMode = RecordingMode.STANDARD
 
     // Recording state
     private var recording: Recording? = null
@@ -505,4 +516,51 @@ class RgbCameraRecorder(
         val deviceModel: String,
         val timingStatistics: Map<String, Any>,
     )
+    
+    /**
+     * Check if RAW DNG recording is available on this device
+     */
+    fun supportsRawDng(): Boolean {
+        return rgbCameraManager.supportsRawDng()
+    }
+    
+    /**
+     * Check if device is Samsung with Camera2 Level 3 support
+     */
+    fun isSamsungLevel3Device(): Boolean {
+        return rgbCameraManager.isSamsungLevel3Device()
+    }
+    
+    /**
+     * Set the recording mode (Standard or RAW DNG)
+     */
+    fun setRecordingMode(mode: RecordingMode) {
+        if (_recordingStatus.value != RecordingStatus.IDLE) {
+            Log.w(TAG, "Cannot change recording mode while recording")
+            return
+        }
+        
+        // Only allow RAW DNG mode on supported devices
+        if (mode == RecordingMode.RAW_DNG && !supportsRawDng()) {
+            Log.w(TAG, "RAW DNG mode not supported on this device")
+            return
+        }
+        
+        recordingMode = mode
+        Log.i(TAG, "Recording mode set to: $mode")
+    }
+    
+    /**
+     * Get the current recording mode
+     */
+    fun getRecordingMode(): RecordingMode {
+        return recordingMode
+    }
+    
+    /**
+     * Get camera manager for advanced operations (internal use)
+     */
+    internal fun getCameraManager(): RgbCameraManager {
+        return rgbCameraManager
+    }
 }

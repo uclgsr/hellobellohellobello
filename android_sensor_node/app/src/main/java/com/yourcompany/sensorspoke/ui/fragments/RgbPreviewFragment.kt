@@ -81,33 +81,33 @@ class RgbPreviewFragment : Fragment() {
     }
     
     /**
-     * Check if device supports RAW DNG and update UI accordingly
+     * Check if device supports RAW DNG and update UI accordingly by querying the camera recorder
      */
     private suspend fun checkRawDngSupport() {
         try {
-            // In a real implementation, this would come from a ViewModel or Service
-            // For now, detect Samsung devices directly
-            val isSamsungDevice = android.os.Build.MANUFACTURER.equals("Samsung", ignoreCase = true)
-            val deviceModel = android.os.Build.MODEL.uppercase()
+            // Get RAW DNG capabilities from the camera recorder
+            val recorder = rgbCameraRecorder
             
-            // Samsung devices known to support Camera2 Level 3
-            val samsungLevel3Models = listOf(
-                "SM-S901", "SM-S906", "SM-S908", // Galaxy S22 series
-                "SM-S911", "SM-S916", "SM-S918", // Galaxy S23 series  
-                "SM-S921", "SM-S926", "SM-S928", // Galaxy S24 series
-                "SM-G991", "SM-G996", "SM-G998"  // Galaxy S21 series
-            )
-            
-            val isSamsungLevel3 = isSamsungDevice && samsungLevel3Models.any { model ->
-                deviceModel.startsWith(model)
+            if (recorder == null) {
+                rawDngControls?.visibility = View.GONE
+                return
             }
             
+            // Initialize camera manager to get capabilities
+            val cameraManager = recorder.getCameraManager()
+            cameraManager.initialize()
+            
+            val supportsRawDng = recorder.supportsRawDng()
+            val isSamsungLevel3 = recorder.isSamsungLevel3Device()
+            val cameraStatus = cameraManager.getCameraStatus()
+            
             activity?.runOnUiThread {
-                if (isSamsungLevel3) {
+                if (supportsRawDng && isSamsungLevel3) {
                     rawDngControls?.visibility = View.VISIBLE
                     rawDngStatusText?.text = "Samsung Level 3 supported"
                     rawDngStatusText?.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.holo_green_light))
-                } else if (isSamsungDevice) {
+                    rawDngToggle?.isEnabled = true
+                } else if (cameraStatus.isSamsungLevel3Device) {
                     rawDngControls?.visibility = View.VISIBLE
                     rawDngStatusText?.text = "Samsung device (Level 3 not supported)"
                     rawDngStatusText?.setTextColor(ContextCompat.getColor(requireContext(), android.R.color.holo_orange_light))
@@ -116,12 +116,15 @@ class RgbPreviewFragment : Fragment() {
                     rawDngControls?.visibility = View.GONE
                 }
                 
-                // Update device model display
-                deviceModelText?.text = "Device: ${android.os.Build.MODEL}"
+                // Update device model display from camera status
+                deviceModelText?.text = "Device: ${cameraStatus.deviceModel}"
             }
         } catch (e: Exception) {
             // Handle error silently in UI context
-            rawDngControls?.visibility = View.GONE
+            activity?.runOnUiThread {
+                rawDngControls?.visibility = View.GONE
+                deviceModelText?.text = "Device: ${android.os.Build.MODEL}"
+            }
         }
     }
     
@@ -130,8 +133,21 @@ class RgbPreviewFragment : Fragment() {
      */
     private fun handleRawDngToggle(enabled: Boolean) {
         try {
-            // This would typically interact with the recording system
-            // For now, just show status feedback
+            val recorder = rgbCameraRecorder
+            if (recorder == null) {
+                rawDngToggle?.isChecked = false
+                statusText?.text = "Error: Camera recorder not available"
+                return
+            }
+            
+            val mode = if (enabled) {
+                RgbCameraRecorder.RecordingMode.RAW_DNG
+            } else {
+                RgbCameraRecorder.RecordingMode.STANDARD
+            }
+            
+            recorder.setRecordingMode(mode)
+            
             val statusMessage = if (enabled) "RAW DNG mode enabled" else "Standard mode enabled"
             statusText?.text = statusMessage
             

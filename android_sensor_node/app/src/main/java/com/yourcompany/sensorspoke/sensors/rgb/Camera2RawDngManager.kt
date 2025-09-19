@@ -17,10 +17,12 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
 
 /**
  * Camera2RawDngManager provides RAW DNG capture functionality using Camera2 API
@@ -285,32 +287,39 @@ class Camera2RawDngManager(
                 1
             ).apply {
                 setOnImageAvailableListener({ reader ->
-                    val image = reader.acquireLatestImage()
-                    try {
-                        // Save RAW DNG data
-                        val buffer = image.planes[0].buffer
-                        val bytes = ByteArray(buffer.remaining())
-                        buffer.get(bytes)
-                        
-                        FileOutputStream(outputFile).use { fos ->
-                            fos.write(bytes)
+                    reader.acquireLatestImage()?.use { image ->
+                        try {
+                            // Save RAW DNG data
+                            val buffer = image.planes[0].buffer
+                            val bytes = ByteArray(buffer.remaining())
+                            buffer.get(bytes)
+                            
+                            FileOutputStream(outputFile).use { fos ->
+                                fos.write(bytes)
+                            }
+                            
+                            Log.i(TAG, "RAW DNG image saved: ${outputFile.absolutePath} (${bytes.size} bytes)")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error saving RAW DNG image: ${e.message}", e)
                         }
-                        
-                        Log.i(TAG, "RAW DNG image saved: ${outputFile.absolutePath} (${bytes.size} bytes)")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error saving RAW DNG image: ${e.message}", e)
-                    } finally {
-                        image.close()
                     }
                 }, backgroundHandler)
             }
             
             // Create capture session with RAW surface
-            val surfaces = listOf(imageReader!!.surface)
+            val reader = imageReader
+            val device = cameraDevice
+            
+            if (reader == null || device == null) {
+                Log.e(TAG, "ImageReader or CameraDevice is null")
+                return false
+            }
+            
+            val surfaces = listOf(reader.surface)
             createCaptureSession(surfaces) { session ->
                 // Build capture request for RAW DNG with Samsung optimizations
-                val captureRequestBuilder = cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-                captureRequestBuilder.addTarget(imageReader!!.surface)
+                val captureRequestBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+                captureRequestBuilder.addTarget(reader.surface)
                 
                 // Samsung Stage3/Level3 optimizations
                 captureRequestBuilder.apply {
@@ -319,13 +328,10 @@ class Camera2RawDngManager(
                     set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
                     set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_OFF)
                     
-                    // RAW format processing
+                    // RAW format processing - disable all post-processing
                     set(CaptureRequest.EDGE_MODE, CameraMetadata.EDGE_MODE_OFF)
                     set(CaptureRequest.NOISE_REDUCTION_MODE, CameraMetadata.NOISE_REDUCTION_MODE_OFF)
                     set(CaptureRequest.HOT_PIXEL_MODE, CameraMetadata.HOT_PIXEL_MODE_OFF)
-                    
-                    // Maximum quality
-                    set(CaptureRequest.JPEG_QUALITY, 100.toByte())
                 }
                 
                 // Capture the RAW DNG image
@@ -399,7 +405,7 @@ class Camera2RawDngManager(
     }
     
     /**
-     * Open camera device
+     * Open camera device using suspendCancellableCoroutine to properly handle async callbacks
      */
     private suspend fun openCamera(cameraId: String): Boolean {
         val manager = cameraManager ?: return false
@@ -409,35 +415,48 @@ class Camera2RawDngManager(
                 throw RuntimeException("Camera open timeout")
             }
             
-            var success = false
-            val callback = object : CameraDevice.StateCallback() {
-                override fun onOpened(device: CameraDevice) {
-                    cameraDevice = device
-                    cameraOpenCloseLock.release()
-                    success = true
-                    Log.i(TAG, "Camera opened successfully: $cameraId")
+            suspendCancellableCoroutine { continuation ->
+                val callback = object : CameraDevice.StateCallback() {
+                    override fun onOpened(device: CameraDevice) {
+                        cameraDevice = device
+                        cameraOpenCloseLock.release()
+                        Log.i(TAG, "Camera opened successfully: $cameraId")
+                        continuation.resume(true)
+                    }
+                    
+                    override fun onDisconnected(device: CameraDevice) {
+                        cameraDevice = null
+                        device.close()
+                        cameraOpenCloseLock.release()
+                        Log.w(TAG, "Camera disconnected: $cameraId")
+                        if (continuation.isActive) {
+                            continuation.resume(false)
+                        }
+                    }
+                    
+                    override fun onError(device: CameraDevice, error: Int) {
+                        cameraDevice = null
+                        device.close()
+                        cameraOpenCloseLock.release()
+                        Log.e(TAG, "Camera error: $error for camera: $cameraId")
+                        if (continuation.isActive) {
+                            continuation.resume(false)
+                        }
+                    }
                 }
                 
-                override fun onDisconnected(device: CameraDevice) {
+                continuation.invokeOnCancellation {
+                    cameraDevice?.close()
                     cameraDevice = null
-                    device.close()
                     cameraOpenCloseLock.release()
-                    Log.w(TAG, "Camera disconnected: $cameraId")
                 }
                 
-                override fun onError(device: CameraDevice, error: Int) {
-                    cameraDevice = null
-                    device.close()
-                    cameraOpenCloseLock.release()
-                    Log.e(TAG, "Camera error: $error for camera: $cameraId")
-                }
+                manager.openCamera(cameraId, callback, backgroundHandler)
             }
-            
-            manager.openCamera(cameraId, callback, backgroundHandler)
-            success
             
         } catch (e: Exception) {
             Log.e(TAG, "Error opening camera: ${e.message}", e)
+            cameraOpenCloseLock.release()
             false
         }
     }
