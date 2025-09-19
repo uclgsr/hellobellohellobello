@@ -31,7 +31,7 @@ def demo_native_backend():
         from core.local_interfaces import ShimmerInterface
         
         print("Testing Shimmer GSR interface with native backend...")
-        shimmer = ShimmerInterface("COM3")
+        shimmer = ShimmerInterface(port=os.environ.get("SHIMMER_PORT", "COM3"))
         shimmer.start()
         time.sleep(1.0)  # Let it collect some samples
         
