@@ -14,7 +14,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-// R import handled automatically
+import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.sensors.thermal.TopdonThermalPalette
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationManager
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001IntegrationState

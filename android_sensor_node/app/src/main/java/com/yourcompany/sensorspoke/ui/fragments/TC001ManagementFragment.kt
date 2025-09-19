@@ -10,7 +10,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-// R import handled automatically
+import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001CalibrationManager
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001CalibrationType
 import com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001DataExporter
