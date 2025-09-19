@@ -36,10 +36,9 @@ class TC001CalibrationManager(
         private const val TAG = "TC001CalibrationManager"
         private val DATE_FORMATTER = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
 
-        // Calibration constants
         private const val CALIBRATION_POINTS_MIN = 3
         private const val CALIBRATION_POINTS_OPTIMAL = 5
-        private const val CALIBRATION_ACCURACY_TARGET = 0.5f // ±0.5°C
+        private const val CALIBRATION_ACCURACY_TARGET = 0.5f
         private const val DRIFT_CHECK_INTERVAL_HOURS = 24
     }
 
@@ -97,7 +96,6 @@ class TC001CalibrationManager(
         withContext(Dispatchers.IO) {
             _calibrationProgress.postValue(TC001CalibrationProgress(25, "Resetting to factory calibration..."))
 
-            // Factory calibration points for TC001
             val factoryPoints =
                 listOf(
                     TC001CalibrationPoint(-10.0f, -10.2f, 0.95f, "Ice water"),
@@ -123,7 +121,6 @@ class TC001CalibrationManager(
         withContext(Dispatchers.IO) {
             _calibrationProgress.postValue(TC001CalibrationProgress(10, "Prepare reference temperature sources..."))
 
-            // In production, this would guide user through calibration points
             val referenceTemperatures = listOf(0.0f, 25.0f, 37.0f, 60.0f, 100.0f)
 
             for (i in referenceTemperatures.indices) {
@@ -135,9 +132,8 @@ class TC001CalibrationManager(
                     ),
                 )
 
-                delay(2000) // Simulate measurement time
+                delay(2000)
 
-                // Simulate measurement with small error
                 val measuredTemp = refTemp + (Random.nextDouble(-0.5, 0.5)).toFloat()
                 val calibrationPoint =
                     TC001CalibrationPoint(
@@ -165,7 +161,6 @@ class TC001CalibrationManager(
         withContext(Dispatchers.IO) {
             _calibrationProgress.postValue(TC001CalibrationProgress(20, "Connecting to blackbody reference..."))
 
-            // Blackbody calibration at multiple temperatures
             val blackbodyTemperatures = listOf(30.0f, 50.0f, 80.0f, 120.0f, 200.0f)
 
             for (i in blackbodyTemperatures.indices) {
@@ -177,14 +172,14 @@ class TC001CalibrationManager(
                     ),
                 )
 
-                delay(3000) // Allow temperature stabilization
+                delay(3000)
 
-                val measuredTemp = bbTemp + (Random.nextDouble(-1.0, 1.0) * 0.2).toFloat() // Higher accuracy
+                val measuredTemp = bbTemp + (Random.nextDouble(-1.0, 1.0) * 0.2).toFloat()
                 val calibrationPoint =
                     TC001CalibrationPoint(
                         referenceTemp = bbTemp,
                         measuredTemp = measuredTemp,
-                        emissivity = 1.0f, // Perfect blackbody
+                        emissivity = 1.0f,
                         description = "Blackbody reference $bbTemp°C",
                     )
 
@@ -205,14 +200,12 @@ class TC001CalibrationManager(
         withContext(Dispatchers.IO) {
             _calibrationProgress.postValue(TC001CalibrationProgress(20, "Measuring environmental conditions..."))
 
-            // Measure ambient conditions for compensation
             val ambientTemp = 23.5f + (Random.nextDouble(-1.0, 1.0) * 1.0).toFloat()
             val humidity = 45.0f + (Random.nextDouble(-1.0, 1.0) * 5.0).toFloat()
             val pressure = 1013.25f + (Random.nextDouble(-1.0, 1.0) * 10.0).toFloat()
 
             _calibrationProgress.postValue(TC001CalibrationProgress(50, "Calculating environmental compensation..."))
 
-            // Generate environmental compensation data
             val compensation =
                 TC001EnvironmentalCompensation(
                     ambientTemperature = ambientTemp,
@@ -223,7 +216,6 @@ class TC001CalibrationManager(
 
             _calibrationProgress.postValue(TC001CalibrationProgress(80, "Applying environmental compensation..."))
 
-            // Apply compensation to existing calibration
             applyEnvironmentalCompensation(compensation)
 
             _calibrationProgress.postValue(TC001CalibrationProgress(100, "Environmental calibration completed"))
@@ -239,7 +231,6 @@ class TC001CalibrationManager(
             return
         }
 
-        // Calculate linear regression for calibration curve
         val n = calibrationData.size
         val sumX = calibrationData.sumOf { it.measuredTemp.toDouble() }
         val sumY = calibrationData.sumOf { it.referenceTemp.toDouble() }
@@ -249,7 +240,6 @@ class TC001CalibrationManager(
         val slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
         val intercept = (sumY - slope * sumX) / n
 
-        // Calculate calibration accuracy
         val errors =
             calibrationData.map { point ->
                 val corrected = slope * point.measuredTemp + intercept
@@ -268,7 +258,6 @@ class TC001CalibrationManager(
                 calibrationTimestamp = System.currentTimeMillis(),
             )
 
-        // Save calibration results
         val results =
             TC001CalibrationResults(
                 calibrationCurve = currentCalibration!!,
@@ -302,9 +291,8 @@ class TC001CalibrationManager(
         ambientTemp: Float,
         humidity: Float,
     ): Float {
-        // Environmental compensation calculation
-        val tempFactor = (ambientTemp - 20.0f) * 0.002f // 0.2% per degree from 20°C
-        val humidityFactor = (humidity - 50.0f) * 0.001f // 0.1% per % humidity from 50%
+        val tempFactor = (ambientTemp - 20.0f) * 0.002f
+        val humidityFactor = (humidity - 50.0f) * 0.001f
         return 1.0f + tempFactor + humidityFactor
     }
 
@@ -363,11 +351,9 @@ class TC001CalibrationManager(
             try {
                 val calibrationJson = JSONObject(calibrationFile.readText())
 
-                // Parse calibration curve
                 val curveJson = calibrationJson.getJSONObject("calibration_curve")
                 currentCalibration = TC001CalibrationCurve.fromJSON(curveJson)
 
-                // Parse calibration points
                 val pointsArray = calibrationJson.getJSONArray("calibration_points")
                 calibrationData.clear()
                 for (i in 0 until pointsArray.length()) {
@@ -398,7 +384,6 @@ class TC001CalibrationManager(
                     message = "No calibration curve available",
                 )
 
-            // Validate using existing calibration points
             val errors =
                 calibrationData.map { point ->
                     val corrected = curve.slope * point.measuredTemp + curve.intercept
@@ -408,7 +393,7 @@ class TC001CalibrationManager(
             val maxError = errors.maxOrNull() ?: Float.MAX_VALUE
             val rmsError = sqrt(errors.map { it * it }.average()).toFloat()
 
-            val isValid = maxError < CALIBRATION_ACCURACY_TARGET * 2 // Allow 2x tolerance for validation
+            val isValid = maxError < CALIBRATION_ACCURACY_TARGET * 2
 
             TC001CalibrationValidation(
                 isValid = isValid,
@@ -434,8 +419,7 @@ class TC001CalibrationManager(
             val timeSinceCalibration = System.currentTimeMillis() - curve.calibrationTimestamp
             val hoursSinceCalibration = timeSinceCalibration / (1000 * 60 * 60)
 
-            // Estimate drift based on time and usage
-            val estimatedDrift = (hoursSinceCalibration / 100.0f) * 0.1f // 0.1°C per 100 hours
+            val estimatedDrift = (hoursSinceCalibration / 100.0f) * 0.1f
             val hasDrift = estimatedDrift > 0.5f || hoursSinceCalibration > DRIFT_CHECK_INTERVAL_HOURS
 
             TC001CalibrationDrift(
@@ -460,11 +444,10 @@ class TC001CalibrationManager(
         val hoursSinceCalibration = timeSinceCalibration / (1000 * 60 * 60)
 
         return curve.maxError < CALIBRATION_ACCURACY_TARGET &&
-            hoursSinceCalibration < DRIFT_CHECK_INTERVAL_HOURS * 7 // 7 days max
+            hoursSinceCalibration < DRIFT_CHECK_INTERVAL_HOURS * 7
     }
 }
 
-// Supporting data classes
 data class TC001CalibrationPoint(
     val referenceTemp: Float,
     val measuredTemp: Float,
@@ -514,7 +497,7 @@ data class TC001CalibrationCurve(
                 intercept = json.getDouble("intercept"),
                 maxError = json.getDouble("max_error"),
                 rmsError = json.getDouble("rms_error"),
-                calibrationPoints = emptyList(), // Would be loaded separately
+                calibrationPoints = emptyList(),
                 calibrationTimestamp = json.getLong("timestamp"),
             )
     }

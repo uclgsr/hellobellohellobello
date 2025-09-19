@@ -15,7 +15,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# Set up matplotlib for better-looking plots
 plt.style.use('seaborn-v0_8')
 sns.set_palette("husl")
 
@@ -23,20 +22,17 @@ sns.set_palette("husl")
 def generate_sample_data():
     """Generate sample physiological data for visualization."""
 
-    # Time base (2 minutes of data)
     start_time = datetime.now() - timedelta(minutes=2)
-    times_rgb = pd.date_range(start_time, periods=800, freq='150ms')  # 6.67 Hz
-    times_thermal = pd.date_range(start_time, periods=1200, freq='100ms')  # 10 Hz
-    times_gsr = pd.date_range(start_time, periods=15360, freq='7.8125ms')  # 128 Hz
+    times_rgb = pd.date_range(start_time, periods=800, freq='150ms')
+    times_thermal = pd.date_range(start_time, periods=1200, freq='100ms')
+    times_gsr = pd.date_range(start_time, periods=15360, freq='7.8125ms')
 
-    # Flash sync events (3 events during recording)
     flash_times = [
         start_time + timedelta(seconds=30),
         start_time + timedelta(seconds=60),
         start_time + timedelta(seconds=90),
     ]
 
-    # Generate synthetic data
     rgb_data = {
         'timestamp': times_rgb,
         'frame_count': range(len(times_rgb)),
@@ -51,13 +47,11 @@ def generate_sample_data():
         'quality_score': 0.92 + 0.08 * np.random.randn(len(times_thermal)),
     }
 
-    # GSR with realistic physiological response to stimulus
     base_gsr = 12.0
     stimulus_response = np.zeros(len(times_gsr))
     for flash_time in flash_times:
         flash_idx = np.abs((times_gsr - flash_time).total_seconds()).argmin()
-        # Simulate GSR response: sharp rise then gradual decay
-        response_window = slice(flash_idx, min(flash_idx + 2560, len(times_gsr)))  # 20 seconds
+        response_window = slice(flash_idx, min(flash_idx + 2560, len(times_gsr)))
         t_response = np.linspace(0, 20, len(range(*response_window.indices(len(times_gsr)))))
         stimulus_response[response_window] += (
             3.0 * np.exp(-t_response / 8) * (1 - np.exp(-t_response / 0.5))
@@ -85,7 +79,6 @@ def create_multimodal_alignment_plot(data, save_path):
 
     fig, axes = plt.subplots(4, 1, figsize=(14, 10), sharex=True)
 
-    # RGB frames
     axes[0].scatter(
         data['rgb']['timestamp'],
         data['rgb']['frame_count'],
@@ -99,7 +92,6 @@ def create_multimodal_alignment_plot(data, save_path):
     axes[0].grid(True, alpha=0.3)
     axes[0].legend()
 
-    # Thermal temperature
     axes[1].plot(
         data['thermal']['timestamp'],
         data['thermal']['avg_temperature'],
@@ -111,7 +103,6 @@ def create_multimodal_alignment_plot(data, save_path):
     axes[1].grid(True, alpha=0.3)
     axes[1].legend()
 
-    # GSR data
     axes[2].plot(
         data['gsr']['timestamp'],
         data['gsr']['gsr_microsiemens'],
@@ -124,8 +115,7 @@ def create_multimodal_alignment_plot(data, save_path):
     axes[2].grid(True, alpha=0.3)
     axes[2].legend()
 
-    # PPG data (downsampled for visibility)
-    ppg_downsampled = data['gsr'][::32]  # Show every 32nd sample
+    ppg_downsampled = data['gsr'][::32]
     axes[3].plot(
         ppg_downsampled['timestamp'],
         ppg_downsampled['ppg_raw'],
@@ -139,7 +129,6 @@ def create_multimodal_alignment_plot(data, save_path):
     axes[3].grid(True, alpha=0.3)
     axes[3].legend()
 
-    # Add flash sync event markers
     for flash_time in data['flash_events']:
         for ax in axes:
             ax.axvline(
@@ -151,7 +140,6 @@ def create_multimodal_alignment_plot(data, save_path):
                 label='Flash Sync' if ax == axes[0] else '',
             )
 
-    # Format x-axis
     for ax in axes:
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
         ax.xaxis.set_major_locator(mdates.SecondLocator(interval=30))
@@ -168,10 +156,8 @@ def create_data_quality_dashboard(data, save_path):
 
     fig = plt.figure(figsize=(16, 12))
 
-    # Create grid layout
     gs = fig.add_gridspec(3, 3, hspace=0.3, wspace=0.3)
 
-    # 1. Signal quality scores over time
     ax1 = fig.add_subplot(gs[0, :])
     rgb_quality = data['rgb']['quality_score'].rolling(window=20).mean()
     thermal_quality = data['thermal']['quality_score'].rolling(window=50).mean()
@@ -199,7 +185,6 @@ def create_data_quality_dashboard(data, save_path):
     ax1.grid(True, alpha=0.3)
     ax1.set_ylim(0.7, 1.0)
 
-    # 2. Data completeness pie charts
     ax2 = fig.add_subplot(gs[1, 0])
     expected_rgb = 800
     actual_rgb = len(data['rgb'])
@@ -239,9 +224,8 @@ def create_data_quality_dashboard(data, save_path):
     )
     ax4.set_title(f'GSR Completeness\n({actual_gsr}/{expected_gsr} samples)')
 
-    # 3. Inter-sample interval histograms (timing jitter analysis)
     ax5 = fig.add_subplot(gs[2, 0])
-    rgb_intervals = data['rgb']['timestamp'].diff().dt.total_seconds() * 1000  # Convert to ms
+    rgb_intervals = data['rgb']['timestamp'].diff().dt.total_seconds() * 1000
     ax5.hist(rgb_intervals.dropna(), bins=30, alpha=0.7, color='blue', edgecolor='black')
     ax5.axvline(150, color='red', linestyle='--', label='Target (150ms)')
     ax5.set_xlabel('Inter-frame Interval (ms)')
@@ -258,10 +242,8 @@ def create_data_quality_dashboard(data, save_path):
     ax6.set_title('Thermal Timing Jitter')
     ax6.legend()
 
-    # 4. Signal-to-noise ratio estimate (GSR)
     ax7 = fig.add_subplot(gs[2, 2])
     gsr_signal = data['gsr']['gsr_microsiemens']
-    # Simple SNR estimate: signal variance / high-frequency noise variance
     gsr_smoothed = gsr_signal.rolling(window=128).mean()
     noise_estimate = (gsr_signal - gsr_smoothed).rolling(window=512).std()
     snr_estimate = gsr_smoothed.rolling(window=512).std() / noise_estimate
@@ -290,12 +272,12 @@ def create_performance_telemetry_chart(save_path):
         + 20 * np.sin(np.linspace(0, 4 * np.pi, len(time_points)))
         + 5 * np.random.randn(len(time_points))
     )
-    cpu_usage = np.clip(cpu_usage, 5, 80)  # Keep within realistic bounds
+    cpu_usage = np.clip(cpu_usage, 5, 80)
 
-    memory_usage = 300 + 50 * np.cumsum(np.random.randn(len(time_points)) * 0.01)  # MB with drift
+    memory_usage = 300 + 50 * np.cumsum(np.random.randn(len(time_points)) * 0.01)
     memory_usage = np.clip(memory_usage, 250, 600)
 
-    network_throughput = 8 + 4 * np.random.exponential(1, len(time_points))  # Mbps
+    network_throughput = 8 + 4 * np.random.exponential(1, len(time_points))
     network_throughput = np.clip(network_throughput, 0, 25)
 
     preview_fps = 6.67 + 0.5 * np.random.randn(len(time_points))
@@ -303,7 +285,6 @@ def create_performance_telemetry_chart(save_path):
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
 
-    # CPU Usage
     axes[0, 0].plot(time_points, cpu_usage, color='red', linewidth=1.5, alpha=0.8)
     axes[0, 0].axhline(60, color='orange', linestyle='--', alpha=0.7, label='Warning (60%)')
     axes[0, 0].axhline(80, color='red', linestyle='--', alpha=0.7, label='Critical (80%)')
@@ -313,7 +294,6 @@ def create_performance_telemetry_chart(save_path):
     axes[0, 0].grid(True, alpha=0.3)
     axes[0, 0].set_ylim(0, 100)
 
-    # Memory Usage
     axes[0, 1].plot(time_points, memory_usage, color='blue', linewidth=1.5, alpha=0.8)
     axes[0, 1].axhline(500, color='orange', linestyle='--', alpha=0.7, label='Warning (500MB)')
     axes[0, 1].axhline(750, color='red', linestyle='--', alpha=0.7, label='Critical (750MB)')
@@ -322,14 +302,12 @@ def create_performance_telemetry_chart(save_path):
     axes[0, 1].legend()
     axes[0, 1].grid(True, alpha=0.3)
 
-    # Network Throughput
     axes[1, 0].plot(time_points, network_throughput, color='green', linewidth=1.5, alpha=0.8)
     axes[1, 0].set_ylabel('Throughput (Mbps)')
     axes[1, 0].set_title('Network Throughput')
     axes[1, 0].grid(True, alpha=0.3)
     axes[1, 0].set_xlabel('Time')
 
-    # Preview Frame Rate
     axes[1, 1].plot(time_points, preview_fps, color='purple', linewidth=1.5, alpha=0.8)
     axes[1, 1].axhline(6.67, color='green', linestyle='--', alpha=0.7, label='Target (6.67 FPS)')
     axes[1, 1].set_ylabel('Frame Rate (FPS)')
@@ -338,7 +316,6 @@ def create_performance_telemetry_chart(save_path):
     axes[1, 1].grid(True, alpha=0.3)
     axes[1, 1].set_xlabel('Time')
 
-    # Format x-axis for all subplots
     for ax in axes.flat:
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
         ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=2))
@@ -356,16 +333,13 @@ def main():
 
     print("Generating sample visualization artifacts for enhanced visualization plan...")
 
-    # Create output directory
     output_dir = Path(__file__).parent / "../images"
     output_dir.mkdir(exist_ok=True)
 
     try:
-        # Generate sample data
         print("Generating synthetic physiological data...")
         data = generate_sample_data()
 
-        # Create visualizations
         create_multimodal_alignment_plot(data, output_dir / "multimodal_alignment_plot.png")
         create_data_quality_dashboard(data, output_dir / "data_quality_dashboard.png")
         create_performance_telemetry_chart(output_dir / "performance_telemetry_chart.png")

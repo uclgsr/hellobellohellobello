@@ -151,7 +151,6 @@ class ThermalDataProcessor {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val pixels = IntArray(width * height)
 
-        // Generate thermal-like image with temperature variations
         for (y in 0 until height) {
             for (x in 0 until width) {
                 val centerX = width / 2f
@@ -159,11 +158,9 @@ class ThermalDataProcessor {
                 val distance = kotlin.math.sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY))
                 val maxDistance = kotlin.math.sqrt(centerX * centerX + centerY * centerY)
 
-                // Temperature decreases with distance from center
                 val temp = baseTemp * (1 - distance / maxDistance * 0.3f)
-                val normalizedTemp = ((temp - 20f) / 40f).coerceIn(0f, 1f) // Normalize to 0-1
+                val normalizedTemp = ((temp - 20f) / 40f).coerceIn(0f, 1f)
 
-                // Convert to thermal color (blue = cold, red = hot)
                 val color = when {
                     normalizedTemp < 0.33f -> {
                         val blue = (255 * (normalizedTemp / 0.33f)).toInt()
@@ -203,7 +200,6 @@ class ThermalDataProcessor {
         }
 
         val actualFps = if (frameTimeWindow.size >= 2) {
-            // Calculate FPS over the entire frame window
             val timeSpan = (frameTimeWindow.last() - frameTimeWindow.first()) / 1_000_000_000.0
             (frameTimeWindow.size - 1) / timeSpan
         } else {

@@ -42,7 +42,6 @@ class ClientConnection:
     device_id: str
     connected_at: float
     last_activity: float
-    # Enhanced device registration fields
     device_name: str = "Unknown Device"
     device_type: str = "unknown"
     capabilities: list = None
@@ -107,11 +106,10 @@ class TCPCommandServer:
             else:
                 logger.info("TCP Command Server running without TLS (set PC_TLS_ENABLE=1 to enable)")
             
-            self.server_socket.listen(10)  # Allow up to 10 concurrent connections
+            self.server_socket.listen(10)
 
             self.running = True
 
-            # Start accepting connections in a separate thread
             accept_thread = threading.Thread(
                 target=self._accept_connections, daemon=True
             )
@@ -128,7 +126,6 @@ class TCPCommandServer:
         """Stop the TCP command server."""
         self.running = False
 
-        # Close all client connections
         for client in list(self.clients.values()):
             try:
                 client.socket.close()
@@ -136,7 +133,6 @@ class TCPCommandServer:
                 pass
         self.clients.clear()
 
-        # Close server socket
         if self.server_socket:
             try:
                 self.server_socket.close()
@@ -153,7 +149,6 @@ class TCPCommandServer:
                 client_socket, address = self.server_socket.accept()
                 logger.info(f"New connection from {address}")
 
-                # Handle client in separate thread
                 client_thread = threading.Thread(
                     target=self._handle_client,
                     args=(client_socket, address),
@@ -177,15 +172,13 @@ class TCPCommandServer:
             last_activity=time.time(),
         )
 
-        # Set a timeout for the client socket to prevent indefinite blocking
-        client_socket.settimeout(30.0)  # 30 seconds timeout; adjust as needed
+        client_socket.settimeout(30.0)
 
         self.clients[device_id] = client
 
         try:
             while self.running:
                 try:
-                    # Receive data from client
                     data = client_socket.recv(4096)
                     if not data:
                         break
@@ -193,11 +186,9 @@ class TCPCommandServer:
                     client.last_activity = time.time()
 
                     try:
-                        # Parse JSON command
                         message = json.loads(data.decode("utf-8"))
                         response = self._process_command(client, message)
 
-                        # Send response
                         if response:
                             response_json = json.dumps(response)
                             client_socket.send(response_json.encode("utf-8"))
@@ -216,7 +207,6 @@ class TCPCommandServer:
             logger.error(f"Error handling client {device_id}: {e}")
 
         finally:
-            # Clean up client connection
             try:
                 client_socket.close()
             except Exception:
@@ -255,7 +245,6 @@ class TCPCommandServer:
                 "timestamp": time.time(),
             }
 
-    # Default command handlers
 
     def _handle_query_capabilities(
         self, client: ClientConnection, message: dict
@@ -332,7 +321,7 @@ class TCPCommandServer:
             "type": "ack",
             "command": "transfer_files",
             "session_id": session_id,
-            "transfer_port": 8082,  # File transfer server port
+            "transfer_port": 8082,
             "status": "ready_for_transfer",
             "timestamp": time.time(),
         }
@@ -346,7 +335,7 @@ class TCPCommandServer:
             "type": "time_sync_response",
             "server_timestamp": server_timestamp,
             "client_timestamp": client_timestamp,
-            "round_trip_time": 0,  # Would be calculated in full implementation
+            "round_trip_time": 0,
             "timestamp": server_timestamp,
         }
 
@@ -357,7 +346,6 @@ class TCPCommandServer:
         device_name = device_info.get("name", f"Device_{client.address[0]}")
         capabilities = device_info.get("capabilities", [])
         
-        # Update client with device registration info
         client.device_name = device_name
         client.device_type = device_type
         client.capabilities = capabilities
@@ -365,7 +353,6 @@ class TCPCommandServer:
         
         logger.info(f"Device registered: {device_name} ({device_type}) with capabilities: {capabilities}")
         
-        # Notify GUI about new device (would trigger UI update)
         if hasattr(self, 'device_registered_callback') and self.device_registered_callback:
             self.device_registered_callback(client.device_id, device_name, device_type, capabilities)
         
@@ -384,19 +371,15 @@ class TCPCommandServer:
         timestamp = message.get("timestamp", time.time())
         
         if frame_type == "gsr_sample":
-            # Handle GSR data for real-time plotting
             if hasattr(self, 'live_gsr_callback') and self.live_gsr_callback:
                 self.live_gsr_callback(client.device_id, frame_data, timestamp)
         elif frame_type == "video_frame":
-            # Handle video frames for preview display
             if hasattr(self, 'live_video_callback') and self.live_video_callback:
                 self.live_video_callback(client.device_id, frame_data, timestamp)
         elif frame_type == "thermal_frame":
-            # Handle thermal frames
             if hasattr(self, 'live_thermal_callback') and self.live_thermal_callback:
                 self.live_thermal_callback(client.device_id, frame_data, timestamp)
         
-        # Send acknowledgment with minimal response
         return {
             "type": "frame_ack",
             "frame_type": frame_type,
@@ -411,13 +394,11 @@ class TCPCommandServer:
         sensor_status = message.get("sensors", {})
         error_message = message.get("error_message")
         
-        # Update client status
         client.status = status
         client.last_activity = time.time()
         
         logger.info(f"Device {client.device_id} status update: {status}")
         
-        # Notify GUI about status change
         if hasattr(self, 'device_status_callback') and self.device_status_callback:
             self.device_status_callback(
                 client.device_id, status, session_id, 

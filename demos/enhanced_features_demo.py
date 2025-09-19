@@ -18,7 +18,6 @@ import threading
 import json
 from pathlib import Path
 
-# Add PC Controller to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "pc_controller" / "src"))
 
 def demo_native_backend():
@@ -33,7 +32,7 @@ def demo_native_backend():
         print("Testing Shimmer GSR interface with native backend...")
         shimmer = ShimmerInterface(port=os.environ.get("SHIMMER_PORT", "COM3"))
         shimmer.start()
-        time.sleep(1.0)  # Let it collect some samples
+        time.sleep(1.0)
         
         # Get samples and performance stats
         ts, vals = shimmer.get_latest_samples()
@@ -60,10 +59,8 @@ def demo_tcp_server():
     try:
         from network.tcp_command_server import TCPCommandServer
         
-        # Start server
         server = TCPCommandServer(host="127.0.0.1", port=8081)
         
-        # Set up demo callbacks
         def on_device_registered(device_id, name, type_, capabilities):
             print(f"📱 Device registered: {name} ({type_}) with {capabilities}")
             
@@ -79,7 +76,6 @@ def demo_tcp_server():
         if server.start():
             print("✓ Server started successfully")
             
-            # Simulate client connection
             print("Simulating device registration...")
             import socket
             import time
@@ -90,7 +86,6 @@ def demo_tcp_server():
                     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     client.connect(("127.0.0.1", 8081))
                     
-                    # Send device registration
                     register_msg = {
                         "command": "register_device",
                         "device_info": {
@@ -101,7 +96,6 @@ def demo_tcp_server():
                     }
                     client.send(json.dumps(register_msg).encode() + b"\n")
                     
-                    # Send live data
                     data_msg = {
                         "command": "live_data_frame",
                         "frame_type": "gsr_sample", 
@@ -114,11 +108,10 @@ def demo_tcp_server():
                 except Exception as e:
                     print(f"Client simulation error: {e}")
             
-            # Run client simulation in background
             client_thread = threading.Thread(target=simulate_client, daemon=True)
             client_thread.start()
             
-            time.sleep(2.0)  # Let messages process
+            time.sleep(2.0)
             server.stop()
             print("✓ TCP server demo completed successfully\n")
         else:
@@ -177,12 +170,10 @@ def demo_data_export():
         import tempfile
         import os
         
-        # Create demo session data
         with tempfile.TemporaryDirectory() as temp_dir:
             session_dir = Path(temp_dir) / "demo_session"
             session_dir.mkdir()
             
-            # Create demo CSV files
             (session_dir / "gsr.csv").write_text(
                 "timestamp_ns,gsr_microsiemens,ppg_raw\n"
                 "1000000000,10.5,2048\n"
@@ -197,7 +188,6 @@ def demo_data_export():
                 "1000033333,25.4\n"
             )
             
-            # Export to HDF5
             output_path = Path(temp_dir) / "demo_export.h5"
             result_path = export_session_to_hdf5(
                 str(session_dir), 
@@ -209,7 +199,6 @@ def demo_data_export():
             print(f"✓ Exported session data to: {result_path}")
             print(f"  File size: {output_path.stat().st_size} bytes")
             
-            # Show HDF5 structure  
             import h5py
             with h5py.File(output_path, 'r') as f:
                 print("  HDF5 structure:")
@@ -228,7 +217,6 @@ def main():
     print("Demonstrating key improvements from the development effort")
     print()
     
-    # Run all demos
     demo_native_backend()
     demo_tcp_server() 
     demo_tls_configuration()

@@ -33,14 +33,13 @@ class ThermalCameraManager(
 ) {
     companion object {
         private const val TAG = "ThermalCameraManager"
-        private const val TOPDON_VENDOR_ID = 0x4d54 // Topdon TC001 vendor ID
-        private const val TC001_PRODUCT_ID_1 = 0x0100 // TC001 product ID variant 1
-        private const val TC001_PRODUCT_ID_2 = 0x0200 // TC001 product ID variant 2
-        private const val DEFAULT_FPS = 10 // Default 10 FPS for simulation
-        private const val MAX_FPS = 25 // Maximum 25 Hz as per Topdon capability
+        private const val TOPDON_VENDOR_ID = 0x4d54
+        private const val TC001_PRODUCT_ID_1 = 0x0100
+        private const val TC001_PRODUCT_ID_2 = 0x0200
+        private const val DEFAULT_FPS = 10
+        private const val MAX_FPS = 25
     }
 
-    // Camera state management
     private val _cameraState = MutableStateFlow(CameraState.UNINITIALIZED)
     val cameraState: StateFlow<CameraState> = _cameraState.asStateFlow()
 
@@ -50,12 +49,10 @@ class ThermalCameraManager(
     private val _frameRate = MutableStateFlow(DEFAULT_FPS.toDouble())
     val frameRate: StateFlow<Double> = _frameRate.asStateFlow()
 
-    // Camera integration components
     private var realTopdonIntegration: RealTopdonIntegration? = null
-    private var topdonIntegration: TopdonThermalIntegration? = null // Legacy simulation integration
+    private var topdonIntegration: TopdonThermalIntegration? = null
     private var targetFps = DEFAULT_FPS
     
-    // Coroutine scope for async operations
     private val managerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     /**
@@ -110,7 +107,6 @@ class ThermalCameraManager(
             val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
             val deviceList = usbManager.deviceList
 
-            // Look for Topdon TC001 device
             val topdonDevice = deviceList.values.find { device ->
                 isTopdonTC001Device(device)
             }
@@ -118,7 +114,6 @@ class ThermalCameraManager(
             if (topdonDevice != null) {
                 Log.i(TAG, "Topdon TC001 device found: ${topdonDevice.deviceName}")
 
-                // Request USB permissions if needed
                 val hasPermission = checkUsbPermission(topdonDevice, usbManager)
                 if (hasPermission) {
                     Log.i(TAG, "USB permission granted, initializing real Topdon integration")
@@ -144,7 +139,6 @@ class ThermalCameraManager(
         try {
             realTopdonIntegration = RealTopdonIntegration(context)
             
-            // Use coroutine scope to call suspend function
             managerScope.launch {
                 val success = realTopdonIntegration!!.initialize()
                 
@@ -230,7 +224,6 @@ class ThermalCameraManager(
             true
         } else {
             Log.i(TAG, "USB permission required for Topdon TC001")
-            // In a real implementation, request permission asynchronously
             false
         }
     }
@@ -281,7 +274,6 @@ class ThermalCameraManager(
     fun cleanup() {
         Log.i(TAG, "Cleaning up thermal camera manager")
 
-        // Clean up real integration using coroutine scope
         realTopdonIntegration?.let { integration ->
             managerScope.launch {
                 integration.stopStreaming()
@@ -290,7 +282,6 @@ class ThermalCameraManager(
             realTopdonIntegration = null
         }
 
-        // Clean up simulation integration
         topdonIntegration?.let {
             it.disconnect()
             it.cleanup()
@@ -314,7 +305,6 @@ class TC001UIController : ViewModel() {
         private const val TAG = "TC001UIController"
     }
 
-    // UI State
     private val _isRecording = MutableLiveData(false)
     val isRecording: LiveData<Boolean> = _isRecording
 
@@ -332,7 +322,6 @@ class TC001UIController : ViewModel() {
             try {
                 Log.i(TAG, "Starting thermal recording")
                 _isRecording.value = true
-                // Recording logic integrated with ThermalCameraManager
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start recording", e)
             }
@@ -347,7 +336,6 @@ class TC001UIController : ViewModel() {
             try {
                 Log.i(TAG, "Stopping thermal recording")
                 _isRecording.value = false
-                // Recording logic integrated with ThermalCameraManager
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to stop recording", e)
             }
@@ -375,9 +363,9 @@ class TC001UIController : ViewModel() {
  * TC001 connection types (adapted from IRCamera)
  */
 enum class TC001ConnectType {
-    LINE, // TC001 via USB
-    WIFI, // TC001 via WiFi (if supported)
-    BLE, // TC001 via Bluetooth (if supported)
+    LINE,
+    WIFI,
+    BLE,
 }
 
 /**

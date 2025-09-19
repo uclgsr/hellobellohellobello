@@ -77,7 +77,6 @@ class TC001DataExporter(
                         exportedFiles.addAll(exportThermalImages(sessionDir, exportDir))
                     }
                     TC001ExportFormat.COMPREHENSIVE -> {
-                        // Export everything
                         exportedFiles.add(exportTemperatureDataCSV(sessionDir, exportDir))
                         exportedFiles.add(exportTemperatureDataJSON(sessionDir, exportDir))
                         exportedFiles.add(exportSessionMetadata(sessionId, sessionDir, exportDir))
@@ -85,12 +84,10 @@ class TC001DataExporter(
                         exportedFiles.add(exportBinaryThermalData(sessionDir, exportDir))
                     }
                     TC001ExportFormat.RESEARCH_PACKAGE -> {
-                        // Export comprehensive research package
                         exportedFiles.add(exportResearchDataPackage(sessionId, sessionDir, exportDir))
                     }
                 }
 
-                // Create compressed archive
                 val archiveFile = createCompressedArchive(exportDir, sessionId)
                 exportedFiles.add(archiveFile)
 
@@ -133,12 +130,10 @@ class TC001DataExporter(
             val writer = BufferedWriter(FileWriter(csvFile))
 
             writer.use {
-                // Write CSV header
                 it.write("timestamp_ns,center_temperature_c,min_temperature_c,max_temperature_c,avg_temperature_c,emissivity\n")
 
-                // Export thermal data (simulated entries for demonstration)
                 repeat(1000) { index ->
-                    val timestamp = System.nanoTime() + index * 40_000_000L // 25 FPS
+                    val timestamp = System.nanoTime() + index * 40_000_000L
                     val centerTemp = 25.0f + kotlin.math.sin(index * 0.1f) * 5.0f
                     val minTemp = centerTemp - 2.0f
                     val maxTemp = centerTemp + 8.0f
@@ -176,13 +171,11 @@ class TC001DataExporter(
             val jsonFile = File(exportDir, "thermal_temperature_data.json")
             val jsonObject = JSONObject()
 
-            // Session metadata
             jsonObject.put("session_id", sessionDir.name)
             jsonObject.put("export_timestamp", System.currentTimeMillis())
             jsonObject.put("device_type", "TC001")
             jsonObject.put("data_version", "1.0")
 
-            // Temperature data array
             val dataArray = JSONArray()
             repeat(1000) { index ->
                 val timestamp = System.nanoTime() + index * 40_000_000L
@@ -223,12 +216,10 @@ class TC001DataExporter(
 
             val exportedImages = mutableListOf<File>()
 
-            // Export thermal images (simulated for demonstration)
             repeat(50) { index ->
-                val timestamp = System.nanoTime() + index * 200_000_000L // 5 FPS for images
+                val timestamp = System.nanoTime() + index * 200_000_000L
                 val imageFile = File(imagesDir, "thermal_$timestamp.png")
 
-                // Create thermal bitmap and save
                 val thermalBitmap = generateSampleThermalBitmap(index)
                 saveBitmapToPNG(thermalBitmap, imageFile)
                 exportedImages.add(imageFile)
@@ -293,15 +284,12 @@ class TC001DataExporter(
             val outputStream = FileOutputStream(binaryFile)
 
             outputStream.use { stream ->
-                // Write binary header
                 val header = ByteArray(32)
                 "TC001RAW".toByteArray().copyInto(header, 0)
                 stream.write(header)
 
-                // Write thermal frame data (simulated)
                 repeat(1000) { index ->
-                    val frameData = ByteArray(256 * 192 * 2) // 16-bit thermal data
-                    // Populate with realistic thermal values
+                    val frameData = ByteArray(256 * 192 * 2)
                     for (i in frameData.indices step 2) {
                         val temp = (25.0f + kotlin.math.sin(index * 0.1f + i * 0.001f) * 5.0f + 273.15f) * 100
                         val tempInt = temp.toInt().coerceIn(0, 65535)
@@ -333,7 +321,6 @@ class TC001DataExporter(
                     put("session_id", sessionId)
                     put("export_timestamp", System.currentTimeMillis())
 
-                    // Device specifications for research
                     put(
                         "device_specifications",
                         JSONObject().apply {
@@ -347,7 +334,6 @@ class TC001DataExporter(
                         },
                     )
 
-                    // Calibration data for research
                     put(
                         "calibration_data",
                         JSONObject().apply {
@@ -358,7 +344,6 @@ class TC001DataExporter(
                         },
                     )
 
-                    // Statistical analysis
                     put(
                         "session_statistics",
                         JSONObject().apply {
@@ -398,7 +383,6 @@ class TC001DataExporter(
             val zipOutputStream = ZipOutputStream(FileOutputStream(archiveFile))
 
             zipOutputStream.use { zip ->
-                // Add all files in export directory to archive
                 addDirectoryToZip(zip, exportDir, "")
             }
 
@@ -445,7 +429,7 @@ class TC001DataExporter(
         for (y in 0 until height) {
             for (x in 0 until width) {
                 val temp = 25.0f + kotlin.math.sin(frameIndex * 0.1f + x * 0.05f + y * 0.03f) * 10.0f
-                val normalized = (temp - 15.0f) / 30.0f // Normalize to 0-1 range
+                val normalized = (temp - 15.0f) / 30.0f
                 val color = mapTemperatureToIronPalette(normalized.coerceIn(0f, 1f))
                 bitmap.setPixel(x, y, color)
             }
@@ -504,13 +488,12 @@ class TC001DataExporter(
 
         return TC001ExportSizeEstimate(
             estimatedSizeMB = thermalDataSizeMB,
-            estimatedTimeSeconds = thermalDataSizeMB * 2.0, // 2 seconds per MB
-            compressionRatio = 0.3, // 30% of original size after compression
+            estimatedTimeSeconds = thermalDataSizeMB * 2.0,
+            compressionRatio = 0.3,
         )
     }
 }
 
-// Supporting data classes and enums
 data class TC001ExportResult(
     val success: Boolean,
     val exportedFiles: List<File>,

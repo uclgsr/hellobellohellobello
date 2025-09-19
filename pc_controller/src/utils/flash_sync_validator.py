@@ -45,8 +45,8 @@ class FlashEvent:
 
     event_id: str
     trigger_timestamp_ns: int
-    device_responses: dict[str, int]  # device_id -> detection_timestamp_ns
-    sync_accuracy_ms: dict[str, float]  # device_id -> accuracy in ms
+    device_responses: dict[str, int]
+    sync_accuracy_ms: dict[str, float]
     validation_passed: bool = False
 
 
@@ -60,7 +60,7 @@ class SyncValidationResult:
     max_deviation_ms: float
     devices_tested: list[str]
     validation_passed: bool
-    specification_met: bool  # True if all devices within 5ms tolerance
+    specification_met: bool
 
 
 class FlashSyncValidator(QObject if HAS_QT else object):
@@ -71,12 +71,12 @@ class FlashSyncValidator(QObject if HAS_QT else object):
 
     if HAS_QT:
         sync_test_started = pyqtSignal()
-        flash_triggered = pyqtSignal(str)  # event_id
+        flash_triggered = pyqtSignal(str)
         device_response_detected = pyqtSignal(
             str, str, float
-        )  # event_id, device_id, accuracy_ms
-        validation_completed = pyqtSignal(object)  # SyncValidationResult
-        progress_updated = pyqtSignal(int, str)  # progress, message
+        )
+        validation_completed = pyqtSignal(object)
+        progress_updated = pyqtSignal(int, str)
 
     def __init__(self, network_controller=None):
         super().__init__()
@@ -84,18 +84,17 @@ class FlashSyncValidator(QObject if HAS_QT else object):
         self.validation_results = []
 
         # Validation parameters
-        self.target_accuracy_ms = 5.0  # Specification requirement
-        self.flash_duration_ms = 100  # Duration of screen flash
-        self.test_interval_seconds = 3  # Interval between flash tests
-        self.num_test_flashes = 10  # Number of flash events per validation
+        self.target_accuracy_ms = 5.0
+        self.flash_duration_ms = 100
+        self.test_interval_seconds = 3
+        self.num_test_flashes = 10
 
         # Flash detection parameters
-        self.brightness_threshold = 200  # Brightness threshold for flash detection
+        self.brightness_threshold = 200
         self.detection_window_ms = (
-            500  # Window around expected flash time to look for detection
+            500
         )
 
-        # Active test state
         self.current_test_results = []
         self.test_in_progress = False
 
@@ -130,7 +129,6 @@ class FlashSyncValidator(QObject if HAS_QT else object):
             self.sync_test_started.emit()
 
         try:
-            # Run multiple flash sync tests
             for i in range(self.num_test_flashes):
                 progress = int((i / self.num_test_flashes) * 90)
                 event_id = f"flash_sync_{i+1:02d}"
@@ -139,18 +137,15 @@ class FlashSyncValidator(QObject if HAS_QT else object):
                     progress, f"Flash sync test {i+1}/{self.num_test_flashes}"
                 )
 
-                # Trigger coordinated flash event
                 flash_event = await self._trigger_flash_event(event_id, devices)
                 self.current_test_results.append(flash_event)
 
                 if HAS_QT and hasattr(self, "flash_triggered"):
                     self.flash_triggered.emit(event_id)
 
-                # Wait between tests
                 if i < self.num_test_flashes - 1:
                     await asyncio.sleep(self.test_interval_seconds)
 
-            # Analyze results
             self.emit_progress(95, "Analyzing synchronization results...")
             result = self._analyze_sync_results(devices, self.current_test_results)
 
@@ -179,10 +174,8 @@ class FlashSyncValidator(QObject if HAS_QT else object):
         Returns:
             FlashEvent with detection results
         """
-        # Record precise trigger timestamp
         trigger_time_ns = time.time_ns()
 
-        # Send flash command to all devices simultaneously
         flash_command = {
             "type": "flash_sync",
             "event_id": event_id,
@@ -190,17 +183,14 @@ class FlashSyncValidator(QObject if HAS_QT else object):
             "duration_ms": self.flash_duration_ms,
         }
 
-        # Parallel flash triggering
         device_responses = {}
 
         if self.network_controller:
-            # Send to all devices in parallel
             tasks = []
             for device_id in devices:
                 task = self._send_flash_command_to_device(device_id, flash_command)
                 tasks.append(task)
 
-            # Wait for all responses
             responses = await asyncio.gather(*tasks, return_exceptions=True)
 
             for device_id, response in zip(devices, responses, strict=True):
@@ -211,13 +201,11 @@ class FlashSyncValidator(QObject if HAS_QT else object):
                     device_responses[device_id] = response
         else:
             # Simulation mode for testing without real devices
-            await asyncio.sleep(0.1)  # Simulate network delay
+            await asyncio.sleep(0.1)
             for device_id in devices:
-                # Simulate device response with some jitter
-                jitter_ns = int(np.random.normal(0, 1_000_000))  # ±1ms jitter
+                jitter_ns = int(np.random.normal(0, 1_000_000))
                 device_responses[device_id] = trigger_time_ns + jitter_ns
 
-        # Calculate sync accuracy for each device
         sync_accuracy = {}
         for device_id, response_time in device_responses.items():
             if response_time is not None:
@@ -225,9 +213,8 @@ class FlashSyncValidator(QObject if HAS_QT else object):
                 accuracy_ms = deviation_ns / 1_000_000.0
                 sync_accuracy[device_id] = accuracy_ms
             else:
-                sync_accuracy[device_id] = float("inf")  # Failed response
+                sync_accuracy[device_id] = float("inf")
 
-        # Determine if this flash event passed validation
         valid_accuracies = [
             acc for acc in sync_accuracy.values() if acc != float("inf")
         ]
@@ -264,10 +251,9 @@ class FlashSyncValidator(QObject if HAS_QT else object):
                 if response and "flash_detected_timestamp_ns" in response:
                     return response["flash_detected_timestamp_ns"]
 
-            # Fallback simulation
             await asyncio.sleep(
                 0.01 + np.random.uniform(0, 0.005)
-            )  # 10-15ms response time
+            )
             return command["trigger_timestamp_ns"] + int(
                 np.random.normal(2_000_000, 500_000)
             )
@@ -343,7 +329,6 @@ class FlashSyncValidator(QObject if HAS_QT else object):
                 specification_met=False,
             )
 
-        # Collect all accuracy measurements
         all_accuracies = []
         max_deviation = 0.0
 
@@ -353,14 +338,13 @@ class FlashSyncValidator(QObject if HAS_QT else object):
                     all_accuracies.append(accuracy)
                     max_deviation = max(max_deviation, accuracy)
 
-        # Calculate overall statistics
         if all_accuracies:
             overall_accuracy = statistics.mean(all_accuracies)
             specification_met = max_deviation <= self.target_accuracy_ms
             passed_events = [e for e in flash_events if e.validation_passed]
             success_rate = (
                 len(passed_events) >= len(flash_events) * 0.8
-            )  # 80% success rate
+            )
             validation_passed = success_rate
         else:
             overall_accuracy = float("inf")
@@ -377,7 +361,6 @@ class FlashSyncValidator(QObject if HAS_QT else object):
             specification_met=specification_met,
         )
 
-        # Emit individual device responses
         if HAS_QT and hasattr(self, "device_response_detected"):
             for event in flash_events:
                 for device_id, accuracy in event.sync_accuracy_ms.items():
@@ -390,7 +373,6 @@ class FlashSyncValidator(QObject if HAS_QT else object):
 
     def save_validation_results(self, result: SyncValidationResult, output_path: Path):
         """Save validation results to JSON file."""
-        # Convert dataclass to dict with proper serialization
         result_dict = {
             "test_timestamp": result.test_timestamp,
             "overall_accuracy_ms": result.overall_accuracy_ms,
@@ -402,7 +384,6 @@ class FlashSyncValidator(QObject if HAS_QT else object):
             "flash_events": [],
         }
 
-        # Serialize flash events
         for event in result.flash_events:
             valid_responses = {
                 k: v for k, v in event.device_responses.items() if v is not None
@@ -552,7 +533,6 @@ class VideoBasedFlashDetector:
 
                 current_time = frame_number * frame_duration
 
-                # Calculate frame brightness
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 mean_brightness = np.mean(gray)
                 brightness_history.append((current_time, mean_brightness))
@@ -561,10 +541,8 @@ class VideoBasedFlashDetector:
 
             cap.release()
 
-            # Find flash events (brightness spikes)
             flash_times = self._find_brightness_spikes(brightness_history)
 
-            # Match detected flashes to expected times
             for expected_time in expected_flash_times:
                 best_match = None
                 best_difference = float("inf")
@@ -573,14 +551,14 @@ class VideoBasedFlashDetector:
                     difference = abs(flash_time - expected_time)
                     if (
                         difference < best_difference and difference < 0.5
-                    ):  # Within 500ms
+                    ):
                         best_match = flash_time
                         best_difference = difference
 
                 if best_match is not None:
                     detections.append((expected_time, best_match))
                 else:
-                    detections.append((expected_time, None))  # No detection
+                    detections.append((expected_time, None))
 
             return detections
 
@@ -598,34 +576,27 @@ class VideoBasedFlashDetector:
         times, brightness_values = zip(*brightness_history, strict=True)
         brightness_array = np.array(brightness_values)
 
-        # Calculate moving average for baseline
-        window_size = min(30, len(brightness_array) // 10)  # Adaptive window
+        window_size = min(30, len(brightness_array) // 10)
         baseline = np.convolve(
             brightness_array, np.ones(window_size) / window_size, mode="same"
         )
 
-        # Find spikes above threshold
         spike_threshold = self.brightness_threshold
         spikes = brightness_array > spike_threshold
 
-        # Also consider relative spikes (brightness jumps)
-        relative_threshold = baseline * 1.5  # 50% increase over baseline
+        relative_threshold = baseline * 1.5
         relative_spikes = brightness_array > relative_threshold
 
-        # Combine both criteria
         flash_candidates = spikes | relative_spikes
 
-        # Find flash event start times
         flash_times = []
         in_flash = False
 
         for i, is_flash in enumerate(flash_candidates):
             if is_flash and not in_flash:
-                # Start of flash event
                 flash_times.append(times[i])
                 in_flash = True
             elif not is_flash and in_flash:
-                # End of flash event
                 in_flash = False
 
         return flash_times
@@ -652,7 +623,6 @@ async def run_sync_validation(
         output_path = output_dir / f"sync_validation_{timestamp}.json"
         validator.save_validation_results(result, output_path)
 
-        # Also save human-readable report
         report_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_path = output_dir / f"sync_validation_report_{report_timestamp}.txt"
         report = validator.generate_validation_report(result)
@@ -663,7 +633,6 @@ async def run_sync_validation(
 
 
 if __name__ == "__main__":
-    # Command line interface
     import argparse
 
     parser = argparse.ArgumentParser(description="Flash sync validation utility")
@@ -692,7 +661,6 @@ if __name__ == "__main__":
 
         result = await validator.run_synchronization_validation(args.devices)
 
-        # Print summary
         print(validator.generate_validation_report(result))
 
         if args.output_dir:
@@ -700,7 +668,6 @@ if __name__ == "__main__":
                 result, args.output_dir / "sync_validation.json"
             )
 
-        # Exit with appropriate code
         exit(0 if result.specification_met else 1)
 
     asyncio.run(main())

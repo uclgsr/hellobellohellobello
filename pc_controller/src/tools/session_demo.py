@@ -17,14 +17,12 @@ import logging
 import time
 from pathlib import Path
 
-# Set up logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
 try:
-    # Try to import from the PC controller modules
     import sys
 
     pc_controller_path = Path(__file__).parent.parent
@@ -32,8 +30,6 @@ try:
 
     from core.session_manager import SessionManager
 
-    # from network.network_controller import NetworkController  # Comment out for now
-    # from data.data_aggregator import DataAggregator  # Comment out for now
 
     logger.info("✅ PC Controller modules imported successfully")
 
@@ -48,8 +44,6 @@ class SessionDemo:
 
     def __init__(self):
         self.session_manager = SessionManager()
-        # self.network_controller = NetworkController()  # Simplified for demo
-        # self.data_aggregator = DataAggregator()  # Simplified for demo
         self.current_session_id: str | None = None
         self.connected_devices: dict[str, dict] = {}
 
@@ -90,11 +84,8 @@ class SessionDemo:
         logger.info("🔍 Scanning for Android sensor nodes...")
 
         try:
-            # Start device discovery
             discovered_devices = []
 
-            # In a real implementation, this would use Zeroconf to discover devices
-            # For demo purposes, we'll simulate device discovery
             demo_devices = [
                 {
                     "id": "android_sensor_001",
@@ -139,8 +130,6 @@ class SessionDemo:
             device_id = device["id"]
             logger.info(f"🔗 Connecting to {device['name']}...")
 
-            # In real implementation, this would establish TCP connection
-            # For demo, we simulate connection
             connection_info = {
                 "device": device,
                 "connected_at": time.time(),
@@ -162,10 +151,8 @@ class SessionDemo:
         try:
             logger.info(f"🎬 Starting recording session: {session_id}")
 
-            # Update session state
             self.session_manager.start_recording()
 
-            # Send start recording commands to all connected devices
             recording_started = []
             for device_id, connection in self.connected_devices.items():
                 device_name = connection["device"]["name"]
@@ -174,7 +161,6 @@ class SessionDemo:
                 logger.info(f"   📱 Starting recording on {device_name}")
                 logger.info(f"      - Sensors: {', '.join(capabilities)}")
 
-                # In real implementation, this would send JSON command via TCP
                 start_command = {
                     "id": int(time.time()),
                     "command": "start_recording",
@@ -185,7 +171,6 @@ class SessionDemo:
 
                 logger.info(f"      - Command sent: {start_command['command']}")
 
-                # Simulate successful start
                 connection["session_active"] = True
                 recording_started.append(device_id)
 
@@ -213,24 +198,20 @@ class SessionDemo:
 
         try:
             while time.time() - start_time < duration_seconds:
-                # Simulate receiving data from connected devices
                 for connection in self.connected_devices.values():
                     if connection["session_active"]:
                         device_name = connection["device"]["name"]
                         capabilities = connection["device"]["capabilities"]
 
-                        # Simulate data reception
                         for sensor in capabilities:
                             data_points_received += 1
 
-                            # Log data reception periodically
                             if data_points_received % 50 == 0:
                                 logger.info(
                                     f"   📈 Data points received: {data_points_received}"
                                 )
                                 logger.info(f"      - {device_name}: {sensor} data")
 
-                # Update every second
                 time.sleep(1)
 
             logger.info(
@@ -245,13 +226,11 @@ class SessionDemo:
         try:
             logger.info(f"⏹️  Stopping recording session: {session_id}")
 
-            # Send stop commands to all devices
             devices_stopped = []
             for device_id, connection in self.connected_devices.items():
                 if connection["session_active"]:
                     device_name = connection["device"]["name"]
 
-                    # In real implementation, send stop command via TCP
                     _stop_command = {
                         "id": int(time.time()),
                         "command": "stop_recording",
@@ -263,7 +242,6 @@ class SessionDemo:
                     connection["session_active"] = False
                     devices_stopped.append(device_id)
 
-            # Update session state
             self.session_manager.stop_recording()
 
             logger.info(f"✅ Recording stopped on {len(devices_stopped)} device(s)")
@@ -281,18 +259,12 @@ class SessionDemo:
             session_dir = self.session_manager.get_session_dir(session_id)
             logger.info(f"   Session directory: {session_dir}")
 
-            # In real implementation, this would:
-            # 1. Collect CSV files from each device
-            # 2. Synchronize timestamps across sensors
-            # 3. Export to HDF5 format for analysis
-            # 4. Generate session summary report
 
-            # Simulate data aggregation
             aggregation_summary = {
                 "session_id": session_id,
                 "devices_processed": len(self.connected_devices),
                 "sensors_aggregated": ["GSR", "RGB", "Thermal"],
-                "total_data_files": 12,  # Simulated
+                "total_data_files": 12,
                 "export_formats": ["CSV", "HDF5"],
                 "processing_time_ms": 2500,
                 "status": "completed",
@@ -302,7 +274,6 @@ class SessionDemo:
             for key, value in aggregation_summary.items():
                 logger.info(f"      - {key}: {value}")
 
-            # Save aggregation summary
             summary_file = session_dir / "aggregation_summary.json"
             with open(summary_file, "w") as f:
                 json.dump(aggregation_summary, f, indent=2)
@@ -367,37 +338,29 @@ class SessionDemo:
         try:
             self.display_banner()
 
-            # Step 1: Create session
             logger.info("🎯 Step 1: Creating demo session...")
             session_id = self.create_demo_session()
             self.current_session_id = session_id
 
-            # Step 2: Discover devices
             logger.info("\n🎯 Step 2: Discovering Android devices...")
             devices = self.discover_android_devices()
 
-            # Step 3: Connect to devices
             logger.info("\n🎯 Step 3: Connecting to devices...")
-            for device in devices[:2]:  # Connect to first 2 devices
+            for device in devices[:2]:
                 self.connect_to_device(device)
 
-            # Step 4: Start recording
             logger.info("\n🎯 Step 4: Starting multi-sensor recording...")
             if self.start_recording_session(session_id):
 
-                # Step 5: Monitor recording
                 logger.info("\n🎯 Step 5: Monitoring recording session...")
-                self.monitor_recording_session(duration_seconds=15)  # Short demo
+                self.monitor_recording_session(duration_seconds=15)
 
-                # Step 6: Stop recording
                 logger.info("\n🎯 Step 6: Stopping recording session...")
                 self.stop_recording_session(session_id)
 
-                # Step 7: Aggregate data
                 logger.info("\n🎯 Step 7: Aggregating session data...")
                 self.aggregate_session_data(session_id)
 
-                # Step 8: Display results
                 logger.info("\n🎯 Step 8: Displaying final results...")
                 self.display_session_results(session_id)
 

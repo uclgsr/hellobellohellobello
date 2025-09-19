@@ -30,12 +30,10 @@ class TC001IntegrationManager(
         private const val TAG = "TC001IntegrationManager"
     }
 
-    // Component instances
     private var tc001Connector: TC001Connector? = null
     private var tc001DataManager: TC001DataManager? = null
     private var tc001UIController: TC001UIController? = null
 
-    // Integration state
     private val _integrationState = MutableLiveData<TC001IntegrationState>()
     val integrationState: LiveData<TC001IntegrationState> = _integrationState
 
@@ -64,21 +62,16 @@ class TC001IntegrationManager(
                 _integrationState.postValue(TC001IntegrationState.INITIALIZING)
                 _systemStatus.postValue("Initializing TC001 System...")
 
-                // Step 1: Initialize TC001 utilities
                 TC001InitUtil.initLog()
                 TC001InitUtil.initReceiver(context)
                 TC001InitUtil.initTC001DeviceManager(context)
 
-                // Step 2: Initialize connector
                 tc001Connector = TC001Connector(context)
 
-                // Step 3: Initialize data manager
                 tc001DataManager = TC001DataManager(context)
 
-                // Step 4: Initialize UI controller
                 tc001UIController = TC001UIController()
 
-                // Step 5: Setup component integration
                 setupComponentIntegration()
 
                 isInitialized = true
@@ -109,11 +102,9 @@ class TC001IntegrationManager(
                 _integrationState.postValue(TC001IntegrationState.STARTING)
                 _systemStatus.postValue("Starting TC001 System...")
 
-                // Start device discovery and connection
                 val connectionResult = tc001Connector?.connect() ?: false
 
                 if (connectionResult) {
-                    // Start thermal data processing
                     tc001DataManager?.startProcessing()
 
                     _integrationState.postValue(TC001IntegrationState.RUNNING)
@@ -145,10 +136,8 @@ class TC001IntegrationManager(
                 _integrationState.postValue(TC001IntegrationState.STOPPING)
                 _systemStatus.postValue("Stopping TC001 System...")
 
-                // Stop data processing
                 tc001DataManager?.stopProcessing()
 
-                // Disconnect device
                 tc001Connector?.disconnect()
 
                 _integrationState.postValue(TC001IntegrationState.INITIALIZED)
@@ -165,12 +154,10 @@ class TC001IntegrationManager(
      * Setup integration between TC001 components
      */
     private fun setupComponentIntegration() {
-        // Connect connector state to UI controller
         tc001Connector?.connectionState?.observeForever { state ->
             tc001UIController?.updateDeviceConnection(state == TC001ConnectionState.CONNECTED)
         }
 
-        // Connect data manager to UI controller for temperature updates
         tc001DataManager?.temperatureData?.observeForever { tempData ->
             tempData?.let {
                 tc001UIController?.updateCurrentTemperature(it.centerTemperature)

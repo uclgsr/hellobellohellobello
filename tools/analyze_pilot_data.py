@@ -33,7 +33,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-# Insert repo pc_controller/src into path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PC_SRC = REPO_ROOT / "pc_controller" / "src"
 if str(PC_SRC) not in sys.path:
@@ -54,10 +53,8 @@ class Series:
 
 
 def _find_first_matching(d: dict, name: str) -> str | None:
-    # exact file at root
     if name in d:
         return d[name]
-    # look for any relpath ending with name
     lower = name.lower()
     for rel, p in d.items():
         if rel.lower().endswith("/" + lower) or rel.lower() == lower:
@@ -72,15 +69,12 @@ def load_gsr(session_dir: str, column: str = "gsr") -> Series:
     if not gsr_path:
         raise FileNotFoundError("gsr.csv not found in session")
     df = dl.load_csv(os.path.relpath(gsr_path, session_dir))
-    # Determine timestamp index
     if df.index.name is None:
-        # try to find timestamp column
         for cand in ("timestamp_ns", "ts_ns", "timestamp", "time_ns"):
             if cand in df.columns:
                 df = df.set_index(cand)
                 break
     if column not in df.columns:
-        # fallback to first non-timestamp column
         cols = [c for c in df.columns if c not in ("timestamp_ns", "ts_ns", "timestamp", "time_ns")]
         if not cols:
             raise ValueError("GSR CSV has no value columns")
@@ -96,16 +90,12 @@ def _roi_mean(
     flat_vals: Sequence[float], w: int, h: int, roi: tuple[int, int, int, int] | None
 ) -> float:
     if roi is None:
-        # global mean
         return float(sum(flat_vals) / max(1, len(flat_vals)))
     x, y, rw, rh = roi
     if x < 0 or y < 0 or rw <= 0 or rh <= 0 or x + rw > w or y + rh > h:
-        # invalid ROI, fallback to global mean
         return float(sum(flat_vals) / max(1, len(flat_vals)))
-    # iterate only ROI pixels
     s = 0.0
     count = 0
-    # row-major order v0..v(N-1)
     for yy in range(y, y + rh):
         base = yy * w
         start = base + x
@@ -130,8 +120,6 @@ def load_thermal_means(session_dir: str, roi: tuple[int, int, int, int] | None) 
         header = next(reader, None)
         if header is None:
             raise ValueError("thermal.csv is empty")
-        # Expect header: timestamp_ns,w,h,v0..vN
-        # Find columns indexes
         try:
             ts_idx = header.index("timestamp_ns")
         except ValueError:
@@ -140,7 +128,6 @@ def load_thermal_means(session_dir: str, roi: tuple[int, int, int, int] | None) 
             w_idx = header.index("w")
             h_idx = header.index("h")
         except ValueError:
-            # fallback positions 1,2
             w_idx, h_idx = 1, 2
 
         for row in reader:
@@ -150,12 +137,9 @@ def load_thermal_means(session_dir: str, roi: tuple[int, int, int, int] | None) 
                 ts_ns = int(row[ts_idx])
                 w = int(row[w_idx])
                 h = int(row[h_idx])
-                # Remaining values start after max(ts_idx, h_idx) + 1
                 start_vals = max(ts_idx, w_idx, h_idx) + 1
-                # Convert to float; if numpy available, could be faster, but keep it simple
                 vals = [float(v) for v in row[start_vals:]]
                 if len(vals) < w * h:
-                    # tolerate partial rows by padding? prefer skip
                     continue
                 mean_val = _roi_mean(vals, w, h, roi)
             except Exception:
@@ -174,7 +158,6 @@ def load_thermal_means(session_dir: str, roi: tuple[int, int, int, int] | None) 
 def _estimate_sample_rate(t_s: list[float]) -> float:
     if len(t_s) < 2:
         return 1.0
-    # median delta
     ds = sorted([t_s[i + 1] - t_s[i] for i in range(len(t_s) - 1) if t_s[i + 1] > t_s[i] > 0])
     if not ds:
         return 1.0
@@ -202,9 +185,7 @@ def smooth_gsr(series: Series, cutoff_hz: float | None, window_sec: float | None
         b, a = sig.butter(2, norm, btype="low")
         y_f = sig.filtfilt(b, a, y)
         return Series(t_s=t_s, y=list(map(float, y_f)))
-    # Fallback: moving average with window_sec or derived from cutoff
     if window_sec is None and cutoff_hz:
-        # approximate: window ~ 1/cutoff
         window_sec = max(0.5, 1.0 / max(1e-3, cutoff_hz))
     if window_sec is None:
         return series
@@ -223,12 +204,8 @@ def smooth_gsr(series: Series, cutoff_hz: float | None, window_sec: float | None
 
 
 def plot_combined(out_path: str, gsr: Series, thermal: Series, show: bool) -> None:
-    import matplotlib.pyplot as plt  # lazy import
+    import matplotlib.pyplot as plt
 
-    # Align to common start based on min t0
-    # Our series are both relative to their own first sample, so we shift to align starts.
-    # In many captures they start near-simultaneously; for more precise alignment, use sync metadata.
-    # Here we simply overlay by their relative times.
     fig, ax1 = plt.subplots(figsize=(10, 5))
     ax1.set_title("Pilot Study: GSR vs Thermal Mean")
     ax1.set_xlabel("Time (s)")
@@ -257,19 +234,16 @@ def plot_combined(out_path: str, gsr: Series, thermal: Series, show: bool) -> No
 def _synthesize_series(n: int = 300, fs: float = 10.0) -> tuple[Series, Series]:
     dt = 1.0 / fs
     t = [i * dt for i in range(n)]
-    # GSR: slow-varying sine + drift
     gsr = [0.5 * math.sin(2 * math.pi * 0.05 * ti) + 0.01 * ti for ti in t]
-    # Thermal: inverted relationship + noise
     thermal = [30.0 - 0.3 * math.sin(2 * math.pi * 0.05 * ti + 0.5) for ti in t]
     return Series(t_s=t, y=gsr), Series(t_s=t, y=thermal)
 
 
 def _dry_run(out_path: str | None) -> int:
-    # Try to plot if matplotlib available; otherwise just synthesize and report success
     try:
         import matplotlib
 
-        matplotlib.use("Agg", force=True)  # headless-safe
+        matplotlib.use("Agg", force=True)
         can_plot = True
     except Exception:
         can_plot = False
@@ -287,7 +261,6 @@ def _dry_run(out_path: str | None) -> int:
             print(f"[DRY-RUN] analyze_pilot_data: plot failed: {e}")
             return 1
     else:
-        # No matplotlib: still consider dry-run successful since synthesis worked
         print("[DRY-RUN] analyze_pilot_data: matplotlib not available; synthesis OK")
         return 0
 

@@ -33,7 +33,6 @@ from dataclasses import dataclass
 
 import numpy as np
 
-# Local imports
 sys.path.append(os.path.join(os.getcwd(), "pc_controller", "src"))
 from tools.validate_sync_core import (  # type: ignore
     StreamDetection,
@@ -42,12 +41,11 @@ from tools.validate_sync_core import (  # type: ignore
     detect_flash_indices_from_brightness,
 )
 
-# OpenCV is imported lazily inside functions to allow --help without dependency.
 
 
 @dataclass
 class DeviceSession:
-    name: str  # folder/device id
+    name: str
     path: str
     flash_csv: str | None
     video_path: str | None
@@ -65,11 +63,9 @@ def _normalize_name(s: str) -> str:
 
 
 def _find_file_case_insensitive(root: str, rel: str) -> str | None:
-    # Try direct
     full = os.path.join(root, rel)
     if os.path.exists(full):
         return full
-    # Try simple glob over expected directory
     base = os.path.dirname(full)
     name = os.path.basename(full).lower()
     if os.path.isdir(base):
@@ -80,11 +76,9 @@ def _find_file_case_insensitive(root: str, rel: str) -> str | None:
 
 
 def _find_flash_csv(dev_dir: str) -> str | None:
-    # Prefer at root of device dir
     cand = _find_file_case_insensitive(dev_dir, "flash_sync_events.csv")
     if cand:
         return cand
-    # Else search recursively
     for root, _dirs, files in os.walk(dev_dir):
         for f in files:
             if f.lower() == "flash_sync_events.csv":
@@ -93,14 +87,12 @@ def _find_flash_csv(dev_dir: str) -> str | None:
 
 
 def _find_android_video(dev_dir: str) -> str | None:
-    # Prefer rgb/video.*
     rgb_dir = os.path.join(dev_dir, "rgb")
     if os.path.isdir(rgb_dir):
         for ext in SUPPORTED_VID_EXT:
             p = os.path.join(rgb_dir, "video" + ext)
             if os.path.exists(p):
                 return p
-    # Else search recursively
     for root, _dirs, files in os.walk(dev_dir):
         for f in files:
             if os.path.splitext(f)[1].lower() in SUPPORTED_VID_EXT:
@@ -128,9 +120,7 @@ def _load_flash_csv(path: str) -> list[int]:
 
 
 def _map_offsets_to_devices(session_dir: str, offsets: dict[str, int]) -> dict[str, int]:
-    # Map per device folder to an offset using normalized name matching
     result: dict[str, int] = {}
-    # Build normalized offsets index
     norm_offset: dict[str, tuple[str, int]] = {
         _normalize_name(k): (k, v) for k, v in offsets.items()
     }
@@ -139,15 +129,12 @@ def _map_offsets_to_devices(session_dir: str, offsets: dict[str, int]) -> dict[s
         if not os.path.isdir(dev_dir):
             continue
         if name.lower().startswith("rgb") or name.lower().startswith("gsr"):
-            # Skip local scalar/video files or local subdirs
             continue
         norm = _normalize_name(name)
-        # Try direct match or contains relationship
         match_key = None
         if norm in norm_offset:
             match_key = norm
         else:
-            # find best candidate by longest common subsequence (simplified contains)
             for k in norm_offset:
                 if norm in k or k in norm:
                     match_key = k
@@ -155,7 +142,7 @@ def _map_offsets_to_devices(session_dir: str, offsets: dict[str, int]) -> dict[s
         if match_key is not None:
             result[name] = norm_offset[match_key][1]
         else:
-            result[name] = 0  # fallback if unknown
+            result[name] = 0
     return result
 
 
@@ -178,7 +165,7 @@ def _read_video_brightness(path: str) -> tuple[list[float], float]:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             means.append(float(np.mean(gray)))
         except Exception:
-            means.append(float(np.mean(frame)))  # fallback
+            means.append(float(np.mean(frame)))
         ok, frame = cap.read()
     cap.release()
     return means, fps
@@ -248,7 +235,6 @@ def main() -> int:
         print("WARNING: session_metadata.json not found; proceeding with zero offsets.")
 
     devices, mapped = build_device_sessions(session_dir, offsets)
-    # Determine event count from the first device with events
     n_events = 0
     for d in devices:
         if d.raw_events_ns:
@@ -258,7 +244,6 @@ def main() -> int:
         print(msg, file=sys.stderr)
         return 2
 
-    # Align event timestamps to master clock using offsets; resolve sign using first device as ref
     # Choose a reference device with events
     ref_idx = next((i for i, d in enumerate(devices) if d.raw_events_ns), None)
     if ref_idx is None:
@@ -278,12 +263,10 @@ def main() -> int:
         dev.offset_sign = sign
         dev.aligned_events_ns = [int(v + sign * dev.offset_ns) for v in dev.raw_events_ns]
 
-    # Build aligned events dict (only devices with events)
     aligned_by_device: dict[str, list[int]] = {
         d.name: d.aligned_events_ns for d in devices if d.aligned_events_ns
     }
 
-    # Build detections for videos (Android + PC webcam)
     detections: dict[str, StreamDetection] = {}
 
     # PC webcam video (optional)
@@ -302,7 +285,6 @@ def main() -> int:
         idxs = detect_flash_indices_from_brightness(means, n_events)
         detections["PC"] = StreamDetection(name="PC", frame_indices=idxs, fps=fps)
 
-    # Android videos
     for dev in devices:
         if dev.video_path and os.path.exists(dev.video_path):
             means, fps = _read_video_brightness(dev.video_path)
@@ -316,11 +298,9 @@ def main() -> int:
     tolerance = args.tolerance_ms
     result = compute_validation_report(aligned_by_device, detections, tolerance_ms=tolerance)
 
-    # Print report
     print("=== Flash Sync Validation Report ===")
     print(f"Session: {args.session_id}")
     print(f"Base Dir: {args.base_dir}")
-    # Summary of devices and offsets
     print("\nDevices and Offsets (ns):")
     for d in devices:
         video_status = 'yes' if d.video_path else 'no'
@@ -328,7 +308,6 @@ def main() -> int:
             f"- {d.name}: offset={d.offset_ns} sign={d.offset_sign} "
             f"events={len(d.aligned_events_ns)} video={video_status}"
         )
-    # Print detailed clock sync stats if available
     if 'clock_sync' in locals() and clock_sync:
         print("\nClock Sync Stats (from session_metadata.json):")
         for dev_name, st in clock_sync.items():
@@ -345,12 +324,10 @@ def main() -> int:
                 )
             except Exception:
                 print(f"- {dev_name}: {st}")
-    # Streams
     if detections:
         print("\nDetected Streams:")
         for s, det in detections.items():
             print(f"- {s}: fps={det.fps:.2f} peaks={len(det.frame_indices)}")
-    # Per-event ranges
     print("\nPer-Event Spread (ms):")
     for i, v in enumerate(result.per_event_ranges_ms, 1):
         print(f"  Event {i}: {v:.3f} ms")

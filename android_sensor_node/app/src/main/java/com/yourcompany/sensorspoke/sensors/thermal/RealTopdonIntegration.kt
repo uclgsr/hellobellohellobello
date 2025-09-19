@@ -32,14 +32,12 @@ class RealTopdonIntegration(private val context: Context) {
     companion object {
         private const val TAG = "RealTopdonIntegration"
         
-        // Authentic TC001 product IDs from IRCamera IRUVCTC.java
         private val TC001_PRODUCT_IDS = intArrayOf(0x5840, 0x3901, 0x5830, 0x5838)
         private const val TC001_VENDOR_ID = 0x4d54
         
-        // TC001 specifications
         private const val TC001_WIDTH = 256
         private const val TC001_HEIGHT = 192
-        private const val TEMPERATURE_SCALE_FACTOR = 16 * 4 // From IRCamera
+        private const val TEMPERATURE_SCALE_FACTOR = 16 * 4
         private const val KELVIN_TO_CELSIUS = 273.15f
     }
 
@@ -52,7 +50,6 @@ class RealTopdonIntegration(private val context: Context) {
         fun onError(error: String)
     }
 
-    // State management
     private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
 
@@ -65,7 +62,6 @@ class RealTopdonIntegration(private val context: Context) {
     private var thermalFrameCallback: ThermalFrameCallback? = null
     private var frameNumber = 0
 
-    // Coroutine scope for async operations
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // Configuration parameters
@@ -131,7 +127,6 @@ class RealTopdonIntegration(private val context: Context) {
         try {
             Log.i(TAG, "Initializing TC001 thermal camera connection")
 
-            // Scan for TC001 hardware
             val device = scanForTC001Hardware()
             if (device != null) {
                 Log.i(TAG, "TC001 hardware detected: ${device.deviceName}")
@@ -160,7 +155,6 @@ class RealTopdonIntegration(private val context: Context) {
             isStreaming = true
             _connectionStatus.value = ConnectionStatus.STREAMING
             
-            // Start frame capture loop
             startFrameCaptureLoop()
             true
         } catch (e: Exception) {
@@ -231,15 +225,14 @@ class RealTopdonIntegration(private val context: Context) {
                         captureSimulatedFrame()
                     }
                     
-                    // Send to both callback interfaces for compatibility
                     frameCallback?.invoke(frame)
                     thermalFrameCallback?.onThermalFrame(frame)
                     _thermalFrame.value = frame
                     
-                    delay(100) // ~10 FPS
+                    delay(100)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in frame capture loop: ${e.message}", e)
-                    delay(1000) // Wait before retry
+                    delay(1000)
                 }
             }
         }
@@ -250,10 +243,8 @@ class RealTopdonIntegration(private val context: Context) {
      * TODO: Replace with actual IRCamera integration
      */
     private fun captureRealThermalFrame(): ThermalFrame {
-        // For now, generate realistic data based on TC001 specs
-        // This should be replaced with actual IRCamera UVCCamera calls
         val temperatureMatrix = FloatArray(TC001_WIDTH * TC001_HEIGHT) { 
-            20.0f + Random.nextFloat() * 15.0f // 20-35°C range
+            20.0f + Random.nextFloat() * 15.0f
         }
 
         val minTemp = temperatureMatrix.minOrNull() ?: 20.0f
@@ -280,7 +271,7 @@ class RealTopdonIntegration(private val context: Context) {
      */
     private fun captureSimulatedFrame(): ThermalFrame {
         val temperatureMatrix = FloatArray(TC001_WIDTH * TC001_HEIGHT) { 
-            25.0f + Random.nextFloat() * 10.0f // 25-35°C range
+            25.0f + Random.nextFloat() * 10.0f
         }
 
         val minTemp = temperatureMatrix.minOrNull() ?: 25.0f

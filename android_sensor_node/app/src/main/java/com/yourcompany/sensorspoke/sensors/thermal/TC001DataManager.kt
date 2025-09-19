@@ -27,12 +27,11 @@ class TC001DataManager(
 ) : IFrameCallback {
     companion object {
         private const val TAG = "TC001DataManager"
-        private const val THERMAL_FRAME_SIZE = 256 * 192 * 2 // 16-bit thermal data
-        private const val TEMPERATURE_SCALE_FACTOR = 0.04f // K per LSB
-        private const val TEMPERATURE_OFFSET = 273.15f // Kelvin to Celsius
+        private const val THERMAL_FRAME_SIZE = 256 * 192 * 2
+        private const val TEMPERATURE_SCALE_FACTOR = 0.04f
+        private const val TEMPERATURE_OFFSET = 273.15f
     }
 
-    // Thermal data streams
     private val _thermalFrame = MutableLiveData<ByteArray>()
     val thermalFrame: LiveData<ByteArray> = _thermalFrame
 
@@ -42,7 +41,6 @@ class TC001DataManager(
     private val _temperatureData = MutableLiveData<TC001TemperatureData>()
     val temperatureData: LiveData<TC001TemperatureData> = _temperatureData
 
-    // Enhanced thermal bitmap output
     private val _thermalBitmap = MutableLiveData<android.graphics.Bitmap>()
     val thermalBitmap: LiveData<android.graphics.Bitmap> = _thermalBitmap
 
@@ -56,17 +54,12 @@ class TC001DataManager(
     private val _temperatureRange = MutableLiveData<Pair<Float, Float>>(-20f to 150f)
     val temperatureRange: LiveData<Pair<Float, Float>> = _temperatureRange
 
-    // IRCamera processing components - these are static utility classes, no instances needed
-    // private var libIRParse: LibIRParse? = null - not needed, static methods
-    // private var libIRProcess: LibIRProcess? = null - not needed, static methods
 
-    // Processing scope
     private val processingScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var isProcessing = false
     private var tc001Connector: TC001Connector? = null
 
     init {
-        // IRCamera processing libraries are static - no initialization needed
         Log.i(TAG, "TC001DataManager ready for IRCamera integration")
     }
 
@@ -76,18 +69,14 @@ class TC001DataManager(
     override fun onFrame(frameData: ByteArray?) {
         frameData?.let { data ->
             try {
-                // Process incoming thermal frame using IRCamera data
                 _thermalFrame.postValue(data)
 
-                // Use IRCamera LibIRTemp for proven temperature analysis
                 val tempData = processFrameWithIRTemp(data)
                 _temperatureData.postValue(tempData)
 
-                // Use IRCamera LibIRProcess for image processing
                 val processedImg = processFrameWithIRProcess(data)
                 _processedImage.postValue(processedImg)
 
-                // Generate thermal bitmap from IRCamera processed data
                 val thermalBitmap = generateThermalBitmapFromIRCamera(processedImg)
                 _thermalBitmap.postValue(thermalBitmap)
             } catch (e: Exception) {
@@ -102,7 +91,6 @@ class TC001DataManager(
     fun setTC001Connector(connector: TC001Connector) {
         tc001Connector = connector
 
-        // Set this as frame callback for IRCamera UVCCamera
         connector.getUVCCamera()?.setFrameCallback(this)
     }
 
@@ -146,7 +134,6 @@ class TC001DataManager(
             return
         }
 
-        // Start thermal streaming using IRCamera's proven UVCCamera approach
         if (!tc001Connector?.startThermalStream()!!) {
             Log.e(TAG, "Failed to start thermal stream via IRCamera UVCCamera")
             return
@@ -154,9 +141,8 @@ class TC001DataManager(
 
         Log.i(TAG, "IRCamera thermal stream started - frames will be received via onFrame callback")
 
-        // Keep processing active while frames come in via onFrame callback
         while (isProcessing && processingScope.isActive) {
-            delay(1000) // Just keep the coroutine alive, real data comes via callback
+            delay(1000)
         }
     }
 
@@ -165,11 +151,8 @@ class TC001DataManager(
      */
     private fun processFrameWithIRTemp(frameData: ByteArray): TC001TemperatureData {
         return try {
-            // Simplified approach using IRCamera LibIRParse for basic processing
-            // Since inner classes are not accessible, use format conversion as indicator
             val outputBuffer = ByteArray(256 * 192)
 
-            // Use IRCamera's Y14 to Y8 conversion to validate data
             val convertResult = if (frameData.size >= 256 * 192 * 2) {
                 val charArray = CharArray(frameData.size / 2)
                 for (i in charArray.indices) {
@@ -184,13 +167,12 @@ class TC001DataManager(
             }
 
             if (convertResult == 0) {
-                // Basic temperature analysis from converted data
                 var minTemp = Float.MAX_VALUE
                 var maxTemp = Float.MIN_VALUE
                 var sumTemp = 0.0f
 
                 for (value in outputBuffer) {
-                    val temp = 20f + (value.toInt() and 0xFF) / 255f * 30f // 20-50°C range
+                    val temp = 20f + (value.toInt() and 0xFF) / 255f * 30f
                     minTemp = minOf(minTemp, temp)
                     maxTemp = maxOf(maxTemp, temp)
                     sumTemp += temp
@@ -206,7 +188,6 @@ class TC001DataManager(
                     emissivity = _emissivity.value ?: 0.95f,
                 )
             } else {
-                // Fallback temperature data
                 TC001TemperatureData(
                     minTemperature = 20f,
                     maxTemperature = 30f,
@@ -217,7 +198,6 @@ class TC001DataManager(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error processing frame with IRCamera LibIRTemp", e)
-            // Fallback temperature data
             TC001TemperatureData(
                 minTemperature = 20f,
                 maxTemperature = 30f,
@@ -233,12 +213,9 @@ class TC001DataManager(
      */
     private fun processFrameWithIRProcess(frameData: ByteArray): ByteArray {
         return try {
-            // Use IRCamera LibIRParse for proven format conversion
-            val outputBuffer = ByteArray(256 * 192 * 3) // RGB output
+            val outputBuffer = ByteArray(256 * 192 * 3)
 
-            // Convert Y14 thermal data to RGB using IRCamera's proven method
             val convertResult = if (frameData.size >= 256 * 192 * 2) {
-                // Convert byte array to char array for Y14 format
                 val charArray = CharArray(frameData.size / 2)
                 for (i in charArray.indices) {
                     val byte1 = frameData[i * 2].toInt() and 0xFF
@@ -248,19 +225,17 @@ class TC001DataManager(
 
                 LibIRParse.convertArrayY14ToRGB(charArray, charArray.size, outputBuffer)
             } else {
-                -1 // Invalid data size
+                -1
             }
 
             if (convertResult == 0) {
                 outputBuffer
             } else {
-                // Fallback: generate gradient image
                 Log.w(TAG, "IRCamera LibIRParse conversion failed, using fallback")
                 generateFallbackRGBData()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error processing frame with IRCamera LibIRParse", e)
-            // Fallback processing
             generateFallbackRGBData()
         }
     }
@@ -289,16 +264,14 @@ class TC001DataManager(
     private suspend fun simulateThermalDataStream() {
         while (isProcessing && processingScope.isActive) {
             try {
-                // Generate simulated thermal frame data
                 val thermalData = generateSimulatedThermalFrame()
 
-                // Process through IRCamera callback interface like real hardware would
                 onFrame(thermalData)
 
-                delay(33) // ~30 FPS
+                delay(33)
             } catch (e: Exception) {
                 Log.e(TAG, "Error in thermal data processing", e)
-                delay(1000) // Retry after error
+                delay(1000)
             }
         }
     }
@@ -310,15 +283,12 @@ class TC001DataManager(
         val frameData = ByteArray(THERMAL_FRAME_SIZE)
         val buffer = ByteBuffer.wrap(frameData)
 
-        // Generate realistic thermal gradient
         for (y in 0 until 192) {
             for (x in 0 until 256) {
-                // Create a temperature gradient with some noise
-                val baseTemp = 25.0f + (x / 256.0f) * 30.0f // 25°C to 55°C range
-                val noise = (Math.random() * 2.0f - 1.0f) // ±1°C noise
+                val baseTemp = 25.0f + (x / 256.0f) * 30.0f
+                val noise = (Math.random() * 2.0f - 1.0f)
                 val tempCelsius = baseTemp + noise
 
-                // Convert to raw sensor value
                 val tempKelvin = tempCelsius + TEMPERATURE_OFFSET
                 val rawValue = (tempKelvin / TEMPERATURE_SCALE_FACTOR).toInt().coerceIn(0, 65535)
 
@@ -334,10 +304,8 @@ class TC001DataManager(
      */
     private fun generateThermalBitmapFromIRCamera(processedData: ByteArray): android.graphics.Bitmap {
         return try {
-            // Use IRCamera's proven bitmap generation
             val bitmap = android.graphics.Bitmap.createBitmap(256, 192, android.graphics.Bitmap.Config.ARGB_8888)
 
-            // IRCamera processed data is typically RGB format
             var pixelIndex = 0
             for (y in 0 until 192) {
                 for (x in 0 until 256) {
@@ -355,7 +323,6 @@ class TC001DataManager(
             bitmap
         } catch (e: Exception) {
             Log.e(TAG, "Error generating bitmap from IRCamera data", e)
-            // Fallback to default bitmap
             generateFallbackThermalBitmap()
         }
     }
@@ -365,7 +332,6 @@ class TC001DataManager(
      */
     private fun generateFallbackThermalBitmap(): android.graphics.Bitmap {
         val bitmap = android.graphics.Bitmap.createBitmap(256, 192, android.graphics.Bitmap.Config.ARGB_8888)
-        // Fill with default thermal gradient
         for (y in 0 until 192) {
             for (x in 0 until 256) {
                 val gray = ((x / 256.0f) * 255).toInt()
@@ -384,7 +350,7 @@ class TC001DataManager(
         palette: TopdonThermalPalette,
     ): ByteArray {
         val buffer = ByteBuffer.wrap(frameData)
-        val processedData = ByteArray(256 * 192 * 3) // RGB output
+        val processedData = ByteArray(256 * 192 * 3)
         var outputIndex = 0
 
         val (minRange, maxRange) = _temperatureRange.value ?: (-20f to 150f)
@@ -394,10 +360,8 @@ class TC001DataManager(
             val tempKelvin = rawValue * TEMPERATURE_SCALE_FACTOR
             val tempCelsius = tempKelvin - TEMPERATURE_OFFSET
 
-            // Normalize temperature to 0-1 range
             val normalizedTemp = ((tempCelsius - minRange) / (maxRange - minRange)).coerceIn(0f, 1f)
 
-            // Apply palette
             val (r, g, b) =
                 when (palette) {
                     TopdonThermalPalette.IRON -> applyIronPalette(normalizedTemp)
@@ -415,7 +379,6 @@ class TC001DataManager(
     }
 
     private fun applyIronPalette(normalized: Float): Triple<Int, Int, Int> {
-        // Iron palette: black -> red -> yellow -> white
         return when {
             normalized < 0.25f -> {
                 val t = normalized * 4
@@ -436,8 +399,7 @@ class TC001DataManager(
     }
 
     private fun applyRainbowPalette(normalized: Float): Triple<Int, Int, Int> {
-        // Rainbow palette
-        val hue = normalized * 300f // 0 to 300 degrees
+        val hue = normalized * 300f
         return hsvToRgb(hue, 1f, 1f)
     }
 
@@ -520,7 +482,6 @@ class TC001DataManager(
         isProcessing = false
         processingScope.cancel()
 
-        // IRCamera LibIRParse and LibIRProcess are static utility classes - no cleanup needed
         Log.i(TAG, "TC001DataManager cleanup completed")
     }
 }

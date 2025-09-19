@@ -53,11 +53,9 @@ class Entry:
 
 
 def _iter_metadata_files(session_dir: str) -> Iterable[str]:
-    # Root metadata first
     root = os.path.join(session_dir, "metadata.json")
     if os.path.exists(root):
         yield root
-    # Then any nested metadata.json files
     for r, _dirs, files in os.walk(session_dir):
         for f in files:
             if f == "metadata.json":
@@ -72,7 +70,6 @@ def _normalize_alg(s: str | None, default_alg: str) -> str:
     s = s.lower().strip()
     if s in SUPPORTED_ALGS:
         return s
-    # Common variants
     if s in {"sha-256", "sha_256"}:
         return "sha256"
     return default_alg
@@ -111,7 +108,6 @@ def _collect_entries(meta_path: str, session_dir: str, default_alg: str) -> list
             )
         )
 
-    # file_manifest entries
     fm = data.get("file_manifest")
     if isinstance(fm, list):
         for it in fm:
@@ -123,7 +119,6 @@ def _collect_entries(meta_path: str, session_dir: str, default_alg: str) -> list
             size = it.get("size")
             add(filename, expected, alg, size)
 
-    # received_files entries (may or may not include checksum in future)
     rf = data.get("received_files")
     if isinstance(rf, list):
         for it in rf:
@@ -147,7 +142,6 @@ def _format_status(ok: bool | None) -> str:
 
 
 def _find_common_files(session_dir: str) -> list[str]:
-    # Typical files we want to suggest checksums for
     cands = [
         "gsr.csv",
         "thermal.csv",

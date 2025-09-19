@@ -29,11 +29,9 @@ data class ThermalFrame(
     val frameNumber: Int = 0,
     val isRealHardware: Boolean = false
 ) {
-    // Compatibility properties for existing code
     val minTemperature: Float get() = minTemp
     val maxTemperature: Float get() = maxTemp
     val averageTemperature: Float get() = avgTemp
-    // Generated bitmap for visualization
     var bitmap: Bitmap? = null
         private set
 
@@ -53,7 +51,6 @@ data class ThermalFrame(
                 0.5f
             }
             
-            // Simple thermal color mapping (blue -> red)
             val red = (normalizedTemp * 255).toInt().coerceIn(0, 255)
             val blue = ((1f - normalizedTemp) * 255).toInt().coerceIn(0, 255)
             val green = 0

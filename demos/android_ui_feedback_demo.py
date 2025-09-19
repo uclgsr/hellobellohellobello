@@ -33,18 +33,15 @@ class UIFeedbackDemo:
         print("📱 SENSOR SPOKE - UI FEEDBACK DEMO")
         print("="*60)
         
-        # Main status bar
         status_color = self.get_status_color(self.main_status)
         print(f"📊 Status: {status_color}{self.main_status}\033[0m")
         
-        # Recording timer (only shown when recording)
         if self.recording:
             timer = self.format_recording_time(self.recording_time)
             print(f"⏱️  Recording Time: \033[91m{timer}\033[0m")
         
         print("-" * 60)
         
-        # Sensor status indicators
         print("🔍 SENSOR STATUS INDICATORS:")
         for sensor_name, sensor_info in self.sensors.items():
             dot_color = self.get_sensor_dot_color(sensor_info["state"])
@@ -53,7 +50,6 @@ class UIFeedbackDemo:
         
         print("-" * 60)
         
-        # Button states
         start_btn = "🟢 Start Recording" if not self.recording else "🔴 Recording..."
         stop_btn = "🟢 Stop Recording" if self.recording else "⚫ Stop Recording"
         start_enabled = " (ENABLED)" if not self.recording else " (DISABLED)"
@@ -67,24 +63,24 @@ class UIFeedbackDemo:
     def get_status_color(self, status: str) -> str:
         """Get ANSI color code for status text"""
         if any(word in status.lower() for word in ["error", "failed"]):
-            return "\033[91m"  # Red
+            return "\033[91m"
         elif "recording" in status.lower():
-            return "\033[91m"  # Red
+            return "\033[91m"
         elif any(word in status.lower() for word in ["ready", "connected", "success"]):
-            return "\033[92m"  # Green
+            return "\033[92m"
         elif any(word in status.lower() for word in ["checking", "starting", "stopping"]):
-            return "\033[94m"  # Blue
+            return "\033[94m"
         else:
-            return "\033[0m"   # Default
+            return "\033[0m"
     
     def get_sensor_dot_color(self, state: SensorState) -> str:
         """Get colored dot for sensor state"""
         color_map = {
-            SensorState.ACTIVE: "\033[92m",      # Green
-            SensorState.SIMULATED: "\033[93m",   # Yellow
-            SensorState.CONNECTING: "\033[94m",  # Blue
-            SensorState.ERROR: "\033[91m",       # Red
-            SensorState.OFFLINE: "\033[90m"      # Gray
+            SensorState.ACTIVE: "\033[92m",
+            SensorState.SIMULATED: "\033[93m",
+            SensorState.CONNECTING: "\033[94m",
+            SensorState.ERROR: "\033[91m",
+            SensorState.OFFLINE: "\033[90m"
         }
         return color_map.get(state, "\033[90m")
     
@@ -100,12 +96,10 @@ class UIFeedbackDemo:
         print("🚀 Starting UI Feedback Demo...")
         time.sleep(1)
         
-        # Initial state
         self.main_status = "Ready to connect"
         self.display_ui_state()
         time.sleep(2)
         
-        # RGB Camera connects
         print("\n📹 Connecting RGB Camera...")
         self.sensors["RGB Camera"]["state"] = SensorState.CONNECTING
         self.sensors["RGB Camera"]["message"] = "Connecting..."
@@ -134,7 +128,6 @@ class UIFeedbackDemo:
         print("⚠️  NOTIFICATION: Thermal Camera Simulation (device not found)")
         time.sleep(2)
         
-        # GSR Sensor connection attempt
         print("\n🔋 Connecting GSR Sensor...")
         self.sensors["GSR Sensor"]["state"] = SensorState.CONNECTING
         self.sensors["GSR Sensor"]["message"] = "Scanning BLE..."
@@ -148,7 +141,6 @@ class UIFeedbackDemo:
         self.display_ui_state()
         time.sleep(2)
         
-        # PC Hub connection
         print("\n💻 Connecting to PC Hub...")
         self.sensors["PC Link"]["state"] = SensorState.CONNECTING
         self.sensors["PC Link"]["message"] = "Discovering..."
@@ -166,19 +158,16 @@ class UIFeedbackDemo:
         """Simulate a recording session"""
         print("\n🎬 Starting Recording Session...")
         
-        # Start recording
         self.recording = True
         self.recording_time = 0
         self.main_status = "Recording in progress..."
         self.display_ui_state()
         
-        # Simulate recording with timer
         for i in range(10):
             time.sleep(1)
             self.recording_time += 1
             self.display_ui_state()
             
-            # Simulate a brief sensor disconnection at 5 seconds
             if i == 4:
                 print("\n⚠️  TOAST: GSR sensor briefly disconnected...")
                 self.sensors["GSR Sensor"]["state"] = SensorState.ERROR
@@ -190,7 +179,6 @@ class UIFeedbackDemo:
                 self.sensors["GSR Sensor"]["state"] = SensorState.ACTIVE
                 self.sensors["GSR Sensor"]["message"] = "Connected"
         
-        # Stop recording
         print("\n🛑 Stopping Recording...")
         self.main_status = "Stopping recording..."
         self.display_ui_state()
@@ -202,7 +190,6 @@ class UIFeedbackDemo:
         self.display_ui_state()
         time.sleep(2)
         
-        # Recording summary
         print("\n📊 RECORDING SUMMARY:")
         print("   Session ID: session_001")
         print("   Duration: 00:00:10")
@@ -215,14 +202,12 @@ class UIFeedbackDemo:
         """Demonstrate error handling features"""
         print("\n❌ Demonstrating Error Handling...")
         
-        # Permission error
         self.main_status = "Error: Camera permission denied"
         self.display_ui_state()
         print("🚨 ERROR DIALOG: Camera permission is required to record RGB video")
         print("   [OK] button to dismiss")
         time.sleep(3)
         
-        # Sensor error
         self.sensors["Thermal Camera"]["state"] = SensorState.ERROR
         self.sensors["Thermal Camera"]["message"] = "Hardware Error"
         self.main_status = "Error: Thermal camera hardware failure"
@@ -230,7 +215,6 @@ class UIFeedbackDemo:
         print("🚨 TOAST: Thermal camera disconnected - data will be incomplete")
         time.sleep(3)
         
-        # Recovery
         print("\n🔄 Recovering from errors...")
         self.sensors["Thermal Camera"]["state"] = SensorState.SIMULATED
         self.sensors["Thermal Camera"]["message"] = "Simulated"
@@ -246,7 +230,6 @@ class UIFeedbackDemo:
         print("\nPress Enter to start...")
         input()
         
-        # Phase 1: Sensor connections
         self.simulate_sensor_connections()
         
         print("\n" + "="*60)
@@ -254,7 +237,6 @@ class UIFeedbackDemo:
         print("Press Enter to start recording session...")
         input()
         
-        # Phase 2: Recording session
         self.simulate_recording_session()
         
         print("\n" + "="*60)
@@ -262,7 +244,6 @@ class UIFeedbackDemo:
         print("Press Enter to demonstrate error handling...")
         input()
         
-        # Phase 3: Error handling
         self.demonstrate_error_handling()
         
         print("\n" + "="*60)

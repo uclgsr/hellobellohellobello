@@ -79,19 +79,17 @@ class CameraCalibrator(QObject if HAS_QT else object):
     """
 
     if HAS_QT:
-        progress_updated = pyqtSignal(int, str)  # progress, message
-        calibration_completed = pyqtSignal(object)  # CalibrationResult
-        error_occurred = pyqtSignal(str)  # error message
-        pattern_detected = pyqtSignal(int)  # number of corners detected
+        progress_updated = pyqtSignal(int, str)
+        calibration_completed = pyqtSignal(object)
+        error_occurred = pyqtSignal(str)
+        pattern_detected = pyqtSignal(int)
 
     def __init__(self):
         super().__init__()
 
-        # Standard checkerboard pattern (9x6 internal corners)
         self.pattern_size = (9, 6)
-        self.square_size_mm = 25.0  # 25mm squares
+        self.square_size_mm = 25.0
 
-        # Calibration criteria
         self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
         # Detection parameters
@@ -101,10 +99,9 @@ class CameraCalibrator(QObject if HAS_QT else object):
             + cv2.CALIB_CB_FAST_CHECK
         )
 
-        # Storage for calibration points
-        self.object_points = []  # 3D points in world coordinates
-        self.image_points_left = []  # 2D points in left image
-        self.image_points_right = []  # 2D points in right image (for stereo)
+        self.object_points = []
+        self.image_points_left = []
+        self.image_points_right = []
 
         self._prepare_object_points()
 
@@ -140,7 +137,6 @@ class CameraCalibrator(QObject if HAS_QT else object):
         """
         self.emit_progress(0, f"Collecting {camera_type} calibration images...")
 
-        # Common image extensions
         extensions = ["*.jpg", "*.jpeg", "*.png", "*.bmp", "*.tiff", "*.tif"]
 
         image_paths: list[Path] = []
@@ -152,7 +148,6 @@ class CameraCalibrator(QObject if HAS_QT else object):
             self.emit_progress(0, f"No images found in {image_dir}")
             return []
 
-        # Sort for consistent processing order
         image_paths.sort()
 
         self.emit_progress(10, f"Found {len(image_paths)} potential calibration images")
@@ -176,25 +171,22 @@ class CameraCalibrator(QObject if HAS_QT else object):
         self.emit_progress(20, "Detecting checkerboard patterns...")
 
         for i, img_path in enumerate(image_paths):
-            progress = 20 + int((i / len(image_paths)) * 60)  # 20% to 80%
+            progress = 20 + int((i / len(image_paths)) * 60)
             self.emit_progress(progress, f"Processing {img_path.name}...")
 
             try:
-                # Read image
                 img = cv2.imread(str(img_path))
                 if img is None:
                     continue
 
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                image_size = gray.shape[::-1]  # (width, height)
+                image_size = gray.shape[::-1]
 
-                # Find checkerboard corners
                 ret, corners = cv2.findChessboardCorners(
                     gray, self.pattern_size, self.detection_flags
                 )
 
                 if ret:
-                    # Refine corner positions to sub-pixel accuracy
                     corners_refined = cv2.cornerSubPix(
                         gray, corners, (11, 11), (-1, -1), self.criteria
                     )
@@ -233,7 +225,6 @@ class CameraCalibrator(QObject if HAS_QT else object):
         """
         self.emit_progress(0, f"Starting {camera_name} calibration...")
 
-        # Detect corners in all images
         corner_points, image_size = self.detect_checkerboard_corners(image_paths)
 
         if len(corner_points) < 5:
@@ -247,13 +238,11 @@ class CameraCalibrator(QObject if HAS_QT else object):
                 print(f"Error: {error_msg}")
             return None
 
-        # Prepare object points (same for all images)
         object_points = [self.objp for _ in corner_points]
 
         self.emit_progress(85, "Running camera calibration...")
 
         try:
-            # Calibrate camera
             ret, camera_matrix, dist_coeffs, rvecs, tvecs = cv2.calibrateCamera(
                 object_points,
                 corner_points,
@@ -269,7 +258,6 @@ class CameraCalibrator(QObject if HAS_QT else object):
                     self.error_occurred.emit(error_msg)
                 return None
 
-            # Calculate reprojection error
             total_error = 0
             for i in range(len(object_points)):
                 proj_points, _ = cv2.projectPoints(
@@ -282,7 +270,6 @@ class CameraCalibrator(QObject if HAS_QT else object):
 
             mean_error = total_error / len(object_points)
 
-            # Create result
             result = CalibrationResult(
                 camera_matrix=camera_matrix,
                 distortion_coeffs=dist_coeffs,
@@ -314,7 +301,6 @@ class CameraCalibrator(QObject if HAS_QT else object):
 
     def save_calibration_result(self, result: CalibrationResult, output_path: Path):
         """Save calibration result to JSON file."""
-        # Convert numpy arrays to lists for JSON serialization
         result_dict = {
             "camera_matrix": result.camera_matrix.tolist(),
             "distortion_coeffs": result.distortion_coeffs.tolist(),
@@ -382,7 +368,6 @@ def calibrate_camera_from_directory(
 
 
 if __name__ == "__main__":
-    # Command line interface
     import argparse
 
     parser = argparse.ArgumentParser(description="Camera calibration utility")
