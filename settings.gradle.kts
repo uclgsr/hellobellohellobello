@@ -23,9 +23,6 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") }
         // Huawei repository for HMS services
         maven { url = uri("https://developer.huawei.com/repo/") }
-        // Additional repositories for specialized SDKs
-        maven { url = uri("https://maven.google.com") }
-        maven { url = uri("https://repo1.maven.org/maven2/") }
     }
 }
 

@@ -182,7 +182,7 @@ This document describes the comprehensive build system optimizations applied to 
 
 ## Compatibility
 
-- **Gradle**: 8.14+ with configuration cache support
+- **Gradle**: 8.14 (current version in use) with configuration cache support
 - **Android Gradle Plugin**: 8.1.4
 - **Kotlin**: 1.9.25
 - **Java**: 17 (target and source compatibility)

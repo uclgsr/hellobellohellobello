@@ -17,10 +17,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        // Build configuration fields
-        buildConfigField("String", "BUILD_TYPE", "\"debug\"")
-        buildConfigField("long", "BUILD_TIME", "${System.currentTimeMillis()}L")
-        buildConfigField("String", "GIT_SHA", "\"${getGitSha()}\"")
+        // Common build configuration fields
+        // Note: BUILD_TYPE is defined per build type to ensure correct values
     }
 
     buildTypes {
@@ -31,6 +29,7 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
             
+            buildConfigField("String", "BUILD_TYPE", "\"debug\"")
             buildConfigField("boolean", "DEBUG_MODE", "true")
             buildConfigField("String", "API_BASE_URL", "\"http://localhost:8080\"")
             
@@ -46,6 +45,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             
+            buildConfigField("String", "BUILD_TYPE", "\"release\"")
             buildConfigField("boolean", "DEBUG_MODE", "false")
             buildConfigField("String", "API_BASE_URL", "\"https://api.production.com\"")
             
@@ -64,6 +64,7 @@ android {
             versionNameSuffix = "-STAGING"
             isDebuggable = true
             
+            buildConfigField("String", "BUILD_TYPE", "\"staging\"")
             buildConfigField("boolean", "DEBUG_MODE", "true")
             buildConfigField("String", "API_BASE_URL", "\"https://staging-api.com\"")
         }
@@ -154,19 +155,10 @@ android {
     
     // Lint configuration
     lint {
-        abortOnError = false
-        checkReleaseBuilds = false
+        abortOnError = System.getenv("CI") == "true"
+        checkReleaseBuilds = true
         disable += setOf("MissingTranslation", "UnusedResources")
     }
-}
-
-// Helper function to get Git SHA for build metadata  
-fun getGitSha(): String {
-    // Configuration cache compatible approach
-    return providers.exec {
-        commandLine("git", "rev-parse", "--short", "HEAD")
-        workingDir(rootProject.projectDir)
-    }.standardOutput.asText.get().trim().ifEmpty { "unknown" }
 }
 
 dependencies {
@@ -301,7 +293,7 @@ tasks.register("assembleAllVariants") {
 
 tasks.register("testAllVariants") {
     group = "verification"  
-    description = "Run tests for all build variants"
+    description = "Run unit tests for all debug build variants"
     dependsOn(
         "testFullDebugUnitTest",
         "testLiteDebugUnitTest"

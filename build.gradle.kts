@@ -58,8 +58,8 @@ tasks.register("buildRelease") {
         dependsOn(
             ":android_sensor_node:app:assembleFullRelease",
             ":android_sensor_node:app:assembleLiteRelease",
-            ":android_sensor_node:app:testFullReleaseUnitTest",
-            ":android_sensor_node:app:testLiteReleaseUnitTest"
+            ":android_sensor_node:app:testFullDebugUnitTest",
+            ":android_sensor_node:app:testLiteDebugUnitTest"
         )
     }
     dependsOn(":pc_controller:assemblePcController")
