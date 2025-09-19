@@ -198,12 +198,11 @@ class RgbPreviewFragment : Fragment() {
             }
                 resolutionText?.text = "Resolution: ${bitmap.width}x${bitmap.height}"
 
-                // Calculate frame rate
                 frameCount++
                 val currentTime = System.currentTimeMillis()
                 if (lastFrameTime > 0) {
                     val deltaMs = currentTime - lastFrameTime
-                    if (deltaMs > 1000) { // Update every second
+                    if (deltaMs > 1000) {
                         val fps = (frameCount * 1000.0 / deltaMs).toInt()
                         framerateText?.text = "Frame Rate: $fps fps"
                         frameCount = 0

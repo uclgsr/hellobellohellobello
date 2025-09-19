@@ -38,9 +38,9 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
     """Production-ready HDF5 exporter with enhanced features."""
 
     if HAS_QT:
-        progress_updated = pyqtSignal(int, str)  # progress, message
-        export_completed = pyqtSignal(str)  # output_file_path
-        export_error = pyqtSignal(str)  # error_message
+        progress_updated = pyqtSignal(int, str)
+        export_completed = pyqtSignal(str)
+        export_error = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -77,14 +77,12 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
         try:
             self.emit_progress(0, "Starting production HDF5 export...")
 
-            # Validate input
             if not session_dir.exists():
                 raise ValueError(f"Session directory not found: {session_dir}")
 
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
             with h5py.File(output_path, "w") as hdf:
-                # Enhanced metadata
                 export_metadata = {
                     "export_timestamp": datetime.now(UTC).isoformat(),
                     "exporter_version": "2.0.0-production",
@@ -104,10 +102,8 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
 
                 hdf.attrs["session_metadata_json"] = json.dumps(export_metadata)
 
-                # Process data files with integrity checking
                 self._process_data_files_with_integrity(hdf, session_dir)
 
-                # Write hardware metadata
                 self._write_hardware_metadata(hdf, session_dir)
 
                 self.emit_progress(100, "Production export completed")
@@ -136,26 +132,22 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
             rel_path = csv_file.relative_to(session_dir)
             self.emit_progress(progress, f"Processing {rel_path}")
 
-            # Calculate file checksum
             file_md5 = self._calculate_file_md5(csv_file)
             integrity_group.attrs[f"{rel_path.as_posix().replace('/', '_')}_md5"] = (
                 file_md5
             )
 
-            # Process CSV content
             try:
                 df = pd.read_csv(csv_file)
                 if df.empty:
                     continue
 
-                # Determine group structure
                 parts = rel_path.parts
                 device = parts[0] if len(parts) > 1 else "PC"
                 modality = rel_path.stem
 
                 group = hdf.require_group(f"devices/{device}/{modality}")
 
-                # Process timestamps
                 timestamp_col = self._find_timestamp_column(df.columns)
                 if timestamp_col:
                     timestamps = np.array(df[timestamp_col], dtype=np.int64)
@@ -167,11 +159,9 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
                     )
                     df = df.drop(columns=[timestamp_col])
 
-                # Process data columns
                 for col in df.columns:
                     self._create_optimized_dataset(group, col, df[col])
 
-                # Add metadata
                 group.attrs["sample_count"] = len(df)
                 group.attrs["source_file"] = str(rel_path)
                 group.attrs["data_integrity_md5"] = file_md5
@@ -193,11 +183,9 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
     ):
         """Create optimized HDF5 dataset for the given column."""
         if series.dtype == "object":
-            # String data
             dt = h5py.string_dtype(encoding="utf-8")
             group.create_dataset(col_name, data=series.values, dtype=dt)
         elif series.dtype.kind in ["i", "u"]:
-            # Integer data - optimize size
             if series.max() <= 65535 and series.min() >= 0:
                 data = series.astype(np.uint16)
             elif series.max() <= 32767 and series.min() >= -32768:
@@ -212,7 +200,6 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
                 compression_opts=self.compression_level,
             )
         elif series.dtype.kind == "f":
-            # Float data - use float32 for efficiency
             data = series.astype(np.float32)
             group.create_dataset(
                 col_name,
@@ -221,7 +208,6 @@ class ProductionHDF5Exporter(QObject if HAS_QT else object):
                 compression_opts=self.compression_level,
             )
         else:
-            # Default
             group.create_dataset(col_name, data=series.values)
 
     def _calculate_file_md5(self, file_path: Path) -> str:
@@ -283,7 +269,6 @@ def export_session_production(
 
 
 if __name__ == "__main__":
-    # Command line interface
     import argparse
 
     parser = argparse.ArgumentParser(description="Production HDF5 export")

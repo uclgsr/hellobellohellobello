@@ -19,7 +19,6 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
-# Set up logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -33,7 +32,7 @@ class CodeIssue(NamedTuple):
     line_number: int
     issue_type: str  # TODO, FIXME, INCOMPLETE, etc.
     description: str
-    severity: str  # HIGH, MEDIUM, LOW
+    severity: str
 
 
 class SystemValidator:
@@ -49,7 +48,6 @@ class SystemValidator:
         """Scan the entire codebase for issues that need attention."""
         logger.info("🔍 Starting comprehensive codebase scan...")
 
-        # Define file patterns to scan
         patterns = [
             "**/*.py",
             "**/*.kt",
@@ -75,7 +73,6 @@ class SystemValidator:
 
     def _should_scan_file(self, file_path: Path) -> bool:
         """Determine if a file should be scanned."""
-        # Skip build artifacts, dependencies, and generated files
         skip_patterns = [
             ".git",
             "build",
@@ -97,7 +94,7 @@ class SystemValidator:
 
         return (
             file_path.is_file() and file_path.stat().st_size < 1024 * 1024
-        )  # Skip large files
+        )
 
     def _scan_file(self, file_path: Path) -> None:
         """Scan a single file for issues."""
@@ -140,7 +137,6 @@ class SystemValidator:
                 )
             )
 
-        # Check for placeholder implementations
         if any(
             keyword in line_lower
             for keyword in ["placeholder", "stub", "not implemented"]
@@ -156,7 +152,6 @@ class SystemValidator:
                     )
                 )
 
-        # Check for empty exception handlers
         if re.search(r"except.*:\s*pass\s*$", line_lower):
             self.issues.append(
                 CodeIssue(
@@ -176,7 +171,6 @@ class SystemValidator:
         report.append("=" * 80)
         report.append("")
 
-        # Summary by type
         issue_counts: dict[str, int] = {}
         for issue in self.issues:
             issue_counts[issue.issue_type] = issue_counts.get(issue.issue_type, 0) + 1
@@ -186,17 +180,15 @@ class SystemValidator:
             report.append(f"   {issue_type}: {count}")
         report.append("")
 
-        # High priority issues
         high_priority = [i for i in self.issues if i.severity == "HIGH"]
         if high_priority:
             report.append("🚨 HIGH PRIORITY ISSUES:")
             report.extend(
                 f"   {issue.file_path}:{issue.line_number} - {issue.description}"
-                for issue in high_priority[:10]  # Show top 10
+                for issue in high_priority[:10]
             )
             report.append("")
 
-        # System status
         total_issues = len(self.issues)
         if total_issues == 0:
             report.append("✅ SYSTEM STATUS: All TODO/FIXME items have been addressed!")
@@ -240,10 +232,8 @@ class SystemValidator:
             if issue.line_number <= len(lines):
                 original_line = lines[issue.line_number - 1]
 
-                # Replace common placeholder patterns
                 improved_line = original_line
                 if "placeholder" in original_line.lower():
-                    # No meaningful auto-fix available for this placeholder.
                     return False
 
                 if improved_line != original_line:
@@ -268,7 +258,6 @@ class SystemValidator:
 
         results = {}
 
-        # Test Android build
         android_path = self.repo_root / "android_sensor_node"
         if android_path.exists():
             try:
@@ -291,7 +280,6 @@ class SystemValidator:
                 logger.error(f"❌ Android build validation failed: {e}")
                 results["android_build"] = False
 
-        # Test PC Controller imports
         pc_path = self.repo_root / "pc_controller" / "src"
         if pc_path.exists():
             try:
@@ -315,20 +303,15 @@ def main():
         print("🚀 Starting hellobellohellobello System Validation")
         print("=" * 60)
 
-        # Scan for issues
         issues = validator.scan_codebase()
 
-        # Try to auto-fix simple issues
         fixes_made = validator.auto_fix_simple_issues()
 
-        # Validate build systems
         build_results = validator.validate_build_systems()
 
-        # Generate and display report
         report = validator.generate_report()
         print(report)
 
-        # Build system results
         print("🔧 BUILD SYSTEM VALIDATION:")
         for system, success in build_results.items():
             status = "✅ PASS" if success else "❌ FAIL"
@@ -338,7 +321,6 @@ def main():
         if fixes_made > 0:
             print(f"🔧 AUTO-FIXES APPLIED: {fixes_made}")
 
-        # Determine exit code
         high_priority_count = len([i for i in issues if i.severity == "HIGH"])
         if high_priority_count == 0 and all(build_results.values()):
             print("🎉 VALIDATION COMPLETE: System is in excellent condition!")

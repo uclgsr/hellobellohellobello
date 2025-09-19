@@ -14,7 +14,6 @@ def setup_linting_tools():
     """Install and configure linting tools"""
     print("Setting up code quality tools...")
 
-    # Install linting tools
     tools = ["ruff>=0.1.0", "mypy>=1.7.0", "black>=23.0.0", "isort>=5.12.0"]
 
     for tool in tools:
@@ -42,7 +41,6 @@ def run_linting():
         print("❌ pc_controller/src directory not found")
         return False
 
-    # 1. Run ruff for fast linting
     print("\n1. Running Ruff linting...")
     try:
         result = subprocess.run(
@@ -60,7 +58,6 @@ def run_linting():
     except FileNotFoundError:
         print("❌ Ruff not available")
 
-    # 2. Run mypy for type checking
     print("\n2. Running MyPy type checking...")
     try:
         result = subprocess.run(
@@ -78,7 +75,6 @@ def run_linting():
     except FileNotFoundError:
         print("❌ MyPy not available")
 
-    # 3. Check code formatting with black
     print("\n3. Checking code formatting with Black...")
     try:
         result = subprocess.run(
@@ -96,7 +92,6 @@ def run_linting():
     except FileNotFoundError:
         print("❌ Black not available")
 
-    # 4. Check import sorting with isort
     print("\n4. Checking import sorting with isort...")
     try:
         result = subprocess.run(
@@ -125,7 +120,6 @@ def fix_code_issues():
 
     pc_controller_src = Path("pc_controller/src")
 
-    # 1. Auto-fix with ruff
     print("\n1. Auto-fixing with Ruff...")
     try:
         result = subprocess.run(
@@ -142,7 +136,6 @@ def fix_code_issues():
     except FileNotFoundError:
         print("❌ Ruff not available for auto-fix")
 
-    # 2. Auto-format with black
     print("\n2. Auto-formatting with Black...")
     try:
         result = subprocess.run(
@@ -157,7 +150,6 @@ def fix_code_issues():
     except FileNotFoundError:
         print("❌ Black not available for auto-formatting")
 
-    # 3. Auto-sort imports with isort
     print("\n3. Auto-sorting imports with isort...")
     try:
         result = subprocess.run(
@@ -325,7 +317,6 @@ def generate_quality_report():
 
     pc_controller_src = Path("pc_controller/src")
 
-    # Count files and lines
     py_files = list(pc_controller_src.rglob("*.py"))
     total_lines = 0
 
@@ -340,7 +331,6 @@ def generate_quality_report():
     print(f"  Python files: {len(py_files)}")
     print(f"  Total lines: {total_lines:,}")
 
-    # Run metrics
     try:
         # Count TODO/FIXME comments
         todo_count = 0
@@ -361,7 +351,6 @@ def generate_quality_report():
     except Exception as e:
         print(f"Error generating metrics: {e}")
 
-    # Test coverage info
     test_files = (
         list(Path("pc_controller/tests").rglob("test_*.py"))
         if Path("pc_controller/tests").exists()

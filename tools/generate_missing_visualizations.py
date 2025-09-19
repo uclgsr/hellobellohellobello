@@ -12,7 +12,6 @@ from pathlib import Path
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
-# Set up matplotlib for publication quality
 plt.style.use('seaborn-v0_8')
 plt.rcParams.update(
     {
@@ -34,7 +33,6 @@ def ensure_directory_exists(path):
 def create_table_6_1_evaluation_summary(output_dir):
     """Create Table 6.1: Evaluation of Project Objectives visualization."""
 
-    # Data from the problem statement requirements
     objectives_data = {
         'Objective': [
             'Objective 1: Multi-Modal\nSensor Integration',
@@ -57,12 +55,10 @@ def create_table_6_1_evaluation_summary(output_dir):
         'Status': ['PARTIAL', 'ACHIEVED', 'ACHIEVED', 'ACHIEVED'],
     }
 
-    # Create figure
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
     ax.axis('tight')
     ax.axis('off')
 
-    # Create table
     table_data = []
     for i in range(len(objectives_data['Objective'])):
         row = [
@@ -73,7 +69,6 @@ def create_table_6_1_evaluation_summary(output_dir):
         ]
         table_data.append(row)
 
-    # Colors based on status
     colors = []
     for status in objectives_data['Status']:
         if status == 'ACHIEVED':
@@ -95,9 +90,8 @@ def create_table_6_1_evaluation_summary(output_dir):
     table.set_fontsize(9)
     table.scale(1, 2.5)
 
-    # Style header
     for i in range(4):
-        table[(0, i)].set_facecolor('#4472C4')
+        table[(0, i)].set_facecolor('
         table[(0, i)].set_text_props(weight='bold', color='white')
         table[(0, i)].set_height(0.1)
 
@@ -119,41 +113,39 @@ def create_testing_strategy_pyramid(output_dir):
 
     fig, ax = plt.subplots(1, 1, figsize=(12, 8))
 
-    # Pyramid levels (bottom to top)
     levels = [
         {
             'name': 'Unit Tests',
             'width': 8,
             'height': 1.5,
-            'color': '#E3F2FD',
+            'color': '
             'details': '200+ tests\n89% coverage\nFast execution',
         },
         {
             'name': 'Integration Tests',
             'width': 6,
             'height': 1.5,
-            'color': '#E8F5E8',
+            'color': '
             'details': 'Multi-device\nProtocol validation\nPipeline testing',
         },
         {
             'name': 'System Tests',
             'width': 4,
             'height': 1.5,
-            'color': '#F3E5F5',
+            'color': '
             'details': '8-hour endurance\nPerformance metrics\nSecurity validation',
         },
         {
             'name': 'User Acceptance',
             'width': 2,
             'height': 1.5,
-            'color': '#FFF3E0',
+            'color': '
             'details': 'Usability testing\nHardware validation\nWorkflow verification',
         },
     ]
 
     y_pos = 0
     for level in levels:
-        # Draw rectangle
         rect = mpatches.Rectangle(
             (-level['width'] / 2, y_pos),
             level['width'],
@@ -164,7 +156,6 @@ def create_testing_strategy_pyramid(output_dir):
         )
         ax.add_patch(rect)
 
-        # Add label
         ax.text(
             0,
             y_pos + level['height'] / 2,
@@ -175,7 +166,6 @@ def create_testing_strategy_pyramid(output_dir):
             fontweight='bold',
         )
 
-        # Add details
         ax.text(
             level['width'] / 2 + 0.5,
             y_pos + level['height'] / 2,
@@ -215,7 +205,6 @@ def create_sensor_specifications_table(output_dir):
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
 
-    # Shimmer3 GSR+ specifications
     shimmer_data = [
         ['Parameter', 'Specification', 'Research Relevance'],
         ['Sampling Rate', '128 Hz (configurable)', 'Captures rapid GSR changes'],
@@ -237,14 +226,12 @@ def create_sensor_specifications_table(output_dir):
     table1.set_fontsize(9)
     table1.scale(1, 1.5)
 
-    # Style header
     for i in range(3):
-        table1[(0, i)].set_facecolor('#4472C4')
+        table1[(0, i)].set_facecolor('
         table1[(0, i)].set_text_props(weight='bold', color='white')
 
     ax1.set_title('Shimmer3 GSR+ Sensor Specifications', fontsize=12, fontweight='bold', pad=10)
 
-    # Topdon TC001 specifications
     thermal_data = [
         ['Parameter', 'Specification', 'Research Relevance'],
         ['Resolution', '256 x 192 pixels', 'Adequate facial ROI detail'],
@@ -266,9 +253,8 @@ def create_sensor_specifications_table(output_dir):
     table2.set_fontsize(9)
     table2.scale(1, 1.5)
 
-    # Style header
     for i in range(3):
-        table2[(0, i)].set_facecolor('#D32F2F')
+        table2[(0, i)].set_facecolor('
         table2[(0, i)].set_text_props(weight='bold', color='white')
 
     ax2.set_title(
@@ -347,7 +333,6 @@ def create_stress_indicators_comparison(output_dir):
         ],
     ]
 
-    # Colors based on research suitability
     colors = []
     for row in comparison_data[1:]:
         suitability = row[5]
@@ -372,9 +357,8 @@ def create_stress_indicators_comparison(output_dir):
     table.set_fontsize(8)
     table.scale(1, 2)
 
-    # Style header
     for i in range(6):
-        table[(0, i)].set_facecolor('#2E7D32')
+        table[(0, i)].set_facecolor('
         table[(0, i)].set_text_props(weight='bold', color='white')
 
     plt.title(
@@ -448,7 +432,6 @@ def main():
 
     print("Generating missing thesis visualizations...")
 
-    # Create output directories
     images_dir = Path(__file__).parent.parent / "images"
     chapter_dirs = {
         'chapter1': images_dir / "chapter1_introduction",
@@ -462,7 +445,6 @@ def main():
         ensure_directory_exists(chapter_dir)
 
     try:
-        # Generate missing visualizations
         print("\nGenerating Chapter 2 visualizations...")
         create_sensor_specifications_table(chapter_dirs['chapter2'])
         create_stress_indicators_comparison(chapter_dirs['chapter2'])
@@ -473,7 +455,6 @@ def main():
         print("\nGenerating Chapter 6 visualizations...")
         create_table_6_1_evaluation_summary(chapter_dirs['chapter6'])
 
-        # Validate evidence completeness
         print("\n" + "=" * 60)
         evidence_dir = Path(__file__).parent.parent / "docs" / "evidence"
         validate_evidence_completeness(evidence_dir)

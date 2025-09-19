@@ -19,10 +19,6 @@ from __future__ import annotations
 
 import contextlib
 
-# Attempt to locate the native extension.
-# We support two layouts:
-# 1) pc_controller.native_backend.native_backend (compiled module as submodule)
-# 2) pc_controller.native_backend (compiled module as package-level)
 import importlib
 import threading
 import time
@@ -32,12 +28,12 @@ import numpy as np
 
 _ns_cls = None
 _nw_cls = None
-try:  # compiled as submodule
+try:
     nb_mod = importlib.import_module("pc_controller.native_backend.native_backend")
     _ns_cls = getattr(nb_mod, "NativeShimmer", None)
     _nw_cls = getattr(nb_mod, "NativeWebcam", None)
 except Exception:
-    try:  # compiled as package-level
+    try:
         nb_pkg = importlib.import_module("pc_controller.native_backend")
         _ns_cls = getattr(nb_pkg, "NativeShimmer", None)
         _nw_cls = getattr(nb_pkg, "NativeWebcam", None)
@@ -67,7 +63,6 @@ class ShimmerInterface:
         self._samples_processed = 0
         self._native_backend_active = False
 
-    # Public API
     def start(self) -> None:
         if self._running:
             return
@@ -78,20 +73,16 @@ class ShimmerInterface:
                 self._native.connect(self._port)
                 self._native.start_streaming()
                 self._native_backend_active = True
-                # Start polling thread to transfer from native queue to python deque
                 self._thread = threading.Thread(target=self._native_loop, daemon=True)
                 self._thread.start()
                 print(f"ShimmerInterface: Started with native C++ backend for high-performance GSR capture")
                 return
             except Exception as e:
-                # Fall back to simulated if native fails
                 self._use_native = False
                 print(f"ShimmerInterface: Native backend failed ({e}), falling back to simulation")
-        # Simulated generator
         self._thread = threading.Thread(target=self._sim_loop, daemon=True)
         self._thread.start()
         print("ShimmerInterface: Started with Python simulation backend")
-        # Seed with an immediate sample to avoid race in tests
         with self._lock:
             now = time.monotonic()
             self._buf_ts.append(now)
@@ -137,14 +128,11 @@ class ShimmerInterface:
             "backend_type": "C++ Native" if self._native_backend_active else "Python Simulation"
         }
 
-    # Internal loops
     def _native_loop(self) -> None:
-        # Poll native queue at ~200 Hz
         poll_dt = 0.005
         while self._running:
             try:
                 samples = self._native.get_latest_samples()  # type: ignore[attr-defined]
-                # Expect list/tuple of (timestamp_seconds, value_microsiemens)
                 if samples:
                     with self._lock:
                         for t, v in samples:
@@ -153,7 +141,6 @@ class ShimmerInterface:
                             self._samples_processed += 1
             except Exception as e:
                 print(f"ShimmerInterface: Native loop failed ({e}), falling back to simulation")
-                # If native loop errors persistently, downgrade to simulation
                 self._use_native = False
                 self._native_backend_active = False
                 self._native = None
@@ -162,7 +149,6 @@ class ShimmerInterface:
             time.sleep(poll_dt)
 
     def _sim_loop(self) -> None:
-        # 128 Hz sine + noise around 10 uS baseline
         rate = 128.0
         dt = 1.0 / rate
         phase = 0.0
@@ -173,13 +159,12 @@ class ShimmerInterface:
             if now < t_next:
                 time.sleep(max(0.0, t_next - now))
                 continue
-            # generate one sample
             val = 10.0 + 2.0 * np.sin(phase) + np.random.normal(0.0, 0.05)
             with self._lock:
                 self._buf_ts.append(now)
                 self._buf_vals.append(val)
                 self._samples_processed += 1
-            phase = (phase + two_pi * dt * 1.2) % two_pi  # 1.2 Hz wave
+            phase = (phase + two_pi * dt * 1.2) % two_pi
             t_next += dt
 
 
@@ -208,7 +193,6 @@ class WebcamInterface:
                 self._native.start_capture()
                 self._thread = threading.Thread(target=self._native_loop, daemon=True)
                 self._thread.start()
-                # Initialize with default frame to prevent race conditions during startup
                 with self._lock:
                     if self._frame is None:
                         self._frame = np.zeros(
@@ -217,7 +201,6 @@ class WebcamInterface:
                 return
             except Exception:
                 self._use_native = False
-        # Try OpenCV
         try:
             import cv2  # type: ignore
 
@@ -230,7 +213,6 @@ class WebcamInterface:
                     pass
                 self._thread = threading.Thread(target=self._cv_loop, daemon=True)
                 self._thread.start()
-                # Initialize default frame to prevent race conditions during startup
                 with self._lock:
                     if self._frame is None:
                         self._frame = np.zeros(
@@ -239,10 +221,8 @@ class WebcamInterface:
                 return
         except Exception:
             self._cap = None
-        # Fallback synthetic
         self._thread = threading.Thread(target=self._synthetic_loop, daemon=True)
         self._thread.start()
-        # Initialize default frame to prevent race conditions during startup
         with self._lock:
             if self._frame is None:
                 self._frame = np.zeros((self._height, self._width, 3), dtype=np.uint8)
@@ -265,9 +245,8 @@ class WebcamInterface:
         with self._lock:
             return None if self._frame is None else self._frame.copy()
 
-    # Internal loops
     def _native_loop(self) -> None:
-        poll_dt = 0.01  # 100 Hz polling
+        poll_dt = 0.01
         while self._running:
             try:
                 frame = self._native.get_latest_frame()  # type: ignore[attr-defined]
@@ -291,7 +270,6 @@ class WebcamInterface:
                 time.sleep(0.01)
 
     def _synthetic_loop(self) -> None:
-        # Moving gradient with timestamp overlay (if cv2 available)
         try:
             import cv2  # type: ignore
         except Exception:

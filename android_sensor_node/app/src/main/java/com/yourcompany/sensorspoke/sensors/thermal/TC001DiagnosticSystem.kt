@@ -35,10 +35,9 @@ class TC001DiagnosticSystem(
         private const val TAG = "TC001DiagnosticSystem"
         private val DATE_FORMATTER = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
 
-        // Diagnostic thresholds
-        private const val MIN_USB_SPEED_MBPS = 100.0 // Minimum USB speed for thermal streaming
-        private const val MAX_LATENCY_MS = 50.0 // Maximum acceptable processing latency
-        private const val MIN_FRAME_RATE = 20.0 // Minimum acceptable frame rate
+        private const val MIN_USB_SPEED_MBPS = 100.0
+        private const val MAX_LATENCY_MS = 50.0
+        private const val MIN_FRAME_RATE = 20.0
         private const val MEMORY_WARNING_MB = 100.0 // Memory usage warning threshold
     }
 
@@ -64,32 +63,27 @@ class TC001DiagnosticSystem(
 
                 val diagnostics = mutableListOf<TC001DiagnosticTest>()
 
-                // Hardware diagnostics
                 _diagnosticProgress.postValue(TC001DiagnosticProgress(10, "Testing hardware connectivity..."))
                 diagnostics.add(testHardwareConnectivity())
 
                 _diagnosticProgress.postValue(TC001DiagnosticProgress(25, "Testing USB communication..."))
                 diagnostics.add(testUSBCommunication())
 
-                // System diagnostics
                 _diagnosticProgress.postValue(TC001DiagnosticProgress(40, "Testing system performance..."))
                 diagnostics.add(testSystemPerformance())
 
                 _diagnosticProgress.postValue(TC001DiagnosticProgress(55, "Testing memory management..."))
                 diagnostics.add(testMemoryManagement())
 
-                // Software diagnostics
                 _diagnosticProgress.postValue(TC001DiagnosticProgress(70, "Testing thermal processing..."))
                 diagnostics.add(testThermalProcessing())
 
                 _diagnosticProgress.postValue(TC001DiagnosticProgress(85, "Testing data pipeline..."))
                 diagnostics.add(testDataPipeline())
 
-                // Integration diagnostics
                 _diagnosticProgress.postValue(TC001DiagnosticProgress(95, "Testing component integration..."))
                 diagnostics.add(testComponentIntegration())
 
-                // Generate overall assessment
                 val overallResult = assessOverallHealth(diagnostics)
 
                 val results =
@@ -174,13 +168,11 @@ class TC001DiagnosticSystem(
      */
     private fun testUSBCommunication(): TC001DiagnosticTest =
         try {
-            // Simulate USB speed test
             val startTime = System.nanoTime()
-            val testDataSize = 1024 * 1024 // 1MB test data
+            val testDataSize = 1024 * 1024
             val testData = ByteArray(testDataSize) { it.toByte() }
 
-            // Simulate USB transfer
-            Thread.sleep(50) // Simulate transfer time
+            Thread.sleep(50)
 
             val endTime = System.nanoTime()
             val transferTimeMs = (endTime - startTime) / 1_000_000.0
@@ -273,19 +265,17 @@ class TC001DiagnosticSystem(
         try {
             val initialMemory = Runtime.getRuntime().freeMemory()
 
-            // Allocate thermal data simulation
             val thermalFrames = mutableListOf<ByteArray>()
             repeat(100) {
-                thermalFrames.add(ByteArray(256 * 192 * 4)) // ARGB thermal frame
+                thermalFrames.add(ByteArray(256 * 192 * 4))
             }
 
             val afterAllocationMemory = Runtime.getRuntime().freeMemory()
             val allocatedMB = (initialMemory - afterAllocationMemory) / (1024.0 * 1024.0)
 
-            // Clear data and suggest GC
             thermalFrames.clear()
             System.gc()
-            Thread.sleep(100) // Allow GC to run
+            Thread.sleep(100)
 
             val afterGCMemory = Runtime.getRuntime().freeMemory()
             val releasedMB = (afterGCMemory - afterAllocationMemory) / (1024.0 * 1024.0)
@@ -328,18 +318,15 @@ class TC001DiagnosticSystem(
         try {
             val startTime = System.nanoTime()
 
-            // Test thermal data processing
             val thermalData =
                 FloatArray(256 * 192) { index ->
                     25.0f + kotlin.math.sin(index * 0.01f) * 10.0f
                 }
 
-            // Test temperature statistics calculation
             val minTemp = thermalData.minOrNull() ?: 0f
             val maxTemp = thermalData.maxOrNull() ?: 0f
             val avgTemp = thermalData.average().toFloat()
 
-            // Test thermal bitmap generation
             val bitmap = android.graphics.Bitmap.createBitmap(256, 192, android.graphics.Bitmap.Config.ARGB_8888)
             for (y in 0 until 192) {
                 for (x in 0 until 256) {
@@ -351,7 +338,7 @@ class TC001DiagnosticSystem(
             }
 
             val endTime = System.nanoTime()
-            val processingTime = (endTime - startTime) / 1_000_000.0 // milliseconds
+            val processingTime = (endTime - startTime) / 1_000_000.0
 
             val testResult =
                 when {
@@ -391,18 +378,15 @@ class TC001DiagnosticSystem(
      */
     private fun testDataPipeline(): TC001DiagnosticTest =
         try {
-            // Test data flow simulation
             var dataFlowSuccess = true
             var processedFrames = 0
             val testFrames = 100
 
             repeat(testFrames) { index ->
                 try {
-                    // Simulate thermal data processing pipeline
                     val thermalData = FloatArray(256 * 192) { 25.0f + index * 0.1f }
                     val timestamp = System.nanoTime()
 
-                    // Simulate data validation
                     if (thermalData.all { it > -50f && it < 500f }) {
                         processedFrames++
                     }
@@ -450,7 +434,6 @@ class TC001DiagnosticSystem(
         try {
             val integrationTests = mutableMapOf<String, Boolean>()
 
-            // Test TC001IntegrationManager
             try {
                 val manager = TC001IntegrationManager(context)
                 integrationTests["IntegrationManager"] = true
@@ -458,7 +441,6 @@ class TC001DiagnosticSystem(
                 integrationTests["IntegrationManager"] = false
             }
 
-            // Test TC001Connector
             try {
                 val connector = TC001Connector(context)
                 integrationTests["Connector"] = true
@@ -466,7 +448,6 @@ class TC001DiagnosticSystem(
                 integrationTests["Connector"] = false
             }
 
-            // Test TC001DataManager
             try {
                 val dataManager = TC001DataManager(context)
                 integrationTests["DataManager"] = true
@@ -541,9 +522,7 @@ class TC001DiagnosticSystem(
             reportFile
         }
 
-    // Helper methods
     private fun isTC001Device(device: UsbDevice): Boolean {
-        // Check for TC001 specific identifiers
         return device.deviceName?.contains("TC001", ignoreCase = true) == true ||
             device.deviceName?.contains("Topdon", ignoreCase = true) == true ||
             (device.vendorId == 0x3353 && device.productId in listOf(0x0201, 0x0301))
@@ -592,7 +571,6 @@ class TC001DiagnosticSystem(
     }
 }
 
-// Supporting data classes and enums
 data class TC001DiagnosticResults(
     val overallHealth: TC001SystemHealthLevel,
     val diagnosticTests: List<TC001DiagnosticTest>,

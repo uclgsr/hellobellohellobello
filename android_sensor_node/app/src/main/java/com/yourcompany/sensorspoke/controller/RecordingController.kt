@@ -50,16 +50,16 @@ class RecordingController(
 ) : SessionOrchestrator {
     companion object {
         private const val TAG = "RecordingController"
-        private const val HEALTH_CHECK_INTERVAL_MS = 5000L // 5 seconds
+        private const val HEALTH_CHECK_INTERVAL_MS = 5000L
         private const val MAX_RECOVERY_ATTEMPTS = 3
-        private const val RECOVERY_DELAY_MS = 2000L // 2 seconds between attempts
+        private const val RECOVERY_DELAY_MS = 2000L
     }
 
     data class RecorderEntry(
         val name: String,
         val recorder: SensorRecorder,
         var state: RecorderState = RecorderState.IDLE,
-        var isRequired: Boolean = false, // Whether this recorder is required for session to proceed
+        var isRequired: Boolean = false,
         var lastError: String? = null,
         var recoveryAttempts: Int = 0,
         var lastHealthCheck: Long = 0L,
@@ -75,7 +75,7 @@ class RecordingController(
         STOPPING,
         STOPPED,
         ERROR,
-        RECOVERING, // New state for recovery attempts
+        RECOVERING,
     }
 
     /**
@@ -86,7 +86,7 @@ class RecordingController(
         val hasStoragePermission: Boolean,
         val hasBluetoothPermission: Boolean,
         val availableStorageBytes: Long,
-        val minimumRequiredBytes: Long = 100 * 1024 * 1024, // 100MB minimum
+        val minimumRequiredBytes: Long = 100 * 1024 * 1024,
         val registeredSensors: List<String>,
         val crashRecoveryStatus: CrashRecoveryManager.RecoveryResult? = null,
     )
@@ -97,7 +97,7 @@ class RecordingController(
     data class SessionStartResult(
         val sessionId: String,
         val successfulSensors: List<String>,
-        val failedSensors: Map<String, String>, // sensor name -> error message
+        val failedSensors: Map<String, String>,
         val isPartialSuccess: Boolean,
         val hasRecoveredSensors: Boolean = false,
     )
@@ -115,44 +115,36 @@ class RecordingController(
         val issues: List<String>,
     )
 
-    // Use SessionOrchestrator.State for consistent interface
     private val _state = MutableStateFlow(SessionOrchestrator.State.IDLE)
     override val state: StateFlow<SessionOrchestrator.State> = _state
 
     private val _currentSessionId = MutableStateFlow<String?>(null)
     override val currentSessionId: StateFlow<String?> = _currentSessionId
 
-    // Track individual sensor states for UI and partial failure handling
     private val _sensorStates = MutableStateFlow<Map<String, RecorderState>>(emptyMap())
     val sensorStates: StateFlow<Map<String, RecorderState>> = _sensorStates
 
-    // Track last session start result for UI consumption
     private val _lastSessionResult = MutableStateFlow<SessionStartResult?>(null)
     val lastSessionResult: StateFlow<SessionStartResult?> = _lastSessionResult
 
-    // Enhanced session health monitoring
     private val _sessionHealth = MutableStateFlow<SessionHealthStatus?>(null)
     val sessionHealth: StateFlow<SessionHealthStatus?> = _sessionHealth
 
     private val recorders = mutableListOf<RecorderEntry>()
     private var sessionRootDir: File? = null
 
-    // Synchronized session timing for multi-modal alignment
     private var sessionStartTimestampNs: Long = 0L
     private var sessionStartTimestampMs: Long = 0L
 
-    // Enhanced crash recovery and monitoring
     private var crashRecoveryManager: CrashRecoveryManager? = null
     private var healthMonitoringJob: Job? = null
     private var recoveryScope: CoroutineScope? = null
 
     init {
-        // Initialize crash recovery manager
         context?.let {
             crashRecoveryManager = CrashRecoveryManager(it, sessionsRootOverride)
         }
         
-        // Initialize recovery scope
         recoveryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     }
 
@@ -218,11 +210,9 @@ class RecordingController(
         _state.value = SessionOrchestrator.State.PREPARING
 
         try {
-            // Step 1: Perform crash recovery before starting new session
             val recoveryResult = performCrashRecovery()
             Log.i(TAG, "Crash recovery completed: ${recoveryResult.crashedSessionsFound} crashed sessions found")
 
-            // Step 2: Enhanced prerequisite validation with crash recovery status
             val prerequisites = validateRecordingPrerequisites(recoveryResult)
             if (!meetsMinimumRequirements(prerequisites)) {
                 throw IllegalStateException("Prerequisites not met: ${getPrerequisiteErrors(prerequisites)}")
@@ -233,7 +223,6 @@ class RecordingController(
             val sessionDir = File(root, id)
             if (!sessionDir.exists()) sessionDir.mkdirs()
 
-            // Step 3: Capture synchronized session start timestamps with enhanced precision
             sessionStartTimestampNs = System.nanoTime()
             sessionStartTimestampMs = System.currentTimeMillis()
 
@@ -241,19 +230,16 @@ class RecordingController(
             Log.i(TAG, "Session start timestamp: ${sessionStartTimestampMs}ms / ${sessionStartTimestampNs}ns")
             Log.i(TAG, "Recovery status: ${recoveryResult.crashedSessionsFound} previous crashes recovered")
 
-            // Step 4: Create enhanced session metadata with recovery info
             createEnhancedSessionMetadata(sessionDir, id, recoveryResult)
 
-            // Step 5: Create per-recorder subdirs with validation
             for (entry in recorders) {
                 val sensorDir = File(sessionDir, entry.name)
                 sensorDir.mkdirs()
                 entry.state = RecorderState.STARTING
-                entry.recoveryAttempts = 0 // Reset recovery attempts
+                entry.recoveryAttempts = 0
             }
             updateSensorStates()
 
-            // Step 6: Enhanced parallel sensor startup with recovery handling
             val successfulSensors = mutableListOf<String>()
             val failedSensors = mutableMapOf<String, String>()
             val recoveredSensors = mutableListOf<String>()
@@ -270,7 +256,6 @@ class RecordingController(
                     attempts++
                     
                     try {
-                        // Set recovery state if this is a retry
                         if (attempts > 1) {
                             entry.state = RecorderState.RECOVERING
                             updateSensorStates()
@@ -296,11 +281,9 @@ class RecordingController(
                         entry.recoveryAttempts = attempts
 
                         if (attempts >= maxAttempts) {
-                            // All attempts failed
                             entry.state = RecorderState.ERROR
                             failedSensors[entry.name] = e.message ?: "Unknown error"
 
-                            // Check if this is a required sensor
                             if (entry.isRequired) {
                                 Log.e(TAG, "Required sensor ${entry.name} failed after $attempts attempts - aborting session")
                                 safeStopAll()
@@ -314,17 +297,14 @@ class RecordingController(
 
             updateSensorStates()
 
-            // Step 7: Check if we have at least one successful sensor
             if (successfulSensors.isEmpty()) {
                 throw IllegalStateException("No sensors started successfully")
             }
 
-            // Step 8: Session started successfully (potentially with partial failures)
             sessionRootDir = sessionDir
             _currentSessionId.value = id
             _state.value = SessionOrchestrator.State.RECORDING
 
-            // Step 9: Start enhanced session health monitoring
             startSessionHealthMonitoring()
 
             val sessionResult = SessionStartResult(
@@ -379,7 +359,7 @@ class RecordingController(
                     delay(HEALTH_CHECK_INTERVAL_MS)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during health check: ${e.message}", e)
-                    delay(HEALTH_CHECK_INTERVAL_MS * 2) // Back off on error
+                    delay(HEALTH_CHECK_INTERVAL_MS * 2)
                 }
             }
         }
@@ -409,7 +389,6 @@ class RecordingController(
                     erroredSensors++
                     issues.add("${entry.name}: ${entry.lastError}")
                     
-                    // Attempt recovery for non-required sensors
                     if (!entry.isRequired && entry.recoveryAttempts < MAX_RECOVERY_ATTEMPTS) {
                         attemptSensorRecovery(entry)
                     }
@@ -418,7 +397,6 @@ class RecordingController(
                     recoveringSensors++
                 }
                 else -> {
-                    // Sensor in transitional state
                 }
             }
         }
@@ -458,9 +436,8 @@ class RecordingController(
         try {
             delay(RECOVERY_DELAY_MS)
 
-            // Try to stop and restart the sensor
             kotlin.runCatching { entry.recorder.stop() }
-            delay(1000) // Brief pause between stop and start
+            delay(1000)
 
             sessionRootDir?.let { sessionDir ->
                 val sensorDir = File(sessionDir, entry.name)
@@ -490,7 +467,7 @@ class RecordingController(
             val root = externalFilesDir ?: ctx.filesDir
             root.freeSpace
         } else {
-            Long.MAX_VALUE // Assume sufficient space if no context
+            Long.MAX_VALUE
         }
 
         return SessionPrerequisites(
@@ -528,21 +505,18 @@ class RecordingController(
         Log.i(TAG, "Session duration: ${sessionDurationMs}ms")
 
         try {
-            // Stop health monitoring first
             healthMonitoringJob?.cancel()
             healthMonitoringJob = null
 
             val stopResults = mutableMapOf<String, Boolean>()
             val stopErrors = mutableMapOf<String, String>()
 
-            // Enhanced stop sequence with proper coordination
             for (entry in recorders) {
                 if (entry.state == RecorderState.RECORDING || entry.state == RecorderState.RECOVERING) {
                     entry.state = RecorderState.STOPPING
                     updateSensorStates()
 
                     val result = runCatching {
-                        // Give the recorder a moment to finish current operations
                         delay(100)
                         
                         entry.recorder.stop()
@@ -565,10 +539,8 @@ class RecordingController(
 
             updateSensorStates()
 
-            // Perform session data validation
             val validationResults = performSessionDataValidation(sessionDir)
 
-            // Update enhanced session metadata with completion info and validation results
             if (sessionDir != null && sessionId != null) {
                 updateEnhancedSessionMetadata(
                     sessionDir,
@@ -596,7 +568,6 @@ class RecordingController(
                 Log.i(TAG, "Session $sessionId stopped successfully. All sensors stopped cleanly.")
             }
 
-            // Log validation results
             if (validationResults != null) {
                 if (validationResults.isValid) {
                     Log.i(TAG, "Session data validation passed: ${validationResults.results.size} checks completed")
@@ -606,18 +577,16 @@ class RecordingController(
             }
 
         } finally {
-            // Always reset state regardless of stop success/failure
             _state.value = SessionOrchestrator.State.IDLE
             _currentSessionId.value = null
             sessionRootDir = null
             _sessionHealth.value = null
 
-            // Reset all recorder states to IDLE
             for (entry in recorders) {
                 if (entry.state != RecorderState.ERROR) {
                     entry.state = RecorderState.IDLE
                 }
-                entry.recoveryAttempts = 0 // Reset recovery attempts
+                entry.recoveryAttempts = 0
             }
             updateSensorStates()
         }
@@ -700,7 +669,7 @@ class RecordingController(
             val root = externalFilesDir ?: ctx.filesDir
             root.freeSpace
         } else {
-            Long.MAX_VALUE // Assume sufficient space if no context
+            Long.MAX_VALUE
         }
 
         return SessionPrerequisites(
@@ -751,7 +720,7 @@ class RecordingController(
      * Check camera permission
      */
     private fun checkCameraPermission(): Boolean {
-        val ctx = context ?: return true // Assume granted if no context
+        val ctx = context ?: return true
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             ctx.checkSelfPermission(android.Manifest.permission.CAMERA) ==
                 android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -764,11 +733,11 @@ class RecordingController(
      * Check storage permission
      */
     private fun checkStoragePermission(): Boolean {
-        val ctx = context ?: return true // Assume granted if no context
+        val ctx = context ?: return true
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             ctx.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
                 android.content.pm.PackageManager.PERMISSION_GRANTED ||
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q // Scoped storage on Q+
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
         } else {
             true
         }
@@ -778,7 +747,7 @@ class RecordingController(
      * Check Bluetooth permission
      */
     private fun checkBluetoothPermission(): Boolean {
-        val ctx = context ?: return true // Assume granted if no context
+        val ctx = context ?: return true
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val hasBluetoothConnect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 ctx.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) ==
@@ -805,7 +774,6 @@ class RecordingController(
         try {
             val metadataFile = File(sessionDir, "session_metadata.json")
             
-            // Create enhanced metadata using safe JSON construction
             val metadata = try {
                 val recordersArray = JSONArray()
                 val expectedFilesArray = JSONArray()
@@ -817,11 +785,9 @@ class RecordingController(
                     put("recovery_errors", JSONArray(recoveryResult.recoveryErrors))
                 }
 
-                // Add detailed recorder info and expected file structure
                 recorders.forEach { entry ->
                     recordersArray.put(entry.name)
 
-                    // Document expected file structure for each recorder
                     when (entry.name.lowercase()) {
                         "rgb" -> {
                             expectedFilesArray.put("${entry.name}/video.mp4")
@@ -845,7 +811,6 @@ class RecordingController(
                     }
                 }
 
-                // Add storage information for monitoring
                 val sessionsRoot = ensureSessionsRoot()
                 val statsFs = android.os.StatFs(sessionsRoot.path)
                 val availableBytes = statsFs.availableBytes
@@ -873,7 +838,7 @@ class RecordingController(
                     .put("expected_files", expectedFilesArray)
                     .put("storage_info", storageInfoObject)
                     .put("recovery_info", recoveryInfoObject)
-                    .put("estimated_session_size_mb", 1000) // Estimate 1GB per session
+                    .put("estimated_session_size_mb", 1000)
                     .put("session_status", "STARTED")
                     .put("synchronization_reference", "System time: System.currentTimeMillis() + System.nanoTime()")
                     .put("timezone", java.util.TimeZone.getDefault().id)
@@ -887,10 +852,9 @@ class RecordingController(
                             put("sync_notes", "All timestamps use common system reference for cross-sensor alignment")
                         },
                     )
-                    .toString(2) // Pretty print with 2-space indent
+                    .toString(2)
             } catch (jsonError: Exception) {
                 Log.e(TAG, "Failed to create enhanced session metadata JSON", jsonError)
-                // Fallback to basic metadata
                 """
                 {
                     "session_id": "$sessionId",
@@ -930,7 +894,6 @@ class RecordingController(
             val allRecordersSuccess = stopResults.values.all { it }
             val failedRecorders = stopResults.filterNot { it.value }.keys.toList()
 
-            // Create enhanced completion metadata using safe JSON construction
             val metadata = try {
                 val recordersArray = JSONArray()
                 recorders.forEach { recordersArray.put(it.name) }
@@ -944,7 +907,6 @@ class RecordingController(
                 val stopErrorsObject = JSONObject()
                 stopErrors.forEach { (key, value) -> stopErrorsObject.put(key, value) }
 
-                // Add validation results if available
                 val validationObject = JSONObject().apply {
                     if (validationResults != null) {
                         put("is_valid", validationResults.isValid)
@@ -979,10 +941,9 @@ class RecordingController(
                     .put("validation_results", validationObject)
                     .put("created_at", dateFormatter.format(Date(sessionStartTimestampMs)))
                     .put("completed_at", dateFormatter.format(Date(endTimestampMs)))
-                    .toString(2) // Pretty print with 2-space indent
+                    .toString(2)
             } catch (jsonError: Exception) {
                 Log.e(TAG, "Failed to create enhanced completion metadata JSON", jsonError)
-                // Fallback to basic metadata
                 """
                 {
                     "session_id": "$sessionId",
@@ -1024,21 +985,17 @@ class RecordingController(
         Log.i(TAG, "Cleaning up enhanced RecordingController")
         
         try {
-            // Cancel health monitoring
             healthMonitoringJob?.cancel()
             healthMonitoringJob = null
             
-            // Cancel recovery scope
             recoveryScope?.cancel()
             recoveryScope = null
             
-            // Reset all state
             _state.value = SessionOrchestrator.State.IDLE
             _currentSessionId.value = null
             _sessionHealth.value = null
             sessionRootDir = null
             
-            // Reset recorder states
             for (entry in recorders) {
                 entry.state = RecorderState.IDLE
                 entry.lastError = null
@@ -1069,7 +1026,6 @@ class RecordingController(
             val allRecordersSuccess = stopResults.values.all { it }
             val failedRecorders = stopResults.filterNot { it.value }.keys.toList()
 
-            // Create completion metadata using safe JSON construction
             val metadata = try {
                 val recordersArray = JSONArray()
                 recorders.forEach { recordersArray.put(it.name) }
@@ -1103,10 +1059,9 @@ class RecordingController(
                     .put("stop_errors", stopErrorsObject)
                     .put("created_at", dateFormatter.format(java.util.Date(sessionStartTimestampMs)))
                     .put("completed_at", dateFormatter.format(java.util.Date(endTimestampMs)))
-                    .toString(2) // Pretty print with 2-space indent
+                    .toString(2)
             } catch (jsonError: Exception) {
                 Log.e("RecordingController", "Failed to create completion metadata JSON", jsonError)
-                // Fallback to basic metadata
                 """
                 {
                     "session_id": "$sessionId",
@@ -1140,7 +1095,6 @@ class RecordingController(
         }
     }
 
-    // SessionOrchestrator interface implementations
 
     override fun getCurrentSessionDirectory(): File? {
         return sessionRootDir
@@ -1197,7 +1151,6 @@ class RecordingController(
             entry.lastError = error
             updateSensorStates()
 
-            // Attempt to stop the failed sensor gracefully
             try {
                 entry.recorder.stop()
                 entry.state = RecorderState.STOPPED
@@ -1205,7 +1158,6 @@ class RecordingController(
                 Log.e("RecordingController", "Failed to stop disconnected sensor $sensorName: ${e.message}", e)
             }
 
-            // Check if this was a required sensor
             if (entry.isRequired) {
                 Log.e("RecordingController", "Required sensor $sensorName disconnected - stopping entire session")
                 stopSession()
@@ -1225,7 +1177,6 @@ class RecordingController(
             Log.i("RecordingController", "Attempting to reconnect sensor: $sensorName")
 
             try {
-                // If we're in a recording session, try to restart the sensor
                 if (_state.value == SessionOrchestrator.State.RECORDING && sessionRootDir != null) {
                     val sensorDir = File(sessionRootDir!!, sensorName)
                     entry.recorder.start(sensorDir)

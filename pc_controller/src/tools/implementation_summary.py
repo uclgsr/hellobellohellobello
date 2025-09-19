@@ -9,7 +9,6 @@ addressing all TODO and FIXME items that were requested to be completed.
 import logging
 from pathlib import Path
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -145,10 +144,8 @@ def main():
     try:
         display_implementation_summary()
 
-        # Validate key components are working
         repo_root = Path(__file__).parent.parent.parent
 
-        # Check if key files exist and have been improved
         key_files = [
             "android_sensor_node/app/src/main/res/drawable/ic_notification_recording.xml",
             "pc_controller/src/tools/comprehensive_system_validator.py",

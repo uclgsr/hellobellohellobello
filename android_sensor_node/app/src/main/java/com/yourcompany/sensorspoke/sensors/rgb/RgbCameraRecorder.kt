@@ -58,17 +58,14 @@ class RgbCameraRecorder(
         RAW_DNG     // CameraX + Camera2 RAW DNG parallel capture
     }
 
-    // Mutable camera selector for switching between front/back
     private var cameraSelector: CameraSelector = initialCameraSelector
 
-    // Manager classes for separation of concerns
     private val rgbCameraManager = cameraManager ?: RgbCameraManager(context, lifecycleOwner, cameraSelector)
     private val dataProcessor = RgbDataProcessor()
     
     // RAW DNG recording state
     private var recordingMode = RecordingMode.STANDARD
 
-    // Recording state
     private var recording: Recording? = null
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -81,14 +78,12 @@ class RgbCameraRecorder(
     private var actualVideoStartTime: Long = 0L
     private var frameTimestampOffset: Long = 0L
 
-    // Status reporting for UI reactivity
     private val _recordingStatus = MutableStateFlow(RecordingStatus.IDLE)
     val recordingStatus: StateFlow<RecordingStatus> = _recordingStatus.asStateFlow()
 
     private val _frameRate = MutableStateFlow(0.0)
     val frameRate: StateFlow<Double> = _frameRate.asStateFlow()
 
-    // Enhanced camera status for UI feedback
     private val _cameraStatus = MutableStateFlow<RgbCameraManager.CameraStatus?>(null)
     val cameraStatus: StateFlow<RgbCameraManager.CameraStatus?> = _cameraStatus.asStateFlow()
 
@@ -108,21 +103,17 @@ class RgbCameraRecorder(
         _recordingStatus.value = RecordingStatus.STARTING
 
         try {
-            // Initialize enhanced camera manager if not already done
             if (!rgbCameraManager.isReady()) {
                 if (!rgbCameraManager.initialize()) {
                     throw RuntimeException("Failed to initialize enhanced RGB camera manager")
                 }
             }
 
-            // Update camera status for UI feedback
             _cameraStatus.value = rgbCameraManager.getCameraStatus()
             
-            // Log camera capabilities for Samsung S22
             val status = _cameraStatus.value
             Log.i(TAG, "Camera initialized - Model: ${status?.deviceModel}, Quality: ${status?.quality}, 4K Support: ${status?.supports4K}")
             
-            // Update device connection manager with enhanced info
             deviceConnectionManager?.updateRgbCameraState(
                 DeviceConnectionManager.DeviceState.CONNECTING,
                 DeviceConnectionManager.DeviceDetails(
@@ -133,7 +124,6 @@ class RgbCameraRecorder(
                 ),
             )
 
-            // Ensure directories
             val framesDir = File(sessionDir, "frames").apply { mkdirs() }
             
             // Create RAW DNG directory if in RAW mode
@@ -141,7 +131,6 @@ class RgbCameraRecorder(
                 File(sessionDir, "raw_dng").apply { mkdirs() }
             } else null
 
-            // Open CSV for frame metadata using data processor
             csvFile = File(sessionDir, "rgb_frames.csv")
             csvWriter = BufferedWriter(FileWriter(csvFile!!, true))
             if (csvFile!!.length() == 0L) {
@@ -154,7 +143,6 @@ class RgbCameraRecorder(
                 csvWriter!!.flush()
             }
 
-            // Start enhanced video recording with detected quality
             startVideoRecording(File(sessionDir, "video.mp4"))
             
             // Initialize RAW DNG capture session if in RAW mode
@@ -176,13 +164,11 @@ class RgbCameraRecorder(
             // Start frame capture process
             startFrameCapture(framesDir, rawDngDir)
 
-            // Start synchronization monitoring
             startSyncMonitoring()
 
             _recordingStatus.value = RecordingStatus.RECORDING
             rgbCameraManager.updateRecordingState(true)
 
-            // Update device connection state to connected
             deviceConnectionManager?.updateRgbCameraState(
                 DeviceConnectionManager.DeviceState.CONNECTED,
                 DeviceConnectionManager.DeviceDetails(
@@ -217,18 +203,15 @@ class RgbCameraRecorder(
         _recordingStatus.value = RecordingStatus.STOPPING
 
         try {
-            // Stop recording
             recording?.stop()
             recording = null
 
-            // Cancel capture job and wait for completion
             captureJob?.let {
                 it.cancel()
-                it.join() // Wait for completion to avoid race condition
+                it.join()
             }
             captureJob = null
 
-            // Cancel sync monitoring job
             syncMonitorJob?.cancel()
             syncMonitorJob = null
 
@@ -245,16 +228,12 @@ class RgbCameraRecorder(
             csvWriter = null
             csvFile = null
 
-            // Update camera manager state
             rgbCameraManager.updateRecordingState(false)
 
-            // Update device connection state
             deviceConnectionManager?.updateRgbCameraState(DeviceConnectionManager.DeviceState.DISCONNECTED)
 
-            // Shutdown executor
             executor.shutdown()
 
-            // Cancel scope
             scope.cancel()
 
             _recordingStatus.value = RecordingStatus.IDLE
@@ -280,7 +259,6 @@ class RgbCameraRecorder(
         recording = videoCapture.output
             .prepareRecording(context, outputOpts)
             .start(ContextCompat.getMainExecutor(context)) { event ->
-                // Handle recording events for better synchronization logging
                 Log.d(TAG, "Recording event: $event")
                 when (event) {
                     is androidx.camera.video.VideoRecordEvent.Start -> {
@@ -289,7 +267,6 @@ class RgbCameraRecorder(
                         Log.i(TAG, "Video recording actually started at: $actualVideoStartTime")
                         Log.i(TAG, "Video start offset: ${frameTimestampOffset / 1_000_000}ms")
 
-                        // Log the actual video start for post-processing synchronization
                         dataProcessor.logVideoEvent(
                             csvFile, "VIDEO_RECORDING_STARTED", actualVideoStartTime,
                             "offset_ms:${frameTimestampOffset / 1_000_000}",
@@ -304,7 +281,6 @@ class RgbCameraRecorder(
                         )
                     }
                     is androidx.camera.video.VideoRecordEvent.Status -> {
-                        // Log periodic status for timing verification
                         if (event.recordingStats.numBytesRecorded > 0) {
                             val statusTime = System.nanoTime()
                             dataProcessor.logVideoEvent(
@@ -329,7 +305,7 @@ class RgbCameraRecorder(
                     delay(33) // ~30 FPS for high-quality data capture
                 } catch (e: Exception) {
                     Log.e(TAG, "Error capturing frame: ${e.message}", e)
-                    delay(1000) // Wait longer on error
+                    delay(1000)
                 }
             }
         }
@@ -341,18 +317,17 @@ class RgbCameraRecorder(
 
             while (isActive) {
                 try {
-                    delay(5000) // Monitor every 5 seconds
+                    delay(5000)
 
                     if (actualVideoStartTime > 0 && frameCount > 0) {
                         val currentTime = System.nanoTime()
-                        val totalRecordingTime = (currentTime - actualVideoStartTime) / 1_000_000 // ms
+                        val totalRecordingTime = (currentTime - actualVideoStartTime) / 1_000_000
                         val avgFrameRate = if (totalRecordingTime > 0) {
                             (frameCount * 1000.0) / totalRecordingTime
                         } else {
                             0.0
                         }
 
-                        // Update frame rate for UI
                         _frameRate.value = avgFrameRate
 
                         dataProcessor.logVideoEvent(
@@ -364,7 +339,7 @@ class RgbCameraRecorder(
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in sync monitoring: ${e.message}", e)
-                    delay(1000) // Wait longer on error
+                    delay(1000)
                 }
             }
         }
@@ -420,7 +395,6 @@ class RgbCameraRecorder(
                             flush()
                         }
 
-                        // Generate preview for UI
                         dataProcessor.generatePreview(outputFile, timestampNs)
 
                         val modeInfo = if (recordingMode == RecordingMode.RAW_DNG) " + RAW DNG" else ""
@@ -510,7 +484,6 @@ class RgbCameraRecorder(
                     CameraSelector.DEFAULT_BACK_CAMERA
                 }
                 
-                // Update camera status for UI
                 _cameraStatus.value = rgbCameraManager.getCameraStatus()
                 
                 Log.i(TAG, "Switched to ${if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) "back" else "front"} camera")

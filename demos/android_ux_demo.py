@@ -46,7 +46,6 @@ class AndroidUXDemo:
         print("The Android app now translates technical errors into user-friendly,")
         print("actionable guidance for researchers.")
 
-        # Network errors
         print("\n🔗 Network Connection Errors:")
         self.print_example(
             "Technical Error",
@@ -61,7 +60,6 @@ class AndroidUXDemo:
             "   • Firewall is not blocking the connection"
         )
 
-        # Sensor errors
         print("\n📡 Sensor Connection Errors:")
         self.print_example(
             "Technical Error",
@@ -77,7 +75,6 @@ class AndroidUXDemo:
             "   • Try power cycling the Shimmer device"
         )
 
-        # Camera errors
         print("\n📷 Camera Permission Errors:")
         self.print_example(
             "Technical Error",
@@ -99,7 +96,6 @@ class AndroidUXDemo:
         print("The Android app provides clear, consistent status information")
         print("throughout the recording workflow.")
 
-        # Connection status
         print("\n🔗 Connection Status Examples:")
         statuses = [
             ("Connected", "Connected to PC Hub: 192.168.1.100:8080"),
@@ -110,7 +106,6 @@ class AndroidUXDemo:
         for status_type, formatted_status in statuses:
             self.print_example(status_type, formatted_status)
 
-        # Recording status
         print("\n🎬 Recording Status Examples:")
         recording_statuses = [
             ("Ready", "Ready to record"),
@@ -121,7 +116,6 @@ class AndroidUXDemo:
         for status_type, formatted_status in recording_statuses:
             self.print_example(status_type, formatted_status)
 
-        # Sensor status
         print("\n📡 Sensor Status Examples:")
         sensor_statuses = [
             ("RGB Camera: Recording", "RGB Camera: Recording"),
@@ -295,7 +289,7 @@ class AndroidUXDemo:
 
         for demo_func in self.demos.values():
             demo_func()
-            time.sleep(1)  # Brief pause between sections
+            time.sleep(1)
 
         self.show_summary()
 

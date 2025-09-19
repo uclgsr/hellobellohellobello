@@ -51,7 +51,6 @@ def check_chapter_visualizations():
 
     base_dir = Path(__file__).parent.parent
 
-    # Check thesis visualization documentation
     thesis_viz_dir = base_dir / "docs" / "diagrams" / "thesis_visualizations"
     images_dir = base_dir / "images"
 
@@ -61,7 +60,6 @@ def check_chapter_visualizations():
         chapter_num = chapter.split()[1]
         print(f"\n{chapter}:")
 
-        # Check documentation exists
         chapter_dir = thesis_viz_dir / f"chapter{chapter_num}_{chapter.split()[1].lower()}"
         if chapter_num == '1':
             chapter_dir = thesis_viz_dir / "chapter1_introduction"
@@ -82,14 +80,12 @@ def check_chapter_visualizations():
             print("  ❌ Documentation directory missing")
             all_complete = False
 
-        # Check generated images
         image_chapter_dirs = [
             images_dir / f"chapter{chapter_num}_background" if chapter_num == '2' else None,
             images_dir / f"chapter{chapter_num}_evaluation" if chapter_num == '5' else None,
             images_dir / f"chapter{chapter_num}_conclusions" if chapter_num == '6' else None,
         ]
 
-        # Also check for Mermaid diagrams
         mermaid_dir = base_dir / "docs" / "diagrams" / "mermaid"
         mermaid_chapter_dirs = [
             mermaid_dir / f"chapter{chapter_num}_introduction" if chapter_num == '1' else None,
@@ -117,9 +113,8 @@ def check_chapter_visualizations():
             if mermaid_count > 0:
                 viz_types.append(f"{mermaid_count} Mermaid")
             print(f"  ✅ {total_viz} generated visualization(s) ({', '.join(viz_types)})")
-        elif chapter_num in ['2', '5', '6']:  # Chapters we specifically generated
+        elif chapter_num in ['2', '5', '6']:
             if chapter_num == '2':
-                # Special case: check if chapter 2 images exist anywhere
                 ch2_images = len(list(images_dir.glob("chapter2*/*.png")))
                 if ch2_images > 0:
                     print(
@@ -207,7 +202,6 @@ def check_readme_completeness():
 
     base_dir = Path(__file__).parent.parent
 
-    # Check main README
     readme_path = base_dir / "README.md"
     validation_readme_path = base_dir / "REPOSITORY_VALIDATION_README.md"
 
@@ -223,7 +217,6 @@ def check_readme_completeness():
         readme_size = validation_readme_path.stat().st_size
         print(f"   Size: {readme_size:,} bytes")
 
-        # Check content completeness
         with open(validation_readme_path) as f:
             content = f.read().lower()
 
@@ -262,7 +255,6 @@ def check_visualization_scripts():
         script_path = scripts_dir / script
         if script_path.exists():
             print(f"✅ {script}")
-            # Check if it's executable
             if script_path.stat().st_size > 0:
                 print(f"   Size: {script_path.stat().st_size:,} bytes")
             else:
@@ -277,10 +269,9 @@ def check_visualization_scripts():
 def main():
     """Run complete validation of issue #27 requirements."""
 
-    print("🎯 Issue #27: Missing Visualisation - Completion Validation")
+    print("🎯 Issue
     print("=" * 70)
 
-    # Run all validation checks
     viz_complete = check_chapter_visualizations()
     evidence_complete = check_evidence_files()
     readme_complete = check_readme_completeness()
@@ -303,11 +294,11 @@ def main():
         print(f"{status_icon} {component}")
 
     if all_complete:
-        print("\n🎉 Issue #27 SUCCESSFULLY COMPLETED!")
+        print("\n🎉 Issue
         print("   All required visualizations, evidence, and documentation are present.")
         print("   Repository is ready for academic examination and validation.")
     else:
-        print("\n⚠️  Issue #27 PARTIALLY COMPLETED")
+        print("\n⚠️  Issue
         print("   Some components may need attention.")
 
     print("\n📊 Generated Visualizations Summary:")
@@ -315,7 +306,6 @@ def main():
     total_images = len(list(images_dir.rglob("*.png")))
     print(f"   Total PNG files generated: {total_images}")
 
-    # List generated files by chapter
     for chapter_dir in sorted(images_dir.iterdir()):
         if chapter_dir.is_dir() and "chapter" in chapter_dir.name:
             png_files = list(chapter_dir.glob("*.png"))

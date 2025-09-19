@@ -26,8 +26,8 @@ class TC001Connector(
 ) : USBMonitor.OnDeviceConnectListener {
     companion object {
         private const val TAG = "TC001Connector"
-        private const val TC001_VENDOR_ID = 0x4d54 // Topdon vendor ID
-        private const val TC001_PRODUCT_ID = 0x0100 // TC001 product ID
+        private const val TC001_VENDOR_ID = 0x4d54
+        private const val TC001_PRODUCT_ID = 0x0100
     }
 
     private val _connectionState = MutableLiveData<TC001ConnectionState>()
@@ -40,7 +40,6 @@ class TC001Connector(
     private var isConnected = false
     private var currentDevice: UsbDevice? = null
 
-    // IRCamera integration - using proven USBMonitor and UVCCamera for TC001
     private var usbMonitor: USBMonitor? = null
     private var uvcCamera: UVCCamera? = null
 
@@ -55,7 +54,6 @@ class TC001Connector(
     private fun initIRCameraUSBMonitoring() {
         scope.launch {
             try {
-                // Initialize IRCamera USBMonitor - this is the proven approach
                 usbMonitor = USBMonitor(context, this@TC001Connector)
                 usbMonitor?.register()
 
@@ -154,7 +152,6 @@ class TC001Connector(
         if (device != null && isTC001Device(device)) {
             if (granted) {
                 Log.i(TAG, "USB permission granted for TC001: ${device.deviceName}")
-                // Permission granted, connection will proceed via onConnect
             } else {
                 Log.w(TAG, "USB permission denied for TC001: ${device.deviceName}")
                 _connectionState.value = TC001ConnectionState.ERROR
@@ -179,15 +176,13 @@ class TC001Connector(
                     return@withContext
                 }
 
-                // Initialize UVCCamera using IRCamera's proven approach
                 uvcCamera = UVCCamera().apply {
-                    uvcType = UVCType.USB_UVC // Use standard USB UVC type for TC001
+                    uvcType = UVCType.USB_UVC
                 }
 
-                // Open the UVC camera connection using IRCamera method
                 uvcCamera?.let { camera ->
                     val openResult = camera.openUVCCamera(controlBlock)
-                    if (openResult == 0) { // Success
+                    if (openResult == 0) {
                         isConnected = true
                         _connectionState.postValue(TC001ConnectionState.CONNECTED)
                         Log.i(TAG, "TC001 connected successfully using IRCamera UVCCamera")
@@ -241,7 +236,6 @@ class TC001Connector(
 
         Log.i(TAG, "TC001 device info: $deviceInfo")
 
-        // Request connection using IRCamera USBMonitor
         usbMonitor?.requestPermission(device)
     }
 
@@ -254,9 +248,7 @@ class TC001Connector(
                 _connectionState.postValue(TC001ConnectionState.CONNECTING)
 
                 currentDevice?.let { device ->
-                    // Use IRCamera USBMonitor for connection instead of manual USB
                     usbMonitor?.openDevice(device)
-                    // Connection will be handled by onConnect callback
                     return@withContext true
                 }
 
@@ -277,11 +269,9 @@ class TC001Connector(
             try {
                 _connectionState.postValue(TC001ConnectionState.DISCONNECTING)
 
-                // Use IRCamera UVCCamera for proper disconnection
                 uvcCamera?.closeUVCCamera()
                 uvcCamera = null
 
-                // USBMonitor handles device connection cleanup automatically
                 Log.i(TAG, "Closing device connection via IRCamera USBMonitor")
 
                 isConnected = false
@@ -321,9 +311,8 @@ class TC001Connector(
     fun startThermalStream(): Boolean {
         return try {
             uvcCamera?.let { camera ->
-                // Use IRCamera's onStartPreview method for thermal streaming
                 val result = camera.onStartPreview()
-                result == 0 // IRCamera returns 0 for success
+                result == 0
             } ?: false
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start thermal stream via IRCamera UVCCamera", e)
@@ -338,7 +327,7 @@ class TC001Connector(
         return try {
             uvcCamera?.let { camera ->
                 val result = camera.onStopPreview()
-                result == 0 // IRCamera returns 0 for success
+                result == 0
             } ?: false
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop thermal stream via IRCamera UVCCamera", e)

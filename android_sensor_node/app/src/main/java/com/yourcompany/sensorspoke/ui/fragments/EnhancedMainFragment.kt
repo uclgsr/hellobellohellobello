@@ -44,7 +44,6 @@ class EnhancedMainFragment :
     private lateinit var uiController: TC001UIController
     private lateinit var adapter: DeviceAdapter
 
-    // UI components
     private lateinit var clHasDevice: View
     private lateinit var clNoDevice: View
     private lateinit var recyclerView: RecyclerView
@@ -67,19 +66,16 @@ class EnhancedMainFragment :
     }
 
     private fun initView(view: View) {
-        // Initialize UI components
         clHasDevice = view.findViewById(R.id.cl_has_device)
         clNoDevice = view.findViewById(R.id.cl_no_device)
         recyclerView = view.findViewById(R.id.recycler_view)
         tvConnectDevice = view.findViewById(R.id.tv_connect_device)
         ivAdd = view.findViewById(R.id.iv_add)
 
-        // Initialize UI controller
         uiController = ViewModelProvider(this)[TC001UIController::class.java]
 
-        // Setup adapter with IRCamera-style callbacks
         adapter = DeviceAdapter()
-        adapter.hasConnectLine = false // Will be updated via LiveData
+        adapter.hasConnectLine = false
         adapter.onItemClickListener = { type ->
             uiController.handleDeviceClick(type)
             handleDeviceConnection(type)
@@ -91,14 +87,11 @@ class EnhancedMainFragment :
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
 
-        // Setup click listeners
         tvConnectDevice.setOnClickListener(this)
         ivAdd.setOnClickListener(this)
 
-        // Observe UI controller state
         observeUIController()
 
-        // Lifecycle management
         viewLifecycleOwner.lifecycle.addObserver(
             object : DefaultLifecycleObserver {
                 override fun onResume(owner: LifecycleOwner) {
@@ -109,7 +102,6 @@ class EnhancedMainFragment :
     }
 
     private fun initData() {
-        // Initialize data and start monitoring
         uiController.refresh()
     }
 
@@ -133,21 +125,16 @@ class EnhancedMainFragment :
     private fun handleDeviceConnection(type: TC001ConnectType) {
         when (type) {
             TC001ConnectType.LINE -> {
-                // Navigate to thermal camera interface and initiate TC001 connection
                 CoroutineScope(Dispatchers.Main).launch {
-                    // Start thermal preview for TC001
                     (activity as? MainActivity)?.navigateToThermalPreview()
 
-                    // Update UI to show connection attempt
                     uiController.updateConnectionStatus(true)
                     Log.i("EnhancedMainFragment", "Navigating to thermal preview and updating connection status")
                 }
             }
             TC001ConnectType.WIFI -> {
-                // Handle WiFi connection
             }
             TC001ConnectType.BLE -> {
-                // Handle BLE connection
             }
         }
     }
@@ -158,22 +145,18 @@ class EnhancedMainFragment :
     ) {
         val popup = DelPopup(requireContext())
         popup.onDelListener = {
-            // Confirm deletion with dialog
             showDeleteConfirmationDialog(type)
         }
         popup.show(anchorView)
     }
 
     private fun showDeleteConfirmationDialog(type: TC001ConnectType) {
-        // Simple confirmation for now
         CoroutineScope(Dispatchers.Main).launch {
-            // Remove device based on type
             when (type) {
                 TC001ConnectType.LINE -> {
                     uiController.updateConnectionStatus(false)
                 }
                 else -> {
-                    // Handle other device types
                 }
             }
             uiController.refresh()
@@ -183,7 +166,6 @@ class EnhancedMainFragment :
     override fun onClick(v: View?) {
         when (v) {
             tvConnectDevice, ivAdd -> {
-                // Navigate to device connection screen with proper device scanning
                 navigateToDeviceConnection()
             }
         }
@@ -193,18 +175,12 @@ class EnhancedMainFragment :
      * Navigate to device connection screen with proper scanning
      */
     private fun navigateToDeviceConnection() {
-        // Launch device discovery and connection process
         lifecycleScope.launch {
             try {
-                // Show connecting indicator
                 uiController.updateConnectionStatus(false)
 
-                // Trigger actual device scanning
-                // This would typically open a device selection dialog or fragment
                 Log.i(TAG, "Starting device connection process")
 
-                // For demonstration, we'll simulate the proper connection workflow
-                // In production, this would show available TC001 devices for selection
                 val connected = attemptDeviceConnection()
                 uiController.updateConnectionStatus(connected)
 
@@ -224,18 +200,13 @@ class EnhancedMainFragment :
      * Attempt to connect to available devices
      */
     private suspend fun attemptDeviceConnection(): Boolean {
-        // This would scan for and attempt to connect to real hardware
         return withContext(Dispatchers.IO) {
             try {
-                // Simulate device discovery process
                 delay(1000)
 
-                // Check for TC001 devices
-                // In production, this would use UsbManager to scan for real devices
                 val deviceAvailable = checkForAvailableDevices()
 
                 if (deviceAvailable) {
-                    // Attempt connection to discovered device
                     delay(500)
                     Log.i(TAG, "Connected to thermal camera device")
                     true
@@ -254,9 +225,7 @@ class EnhancedMainFragment :
      * Check for available devices (TC001, Shimmer, etc.)
      */
     private fun checkForAvailableDevices(): Boolean {
-        // In production, this would query UsbManager and BluetoothManager
-        // for compatible devices (TC001 thermal cameras, Shimmer GSR sensors)
-        return true // Would check real hardware availability
+        return true
     }
 
     /**
@@ -320,7 +289,6 @@ class EnhancedMainFragment :
                     else -> false
                 }
 
-            // Setup device display based on IRCamera logic
             holder.itemView.findViewById<TextView>(R.id.tv_title)?.apply {
                 isVisible = position == 0
                 text = "Wired Connection"
@@ -337,7 +305,6 @@ class EnhancedMainFragment :
                 text = if (hasConnect) "online" else "offline"
             }
 
-            // Hide battery info for TC001 (no battery)
             holder.itemView.findViewById<TextView>(R.id.tv_battery)?.isVisible = false
             holder.itemView.findViewById<View>(R.id.battery_view)?.isVisible = false
         }
@@ -361,7 +328,6 @@ class EnhancedMainFragment :
                     val position = bindingAdapterPosition
                     if (position != RecyclerView.NO_POSITION) {
                         val deviceType = getConnectType(position)
-                        // Only allow deletion when device is offline
                         if (!hasConnectLine) {
                             onItemLongClickListener?.invoke(view, deviceType)
                         }

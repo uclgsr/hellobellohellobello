@@ -31,10 +31,10 @@ class TC001PerformanceMonitor(
 ) {
     companion object {
         private const val TAG = "TC001PerformanceMonitor"
-        private const val PERFORMANCE_WINDOW_SIZE = 100 // Analyze last 100 frames
-        private const val ALERT_THRESHOLD_LOW_FPS = 20.0 // Below 20 FPS
-        private const val ALERT_THRESHOLD_HIGH_LATENCY = 100.0 // Above 100ms processing time
-        private const val MEMORY_WARNING_THRESHOLD_MB = 50.0 // 50MB thermal data in memory
+        private const val PERFORMANCE_WINDOW_SIZE = 100
+        private const val ALERT_THRESHOLD_LOW_FPS = 20.0
+        private const val ALERT_THRESHOLD_HIGH_LATENCY = 100.0
+        private const val MEMORY_WARNING_THRESHOLD_MB = 50.0
     }
 
     // Performance metrics storage
@@ -73,7 +73,7 @@ class TC001PerformanceMonitor(
                         updatePerformanceMetrics()
                         checkPerformanceAlerts()
                         assessSystemHealth()
-                        delay(1000) // Update every second
+                        delay(1000)
                     } catch (e: Exception) {
                         Log.e(TAG, "Error in performance monitoring", e)
                     }
@@ -103,7 +103,6 @@ class TC001PerformanceMonitor(
         val timestamp = SystemClock.elapsedRealtimeNanos()
         frameTimestamps.offer(timestamp)
 
-        // Keep only recent frames for analysis
         while (frameTimestamps.size > PERFORMANCE_WINDOW_SIZE) {
             frameTimestamps.poll()
         }
@@ -116,7 +115,7 @@ class TC001PerformanceMonitor(
         startTime: Long,
         endTime: Long,
     ) {
-        val latency = (endTime - startTime) / 1_000_000 // Convert to milliseconds
+        val latency = (endTime - startTime) / 1_000_000
         processingLatencies.offer(latency)
 
         while (processingLatencies.size > PERFORMANCE_WINDOW_SIZE) {
@@ -152,23 +151,18 @@ class TC001PerformanceMonitor(
     private fun updatePerformanceMetrics() {
         val currentTime = SystemClock.elapsedRealtimeNanos()
 
-        // Calculate frame rate
         val frameRate = calculateFrameRate()
 
-        // Calculate average processing latency
         val avgLatency =
             processingLatencies.toList().let { latencies ->
                 if (latencies.isNotEmpty()) latencies.average() else 0.0
             }
 
-        // Calculate memory usage statistics
         val memoryStats = calculateMemoryStats()
 
-        // Calculate temperature statistics
         val tempStats = calculateTemperatureStats()
 
-        // Calculate session uptime
-        val sessionUptime = (currentTime - sessionStartTime) / 1_000_000_000.0 // seconds
+        val sessionUptime = (currentTime - sessionStartTime) / 1_000_000_000.0
 
         val metrics =
             TC001PerformanceMetrics(
@@ -194,7 +188,7 @@ class TC001PerformanceMonitor(
         val timestamps = frameTimestamps.toList()
         if (timestamps.size < 2) return 0.0
 
-        val timeSpan = (timestamps.last() - timestamps.first()) / 1_000_000_000.0 // seconds
+        val timeSpan = (timestamps.last() - timestamps.first()) / 1_000_000_000.0
         return if (timeSpan > 0) (timestamps.size - 1) / timeSpan else 0.0
     }
 
@@ -220,7 +214,7 @@ class TC001PerformanceMonitor(
 
         val average = readings.average()
         val variance = readings.map { (it - average) * (it - average) }.average()
-        val stability = max(0.0, 100.0 - variance) // Higher is more stable
+        val stability = max(0.0, 100.0 - variance)
 
         return TemperatureStats(average, stability)
     }
@@ -235,9 +229,8 @@ class TC001PerformanceMonitor(
                 if (it.isNotEmpty()) it.average() else 0.0
             }
 
-        // Connection quality based on frame rate and latency
-        val frameRateScore = min(100.0, (frameRate / 25.0) * 100.0) // Target 25 FPS
-        val latencyScore = max(0.0, 100.0 - (avgLatency / 2.0)) // Lower latency is better
+        val frameRateScore = min(100.0, (frameRate / 25.0) * 100.0)
+        val latencyScore = max(0.0, 100.0 - (avgLatency / 2.0))
 
         return (frameRateScore + latencyScore) / 2.0
     }
@@ -261,7 +254,6 @@ class TC001PerformanceMonitor(
     private fun checkPerformanceAlerts() {
         val alerts = mutableListOf<TC001PerformanceAlert>()
 
-        // Check frame rate
         val frameRate = calculateFrameRate()
         if (frameRate < ALERT_THRESHOLD_LOW_FPS) {
             alerts.add(
@@ -274,7 +266,6 @@ class TC001PerformanceMonitor(
             )
         }
 
-        // Check processing latency
         val avgLatency =
             processingLatencies.toList().let {
                 if (it.isNotEmpty()) it.average() else 0.0
@@ -290,7 +281,6 @@ class TC001PerformanceMonitor(
             )
         }
 
-        // Check memory usage
         val memoryStats = calculateMemoryStats()
         if (memoryStats.currentMB > MEMORY_WARNING_THRESHOLD_MB) {
             alerts.add(
@@ -367,7 +357,6 @@ class TC001PerformanceMonitor(
     }
 }
 
-// Supporting data classes
 data class TC001PerformanceMetrics(
     val frameRate: Double,
     val averageProcessingLatency: Double,

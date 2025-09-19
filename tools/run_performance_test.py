@@ -36,14 +36,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
-# Ensure we can import the controller and protocol from the repo checkout
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PC_SRC = REPO_ROOT / "pc_controller" / "src"
 if str(PC_SRC) not in sys.path:
     sys.path.insert(0, str(PC_SRC))
 
-# Imports after sys.path tweak
-import contextlib  # noqa: E402
+import contextlib
 
 from network.network_controller import (  # type: ignore  # noqa: E402
     DiscoveredDevice,
@@ -79,7 +77,7 @@ class ReceivedCounter:
         self._lock = threading.Lock()
         self.count = 0
 
-    def on_frame(self, name: str, data: bytes, ts: int) -> None:  # Qt signal callback
+    def on_frame(self, name: str, data: bytes, ts: int) -> None:
         with self._lock:
             self.count += 1
 
@@ -111,7 +109,6 @@ class SimulatedAndroidClient:
         t = threading.Thread(target=self._server_loop, name=f"{self.name}-srv", daemon=True)
         self._srv_thread = t
         t.start()
-        # Wait until port is ready
         deadline = time.time() + 5.0
         while self.port is None and time.time() < deadline:
             time.sleep(0.01)
@@ -120,7 +117,6 @@ class SimulatedAndroidClient:
 
     def stop(self) -> None:
         self._stop.set()
-        # Close server socket to unblock accept
         try:
             if self._sock is not None:
                 with contextlib.suppress(Exception):
@@ -128,7 +124,6 @@ class SimulatedAndroidClient:
                 self._sock.close()
         except Exception:
             pass
-        # Close client sockets
         with self._lock:
             for s in list(self._connections):
                 with contextlib.suppress(Exception):
@@ -136,7 +131,6 @@ class SimulatedAndroidClient:
                 with contextlib.suppress(Exception):
                     s.close()
             self._connections.clear()
-        # Wait threads
         for th in list(self._stream_threads):
             with contextlib.suppress(Exception):
                 th.join(timeout=0.5)
@@ -157,10 +151,8 @@ class SimulatedAndroidClient:
                     continue
                 except OSError:
                     break
-                # Track connection
                 with self._lock:
                     self._connections.append(cli)
-                # Heuristic: if no data arrives within 300 ms, treat as stream_conn; else command_conn
                 th = threading.Thread(
                     target=self._handle_connection,
                     args=(cli,),
@@ -178,7 +170,6 @@ class SimulatedAndroidClient:
                 pass
 
     def _handle_connection(self, sock: socket.socket) -> None:
-        # Detect if this will be a command connection (PC writes first) or a stream connection
         cmd_conn = False
         try:
             sock.settimeout(0.3)
@@ -210,11 +201,9 @@ class SimulatedAndroidClient:
                 if not chunk:
                     break
                 buf += chunk
-                # Try v1 frame decode
                 res = decode_frames(buf)
                 msgs = res.messages
                 buf = res.remainder
-                # Fallback: legacy newline JSON when prefix isn't numeric
                 if not msgs and b"\n" in buf and not buf.split(b"\n", 1)[0].isdigit():
                     line, buf = buf.split(b"\n", 1)
                     try:
@@ -256,7 +245,6 @@ class SimulatedAndroidClient:
                     sock.sendall(encode_frame(reply))
                 elif cmd == "time_sync":
                     t1 = now_ns()
-                    # simulate very small processing time
                     time.sleep(0.0005)
                     t2 = now_ns()
                     reply = build_v1_ack(mid, status="ok", t1=int(t1), t2=int(t2))
@@ -273,7 +261,6 @@ class SimulatedAndroidClient:
                     reply = build_v1_ack(mid, status="ok")
                     sock.sendall(encode_frame(reply))
                 else:
-                    # Unknown command: still ack ok to keep broadcast green
                     reply = build_v1_ack(mid, status="ok")
                     sock.sendall(encode_frame(reply))
         except Exception as exc:
@@ -282,7 +269,6 @@ class SimulatedAndroidClient:
     def _stream_loop(self, sock: socket.socket) -> None:
         # Periodically send preview_frame events at configured rate
         interval = 1.0 / float(self.rate_hz)
-        # Minimal fake JPEG bytes
         fake_jpeg = b"\xff\xd8\xff\xdb" + os.urandom(64) + b"\xff\xd9"
         b64 = base64.b64encode(fake_jpeg).decode("ascii")
         try:
@@ -299,7 +285,6 @@ class SimulatedAndroidClient:
                     self.stats.send_errors += 1
                     self.stats.last_error = f"stream send error: {exc}"
                     break
-                # Jitter to avoid perfect phase alignment across clients
                 jitter = random.uniform(-interval * 0.05, interval * 0.05)
                 time.sleep(max(0.0, interval + jitter))
         finally:
@@ -335,50 +320,41 @@ def _sample_resources(proc=None) -> tuple[float, float]:
             return float(cpu), float(rss_mb)
         except Exception:
             pass
-    # Fallback: approximate using process time delta and no RSS (as 0)
     # Note: cpu_percent will be 0 without a prior call; the loop will compute deltas over time
     return 0.0, 0.0
 
 
 def run_test(num_clients: int, rate_hz: int, duration_s: int) -> int:
-    # Create simulated clients
     clients: list[SimulatedAndroidClient] = []
     for i in range(num_clients):
         c = SimulatedAndroidClient(name=f"SimClient_{i+1:02d}", rate_hz=rate_hz)
         c.start()
         clients.append(c)
 
-    # Instantiate PC NetworkController (no GUI)
     controller = NetworkController()
 
-    # Register devices directly (bypass Zeroconf)
     for c in clients:
         if c.port is None:
             raise RuntimeError("client port missing")
         dev = DiscoveredDevice(name=c.name, address=c.host, port=int(c.port))
         controller._on_service_added(dev)  # type: ignore[attr-defined]
 
-    # Give PreviewStreamWorkers time to connect to each device
     time.sleep(2.0)
 
-    # Start session
     session_id = f"PERF_{time.strftime('%Y%m%d_%H%M%S')}"
     controller.broadcast_start_recording(session_id)
 
-    # Setup logging
     log_path, log_f = _open_log_file("performance")
     print(f"[INFO] Logging CPU/mem to {log_path}")
 
-    # psutil process for consistent cpu_percent sampling
     proc = None
     if psutil is not None:
         try:
             proc = psutil.Process(os.getpid())
-            proc.cpu_percent(interval=None)  # prime
+            proc.cpu_percent(interval=None)
         except Exception:
             proc = None
 
-    # Run for duration
     start = time.time()
     end = start + duration_s
     exit_code = 0
@@ -389,7 +365,6 @@ def run_test(num_clients: int, rate_hz: int, duration_s: int) -> int:
             total_frames = sum(c.stats.frames_sent for c in clients)
             send_errors = sum(c.stats.send_errors for c in clients)
             log_f.write(f"{time.time():.3f},{cpu:.1f},{rss:.1f},{total_frames},{send_errors}\n")
-            # If any sustained send errors accumulate, mark for non-zero exit
             if send_errors > 0:
                 exit_code = 2
     except KeyboardInterrupt:
@@ -398,7 +373,6 @@ def run_test(num_clients: int, rate_hz: int, duration_s: int) -> int:
     finally:
         with contextlib.suppress(Exception):
             controller.broadcast_stop_recording()
-        # Allow a moment for stop to propagate
         time.sleep(1.0)
         with contextlib.suppress(Exception):
             controller.shutdown()
@@ -410,7 +384,6 @@ def run_test(num_clients: int, rate_hz: int, duration_s: int) -> int:
         except Exception:
             pass
 
-    # Summarize
     total_frames = sum(c.stats.frames_sent for c in clients)
     total_errors = sum(c.stats.send_errors for c in clients)
     print(

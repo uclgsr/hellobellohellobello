@@ -51,10 +51,10 @@ class ThermalCameraRecorder(
 ) : SensorRecorder {
     companion object {
         private const val TAG = "ThermalCameraRecorder"
-        private const val TOPDON_VENDOR_ID = 0x4d54 // Topdon TC001 vendor ID
-        private const val TC001_PRODUCT_ID_1 = 0x0100 // TC001 product ID variant 1
-        private const val TC001_PRODUCT_ID_2 = 0x0200 // TC001 product ID variant 2
-        private const val MAX_FPS = 25 // Maximum thermal camera frame rate
+        private const val TOPDON_VENDOR_ID = 0x4d54
+        private const val TC001_PRODUCT_ID_1 = 0x0100
+        private const val TC001_PRODUCT_ID_2 = 0x0200
+        private const val MAX_FPS = 25
         private const val USB_PERMISSION_ACTION = "com.yourcompany.sensorspoke.USB_PERMISSION"
     }
 
@@ -72,30 +72,25 @@ class ThermalCameraRecorder(
     private var recordingJob: Job? = null
     private var initializationJob: Job? = null
     
-    // Enhanced integration with real Topdon SDK
     private var realTopdonIntegration: RealTopdonIntegration? = null
-    private var topdonIntegration: TopdonThermalIntegration? = null // Fallback mock
+    private var topdonIntegration: TopdonThermalIntegration? = null
     
     private var frameCount = 0
-    private var targetFps = 10 // Default 10 FPS
+    private var targetFps = 10
     private var isUsingRealHardware = false
     
-    // Enhanced status reporting
     private val _recordingStatus = MutableStateFlow(RecordingStatus.IDLE)
     val recordingStatus: StateFlow<RecordingStatus> = _recordingStatus.asStateFlow()
     
     private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
 
-    // Reusable coroutine scope for thermal recording operations
     private val thermalScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
-    // USB device management
     private val usbManager: UsbManager by lazy {
         context.getSystemService(Context.USB_SERVICE) as UsbManager
     }
     
-    // USB permission and hotplug handling
     private var usbReceiver: BroadcastReceiver? = null
 
     /**
@@ -126,15 +121,12 @@ class ThermalCameraRecorder(
         _recordingStatus.value = RecordingStatus.STARTING
         
         try {
-            // Register USB device hotplug receiver
             registerUsbReceiver()
             
-            // Initialize enhanced thermal integration
             if (!initializeEnhancedThermalIntegration(sessionDir)) {
                 throw RuntimeException("Failed to initialize enhanced thermal camera integration")
             }
             
-            // Update device connection manager
             deviceConnectionManager?.updateThermalCameraState(
                 DeviceConnectionManager.DeviceState.CONNECTING,
                 DeviceConnectionManager.DeviceDetails(
@@ -145,7 +137,6 @@ class ThermalCameraRecorder(
                 )
             )
             
-            // Start enhanced recording
             startEnhancedRecording()
             
             _recordingStatus.value = RecordingStatus.RECORDING
@@ -195,18 +186,15 @@ class ThermalCameraRecorder(
      */
     private suspend fun initializeEnhancedThermalIntegration(sessionDir: File): Boolean = withContext(Dispatchers.IO) {
         try {
-            // Create directories
             thermalImagesDir = File(sessionDir, "thermal_images").apply { mkdirs() }
             csvFile = File(sessionDir, "thermal_data.csv")
             csvWriter = BufferedWriter(FileWriter(csvFile!!))
             
-            // Write enhanced CSV header
             csvWriter!!.write("timestamp_ns,timestamp_ms,frame_number,center_temp,min_temp,max_temp,avg_temp,image_filename,width,height,hardware_type\n")
             csvWriter!!.flush()
             
             _connectionStatus.value = ConnectionStatus.SCANNING
             
-            // Try to initialize real Topdon hardware first
             if (initializeRealTopdonHardware()) {
                 Log.i(TAG, "Successfully initialized real Topdon TC001 hardware")
                 isUsingRealHardware = true
@@ -214,7 +202,6 @@ class ThermalCameraRecorder(
                 return@withContext true
             }
             
-            // Fall back to simulation if real hardware is not available
             Log.w(TAG, "Real Topdon hardware not available, falling back to enhanced simulation")
             initializeFallbackSimulation()
             isUsingRealHardware = false
@@ -235,14 +222,12 @@ class ThermalCameraRecorder(
         return try {
             Log.i(TAG, "Initializing real Topdon TC001 hardware integration")
             
-            // Initialize RealTopdonIntegration with IRCamera library
             realTopdonIntegration = RealTopdonIntegration(context)
             val initSuccess = realTopdonIntegration!!.initialize()
             
             if (initSuccess) {
                 Log.i(TAG, "RealTopdonIntegration initialized successfully")
                 
-                // Set up frame callback
                 realTopdonIntegration!!.setFrameCallback(object : RealTopdonIntegration.ThermalFrameCallback {
                     override fun onThermalFrame(frame: ThermalFrame) {
                         processThermalFrame(frame)
@@ -257,7 +242,6 @@ class ThermalCameraRecorder(
                     }
                 })
                 
-                // Try to connect to device
                 if (realTopdonIntegration!!.connectDevice()) {
                     Log.i(TAG, "Successfully connected to TC001 device")
                     true
@@ -299,12 +283,10 @@ class ThermalCameraRecorder(
     private fun processThermalFrame(frame: ThermalFrame) {
         thermalScope.launch {
             try {
-                // Save thermal image
                 val imageFilename = "thermal_frame_${System.nanoTime()}.png"
                 val imageFile = File(thermalImagesDir, imageFilename)
                 saveThermalFrame(frame, imageFile)
                 
-                // Write CSV data with real hardware indication
                 val hardwareType = if (frame.isRealHardware) "REAL" else "SIMULATION"
                 val csvLine = "${frame.timestamp},${System.currentTimeMillis()},${frame.frameNumber}," +
                         "${frame.averageTemperature},${frame.minTemperature},${frame.maxTemperature}," +
@@ -352,7 +334,6 @@ class ThermalCameraRecorder(
                     0.5f
                 }
                 
-                // Create color based on temperature (blue = cold, red = hot)
                 val red = (255 * normalizedTemp).toInt().coerceIn(0, 255)
                 val blue = (255 * (1 - normalizedTemp)).toInt().coerceIn(0, 255)
                 val green = 0
@@ -426,11 +407,9 @@ class ThermalCameraRecorder(
             if (isTopdonTC001Device(it)) {
                 Log.i(TAG, "TC001 device attached: ${it.deviceName}")
                 
-                // If we're currently recording and not using real hardware, try to switch
                 if (_recordingStatus.value == RecordingStatus.RECORDING && !isUsingRealHardware) {
                     thermalScope.launch {
                         Log.i(TAG, "Attempting to switch to real hardware mid-session")
-                        // This could be enhanced to hot-swap to real hardware
                     }
                 }
             }
@@ -466,7 +445,6 @@ class ThermalCameraRecorder(
                 
                 if (granted) {
                     thermalScope.launch {
-                        // Try to initialize real hardware now that we have permission
                         if (initializeRealTopdonHardware()) {
                             isUsingRealHardware = true
                             Log.i(TAG, "Successfully switched to real hardware after permission grant")
@@ -524,10 +502,10 @@ class ThermalCameraRecorder(
         while (thermalScope.isActive && _recordingStatus.value == RecordingStatus.RECORDING) {
             try {
                 captureSimulatedFrame()
-                delay(100) // ~10 FPS
+                delay(100)
             } catch (e: Exception) {
                 Log.e(TAG, "Error during simulated thermal recording: ${e.message}", e)
-                delay(1000) // Wait longer on error
+                delay(1000)
             }
         }
     }
@@ -539,7 +517,6 @@ class ThermalCameraRecorder(
         val timestamp = System.nanoTime()
         frameCount++
         
-        // Generate simulated thermal frame
         val simulatedFrame = ThermalFrame(
             timestamp = timestamp,
             width = 256,
@@ -554,7 +531,6 @@ class ThermalCameraRecorder(
             isRealHardware = false
         )
         
-        // Process the simulated frame
         processThermalFrame(simulatedFrame)
     }
 
@@ -570,13 +546,11 @@ class ThermalCameraRecorder(
         
         for (y in 0 until height) {
             for (x in 0 until width) {
-                // Create some thermal patterns
                 val centerX = width / 2.0f
                 val centerY = height / 2.0f
                 val distance = kotlin.math.sqrt((x - centerX).pow(2) + (y - centerY).pow(2))
                 val normalizedDistance = (distance / kotlin.math.sqrt(centerX.pow(2) + centerY.pow(2))).coerceIn(0.0f, 1.0f)
                 
-                // Create a temperature gradient from center outward
                 val temp = baseTemp + (5.0f * (1.0f - normalizedDistance)) + Random.nextFloat() * 2.0f - 1.0f
                 data[y * width + x] = temp
             }
@@ -594,7 +568,6 @@ class ThermalCameraRecorder(
         val timestampMs = System.currentTimeMillis()
         
         try {
-            // Save thermal image if bitmap is available
             val imageFileName = "thermal_${timestampNs}.png"
             thermalFrame.thermalBitmap?.let { bitmap ->
                 val imageFile = File(thermalImagesDir, imageFileName)
@@ -603,7 +576,6 @@ class ThermalCameraRecorder(
                 }
             }
             
-            // Write CSV data
             csvWriter?.apply {
                 write("$timestampNs,$timestampMs,$frameCount,${thermalFrame.centerTemp},${thermalFrame.minTemp},${thermalFrame.maxTemp},${thermalFrame.avgTemp},$imageFileName,192,256,REAL\n")
                 flush()
@@ -623,13 +595,11 @@ class ThermalCameraRecorder(
         recordingJob?.cancel()
         recordingJob = null
         
-        // Stop real hardware streaming if active
         if (isUsingRealHardware && realTopdonIntegration != null) {
             realTopdonIntegration!!.stopStreaming()
             Log.i(TAG, "Real thermal hardware streaming stopped")
         }
         
-        // Close CSV writer
         csvWriter?.close()
         csvWriter = null
         
@@ -643,20 +613,16 @@ class ThermalCameraRecorder(
         Log.i(TAG, "Cleaning up enhanced thermal camera recorder")
         
         try {
-            // Unregister USB receiver
             usbReceiver?.let {
                 context.unregisterReceiver(it)
                 usbReceiver = null
             }
             
-            // Cancel coroutine scope
             thermalScope.cancel()
             
-            // Clean up integrations
             realTopdonIntegration = null
             topdonIntegration = null
             
-            // Close file resources
             csvWriter?.close()
             csvWriter = null
             

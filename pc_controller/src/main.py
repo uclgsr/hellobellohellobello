@@ -41,28 +41,24 @@ def _time_server_thread(stop_flag: threading.Event) -> None:
     try:
         asyncio.run(_runner())
     except Exception:
-        # On exit or unexpected error, just return; app shutdown will proceed
         return
 
 
 def main() -> int:
     app = QApplication(sys.argv)
 
-    # Start TimeSyncServer in background thread
     _stop_flag = threading.Event()
     _ts_thread = threading.Thread(
         target=_time_server_thread, args=(_stop_flag,), daemon=True
     )
     _ts_thread.start()
 
-    # Start TCP Command Server for enhanced communication
     tcp_server = TCPCommandServer(host="0.0.0.0", port=8080)
     tcp_server.start()
 
     network = NetworkController()
     gui = GUIManager(network)
     
-    # Wire TCP server callbacks to GUI for enhanced device management
     tcp_server.set_device_callbacks(
         device_registered_callback=gui.on_device_registered,
         device_status_callback=gui.on_device_status_updated,
@@ -74,7 +70,6 @@ def main() -> int:
     gui.show()
     code = app.exec()
 
-    # Ensure proper shutdown
     network.shutdown()
     tcp_server.stop()
     try:

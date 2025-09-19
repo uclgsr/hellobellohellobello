@@ -120,7 +120,7 @@ class ConnectionWorker(QThread):
     """
 
     log = pyqtSignal(str)
-    capabilities = pyqtSignal(str, dict)  # device name, capabilities dict
+    capabilities = pyqtSignal(str, dict)
 
     def __init__(self, device: DiscoveredDevice, timeout: float = 5.0) -> None:
         super().__init__()
@@ -132,14 +132,12 @@ class ConnectionWorker(QThread):
             sock = _connect(self._device.address, self._device.port, self._timeout)
             try:
                 sock.settimeout(self._timeout)
-                # Prefer v1 length-prefixed query, fall back accepted on receive
                 v1 = build_v1_query_capabilities(
                     msg_id=int(time.time() * 1000) % 2_000_000_000
                 )
                 sock.sendall(encode_frame(v1))
                 self.log.emit(f"Sent v1 query_capabilities to {self._device.name}")
 
-                # Receive response: try length-prefixed first, then legacy newline
                 buf = b""
                 payload = None
                 deadline = time.monotonic() + self._timeout
@@ -148,12 +146,10 @@ class ConnectionWorker(QThread):
                     if not chunk:
                         break
                     buf += chunk
-                    # Try length-prefixed decode
                     res = decode_frames(buf)
                     if res.messages:
                         payload = res.messages[0]
                         break
-                    # If buffer looks like legacy (no numeric length prefix), try newline-delimited
                     nl = buf.find(b"\n")
                     if nl != -1 and not buf[:nl].isdigit():
                         line, buf = buf.split(b"\n", 1)
@@ -162,7 +158,6 @@ class ConnectionWorker(QThread):
                             break
                         except Exception:
                             continue
-                    # otherwise wait for more data (likely length-prefixed incomplete)
                     buf = res.remainder
                 if payload is None:
                     self.log.emit("No response to capabilities query")
@@ -218,7 +213,6 @@ class _BroadcastWorker(QThread):
             res = decode_frames(buf)
             if res.messages:
                 return res.messages[0]
-            # Legacy fallback if prefix isn't numeric length
             nl = buf.find(b"\n")
             if nl != -1 and not buf[:nl].isdigit():
                 line, buf = buf.split(b"\n", 1)
@@ -256,7 +250,6 @@ class _BroadcastWorker(QThread):
                 if payload.get("type") == "error":
                     self.log.emit(f"Time sync error from {name}: {payload}")
                     continue
-                # Accept both v1 ack and legacy shape
                 try:
                     t1 = int(payload.get("t1", 0))
                     t2 = int(payload.get("t2", 0))
@@ -265,7 +258,6 @@ class _BroadcastWorker(QThread):
                     delays.append(int(delay))
                 except Exception:
                     continue
-                # tiny pacing to avoid back-to-back bursts
                 time.sleep(0.005)
             if offsets and delays:
                 median_off, min_delay, std_dev, used = compute_time_sync_stats(
@@ -322,7 +314,6 @@ class _BroadcastWorker(QThread):
         except Exception as exc:
             self.log.emit(f"Send failed to {name}: {exc}")
             return False
-        # Try to receive ack/error but don't require it
         payload = None
         try:
             payload = self._recv_message(sock, self._timeout)
@@ -335,7 +326,7 @@ class _BroadcastWorker(QThread):
             if payload.get("type") == "error":
                 self.log.emit(f"Error from {name}: {payload}")
                 return False
-        return True  # consider success if send succeeded
+        return True
 
     def run(self) -> None:
         try:
@@ -352,7 +343,7 @@ class _BroadcastWorker(QThread):
                                 ok = self._send_command(sock, name)
                             elif self._command == "time_sync":
                                 self._time_sync(sock, name)
-                                ok = True  # time_sync-only: no further command to send
+                                ok = True
                             else:
                                 ok = self._send_command(sock, name)
                             if ok:
@@ -373,7 +364,6 @@ class _BroadcastWorker(QThread):
                             f"Attempt {attempt_idx}/{len(schedule)} to {name} "
                             f"failed to connect: {exc}"
                         )
-                    # backoff before next attempt if not success
                     if not success and attempt_idx < len(schedule):
                         jitter = random.randint(0, max(1, self._base_delay_ms // 2))
                         time.sleep((delay_ms + jitter) / 1000.0)
@@ -393,8 +383,8 @@ class PreviewStreamWorker(QThread):
     """
 
     log = pyqtSignal(str)
-    frame = pyqtSignal(str, bytes, int)  # device name, jpeg bytes, ts
-    rejoin = pyqtSignal(str, dict)  # device name, payload
+    frame = pyqtSignal(str, bytes, int)
+    rejoin = pyqtSignal(str, dict)
 
     def __init__(self, device: DiscoveredDevice, timeout: float = 5.0) -> None:
         super().__init__()
@@ -409,7 +399,6 @@ class PreviewStreamWorker(QThread):
         try:
             if not isinstance(payload, dict):
                 return
-            # v1 rejoin command from Android
             if (
                 payload.get("v") == 1
                 and payload.get("type") == "cmd"
@@ -417,7 +406,6 @@ class PreviewStreamWorker(QThread):
             ):
                 self.rejoin.emit(self._device.name, dict(payload))
                 return
-            # v1 event
             if (
                 payload.get("v") == 1
                 and payload.get("type") == "event"
@@ -444,14 +432,12 @@ class PreviewStreamWorker(QThread):
                         if not chunk:
                             break
                         buf += chunk
-                        # First try to decode v1 length-prefixed frames
                         res = decode_frames(buf)
                         if res.messages:
                             for msg in res.messages:
                                 self._handle_message(msg)
                             buf = res.remainder
                             continue
-                        # Fallback: only treat as legacy when prefix is not numeric length
                         nl = buf.find(b"\n")
                         if nl != -1 and not buf[:nl].isdigit():
                             line, buf = buf.split(b"\n", 1)
@@ -465,7 +451,6 @@ class PreviewStreamWorker(QThread):
                 finally:
                     with contextlib.suppress(Exception):
                         sock.close()
-                # Socket closed; retry after short delay
                 time.sleep(1.0)
             except Exception as exc:
                 self.log.emit(f"Stream error for {self._device.name}: {exc}")
@@ -476,14 +461,13 @@ class NetworkController(QObject):
     """Coordinates network discovery and connections for the PC Hub."""
 
     device_discovered = pyqtSignal(DiscoveredDevice)
-    device_removed = pyqtSignal(str)  # name
+    device_removed = pyqtSignal(str)
     log = pyqtSignal(str)
-    device_capabilities = pyqtSignal(str, dict)  # name, payload
-    preview_frame = pyqtSignal(str, bytes, int)  # device name, jpeg bytes, ts
-    # Enhanced connection status signals
-    device_connected = pyqtSignal(str, bool)  # name, success
-    device_disconnected = pyqtSignal(str)  # name
-    connection_error = pyqtSignal(str, str)  # name, error_message
+    device_capabilities = pyqtSignal(str, dict)
+    preview_frame = pyqtSignal(str, bytes, int)
+    device_connected = pyqtSignal(str, bool)
+    device_disconnected = pyqtSignal(str)
+    connection_error = pyqtSignal(str, str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -496,17 +480,15 @@ class NetworkController(QObject):
         self._clock_offsets_ns: dict[str, int] = {}
         self._clock_sync_stats: dict[str, dict] = {}
 
-        # Connection state tracking
         self._connected_devices: set[str] = set()
         self._connection_attempts: dict[str, int] = {}
         self._max_connection_retries = 3
         self._connection_retry_delay = 2.0
 
-        # Auto re-sync policy (Priority 2 extension)
         try:
             self._resync_delay_threshold_ns: int = int(
                 os.environ.get("PC_RESYNC_DELAY_THRESHOLD_NS", str(25_000_000))
-            )  # 25 ms
+            )
         except Exception:
             self._resync_delay_threshold_ns = 25_000_000
         try:
@@ -517,11 +499,9 @@ class NetworkController(QObject):
             self._resync_cooldown_s = 120.0
         self._last_auto_resync_monotonic: float = 0.0
         self._auto_resync_in_flight: bool = False
-        # Session/Device state tracking
         self._active_session_id: str | None = None
         self._is_recording: bool = False
         self._device_manager = DeviceManager()
-        # Start FileTransferServer (FR10)
         try:
             base_dir = os.path.join(os.getcwd(), "pc_controller_data")
             os.makedirs(base_dir, exist_ok=True)
@@ -553,13 +533,11 @@ class NetworkController(QObject):
             self._emit_log("Service discovery started.")
 
     def shutdown(self) -> None:
-        # Stop workers
         for _name, worker in list(self._workers.items()):
             if worker.isRunning():
                 worker.quit()
                 worker.wait(1000)
         self._workers.clear()
-        # Stop preview stream workers
         for _name, sw in list(self._stream_workers.items()):
             try:
                 sw.stop()
@@ -567,28 +545,23 @@ class NetworkController(QObject):
             except Exception:
                 pass
         self._stream_workers.clear()
-        # Stop FileTransferServer if running (FR10)
         try:
             srv = getattr(self, "_file_server", None)
             if srv is not None:
                 srv.stop()
         except Exception:
             pass
-        # Stop discovery
         if self._browser is not None:
             self._browser.cancel()
             self._browser = None
-        # Close zeroconf
         try:
             self._zeroconf.close()
         except Exception:  # pragma: no cover - safety
             pass
 
-    # Internal events from Zeroconf listener
     def _on_service_added(self, device: DiscoveredDevice) -> None:
         self._devices[device.name] = device
         self.device_discovered.emit(device)
-        # Start preview stream worker for this device
         try:
             worker = PreviewStreamWorker(device)
             worker.log.connect(self._emit_log)
@@ -605,7 +578,6 @@ class NetworkController(QObject):
 
     def _on_service_removed(self, name: str) -> None:
         clean_name = name.rstrip(".")
-        # Stop preview stream worker if running
         try:
             worker = self._stream_workers.pop(clean_name, None)
             if worker is not None:
@@ -622,7 +594,6 @@ class NetworkController(QObject):
         self.log.emit(message)
 
     def _on_preview_frame(self, name: str, data: bytes, ts: int) -> None:
-        # Re-emit for GUI consumers
         with contextlib.suppress(Exception):
             self.preview_frame.emit(name, data, ts)
 
@@ -632,7 +603,6 @@ class NetworkController(QObject):
     def _store_sync_stats(self, name: str, stats: dict) -> None:
         """Internal: store detailed sync stats for a device and trigger auto re-sync when needed."""
         self._clock_sync_stats[name] = dict(stats)
-        # Evaluate auto re-sync policy
         with contextlib.suppress(Exception):
             self._maybe_auto_resync(name, stats)
 
@@ -660,7 +630,6 @@ class NetworkController(QObject):
                         f"threshold {self._resync_delay_threshold_ns/1e6:.2f} ms — "
                         f"triggering broadcast_time_sync()"
                     )
-                # Launch re-sync broadcast (non-blocking)
                 with contextlib.suppress(Exception):
                     self.broadcast_time_sync()
                 # Clear in-flight flag immediately; cooldown prevents rapid retriggering
@@ -668,7 +637,6 @@ class NetworkController(QObject):
         except Exception:
             pass
 
-    # Public API
     def start_discovery(self) -> None:
         """Start or restart device discovery."""
         try:
@@ -685,7 +653,6 @@ class NetworkController(QObject):
         """Enhanced connection with retry logic and status tracking."""
         device_name = name or f"{address}:{port}"
 
-        # Reset attempt counter for new connections
         self._connection_attempts[device_name] = 0
 
         try:
@@ -710,7 +677,7 @@ class NetworkController(QObject):
         try:
             worker = ConnectionWorker(
                 device, timeout=10.0
-            )  # Longer timeout for stability
+            )
             worker.log.connect(self._emit_log)
             worker.capabilities.connect(self._on_capabilities)
             worker.finished.connect(lambda: self._on_connection_finished(device))
@@ -720,7 +687,6 @@ class NetworkController(QObject):
             self._emit_log(f"Connection attempt {attempts + 1} for {device.name}")
 
         except Exception as exc:
-            # Retry after delay if we haven't exceeded max attempts
             if attempts < self._max_connection_retries - 1:
                 QTimer.singleShot(
                     int(self._connection_retry_delay * 1000),
@@ -737,7 +703,6 @@ class NetworkController(QObject):
         if device.name in self._workers:
             worker = self._workers[device.name]
             if worker.isFinished():
-                # Check if connection was successful by presence of capabilities
                 success = (
                     device.name in self._clock_offsets_ns
                     or device.name in self._connected_devices
@@ -747,10 +712,8 @@ class NetworkController(QObject):
                     self.device_connected.emit(device.name, True)
                     self._emit_log(f"Successfully connected to {device.name}")
 
-                    # Start preview stream worker
                     self._start_preview_stream(device)
                 else:
-                    # Retry if we haven't exceeded max attempts
                     attempts = self._connection_attempts.get(device.name, 0)
                     if attempts < self._max_connection_retries:
                         QTimer.singleShot(
@@ -763,19 +726,16 @@ class NetworkController(QObject):
     def disconnect_device(self, name: str) -> None:
         """Disconnect from a specific device."""
         try:
-            # Stop connection worker
             if name in self._workers:
                 worker = self._workers.pop(name)
                 worker.stop() if hasattr(worker, "stop") else None
                 worker.wait(2000) if hasattr(worker, "wait") else None
 
-            # Stop preview stream worker
             if name in self._stream_workers:
                 stream_worker = self._stream_workers.pop(name)
                 stream_worker.stop()
                 stream_worker.wait(2000)
 
-            # Clean up connection state
             self._connected_devices.discard(name)
             self._connection_attempts.pop(name, None)
 
@@ -807,9 +767,7 @@ class NetworkController(QObject):
         self.device_capabilities.emit(name, payload)
         self._emit_log(f"Capabilities from {name}: {payload}")
 
-    # Phase 4 broadcast API
     def broadcast_start_recording(self, session_id: str) -> None:
-        # Track session state for FR8 rejoin logic
         self._active_session_id = session_id
         self._is_recording = True
         worker = _BroadcastWorker(
@@ -827,13 +785,11 @@ class NetworkController(QObject):
         worker.start()
         self._emit_log("Broadcast stop_recording")
 
-    # FR8: Handle rejoin_session notifications from PreviewStreamWorker
     def _on_rejoin(self, device_name: str, payload: dict) -> None:
         try:
             sid = str(payload.get("session_id", ""))
         except Exception:
             sid = ""
-        # If we're still recording this session, mark device back to Recording
         if (
             self._is_recording
             and self._active_session_id
@@ -845,7 +801,6 @@ class NetworkController(QObject):
                 f"Device {device_name} rejoined active session {sid}; status set to Recording"
             )
             return
-        # Otherwise, request file transfer for the provided or last active session id
         session_id = sid or (self._active_session_id or "")
         if not session_id:
             self._emit_log(
@@ -872,7 +827,6 @@ class NetworkController(QObject):
         if not dev:
             self._emit_log(f"Cannot transfer_files: device {device_name} not known")
             return
-        # Reuse broadcast worker with a single-device map
         devices = {device_name: dev}
         worker = _BroadcastWorker(
             devices,

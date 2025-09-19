@@ -23,21 +23,17 @@ class TestRunPytestViaUnittest(unittest.TestCase):
     """
 
     def test_run_pytests(self) -> None:
-        # Ensure we are at the repo root so pytest.ini is used
         repo_root = Path(__file__).resolve().parents[1]
         os.chdir(str(repo_root))
 
         target = "pc_controller/tests"
 
         if pytest is not None:
-            # Run using pytest API
             args = ["-q", target]
             ret = pytest.main(args)
             if ret == 0:
                 return
-            # If API invocation failed, fall back to subprocess for more isolation
 
-        # Fallback: try subprocess with `python -m pytest`
         try:
             proc = subprocess.run(
                 [sys.executable, "-m", "pytest", "-q", target],
@@ -52,6 +48,4 @@ class TestRunPytestViaUnittest(unittest.TestCase):
                     f"Pytest failed (exit {proc.returncode}). Output:\n{proc.stdout}"
                 )
         except Exception:
-            # Pytest is likely unavailable; skip to avoid false negatives while
-            # still solving discovery issues in run_test tool.
             self.skipTest("pytest is not available to run the Python test suite")
