@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 
 # Add PC Controller to path
-sys.path.insert(0, str(Path(__file__).parent / "pc_controller" / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "pc_controller" / "src"))
 
 def demo_native_backend():
     """Demo 1: Native C++ backend performance."""
