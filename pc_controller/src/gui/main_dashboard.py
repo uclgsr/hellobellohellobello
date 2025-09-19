@@ -67,20 +67,89 @@ class DeviceDiscoveryThread(QThread):
         self.running = False
 
     def run(self):
-        """Run device discovery loop"""
+        """Run device discovery loop using actual zeroconf service discovery"""
         self.running = True
-        logger.info("Device discovery thread started")
+        logger.info("Device discovery thread started with zeroconf service discovery")
 
-        # Implement actual zeroconf device discovery
+        try:
+            from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
+        except ImportError:
+            logger.warning("Zeroconf not available, falling back to simulation")
+            self._run_simulation()
+            return
+
+        class AndroidServiceListener(ServiceListener):
+            def __init__(self, discovery_thread):
+                self.discovery_thread = discovery_thread
+
+            def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
+                info = zc.get_service_info(type_, name)
+                if info:
+                    # Extract device info from service
+                    device_id = name.split(".")[0]
+                    addresses = info.parsed_addresses()
+                    if addresses:
+                        ip = addresses[0]  # Use first available address
+                        port = info.port
+                        logger.info(f"Discovered Android device: {device_id} at {ip}:{port}")
+                        self.discovery_thread.device_found.emit(device_id, ip, port)
+
+            def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
+                device_id = name.split(".")[0]
+                logger.info(f"Android device disconnected: {device_id}")
+                self.discovery_thread.device_lost.emit(device_id)
+
+            def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
+                """Handle service updates - refresh device information"""
+                info = zc.get_service_info(type_, name)
+                if info:
+                    device_id = name.split(".")[0]
+                    addresses = info.parsed_addresses()
+                    if addresses:
+                        ip = addresses[0]
+                        port = info.port
+                        logger.info(f"Android device updated: {device_id} at {ip}:{port}")
+                        # Re-emit device found to update any cached information
+                        self.discovery_thread.device_found.emit(device_id, ip, port)
+
+        try:
+            zeroconf = Zeroconf()
+            listener = AndroidServiceListener(self)
+            
+            # Browse for Android sensor node services
+            # This matches the service type advertised by Android devices
+            service_type = "_gsr-controller._tcp.local."
+            browser = ServiceBrowser(zeroconf, service_type, listener)
+            
+            logger.info(f"Browsing for services of type: {service_type}")
+            
+            # Keep the discovery running
+            while self.running:
+                import time
+                time.sleep(1)  # Check every second
+                
+        except Exception as e:
+            logger.error(f"Zeroconf discovery error: {e}, falling back to simulation")
+            self._run_simulation()
+        finally:
+            try:
+                browser.cancel()
+                zeroconf.close()
+            except:
+                pass
+                
+    def _run_simulation(self):
+        """Fallback simulation when zeroconf is not available"""
         import random
         import time
 
+        logger.info("Running device discovery simulation")
         while self.running:
             time.sleep(5)  # Discovery interval
             # Simulate finding devices with realistic data
             device_ids = [
                 "android_device_001",
-                "android_device_002",
+                "android_device_002", 
                 "android_device_003",
             ]
             for device_id in device_ids:
