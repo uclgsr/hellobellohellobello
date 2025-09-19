@@ -129,13 +129,19 @@ class DeviceWidget(QWidget):
             else:
                 self.view = pg.PlotWidget(self)
                 self.view.setBackground("w")
+                # Enhanced GSR plot styling
                 self.curve = self.view.plot(pen=pg.mkPen(color=(0, 120, 255), width=2))
+                self.view.setLabel('left', 'GSR (μS)')
+                self.view.setLabel('bottom', 'Time (s)')
+                self.view.showGrid(x=True, y=True, alpha=0.3)
                 layout.addWidget(self.view)
             # Data buffer for plotting: last 10 seconds at 128 Hz
             self._buf_seconds = 10.0
             self._buf_max = int(128 * self._buf_seconds)
             self._times: deque[float] = deque(maxlen=self._buf_max)
             self._values: deque[float] = deque(maxlen=self._buf_max)
+            # Sample rate tracking for enhanced visualization
+            self._last_sample_count = 0
         else:
             raise ValueError(f"Unsupported DeviceWidget kind: {kind}")
 
@@ -213,13 +219,40 @@ class DeviceWidget(QWidget):
             return
         self._times.extend(ts.tolist())
         self._values.extend(vals.tolist())
-        # Update plot immediately; X axis as relative seconds
-        t0 = self._times[0] if self._times else time.monotonic()
-        x = np.fromiter(
-            (t - t0 for t in self._times), dtype=np.float64, count=len(self._times)
-        )
-        y = np.fromiter(self._values, dtype=np.float64, count=len(self._values))
-        self.curve.setData(x, y)
+        
+        # Enhanced real-time GSR visualization with performance optimizations
+        if len(self._times) > 0:
+            t0 = self._times[0]
+            x = np.fromiter(
+                (t - t0 for t in self._times), dtype=np.float64, count=len(self._times)
+            )
+            y = np.fromiter(self._values, dtype=np.float64, count=len(self._values))
+            
+            # Update plot with improved styling
+            self.curve.setData(x, y)
+            
+            # Auto-scale Y-axis with some margin for better visibility
+            if y.size > 10:  # Only auto-scale when we have sufficient data
+                y_min, y_max = np.min(y), np.max(y)
+                y_margin = (y_max - y_min) * 0.1 if y_max > y_min else 1.0
+                self.view.setYRange(y_min - y_margin, y_max + y_margin, padding=0)
+            
+            # Keep only last 10 seconds visible on X-axis for smooth scrolling
+            if x.size > 0:
+                x_latest = x[-1]
+                x_window = self._buf_seconds
+                self.view.setXRange(max(0, x_latest - x_window), x_latest + 0.5, padding=0)
+            
+            # Add visual indicators for data quality
+            if hasattr(self, '_last_sample_count'):
+                current_count = len(self._values)
+                samples_added = current_count - self._last_sample_count
+                if samples_added > 0:
+                    # Update title to show sample rate
+                    expected_samples = 128 * 0.05  # 128 Hz * 50ms update interval
+                    rate_percentage = min(100, (samples_added / expected_samples) * 100)
+                    self.title.setText(f"{self.base_title} ({rate_percentage:.0f}% rate)")
+            self._last_sample_count = len(self._values)
 
 
 class GUIManager(QMainWindow):
@@ -1770,6 +1803,99 @@ class GUIManager(QMainWindow):
 
         except Exception:
             pass  # Ignore errors in tutorial check - should not affect main app
+
+    # Enhanced TCP Server Integration Callbacks
+    
+    @pyqtSlot(str, str, str, list)
+    def on_device_registered(self, device_id: str, device_name: str, device_type: str, capabilities: list):
+        """Handle device registration from TCP server."""
+        try:
+            self._log(f"Device registered: {device_name} ({device_type}) - {device_id}")
+            # Update connected devices list in UI
+            self.connected_devices.addItem(f"{device_name} ({device_type})")
+            self.btn_disconnect_device.setEnabled(True)
+            
+            # Create a remote widget for this device if it has visual capabilities
+            if "video" in capabilities or "thermal" in capabilities:
+                widget_kind = "video" if "video" in capabilities else "thermal"
+                remote_widget = DeviceWidget(widget_kind, f"{device_name} ({device_type})", self)
+                self._add_to_grid(remote_widget)
+                self._remote_widgets[device_id] = remote_widget
+                
+        except Exception as exc:
+            self._log(f"Error handling device registration: {exc}")
+
+    @pyqtSlot(str, str, str, int, dict, str)  
+    def on_device_status_updated(self, device_id: str, status: str, session_id: str, 
+                                recording_progress: int, sensor_status: dict, error_message: str):
+        """Handle device status updates from TCP server."""
+        try:
+            if device_id in self._remote_widgets:
+                widget = self._remote_widgets[device_id]
+                if status == "recording":
+                    widget.set_recording_status(True, recording_progress)
+                elif status == "idle":
+                    widget.set_recording_status(False)
+                elif status == "error" and error_message:
+                    widget.set_error_status(error_message)
+                    
+            self._log(f"Device {device_id} status: {status}")
+            if error_message:
+                self._log(f"Device {device_id} error: {error_message}")
+                
+        except Exception as exc:
+            self._log(f"Error handling device status: {exc}")
+
+    @pyqtSlot(str, dict, float)
+    def on_live_gsr_data(self, device_id: str, gsr_data: dict, timestamp: float):
+        """Handle live GSR data from remote devices for real-time plotting."""
+        try:
+            # Create or find GSR widget for this device
+            widget_key = f"{device_id}_gsr"
+            if widget_key not in self._remote_widgets:
+                gsr_widget = DeviceWidget("gsr", f"Remote GSR ({device_id[:8]})", self)
+                self._add_to_grid(gsr_widget)
+                self._remote_widgets[widget_key] = gsr_widget
+                
+            # Extract GSR values
+            gsr_value = gsr_data.get("gsr_microsiemens", 0.0)
+            ts_array = np.array([timestamp])
+            vals_array = np.array([gsr_value])
+            
+            # Update the plot
+            self._remote_widgets[widget_key].append_gsr_samples(ts_array, vals_array)
+            
+        except Exception as exc:
+            self._log(f"Error handling live GSR data: {exc}")
+
+    @pyqtSlot(str, str, float)
+    def on_live_video_frame(self, device_id: str, frame_data: str, timestamp: float):
+        """Handle live video frames from remote devices."""
+        try:
+            if device_id in self._remote_widgets:
+                # Decode base64 frame data (simplified implementation)
+                import base64
+                try:
+                    frame_bytes = base64.b64decode(frame_data)
+                    # Convert to numpy array and display (simplified)
+                    # In a full implementation, this would properly decode JPEG/video formats
+                    self._log(f"Received video frame from {device_id}: {len(frame_bytes)} bytes")
+                except Exception as exc:
+                    self._log(f"Failed to decode video frame from {device_id}: {exc}")
+                    
+        except Exception as exc:
+            self._log(f"Error handling live video: {exc}")
+
+    @pyqtSlot(str, str, float)
+    def on_live_thermal_frame(self, device_id: str, frame_data: str, timestamp: float):
+        """Handle live thermal frames from remote devices.""" 
+        try:
+            if device_id in self._remote_widgets:
+                self._log(f"Received thermal frame from {device_id}")
+                # Thermal frame processing would go here
+                
+        except Exception as exc:
+            self._log(f"Error handling live thermal data: {exc}")
 
 
 class CalibrationDialog(QDialog):
