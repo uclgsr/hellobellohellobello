@@ -172,7 +172,7 @@ class RgbCameraManager(
     private suspend fun initializeCamera2RawDng() {
         try {
             camera2RawDngManager = Camera2RawDngManager(context)
-            val rawInitialized = camera2RawDngManager!!.initialize()
+            val rawInitialized = camera2RawDngManager?.initialize() == true
             
             if (rawInitialized) {
                 val rawStatus = camera2RawDngManager?.getCamera2Status()
