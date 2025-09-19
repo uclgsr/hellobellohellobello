@@ -350,7 +350,13 @@ class ThermalPreviewFragment : Fragment() {
                 TopdonThermalPalette.IRON -> TopdonThermalPalette.RAINBOW
                 TopdonThermalPalette.RAINBOW -> TopdonThermalPalette.GRAYSCALE
                 TopdonThermalPalette.GRAYSCALE -> TopdonThermalPalette.HOT
-                TopdonThermalPalette.HOT -> TopdonThermalPalette.IRON
+                TopdonThermalPalette.HOT -> TopdonThermalPalette.COOL
+                TopdonThermalPalette.COOL -> TopdonThermalPalette.WHITE_HOT
+                TopdonThermalPalette.WHITE_HOT -> TopdonThermalPalette.BLACK_HOT
+                TopdonThermalPalette.BLACK_HOT -> TopdonThermalPalette.RED
+                TopdonThermalPalette.RED -> TopdonThermalPalette.GREEN
+                TopdonThermalPalette.GREEN -> TopdonThermalPalette.BLUE
+                TopdonThermalPalette.BLUE -> TopdonThermalPalette.IRON
             }
 
         updateThermalPalette(currentPalette)
@@ -423,6 +429,38 @@ class ThermalPreviewFragment : Fragment() {
                 val green = (255 * (normalized * 2f - 1f).coerceIn(0f, 1f)).toInt()
                 val blue = (255 * (normalized - 0.75f).coerceAtLeast(0f) * 4f).toInt()
                 (0xFF shl 24) or (red shl 16) or (green shl 8) or blue
+            }
+            TopdonThermalPalette.COOL -> {
+                // COOL palette: white -> cyan -> blue -> black
+                val red = (255 * (1f - normalized)).toInt()
+                val green = (255 * (1f - normalized * 0.5f)).toInt()
+                val blue = 255
+                (0xFF shl 24) or (red shl 16) or (green shl 8) or blue
+            }
+            TopdonThermalPalette.WHITE_HOT -> {
+                // White hot: black to white
+                val gray = (normalized * 255).toInt()
+                (0xFF shl 24) or (gray shl 16) or (gray shl 8) or gray
+            }
+            TopdonThermalPalette.BLACK_HOT -> {
+                // Black hot: white to black
+                val gray = (255 * (1f - normalized)).toInt()
+                (0xFF shl 24) or (gray shl 16) or (gray shl 8) or gray
+            }
+            TopdonThermalPalette.RED -> {
+                // Red palette: black to red
+                val red = (normalized * 255).toInt()
+                (0xFF shl 24) or (red shl 16)
+            }
+            TopdonThermalPalette.GREEN -> {
+                // Green palette: black to green
+                val green = (normalized * 255).toInt()
+                (0xFF shl 24) or (green shl 8)
+            }
+            TopdonThermalPalette.BLUE -> {
+                // Blue palette: black to blue
+                val blue = (normalized * 255).toInt()
+                (0xFF shl 24) or blue
             }
         }
 
