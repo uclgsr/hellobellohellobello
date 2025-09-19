@@ -175,7 +175,7 @@ class RgbCameraManager(
             val rawInitialized = camera2RawDngManager!!.initialize()
             
             if (rawInitialized) {
-                val rawStatus = camera2RawDngManager!!.getCamera2Status()
+                val rawStatus = camera2RawDngManager?.getCamera2Status()
                 Log.i(TAG, "Camera2 RAW DNG initialized: Samsung Level 3: ${rawStatus.supportsCamera2Level3}, RAW DNG: ${rawStatus.supportsRawDng}")
             } else {
                 Log.i(TAG, "Camera2 RAW DNG not available on this device")
