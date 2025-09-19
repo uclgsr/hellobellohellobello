@@ -61,6 +61,15 @@ def main() -> int:
 
     network = NetworkController()
     gui = GUIManager(network)
+    
+    # Wire TCP server callbacks to GUI for enhanced device management
+    tcp_server.set_device_callbacks(
+        device_registered_callback=gui.on_device_registered,
+        device_status_callback=gui.on_device_status_updated,
+        live_gsr_callback=gui.on_live_gsr_data,
+        live_video_callback=gui.on_live_video_frame,
+        live_thermal_callback=gui.on_live_thermal_frame
+    )
 
     gui.show()
     code = app.exec()

@@ -62,6 +62,10 @@ class ShimmerInterface:
         self._buf_vals: deque[float] = deque(maxlen=4096)
         self._thread: threading.Thread | None = None
         self._native: object | None = None
+        
+        # Performance tracking for native backend demonstration
+        self._samples_processed = 0
+        self._native_backend_active = False
 
     # Public API
     def start(self) -> None:
@@ -73,16 +77,20 @@ class ShimmerInterface:
                 self._native = _ns_cls()  # type: ignore[operator]
                 self._native.connect(self._port)
                 self._native.start_streaming()
+                self._native_backend_active = True
                 # Start polling thread to transfer from native queue to python deque
                 self._thread = threading.Thread(target=self._native_loop, daemon=True)
                 self._thread.start()
+                print(f"ShimmerInterface: Started with native C++ backend for high-performance GSR capture")
                 return
-            except Exception:
+            except Exception as e:
                 # Fall back to simulated if native fails
                 self._use_native = False
+                print(f"ShimmerInterface: Native backend failed ({e}), falling back to simulation")
         # Simulated generator
         self._thread = threading.Thread(target=self._sim_loop, daemon=True)
         self._thread.start()
+        print("ShimmerInterface: Started with Python simulation backend")
         # Seed with an immediate sample to avoid race in tests
         with self._lock:
             now = time.monotonic()
@@ -120,6 +128,15 @@ class ShimmerInterface:
             vals = vals[order]
         return ts, vals
 
+    def get_performance_stats(self) -> dict[str, any]:
+        """Get performance statistics for native backend demonstration."""
+        return {
+            "native_backend_active": self._native_backend_active,
+            "samples_processed": self._samples_processed,
+            "buffer_size": len(self._buf_ts),
+            "backend_type": "C++ Native" if self._native_backend_active else "Python Simulation"
+        }
+
     # Internal loops
     def _native_loop(self) -> None:
         # Poll native queue at ~200 Hz
@@ -133,9 +150,11 @@ class ShimmerInterface:
                         for t, v in samples:
                             self._buf_ts.append(float(t))
                             self._buf_vals.append(float(v))
+                            self._samples_processed += 1
             except Exception:
                 # If native loop errors persistently, downgrade to simulation
                 self._use_native = False
+                self._native_backend_active = False
                 self._native = None
                 self._sim_loop()
                 return
@@ -158,6 +177,7 @@ class ShimmerInterface:
             with self._lock:
                 self._buf_ts.append(now)
                 self._buf_vals.append(val)
+                self._samples_processed += 1
             phase = (phase + two_pi * dt * 1.2) % two_pi  # 1.2 Hz wave
             t_next += dt
 
