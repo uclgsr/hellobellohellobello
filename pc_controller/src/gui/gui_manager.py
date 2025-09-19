@@ -1880,8 +1880,8 @@ class GUIManager(QMainWindow):
                     # Convert to numpy array and display (simplified)
                     # In a full implementation, this would properly decode JPEG/video formats
                     self._log(f"Received video frame from {device_id}: {len(frame_bytes)} bytes")
-                except Exception:
-                    pass  # Skip malformed frames
+                except Exception as exc:
+                    self._log(f"Failed to decode video frame from {device_id}: {exc}")
                     
         except Exception as exc:
             self._log(f"Error handling live video: {exc}")
