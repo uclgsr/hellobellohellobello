@@ -35,15 +35,6 @@ fun detectAndroidSdk(): Boolean {
 val hasAndroidSdk = detectAndroidSdk()
 
 // ============================================================================
-// Performance Configuration
-// ============================================================================
-
-gradle.startParameter.apply {
-    isBuildCacheEnabled = true
-    maxWorkerCount = Runtime.getRuntime().availableProcessors()
-}
-
-// ============================================================================
 // Composite Build Tasks
 // ============================================================================
 

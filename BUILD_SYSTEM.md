@@ -13,7 +13,7 @@ This document describes the comprehensive build system optimizations applied to 
 - Optimized GC pause times (200ms target)
 
 **Parallel Processing:**
-- 8 worker threads for parallel task execution
+- Parallel execution enabled, using all available CPU cores
 - Parallel project configuration enabled
 - Build cache enabled for incremental builds
 - Configuration cache with problem warnings
@@ -35,7 +35,6 @@ This document describes the comprehensive build system optimizations applied to 
 - `staging`: QA builds with release optimizations but debug symbols
 
 **Build Configuration Fields:**
-- Dynamic build metadata (Git SHA, build timestamp)
 - Environment-specific API endpoints
 - Hardware capability flags
 

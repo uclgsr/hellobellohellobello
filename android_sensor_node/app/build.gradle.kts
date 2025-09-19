@@ -32,12 +32,6 @@ android {
             buildConfigField("String", "BUILD_TYPE", "\"debug\"")
             buildConfigField("boolean", "DEBUG_MODE", "true")
             buildConfigField("String", "API_BASE_URL", "\"http://localhost:8080\"")
-            
-            // Enable detailed logging for debug builds
-            proguardFiles(
-                getDefaultProguardFile("proguard-android.txt"),
-                "proguard-rules.pro"
-            )
         }
         
         release {
