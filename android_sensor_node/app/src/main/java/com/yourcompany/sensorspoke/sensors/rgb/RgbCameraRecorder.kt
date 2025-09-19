@@ -156,6 +156,22 @@ class RgbCameraRecorder(
 
             // Start enhanced video recording with detected quality
             startVideoRecording(File(sessionDir, "video.mp4"))
+            
+            // Initialize RAW DNG capture session if in RAW mode
+            if (recordingMode == RecordingMode.RAW_DNG && rawDngDir != null) {
+                val rawDngManager = rgbCameraManager.getCamera2RawDngManager()
+                if (rawDngManager != null) {
+                    val sessionStarted = rawDngManager.startRawCaptureSession()
+                    if (sessionStarted) {
+                        Log.i(TAG, "RAW DNG capture session started successfully")
+                        _recordingStatus.value = RecordingStatus.RECORDING
+                    } else {
+                        Log.w(TAG, "Failed to start RAW DNG capture session, continuing with standard recording")
+                    }
+                } else {
+                    Log.w(TAG, "RAW DNG manager not available, continuing with standard recording")
+                }
+            }
 
             // Start frame capture process
             startFrameCapture(framesDir, rawDngDir)
@@ -215,6 +231,13 @@ class RgbCameraRecorder(
             // Cancel sync monitoring job
             syncMonitorJob?.cancel()
             syncMonitorJob = null
+
+            // Stop RAW DNG capture session if active
+            if (recordingMode == RecordingMode.RAW_DNG) {
+                val rawDngManager = rgbCameraManager.getCamera2RawDngManager()
+                rawDngManager?.stopRawCaptureSession()
+                Log.i(TAG, "RAW DNG capture session stopped")
+            }
 
             // Close CSV resources
             csvWriter?.flush()
@@ -411,7 +434,7 @@ class RgbCameraRecorder(
     }
 
     /**
-     * Capture RAW DNG frame using Camera2 API for Samsung devices
+     * Capture RAW DNG frame using efficient persistent session
      */
     private fun captureRawDngFrame(timestampNs: Long, rawDngDir: File): String? {
         return try {
@@ -424,23 +447,23 @@ class RgbCameraRecorder(
             val rawFilename = "raw_${timestampNs}_${frameCount}.dng"
             val rawOutputFile = File(rawDngDir, rawFilename)
             
-            // Launch RAW DNG capture in background (non-blocking)
+            // Launch efficient RAW DNG frame capture using persistent session
             scope.launch {
                 try {
-                    val success = rawDngManager.captureRawDng(rawOutputFile)
+                    val success = rawDngManager.captureRawDngFrame(rawOutputFile)
                     if (success) {
-                        Log.d(TAG, "RAW DNG captured: $rawFilename")
+                        Log.d(TAG, "RAW DNG frame captured: $rawFilename")
                     } else {
-                        Log.w(TAG, "RAW DNG capture failed: $rawFilename")
+                        Log.w(TAG, "RAW DNG frame capture failed: $rawFilename")
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error capturing RAW DNG: ${e.message}", e)
+                    Log.e(TAG, "Error capturing RAW DNG frame: ${e.message}", e)
                 }
             }
             
             rawFilename
         } catch (e: Exception) {
-            Log.e(TAG, "Error initiating RAW DNG capture: ${e.message}", e)
+            Log.e(TAG, "Error initiating RAW DNG frame capture: ${e.message}", e)
             null
         }
     }

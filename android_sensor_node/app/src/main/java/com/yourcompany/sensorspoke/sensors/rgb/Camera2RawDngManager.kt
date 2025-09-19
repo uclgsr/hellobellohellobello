@@ -79,6 +79,7 @@ class Camera2RawDngManager(
     private var backgroundThread: HandlerThread? = null
     private var backgroundHandler: Handler? = null
     private var imageReader: ImageReader? = null
+    private var captureSession: CameraCaptureSession? = null
     
     // Synchronization primitives
     private val cameraOpenCloseLock = Semaphore(1)
@@ -256,9 +257,9 @@ class Camera2RawDngManager(
     }
     
     /**
-     * Capture RAW DNG image using Samsung's Stage3/Level3 processing
+     * Start RAW DNG capture session (persistent camera connection)
      */
-    suspend fun captureRawDng(outputFile: File): Boolean {
+    suspend fun startRawCaptureSession(): Boolean {
         val deviceInfo = _deviceInfo.value ?: return false
         
         if (!deviceInfo.supportsRawDng || deviceInfo.backCameraId == null) {
@@ -266,17 +267,22 @@ class Camera2RawDngManager(
             return false
         }
         
+        if (_cameraState.value != Camera2State.READY && _cameraState.value != Camera2State.UNINITIALIZED) {
+            Log.w(TAG, "RAW capture session already active or in error state")
+            return false
+        }
+        
         return try {
-            _cameraState.value = Camera2State.CAPTURING
-            Log.i(TAG, "Starting RAW DNG capture to: ${outputFile.absolutePath}")
+            _cameraState.value = Camera2State.INITIALIZING
+            Log.i(TAG, "Starting persistent RAW DNG capture session")
             
-            // Open camera and setup capture session
+            // Open camera for persistent session
             if (!openCamera(deviceInfo.backCameraId)) {
                 _cameraState.value = Camera2State.ERROR
                 return false
             }
             
-            // Setup ImageReader for RAW capture
+            // Setup ImageReader for RAW capture (persistent)
             val rawSize = deviceInfo.maxRawSize ?: return false
             val rawFormat = deviceInfo.availableRawFormats.firstOrNull() ?: return false
             
@@ -284,10 +290,71 @@ class Camera2RawDngManager(
                 rawSize.width, 
                 rawSize.height,
                 rawFormat,
-                1
-            ).apply {
-                setOnImageAvailableListener({ reader ->
-                    reader.acquireLatestImage()?.use { image ->
+                2  // Buffer for 2 images to prevent blocking
+            )
+            
+            // Create persistent capture session
+            val reader = imageReader
+            val device = cameraDevice
+            
+            if (reader == null || device == null) {
+                Log.e(TAG, "ImageReader or CameraDevice is null")
+                _cameraState.value = Camera2State.ERROR
+                return false
+            }
+            
+            val surfaces = listOf(reader.surface)
+            createCaptureSession(surfaces) { session ->
+                captureSession = session
+                _cameraState.value = Camera2State.READY
+                Log.i(TAG, "RAW DNG capture session established successfully")
+            }
+            
+            true
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting RAW DNG capture session: ${e.message}", e)
+            _cameraState.value = Camera2State.ERROR
+            cleanup()
+            false
+        }
+    }
+    
+    /**
+     * Stop RAW DNG capture session and cleanup resources
+     */
+    fun stopRawCaptureSession() {
+        Log.i(TAG, "Stopping RAW DNG capture session")
+        cleanup()
+        _cameraState.value = Camera2State.UNINITIALIZED
+    }
+    
+    /**
+     * Capture single RAW DNG frame using persistent session (efficient)
+     */
+    suspend fun captureRawDngFrame(outputFile: File): Boolean {
+        val session = captureSession
+        val device = cameraDevice
+        val reader = imageReader
+        
+        if (session == null || device == null || reader == null) {
+            Log.e(TAG, "RAW capture session not active")
+            return false
+        }
+        
+        if (_cameraState.value != Camera2State.READY) {
+            Log.w(TAG, "Camera not ready for capture")
+            return false
+        }
+        
+        return try {
+            _cameraState.value = Camera2State.CAPTURING
+            
+            // Use suspendCancellableCoroutine to properly wait for capture completion
+            suspendCancellableCoroutine { continuation ->
+                // Setup image listener for this specific capture
+                reader.setOnImageAvailableListener({ imageReader ->
+                    imageReader.acquireLatestImage()?.use { image ->
                         try {
                             // Save RAW DNG data
                             val buffer = image.planes[0].buffer
@@ -298,30 +365,17 @@ class Camera2RawDngManager(
                                 fos.write(bytes)
                             }
                             
-                            Log.i(TAG, "RAW DNG image saved: ${outputFile.absolutePath} (${bytes.size} bytes)")
+                            Log.d(TAG, "RAW DNG frame saved: ${outputFile.name} (${bytes.size} bytes)")
                         } catch (e: Exception) {
-                            Log.e(TAG, "Error saving RAW DNG image: ${e.message}", e)
+                            Log.e(TAG, "Error saving RAW DNG frame: ${e.message}", e)
                         }
                     }
                 }, backgroundHandler)
-            }
-            
-            // Create capture session with RAW surface
-            val reader = imageReader
-            val device = cameraDevice
-            
-            if (reader == null || device == null) {
-                Log.e(TAG, "ImageReader or CameraDevice is null")
-                return false
-            }
-            
-            val surfaces = listOf(reader.surface)
-            createCaptureSession(surfaces) { session ->
-                // Build capture request for RAW DNG with Samsung optimizations
+                
+                // Build capture request with Samsung Stage3/Level3 optimizations
                 val captureRequestBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                 captureRequestBuilder.addTarget(reader.surface)
                 
-                // Samsung Stage3/Level3 optimizations
                 captureRequestBuilder.apply {
                     // Manual sensor controls for highest quality
                     set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_OFF)
@@ -334,7 +388,12 @@ class Camera2RawDngManager(
                     set(CaptureRequest.HOT_PIXEL_MODE, CameraMetadata.HOT_PIXEL_MODE_OFF)
                 }
                 
-                // Capture the RAW DNG image
+                // Handle cancellation
+                continuation.invokeOnCancellation {
+                    Log.w(TAG, "RAW DNG capture cancelled")
+                }
+                
+                // Capture the RAW DNG frame
                 session.capture(
                     captureRequestBuilder.build(),
                     object : CameraCaptureSession.CaptureCallback() {
@@ -343,7 +402,10 @@ class Camera2RawDngManager(
                             request: CaptureRequest,
                             result: TotalCaptureResult
                         ) {
-                            Log.i(TAG, "RAW DNG capture completed successfully")
+                            _cameraState.value = Camera2State.READY
+                            if (continuation.isActive) {
+                                continuation.resume(true)
+                            }
                         }
                         
                         override fun onCaptureFailed(
@@ -352,21 +414,36 @@ class Camera2RawDngManager(
                             failure: CaptureFailure
                         ) {
                             Log.e(TAG, "RAW DNG capture failed: ${failure.reason}")
+                            _cameraState.value = Camera2State.READY
+                            if (continuation.isActive) {
+                                continuation.resume(false)
+                            }
                         }
                     },
                     backgroundHandler
                 )
             }
             
-            _cameraState.value = Camera2State.READY
-            true
-            
         } catch (e: Exception) {
-            Log.e(TAG, "Error during RAW DNG capture: ${e.message}", e)
+            Log.e(TAG, "Error during RAW DNG frame capture: ${e.message}", e)
             _cameraState.value = Camera2State.ERROR
             false
-        } finally {
-            closeCamera()
+        }
+    }
+    
+    /**
+     * Legacy method for backward compatibility (now uses persistent session internally)
+     */
+    suspend fun captureRawDng(outputFile: File): Boolean {
+        Log.w(TAG, "Using legacy captureRawDng - consider using persistent session for better performance")
+        
+        // Start session, capture frame, then stop (inefficient but compatible)
+        return if (startRawCaptureSession()) {
+            val result = captureRawDngFrame(outputFile)
+            stopRawCaptureSession()
+            result
+        } else {
+            false
         }
     }
     
