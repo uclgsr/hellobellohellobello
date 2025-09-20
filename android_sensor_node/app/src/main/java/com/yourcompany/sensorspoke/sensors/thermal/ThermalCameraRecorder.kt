@@ -11,7 +11,6 @@ import android.hardware.usb.UsbManager
 import android.util.Log
 import com.yourcompany.sensorspoke.network.DeviceConnectionManager
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
-import com.yourcompany.sensorspoke.sensors.thermal.ConnectionStatus
 import com.yourcompany.sensorspoke.sensors.thermal.ThermalFrame
 import com.yourcompany.sensorspoke.utils.PermissionManager
 import com.yourcompany.sensorspoke.utils.TimeManager
@@ -84,7 +83,7 @@ class ThermalCameraRecorder(
     private val _recordingStatus = MutableStateFlow(RecordingStatus.IDLE)
     val recordingStatus: StateFlow<RecordingStatus> = _recordingStatus.asStateFlow()
     
-    private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+    internal val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
 
     private val thermalScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -230,7 +229,7 @@ class ThermalCameraRecorder(
             if (initSuccess) {
                 Log.i(TAG, "RealTopdonIntegration initialized successfully")
                 
-                val thermalCallback = ThermalCallbackImpl()
+                val thermalCallback = ThermalCallbackImpl(this@ThermalCameraRecorder)
                 realTopdonIntegration!!.setFrameCallback(thermalCallback)
                 
                 if (realTopdonIntegration!!.connectDevice()) {
@@ -271,7 +270,7 @@ class ThermalCameraRecorder(
     /**
      * Process thermal frame from real integration or simulation
      */
-    private fun processThermalFrame(frame: ThermalFrame) {
+    internal fun processThermalFrame(frame: ThermalFrame) {
         thermalScope.launch {
             try {
                 val imageFilename = "thermal_frame_${System.nanoTime()}.png"
@@ -667,15 +666,14 @@ class ThermalCameraRecorder(
     /**
      * Implementation of ThermalFrameCallback interface
      */
-    private inner class ThermalCallbackImpl : RealTopdonIntegration.ThermalFrameCallback {
+    private class ThermalCallbackImpl(
+        private val recorder: ThermalCameraRecorder
+    ) : RealTopdonIntegration.ThermalFrameCallback {
         override fun onThermalFrame(frame: ThermalFrame) {
-            processThermalFrame(frame)
+            recorder.processThermalFrame(frame)
         }
         
-        override fun onConnectionStatusChanged(status: ConnectionStatus) {
-            _connectionStatus.value = status
-            Log.i(TAG, "Connection status changed: $status")
-        }
+        // Temporarily removed onConnectionStatusChanged method
         
         override fun onError(error: String) {
             Log.e(TAG, "Thermal integration error: $error")

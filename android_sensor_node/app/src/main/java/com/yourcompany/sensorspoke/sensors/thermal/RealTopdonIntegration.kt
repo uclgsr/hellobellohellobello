@@ -46,7 +46,7 @@ class RealTopdonIntegration(private val context: Context) {
      */
     interface ThermalFrameCallback {
         fun onThermalFrame(frame: ThermalFrame)
-        fun onConnectionStatusChanged(status: ConnectionStatus)
+        // fun onConnectionStatusChanged(status: ConnectionStatus)  // Temporarily disabled
         fun onError(error: String)
     }
 
@@ -101,12 +101,12 @@ class RealTopdonIntegration(private val context: Context) {
             if (device != null) {
                 usbDevice = device
                 _connectionStatus.value = ConnectionStatus.CONNECTED
-                thermalFrameCallback?.onConnectionStatusChanged(ConnectionStatus.CONNECTED)
+                // thermalFrameCallback?.onConnectionStatusChanged(ConnectionStatus.CONNECTED)  // Temporarily disabled
                 Log.i(TAG, "Successfully connected to TC001 device")
                 true
             } else {
                 _connectionStatus.value = ConnectionStatus.DISCONNECTED
-                thermalFrameCallback?.onConnectionStatusChanged(ConnectionStatus.DISCONNECTED)
+                // thermalFrameCallback?.onConnectionStatusChanged(ConnectionStatus.DISCONNECTED)  // Temporarily disabled
                 Log.w(TAG, "No TC001 device found")
                 false
             }
