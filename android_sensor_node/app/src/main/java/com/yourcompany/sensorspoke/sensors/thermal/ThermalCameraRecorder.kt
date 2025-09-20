@@ -230,19 +230,8 @@ class ThermalCameraRecorder(
             if (initSuccess) {
                 Log.i(TAG, "RealTopdonIntegration initialized successfully")
                 
-                realTopdonIntegration!!.setFrameCallback(object : RealTopdonIntegration.ThermalFrameCallback {
-                    override fun onThermalFrame(frame: ThermalFrame) {
-                        processThermalFrame(frame)
-                    }
-                    
-                    override fun onConnectionStatusChanged(status: ConnectionStatus) {
-                        // Empty implementation for now
-                    }
-                    
-                    override fun onError(error: String) {
-                        Log.e(TAG, "Thermal integration error: $error")
-                    }
-                })
+                val thermalCallback = ThermalCallbackImpl()
+                realTopdonIntegration!!.setFrameCallback(thermalCallback)
                 
                 if (realTopdonIntegration!!.connectDevice()) {
                     Log.i(TAG, "Successfully connected to TC001 device")
@@ -674,4 +663,22 @@ class ThermalCameraRecorder(
         val isUsingRealHardware: Boolean,
         val targetFps: Int,
     )
+
+    /**
+     * Implementation of ThermalFrameCallback interface
+     */
+    private inner class ThermalCallbackImpl : RealTopdonIntegration.ThermalFrameCallback {
+        override fun onThermalFrame(frame: ThermalFrame) {
+            processThermalFrame(frame)
+        }
+        
+        override fun onConnectionStatusChanged(status: ConnectionStatus) {
+            _connectionStatus.value = status
+            Log.i(TAG, "Connection status changed: $status")
+        }
+        
+        override fun onError(error: String) {
+            Log.e(TAG, "Thermal integration error: $error")
+        }
+    }
 }
