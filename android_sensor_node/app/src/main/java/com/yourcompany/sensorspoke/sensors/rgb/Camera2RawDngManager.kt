@@ -79,7 +79,6 @@ class Camera2RawDngManager(
     private var backgroundThread: HandlerThread? = null
     private var backgroundHandler: Handler? = null
     private var imageReader: ImageReader? = null
-    private var captureSession: CameraCaptureSession? = null
     
     // Synchronization primitives
     private val cameraOpenCloseLock = Semaphore(1)

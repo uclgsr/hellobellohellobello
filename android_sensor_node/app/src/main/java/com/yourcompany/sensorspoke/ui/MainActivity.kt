@@ -77,6 +77,12 @@ class MainActivity : AppCompatActivity() {
     private var pcStatusIndicator: View? = null
     private var pcStatusText: TextView? = null
 
+    // Sensor status indicator components
+    private var rgbSensorStatus: SensorStatusIndicator? = null
+    private var thermalSensorStatus: SensorStatusIndicator? = null
+    private var gsrSensorStatus: SensorStatusIndicator? = null
+    private var pcSensorStatus: SensorStatusIndicator? = null
+
     private var navigationController: NavigationController? = null
 
     private lateinit var preferences: SharedPreferences
@@ -558,13 +564,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Initialize the ViewModel with the recording controller
+     * Update sensor status from current ViewModel state
      */
-    private fun initializeViewModel() {
-        lifecycleScope.launch {
-            val controller = ensureController()
-            vm.initialize(controller)
-        }
+    private fun updateSensorStatus() {
+        // This will be called to refresh sensor status indicators
+        // The actual updates happen via the uiState flow in observeUiState()
     }
 
     /**
@@ -575,11 +579,11 @@ class MainActivity : AppCompatActivity() {
             vm.uiState.collect { state ->
                 statusText?.text = state.statusText
 
-                if (state.isRecording && state.recordingDurationSeconds > 0) {
-                    recordingTimer?.visibility = View.VISIBLE
-                    recordingTimer?.text = formatRecordingTime(state.recordingDurationSeconds)
+                if (state.isRecording && state.recordingElapsedTime != "00:00") {
+                    recordingTimeText?.visibility = View.VISIBLE
+                    recordingTimeText?.text = state.recordingElapsedTime
                 } else {
-                    recordingTimer?.visibility = View.GONE
+                    recordingTimeText?.visibility = View.GONE
                 }
 
                 btnStartRecording?.isEnabled = state.startButtonEnabled
@@ -587,16 +591,66 @@ class MainActivity : AppCompatActivity() {
 
                 btnStartRecording?.text = if (state.isRecording) "Recording..." else "Start Recording"
 
-                rgbSensorStatus?.updateStatus("RGB Camera", state.cameraStatus.toSensorStatusIndicator())
-                thermalSensorStatus?.updateStatus("Thermal", state.thermalStatus.toSensorStatusIndicator())
-                gsrSensorStatus?.updateStatus("GSR", state.shimmerStatus.toSensorStatusIndicator())
-                pcSensorStatus?.updateStatus("PC Link", state.pcStatus.toSensorStatusIndicator())
+                rgbSensorStatus?.updateStatus("RGB Camera", 
+                    state.sensorStatus["rgb"]?.let { sensorStatus ->
+                        SensorStatusIndicator.SensorStatus(
+                            name = "RGB Camera",
+                            isActive = sensorStatus.isActive,
+                            isHealthy = sensorStatus.isHealthy,
+                            statusMessage = sensorStatus.statusMessage
+                        )
+                    } ?: SensorStatusIndicator.SensorStatus(
+                        name = "RGB Camera",
+                        isActive = state.isCameraConnected,
+                        isHealthy = state.isCameraConnected,
+                        statusMessage = if (state.isCameraConnected) "Connected" else "Disconnected"
+                    )
+                )
+                
+                thermalSensorStatus?.updateStatus("Thermal", 
+                    state.sensorStatus["thermal"]?.let { sensorStatus ->
+                        SensorStatusIndicator.SensorStatus(
+                            name = "Thermal Camera",
+                            isActive = sensorStatus.isActive,
+                            isHealthy = sensorStatus.isHealthy,
+                            statusMessage = sensorStatus.statusMessage
+                        )
+                    } ?: SensorStatusIndicator.SensorStatus(
+                        name = "Thermal Camera",
+                        isActive = state.isThermalConnected,
+                        isHealthy = state.isThermalConnected,
+                        statusMessage = if (state.isThermalConnected) "Connected" else "Disconnected"
+                    )
+                )
+                
+                gsrSensorStatus?.updateStatus("GSR", 
+                    state.sensorStatus["gsr"]?.let { sensorStatus ->
+                        SensorStatusIndicator.SensorStatus(
+                            name = "GSR Sensor",
+                            isActive = sensorStatus.isActive,
+                            isHealthy = sensorStatus.isHealthy,
+                            statusMessage = sensorStatus.statusMessage
+                        )
+                    } ?: SensorStatusIndicator.SensorStatus(
+                        name = "GSR Sensor",
+                        isActive = state.isShimmerConnected,
+                        isHealthy = state.isShimmerConnected,
+                        statusMessage = if (state.isShimmerConnected) "Connected" else "Disconnected"
+                    )
+                )
+                
+                pcSensorStatus?.updateStatus("PC Link", SensorStatusIndicator.SensorStatus(
+                    name = "PC Link",
+                    isActive = state.isPcConnected,
+                    isHealthy = state.isPcConnected,
+                    statusMessage = if (state.isPcConnected) "Connected" else "Disconnected"
+                ))
 
                 if (state.showErrorDialog && !state.errorMessage.isNullOrEmpty()) {
                     showErrorDialog(state.errorMessage)
                 }
 
-                if (state.thermalIsSimulated && state.isThermalConnected) {
+                if (state.thermalStatus.isSimulated && state.isThermalConnected) {
                     showThermalSimulationOverlay()
                 }
             }
@@ -949,13 +1003,13 @@ class MainActivity : AppCompatActivity() {
      */
     private fun initializeTC001System() {
         try {
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+            com.yourcompany.sensorspoke.sensors.thermal.TC001InitUtil
                 .initLog()
 
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+            com.yourcompany.sensorspoke.sensors.thermal.TC001InitUtil
                 .initReceiver(this)
 
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+            com.yourcompany.sensorspoke.sensors.thermal.TC001InitUtil
                 .initTC001DeviceManager(this)
 
             Log.i("MainActivity", "TC001 thermal camera system initialized successfully")
@@ -984,10 +1038,6 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "Permission status: ${permissionManager.getPermissionStatus()}")
             }
         }
-    }
-
-    fun showToast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun showUserFriendlyError(message: String, context: String = "") {

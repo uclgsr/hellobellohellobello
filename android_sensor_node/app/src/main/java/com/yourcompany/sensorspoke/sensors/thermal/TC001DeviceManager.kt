@@ -1,6 +1,7 @@
 package com.yourcompany.sensorspoke.sensors.thermal
 
 import android.content.Context
+import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
@@ -68,8 +69,8 @@ class TC001DeviceManager(
     private val _connectedDevices = MutableLiveData<List<TC001Device>>()
     val connectedDevices: LiveData<List<TC001Device>> = _connectedDevices
 
-    private val _deviceStatus = MutableLiveData<TC001DeviceStatus>()
-    val deviceStatus: LiveData<TC001DeviceStatus> = _deviceStatus
+    private val _deviceStatus = MutableLiveData<TC001DeviceOperationStatus>()
+    val deviceStatus: LiveData<TC001DeviceOperationStatus> = _deviceStatus
 
     private var isScanning = false
     private var scanningJob: Job? = null
@@ -84,7 +85,7 @@ class TC001DeviceManager(
 
     init {
         _deviceState.value = TC001DeviceState.DISCONNECTED
-        _deviceStatus.value = TC001DeviceStatus.IDLE
+        _deviceStatus.value = TC001DeviceOperationStatus.IDLE
     }
 
     /**
@@ -97,7 +98,7 @@ class TC001DeviceManager(
         }
 
         isScanning = true
-        _deviceStatus.value = TC001DeviceStatus.SCANNING
+        _deviceStatus.value = TC001DeviceOperationStatus.SCANNING
 
         scanningJob =
             CoroutineScope(Dispatchers.IO).launch {
@@ -129,7 +130,7 @@ class TC001DeviceManager(
     fun stopDeviceDiscovery() {
         isScanning = false
         scanningJob?.cancel()
-        _deviceStatus.value = TC001DeviceStatus.IDLE
+        _deviceStatus.value = TC001DeviceOperationStatus.IDLE
         Log.i(TAG, "Device discovery stopped")
     }
 
@@ -173,7 +174,7 @@ class TC001DeviceManager(
             }
 
             _deviceState.postValue(TC001DeviceState.CONNECTING)
-            _deviceStatus.postValue(TC001DeviceStatus.CONNECTING)
+            _deviceStatus.postValue(TC001DeviceOperationStatus.CONNECTING)
 
             connectionJob =
                 launch {
@@ -190,24 +191,24 @@ class TC001DeviceManager(
                             deviceCapabilities = queryDeviceCapabilities(device)
 
                             _deviceState.postValue(TC001DeviceState.CONNECTED)
-                            _deviceStatus.postValue(TC001DeviceStatus.STREAMING)
+                            _deviceStatus.postValue(TC001DeviceOperationStatus.STREAMING)
                             reconnectionAttempts = 0
 
                             Log.i(TAG, "Successfully connected to TC001 device: ${device.serialNumber}")
                             Log.i(TAG, "Device capabilities: $deviceCapabilities")
                         } else {
                             _deviceState.postValue(TC001DeviceState.CONNECTION_FAILED)
-                            _deviceStatus.postValue(TC001DeviceStatus.ERROR)
+                            _deviceStatus.postValue(TC001DeviceOperationStatus.ERROR)
                             Log.e(TAG, "Failed to connect to TC001 device: ${device.serialNumber}")
                         }
                     } catch (e: TimeoutCancellationException) {
                         Log.e(TAG, "Connection timeout for device: ${device.serialNumber}")
                         _deviceState.postValue(TC001DeviceState.CONNECTION_TIMEOUT)
-                        _deviceStatus.postValue(TC001DeviceStatus.ERROR)
+                        _deviceStatus.postValue(TC001DeviceOperationStatus.ERROR)
                     } catch (e: Exception) {
                         Log.e(TAG, "Connection error for device: ${device.serialNumber}", e)
                         _deviceState.postValue(TC001DeviceState.CONNECTION_FAILED)
-                        _deviceStatus.postValue(TC001DeviceStatus.ERROR)
+                        _deviceStatus.postValue(TC001DeviceOperationStatus.ERROR)
                     }
                 }
 
@@ -229,7 +230,7 @@ class TC001DeviceManager(
 
             try {
                 _deviceState.postValue(TC001DeviceState.DISCONNECTING)
-                _deviceStatus.postValue(TC001DeviceStatus.DISCONNECTING)
+                _deviceStatus.postValue(TC001DeviceOperationStatus.DISCONNECTING)
 
                 Log.i(TAG, "Disconnecting from TC001 device: ${device.serialNumber}")
 
@@ -239,13 +240,13 @@ class TC001DeviceManager(
                 deviceCapabilities = null
 
                 _deviceState.postValue(TC001DeviceState.DISCONNECTED)
-                _deviceStatus.postValue(TC001DeviceStatus.IDLE)
+                _deviceStatus.postValue(TC001DeviceOperationStatus.IDLE)
 
                 Log.i(TAG, "Successfully disconnected from TC001 device")
             } catch (e: Exception) {
                 Log.e(TAG, "Error during device disconnection: ${e.message}", e)
                 _deviceState.postValue(TC001DeviceState.DISCONNECTED)
-                _deviceStatus.postValue(TC001DeviceStatus.ERROR)
+                _deviceStatus.postValue(TC001DeviceOperationStatus.ERROR)
             }
         }
 
@@ -256,7 +257,7 @@ class TC001DeviceManager(
         withContext(Dispatchers.IO) {
             if (reconnectionAttempts >= MAX_RECONNECTION_ATTEMPTS) {
                 Log.w(TAG, "Max reconnection attempts reached")
-                _deviceStatus.postValue(TC001DeviceStatus.CONNECTION_LOST)
+                _deviceStatus.postValue(TC001DeviceOperationStatus.CONNECTION_LOST)
                 return@withContext false
             }
 
@@ -410,7 +411,7 @@ enum class TC001DeviceState {
     CONNECTION_LOST,
 }
 
-enum class TC001DeviceStatus {
+enum class TC001DeviceOperationStatus {
     IDLE,
     SCANNING,
     CONNECTING,

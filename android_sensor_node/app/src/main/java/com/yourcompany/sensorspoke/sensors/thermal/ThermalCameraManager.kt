@@ -314,6 +314,28 @@ class TC001UIController : ViewModel() {
     private val _deviceStatus = MutableLiveData<TC001DeviceStatus?>(null)
     val deviceStatus: LiveData<TC001DeviceStatus?> = _deviceStatus
 
+    private val _deviceConnectionStatus = MutableLiveData(false)
+    val deviceConnectionStatus: LiveData<Boolean> = _deviceConnectionStatus
+
+    private val _currentTemperature = MutableLiveData<Float?>(null)
+    val currentTemperature: LiveData<Float?> = _currentTemperature
+
+    /**
+     * Update device connection status
+     */
+    fun updateDeviceConnection(connected: Boolean) {
+        _deviceConnectionStatus.value = connected
+        Log.i(TAG, "Device connection updated: $connected")
+    }
+
+    /**
+     * Update current temperature reading
+     */
+    fun updateCurrentTemperature(temperature: Float) {
+        _currentTemperature.value = temperature
+        Log.d(TAG, "Temperature updated: $temperature°C")
+    }
+
     /**
      * Start thermal recording
      */
@@ -356,6 +378,51 @@ class TC001UIController : ViewModel() {
     fun updateDeviceStatus(status: TC001DeviceStatus) {
         _deviceStatus.value = status
         Log.i(TAG, "Updated device status: $status")
+    }
+
+    /**
+     * Handle auto gain toggle
+     */
+    fun onAutoGainToggled(enabled: Boolean) {
+        Log.i(TAG, "Auto gain toggled: $enabled")
+        // Implementation for auto gain control
+    }
+
+    /**
+     * Handle temperature compensation toggle
+     */
+    fun onTemperatureCompensationToggled(enabled: Boolean) {
+        Log.i(TAG, "Temperature compensation toggled: $enabled")
+        // Implementation for temperature compensation control
+    }
+
+    // Additional UI controller methods for EnhancedMainFragment integration
+    
+    private val _hasConnectLine = MutableLiveData(false)
+    val hasConnectLine: LiveData<Boolean> = _hasConnectLine
+
+    /**
+     * Handle device click events
+     */
+    fun handleDeviceClick(deviceType: Any) {
+        Log.i(TAG, "Device clicked: $deviceType")
+        // Handle device selection/interaction
+    }
+
+    /**
+     * Refresh UI state
+     */
+    fun refresh() {
+        Log.d(TAG, "Refreshing UI state")
+        // Refresh device list and connection status
+    }
+
+    /**
+     * Update connection status
+     */
+    fun updateConnectionStatus(connected: Boolean) {
+        _deviceConnectionStatus.value = connected
+        Log.i(TAG, "Connection status updated: $connected")
     }
 }
 

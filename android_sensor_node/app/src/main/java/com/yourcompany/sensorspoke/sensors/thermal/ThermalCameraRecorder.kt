@@ -11,6 +11,7 @@ import android.hardware.usb.UsbManager
 import android.util.Log
 import com.yourcompany.sensorspoke.network.DeviceConnectionManager
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
+import com.yourcompany.sensorspoke.sensors.thermal.ThermalFrame
 import com.yourcompany.sensorspoke.utils.PermissionManager
 import com.yourcompany.sensorspoke.utils.TimeManager
 import kotlinx.coroutines.CoroutineScope
@@ -82,7 +83,7 @@ class ThermalCameraRecorder(
     private val _recordingStatus = MutableStateFlow(RecordingStatus.IDLE)
     val recordingStatus: StateFlow<RecordingStatus> = _recordingStatus.asStateFlow()
     
-    private val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
+    internal val _connectionStatus = MutableStateFlow(ConnectionStatus.DISCONNECTED)
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
 
     private val thermalScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -228,19 +229,8 @@ class ThermalCameraRecorder(
             if (initSuccess) {
                 Log.i(TAG, "RealTopdonIntegration initialized successfully")
                 
-                realTopdonIntegration!!.setFrameCallback(object : RealTopdonIntegration.ThermalFrameCallback {
-                    override fun onThermalFrame(frame: ThermalFrame) {
-                        processThermalFrame(frame)
-                    }
-                    
-                    override fun onConnectionStatusChanged(status: ConnectionStatus) {
-                        updateConnectionStatus(status)
-                    }
-                    
-                    override fun onError(error: String) {
-                        Log.e(TAG, "Thermal integration error: $error")
-                    }
-                })
+                val thermalCallback = ThermalCallbackImpl(this@ThermalCameraRecorder)
+                realTopdonIntegration!!.setFrameCallback(thermalCallback)
                 
                 if (realTopdonIntegration!!.connectDevice()) {
                     Log.i(TAG, "Successfully connected to TC001 device")
@@ -280,7 +270,7 @@ class ThermalCameraRecorder(
     /**
      * Process thermal frame from real integration or simulation
      */
-    private fun processThermalFrame(frame: ThermalFrame) {
+    internal fun processThermalFrame(frame: ThermalFrame) {
         thermalScope.launch {
             try {
                 val imageFilename = "thermal_frame_${System.nanoTime()}.png"
@@ -323,13 +313,14 @@ class ThermalCameraRecorder(
     private fun createThermalBitmap(frame: ThermalFrame): Bitmap {
         val bitmap = Bitmap.createBitmap(frame.width, frame.height, Bitmap.Config.ARGB_8888)
         
-        val tempRange = frame.maxTemperature - frame.minTemperature
+        val tempRange = frame.maxTemp - frame.minTemp
         
         for (y in 0 until frame.height) {
             for (x in 0 until frame.width) {
-                val temp = frame.temperatureMatrix[y][x]
+                val index = y * frame.width + x
+                val temp = frame.temperatureMatrix[index]
                 val normalizedTemp = if (tempRange > 0) {
-                    (temp - frame.minTemperature) / tempRange
+                    (temp - frame.minTemp) / tempRange
                 } else {
                     0.5f
                 }
@@ -562,26 +553,37 @@ class ThermalCameraRecorder(
     /**
      * Process real thermal frame from hardware
      */
-    private suspend fun processRealThermalFrame(thermalFrame: RealTopdonIntegration.ThermalFrame) {
+    private suspend fun processRealThermalFrame(thermalFrame: ThermalFrame) {
         frameCount++
         val timestampNs = thermalFrame.timestamp
         val timestampMs = System.currentTimeMillis()
         
         try {
             val imageFileName = "thermal_${timestampNs}.png"
-            thermalFrame.thermalBitmap?.let { bitmap ->
-                val imageFile = File(thermalImagesDir, imageFileName)
-                FileOutputStream(imageFile).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                }
+            
+            // Create thermal bitmap from frame data
+            val thermalBitmap = createThermalBitmap(thermalFrame)
+            val imageFile = File(thermalImagesDir, imageFileName)
+            FileOutputStream(imageFile).use { out ->
+                thermalBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            
+            // Calculate center temperature
+            val centerX = thermalFrame.width / 2
+            val centerY = thermalFrame.height / 2
+            val centerIndex = centerY * thermalFrame.width + centerX
+            val centerTemp = if (centerIndex < thermalFrame.temperatureMatrix.size) {
+                thermalFrame.temperatureMatrix[centerIndex]
+            } else {
+                thermalFrame.avgTemp
             }
             
             csvWriter?.apply {
-                write("$timestampNs,$timestampMs,$frameCount,${thermalFrame.centerTemp},${thermalFrame.minTemp},${thermalFrame.maxTemp},${thermalFrame.avgTemp},$imageFileName,192,256,REAL\n")
+                write("$timestampNs,$timestampMs,$frameCount,$centerTemp,${thermalFrame.minTemp},${thermalFrame.maxTemp},${thermalFrame.avgTemp},$imageFileName,192,256,REAL\n")
                 flush()
             }
             
-            Log.d(TAG, "Processed real thermal frame $frameCount: center=${String.format("%.2f", thermalFrame.centerTemp)}°C, range=${String.format("%.2f", thermalFrame.minTemp)}-${String.format("%.2f", thermalFrame.maxTemp)}°C")
+            Log.d(TAG, "Processed real thermal frame $frameCount: center=${String.format("%.2f", centerTemp)}°C, range=${String.format("%.2f", thermalFrame.minTemp)}-${String.format("%.2f", thermalFrame.maxTemp)}°C")
             
         } catch (e: Exception) {
             Log.e(TAG, "Error processing real thermal frame: ${e.message}", e)
@@ -660,4 +662,21 @@ class ThermalCameraRecorder(
         val isUsingRealHardware: Boolean,
         val targetFps: Int,
     )
+
+    /**
+     * Implementation of ThermalFrameCallback interface
+     */
+    private class ThermalCallbackImpl(
+        private val recorder: ThermalCameraRecorder
+    ) : RealTopdonIntegration.ThermalFrameCallback {
+        override fun onThermalFrame(frame: ThermalFrame) {
+            recorder.processThermalFrame(frame)
+        }
+        
+        // Temporarily removed onConnectionStatusChanged method
+        
+        override fun onError(error: String) {
+            Log.e(TAG, "Thermal integration error: $error")
+        }
+    }
 }

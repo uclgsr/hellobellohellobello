@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.yourcompany.sensorspoke"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.yourcompany.sensorspoke"
         minSdk = 26 // Android 8.0 (API 26) - matches documentation
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
 
@@ -98,9 +98,7 @@ android {
         // Performance: enable parallel test execution
         execution = "ANDROIDX_TEST_ORCHESTRATOR"
         
-        unitTests.all { test ->
-            test.useJUnitPlatform()
-        }
+        // Remove JUnit Platform configuration as it's not compatible with Android
     }
 
     compileOptions {
@@ -113,8 +111,8 @@ android {
         // Performance: enable incremental compilation
         freeCompilerArgs += listOf(
             "-opt-in=kotlin.RequiresOptIn",
-            "-Xjsr305=strict",
-            "-Xuse-k2" // Enable K2 compiler for better performance
+            "-Xjsr305=strict"
+            // Removed "-Xuse-k2" flag as it may cause compilation issues
         )
     }
 
