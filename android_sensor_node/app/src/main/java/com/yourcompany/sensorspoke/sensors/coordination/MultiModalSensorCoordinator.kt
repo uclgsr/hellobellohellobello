@@ -6,6 +6,8 @@ import androidx.lifecycle.LifecycleOwner
 import com.yourcompany.sensorspoke.sensors.audio.AudioRecorder
 import com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder
 import com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
+import com.yourcompany.sensorspoke.sensors.thermal.TC001IntegrationManager
+import com.yourcompany.sensorspoke.sensors.thermal.TC001IntegrationState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -56,7 +58,7 @@ class MultiModalSensorCoordinator(
         const val SYNC_LOG_HEADER = "timestamp_ns,system_time_ms,sensor_type,data_type,sensor_value,sync_status"
     }
 
-    private var tc001IntegrationManager: TC001SensorIntegrationManager? = null
+    private var tc001IntegrationManager: TC001IntegrationManager? = null
     private var rgbRecorder: RgbCameraRecorder? = null
     private var audioRecorder: AudioRecorder? = null
     private var shimmerRecorder: ShimmerRecorder? = null
@@ -94,14 +96,13 @@ class MultiModalSensorCoordinator(
                 shimmerRecorder = ShimmerRecorder(context)
                 Log.i(TAG, "GSR Shimmer recorder initialized")
 
-                tc001IntegrationManager =
-                    TC001SensorIntegrationManager(context).apply {
-                        if (!initializeSystem()) {
-                            Log.w(TAG, "TC001 integration initialization failed")
-                        } else {
-                            Log.i(TAG, "TC001 integration initialized successfully")
-                        }
-                    }
+                tc001IntegrationManager = TC001IntegrationManager(context)
+                val tc001InitResult = tc001IntegrationManager!!.initializeSystem()
+                if (!tc001InitResult) {
+                    Log.w(TAG, "TC001 integration initialization failed")
+                } else {
+                    Log.i(TAG, "TC001 integration initialized successfully")
+                }
 
                 rgbRecorder =
                     RgbCameraRecorder(context, lifecycleOwner).apply {
@@ -298,7 +299,7 @@ class MultiModalSensorCoordinator(
                 metricsJob?.cancel()
                 synchronizationJob?.cancel()
 
-                tc001IntegrationManager?.shutdown()
+                tc001IntegrationManager?.cleanup()
                 shimmerRecorder?.let { recorder ->
                     Log.i(TAG, "Stopping GSR recording")
                 }
@@ -334,7 +335,7 @@ class MultiModalSensorCoordinator(
                 if (manager.isSystemReady()) {
                     manager.startSystem()
                     delay(1000)
-                    manager.startRecording(sessionDir)
+                    // Note: Recording is handled by startSystem() and data processing starts automatically
                     Log.i(TAG, "Thermal recording started")
                     true
                 } else {
@@ -384,10 +385,8 @@ class MultiModalSensorCoordinator(
 
     private suspend fun stopThermalRecording(): Boolean =
         try {
-            tc001IntegrationManager?.let { manager ->
-                if (manager.isRecording()) {
-                    manager.stopRecording()
-                }
+            tc001IntegrationManager?.let { manager: TC001IntegrationManager ->
+                // Stop the system which will handle stopping all data processing
                 manager.stopSystem()
             }
             Log.i(TAG, "Thermal recording stopped")
@@ -512,8 +511,8 @@ class MultiModalSensorCoordinator(
     private suspend fun performSystemHealthCheck() {
         val gsrHealthy = shimmerRecorder != null
         val thermalHealthy =
-            tc001IntegrationManager?.getCurrentState()?.let { state ->
-                state != TC001SensorIntegrationManager.Companion.IntegrationState.ERROR
+            tc001IntegrationManager?.integrationState?.value?.let { state: TC001IntegrationState ->
+                state != TC001IntegrationState.ERROR
             } ?: false
         val rgbHealthy = true
         val audioHealthy = true
@@ -594,7 +593,7 @@ class MultiModalSensorCoordinator(
     private fun getActiveSensorCount(): Int {
         var count = 0
         if (shimmerRecorder != null) count++
-        if (tc001IntegrationManager?.isRecording() == true) count++
+        if (tc001IntegrationManager?.isSystemReady() == true) count++
         return count
     }
 

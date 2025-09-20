@@ -77,6 +77,12 @@ class MainActivity : AppCompatActivity() {
     private var pcStatusIndicator: View? = null
     private var pcStatusText: TextView? = null
 
+    // Sensor status indicator components
+    private var rgbSensorStatus: SensorStatusIndicator? = null
+    private var thermalSensorStatus: SensorStatusIndicator? = null
+    private var gsrSensorStatus: SensorStatusIndicator? = null
+    private var pcSensorStatus: SensorStatusIndicator? = null
+
     private var navigationController: NavigationController? = null
 
     private lateinit var preferences: SharedPreferences
@@ -558,13 +564,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Initialize the ViewModel with the recording controller
+     * Update sensor status from current ViewModel state
      */
-    private fun initializeViewModel() {
-        lifecycleScope.launch {
-            val controller = ensureController()
-            vm.initialize(controller)
-        }
+    private fun updateSensorStatus() {
+        // This will be called to refresh sensor status indicators
+        // The actual updates happen via the uiState flow in observeUiState()
     }
 
     /**
@@ -984,10 +988,6 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "Permission status: ${permissionManager.getPermissionStatus()}")
             }
         }
-    }
-
-    fun showToast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun showUserFriendlyError(message: String, context: String = "") {

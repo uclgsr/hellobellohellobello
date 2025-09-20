@@ -121,7 +121,7 @@ class MainViewModel : ViewModel() {
         sessionOrchestrator = orchestrator
         connectionManager = connManager
 
-        updateUiState { it.copy(isInitialized = true, statusText = "Ready to connect") }
+        updateUiState { copy(isInitialized = true, statusText = "Ready to connect") }
 
         viewModelScope.launch {
             orchestrator.state.collect { orchestratorState ->
@@ -159,7 +159,7 @@ class MainViewModel : ViewModel() {
 
         viewModelScope.launch {
             orchestrator.currentSessionId.collect { sessionId ->
-                updateUiState { it.copy(currentSessionId = sessionId) }
+                updateUiState { copy(currentSessionId = sessionId) }
             }
         }
 
@@ -177,8 +177,9 @@ class MainViewModel : ViewModel() {
                             com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.STOPPING -> "Stopping..."
                             com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.STOPPED -> "Stopped"
                             com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.ERROR -> "Error"
+                            com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.RECOVERING -> "Recovering..."
                         }
-                        SensorStatus(sensorName, isActive, isHealthy, System.currentTimeMillis(), statusMessage)
+                        SensorStatus(sensorName, isActive, isHealthy, false, System.currentTimeMillis(), statusMessage)
                     }
                     _sensorStatus.value = statusMap
                 }
