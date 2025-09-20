@@ -53,7 +53,13 @@ def validate_mermaid_syntax(content: str) -> Tuple[bool, List[str]]:
         # Check for unmatched brackets/parentheses
         brackets = {'[': ']', '(': ')', '{': '}', '<': '>'}
         stack = []
+        in_quotes = False
         for char in line:
+            if char == '"':
+                in_quotes = not in_quotes
+            if in_quotes:
+                continue
+
             if char in brackets:
                 stack.append(brackets[char])
             elif char in brackets.values():
