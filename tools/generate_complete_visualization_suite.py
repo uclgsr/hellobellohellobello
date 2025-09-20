@@ -591,7 +591,7 @@ python tools/validate_mermaid_syntax.py
 
 ---
 
-*Generated from repository state: `$(git rev-parse HEAD)` - Reflects actual implementation*
+*Generated from repository state: `{get_git_revision_hash()}` - Reflects actual implementation*
 """
     
     base_dir = Path(__file__).parent.parent / "documentation" / "diagrams" / "comprehensive_mermaid"
