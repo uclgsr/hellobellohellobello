@@ -145,7 +145,7 @@ def generate_validation_report():
 - **Total Charts:** {len(analysis_results)}
 - **Valid Charts:** {len(valid_charts)} ✅
 - **Invalid Charts:** {len(invalid_charts)} ❌
-- **Success Rate:** {len(valid_charts)/len(analysis_results)*100:.1f}%
+- **Success Rate:** {len(valid_charts) / len(analysis_results) * 100 if analysis_results else 0.0:.1f}%
 
 ## 📈 Statistics
 
