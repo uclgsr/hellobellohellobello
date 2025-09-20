@@ -149,7 +149,7 @@ This document describes the comprehensive build system optimizations applied to 
 
 ### `gradle.properties`
 - JVM memory settings: 6GB heap, G1GC
-- Parallel build configuration: 8 workers
+- Parallel build configuration: uses all available CPU cores
 - Android optimizations: R8, AndroidX, Jetifier
 - Kotlin compiler optimizations
 - File system watching and build cache settings

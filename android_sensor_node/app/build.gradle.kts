@@ -279,9 +279,11 @@ tasks.register("assembleAllVariants") {
     description = "Assemble all build variants for comprehensive testing"
     dependsOn(
         "assembleFullDebug",
-        "assembleFullRelease", 
+        "assembleFullRelease",
+        "assembleFullStaging",
         "assembleLiteDebug",
-        "assembleLiteRelease"
+        "assembleLiteRelease",
+        "assembleLiteStaging"
     )
 }
 

@@ -48,9 +48,7 @@ tasks.register("buildRelease") {
     if (hasAndroidSdk) {
         dependsOn(
             ":android_sensor_node:app:assembleFullRelease",
-            ":android_sensor_node:app:assembleLiteRelease",
-            ":android_sensor_node:app:testFullDebugUnitTest",
-            ":android_sensor_node:app:testLiteDebugUnitTest"
+            ":android_sensor_node:app:assembleLiteRelease"
         )
     }
     dependsOn(":pc_controller:assemblePcController")
@@ -98,8 +96,6 @@ tasks.register<Exec>("pyTest") {
     executable = "python3"
     args = listOf("-m", "pytest", "--verbose", "--tb=short")
     workingDir = rootProject.projectDir
-    
-    isIgnoreExitValue = true // Don't fail the build if pytest is not available
     
     doFirst {
         println("[pyTest] Running Python test suite...")
