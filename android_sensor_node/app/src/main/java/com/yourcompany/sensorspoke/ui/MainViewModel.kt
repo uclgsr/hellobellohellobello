@@ -159,7 +159,7 @@ class MainViewModel : ViewModel() {
 
         viewModelScope.launch {
             orchestrator.currentSessionId.collect { sessionId ->
-                updateUiState { copy(currentSessionId = sessionId) }
+                updateUiState { copy(statusText = if (sessionId != null) "Session: $sessionId" else "Ready") }
             }
         }
 
@@ -193,10 +193,6 @@ class MainViewModel : ViewModel() {
                             _statusMessage.value = "Recording started ($failedSensors failed)"
                         }
                     }
-                }
-
-                updateUiState {
-                    copy(statusText = if (sessionId != null) "Session: $sessionId" else "Ready")
                 }
             }
         }

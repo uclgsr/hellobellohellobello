@@ -592,27 +592,35 @@ class MainActivity : AppCompatActivity() {
                 btnStartRecording?.text = if (state.isRecording) "Recording..." else "Start Recording"
 
                 rgbSensorStatus?.updateStatus("RGB Camera", SensorStatusIndicator.SensorStatus(
+                    name = "RGB Camera",
                     isActive = state.isCameraConnected,
-                    isHealthy = state.isCameraConnected
+                    isHealthy = state.isCameraConnected,
+                    statusMessage = if (state.isCameraConnected) "Connected" else "Disconnected"
                 ))
                 thermalSensorStatus?.updateStatus("Thermal", SensorStatusIndicator.SensorStatus(
+                    name = "Thermal Camera",
                     isActive = state.isThermalConnected,
-                    isHealthy = state.isThermalConnected
+                    isHealthy = state.isThermalConnected,
+                    statusMessage = if (state.isThermalConnected) "Connected" else "Disconnected"
                 ))
                 gsrSensorStatus?.updateStatus("GSR", SensorStatusIndicator.SensorStatus(
+                    name = "GSR Sensor",
                     isActive = state.isShimmerConnected,
-                    isHealthy = state.isShimmerConnected
+                    isHealthy = state.isShimmerConnected,
+                    statusMessage = if (state.isShimmerConnected) "Connected" else "Disconnected"
                 ))
                 pcSensorStatus?.updateStatus("PC Link", SensorStatusIndicator.SensorStatus(
+                    name = "PC Link",
                     isActive = state.isPcConnected,
-                    isHealthy = state.isPcConnected
+                    isHealthy = state.isPcConnected,
+                    statusMessage = if (state.isPcConnected) "Connected" else "Disconnected"
                 ))
 
                 if (state.showErrorDialog && !state.errorMessage.isNullOrEmpty()) {
                     showErrorDialog(state.errorMessage)
                 }
 
-                if (state.thermalIsSimulated && state.isThermalConnected) {
+                if (state.thermalStatus.isSimulated && state.isThermalConnected) {
                     showThermalSimulationOverlay()
                 }
             }
@@ -965,13 +973,13 @@ class MainActivity : AppCompatActivity() {
      */
     private fun initializeTC001System() {
         try {
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+            com.yourcompany.sensorspoke.sensors.thermal.TC001InitUtil
                 .initLog()
 
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+            com.yourcompany.sensorspoke.sensors.thermal.TC001InitUtil
                 .initReceiver(this)
 
-            com.yourcompany.sensorspoke.sensors.thermal.tc001.TC001InitUtil
+            com.yourcompany.sensorspoke.sensors.thermal.TC001InitUtil
                 .initTC001DeviceManager(this)
 
             Log.i("MainActivity", "TC001 thermal camera system initialized successfully")

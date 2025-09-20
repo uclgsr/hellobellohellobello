@@ -236,7 +236,7 @@ class ThermalCameraRecorder(
                     }
                     
                     override fun onConnectionStatusChanged(status: ConnectionStatus) {
-                        updateConnectionStatus(status)
+                        // Empty implementation for now
                     }
                     
                     override fun onError(error: String) {

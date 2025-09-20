@@ -395,6 +395,39 @@ class TC001UIController : ViewModel() {
         Log.i(TAG, "Temperature compensation toggled: $enabled")
         // Implementation for temperature compensation control
     }
+
+    // Additional UI controller methods for EnhancedMainFragment integration
+    
+    private val _hasConnectLine = MutableLiveData(false)
+    val hasConnectLine: LiveData<Boolean> = _hasConnectLine
+
+    private val _deviceConnectionStatus = MutableLiveData(false)  
+    val deviceConnectionStatus: LiveData<Boolean> = _deviceConnectionStatus
+
+    /**
+     * Handle device click events
+     */
+    fun handleDeviceClick(deviceType: Any) {
+        Log.i(TAG, "Device clicked: $deviceType")
+        // Handle device selection/interaction
+    }
+
+    /**
+     * Refresh UI state
+     */
+    fun refresh() {
+        Log.d(TAG, "Refreshing UI state")
+        // Refresh device list and connection status
+    }
+
+    /**
+     * Update connection status
+     */
+    fun updateConnectionStatus(connected: Boolean) {
+        _deviceConnectionStatus.value = connected
+        _isDeviceConnected.value = connected
+        Log.i(TAG, "Connection status updated: $connected")
+    }
 }
 
 /**
