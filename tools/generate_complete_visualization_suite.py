@@ -35,40 +35,40 @@ def generate_deployment_architecture():
     mermaid_content = """```mermaid
 graph TB
     subgraph "Development Environment"
-        DEV_PC[\"Developer PC<br/>Windows/macOS/Linux\"]
-        DEV_IDE[\"VS Code / IntelliJ<br/>IDE with extensions\"]
-        DEV_TOOLS[\"Build Tools<br/>Python 3.11+, JDK 17+\"]
-        DEV_ANDROID[\"Android Studio<br/>SDK 34, NDK\"]
+        DEV_PC["Developer PC<br/>Windows/macOS/Linux"]
+        DEV_IDE["VS Code / IntelliJ<br/>IDE with extensions"]
+        DEV_TOOLS["Build Tools<br/>Python 3.11+, JDK 17+"]
+        DEV_ANDROID["Android Studio<br/>SDK 34, NDK"]
     end
 
     subgraph "Production Deployment"
         subgraph "PC Controller Hub"
-            PROD_PC[\"Research PC<br/>Windows 10/11 64-bit\"]
-            PYQT_APP[\"PyQt6 Application<br/>Executable (.exe)\"]
-            PYTHON_RUNTIME[\"Python 3.11 Runtime<br/>Embedded distribution\"]
-            PC_CONFIG[\"Configuration<br/>config.json, certificates\"]
+            PROD_PC["Research PC<br/>Windows 10/11 64-bit"]
+            PYQT_APP["PyQt6 Application<br/>Executable (.exe)"]
+            PYTHON_RUNTIME["Python 3.11 Runtime<br/>Embedded distribution"]
+            PC_CONFIG["Configuration<br/>config.json, certificates"]
         end
 
         subgraph "Android Sensor Nodes"
-            ANDROID_DEVICES[\"Android Devices<br/>API 24+ (Android 7.0+)\"]
-            APK_INSTALL[\"Sensor Spoke APK<br/>Debug/Release builds\"]
-            SENSOR_HARDWARE[\"Hardware Sensors<br/>Shimmer GSR+, TC001\"]
-            STORAGE[\"Local Storage<br/>Internal + SD card\"]
+            ANDROID_DEVICES["Android Devices<br/>API 24+ (Android 7.0+)"]
+            APK_INSTALL["Sensor Spoke APK<br/>Debug/Release builds"]
+            SENSOR_HARDWARE["Hardware Sensors<br/>Shimmer GSR+, TC001"]
+            STORAGE["Local Storage<br/>Internal + SD card"]
         end
     end
 
     subgraph "Network Infrastructure"
-        WIFI_NETWORK[\"WiFi Network<br/>2.4GHz/5GHz\"]
-        ROUTER[\"Network Router<br/>DHCP, Port forwarding\"]
-        FIREWALL[\"Firewall Rules<br/>TCP ports 8080-8090\"]
-        DNS[\"mDNS/Zeroconf<br/>Service discovery\"]
+        WIFI_NETWORK["WiFi Network<br/>2.4GHz/5GHz"]
+        ROUTER["Network Router<br/>DHCP, Port forwarding"]
+        FIREWALL["Firewall Rules<br/>TCP ports 8080-8090"]
+        DNS["mDNS/Zeroconf<br/>Service discovery"]
     end
 
     subgraph "Data Storage & Export"
-        SESSION_DIR[\"Session Directories<br/>./sessions/YYYYMMDD_HHMMSS/\"]
-        HDF5_FILES[\"HDF5 Export<br/>Research data format\"]
-        BACKUP_STORAGE[\"Backup Storage<br/>External drive/cloud\"]
-        MATLAB_PYTHON[\"Analysis Tools<br/>MATLAB/Python/R\"]
+        SESSION_DIR["Session Directories<br/>./sessions/YYYYMMDD_HHMMSS/"]
+        HDF5_FILES["HDF5 Export<br/>Research data format"]
+        BACKUP_STORAGE["Backup Storage<br/>External drive/cloud"]
+        MATLAB_PYTHON["Analysis Tools<br/>MATLAB/Python/R"]
     end
 
     %% Development connections
@@ -120,73 +120,73 @@ def generate_testing_validation_architecture():
 graph TB
     subgraph "Testing Framework Architecture"
         subgraph "PC Controller Tests"
-            PC_PYTEST[\"pytest Test Suite<br/>Unit & Integration tests\"]
-            PC_UNIT[\"Unit Tests<br/>Individual module testing\"]
-            PC_INTEGRATION[\"Integration Tests<br/>Component interaction\"]
-            PC_MOCK[\"Mock Objects<br/>Hardware simulation\"]
-            PC_COVERAGE[\"Coverage Analysis<br/>pytest-cov reporting\"]
+            PC_PYTEST["pytest Test Suite<br/>Unit & Integration tests"]
+            PC_UNIT["Unit Tests<br/>Individual module testing"]
+            PC_INTEGRATION["Integration Tests<br/>Component interaction"]
+            PC_MOCK["Mock Objects<br/>Hardware simulation"]
+            PC_COVERAGE["Coverage Analysis<br/>pytest-cov reporting"]
         end
 
         subgraph "Android Tests"
-            AND_JUNIT[\"JUnit Test Suite<br/>Kotlin unit tests\"]
-            AND_ROBOLECTRIC[\"Robolectric<br/>Android framework mocking\"]
-            AND_INSTRUMENTED[\"Instrumented Tests<br/>Device testing\"]
-            AND_UI[\"UI Tests<br/>Espresso automation\"]
+            AND_JUNIT["JUnit Test Suite<br/>Kotlin unit tests"]
+            AND_ROBOLECTRIC["Robolectric<br/>Android framework mocking"]
+            AND_INSTRUMENTED["Instrumented Tests<br/>Device testing"]
+            AND_UI["UI Tests<br/>Espresso automation"]
         end
 
         subgraph "System Validation"
-            SYNC_VALIDATOR[\"Sync Validator<br/>validate_sync_core.py\"]
-            FLASH_SYNC[\"Flash Sync Test<br/>Visual timing validation\"]
-            COMPREHENSIVE[\"System Validator<br/>End-to-end testing\"]
-            PERFORMANCE[\"Performance Tests<br/>Latency & throughput\"]
+            SYNC_VALIDATOR["Sync Validator<br/>validate_sync_core.py"]
+            FLASH_SYNC["Flash Sync Test<br/>Visual timing validation"]
+            COMPREHENSIVE["System Validator<br/>End-to-end testing"]
+            PERFORMANCE["Performance Tests<br/>Latency & throughput"]
         end
     end
 
     subgraph "Data Validation Pipeline"
         subgraph "Data Integrity"
-            FILE_VALIDATION[\"File Validation<br/>Checksums & structure\"]
-            TIMESTAMP_CHECK[\"Timestamp Validation<br/>Monotonic & alignment\"]
-            SENSOR_VALIDATION[\"Sensor Data Validation<br/>Range & calibration checks\"]
-            METADATA_CHECK[\"Metadata Validation<br/>Session completeness\"]
+            FILE_VALIDATION["File Validation<br/>Checksums & structure"]
+            TIMESTAMP_CHECK["Timestamp Validation<br/>Monotonic & alignment"]
+            SENSOR_VALIDATION["Sensor Data Validation<br/>Range & calibration checks"]
+            METADATA_CHECK["Metadata Validation<br/>Session completeness"]
         end
 
         subgraph "Quality Metrics"
-            SYNC_ACCURACY[\"Sync Accuracy<br/>±5ms tolerance measurement\"]
-            DATA_COMPLETENESS[\"Data Completeness<br/>Missing sample detection\"]
-            SIGNAL_QUALITY[\"Signal Quality<br/>SNR & artifact detection\"]
-            EXPORT_VALIDATION[\"Export Validation<br/>HDF5 format verification\"]
+            SYNC_ACCURACY["Sync Accuracy<br/>±5ms tolerance measurement"]
+            DATA_COMPLETENESS["Data Completeness<br/>Missing sample detection"]
+            SIGNAL_QUALITY["Signal Quality<br/>SNR & artifact detection"]
+            EXPORT_VALIDATION["Export Validation<br/>HDF5 format verification"]
         end
     end
 
     subgraph "Automated Testing Pipeline"
         subgraph "Continuous Integration"
-            GITHUB_ACTIONS[\"GitHub Actions<br/>CI/CD pipeline\"]
-            LINT_CHECK[\"Linting<br/>ruff, mypy, ktlint\"]
-            BUILD_TEST[\"Build Tests<br/>Gradle, Python builds\"]
-            UNIT_RUNNER[\"Unit Test Runner<br/>All test suites\"]
+            GITHUB_ACTIONS["GitHub Actions<br/>CI/CD pipeline"]
+            LINT_CHECK["Linting<br/>ruff, mypy, ktlint"]
+            BUILD_TEST["Build Tests<br/>Gradle, Python builds"]
+            UNIT_RUNNER["Unit Test Runner<br/>All test suites"]
         end
 
         subgraph "Quality Gates"
-            CODE_COVERAGE[\"Code Coverage<br/>Minimum 80% threshold\"]
-            STATIC_ANALYSIS[\"Static Analysis<br/>Security & quality\"]
-            DEPENDENCY_CHECK[\"Dependency Check<br/>Vulnerability scanning\"]
-            DOCUMENTATION[\"Documentation Check<br/>Markdown linting\"]
+            CODE_COVERAGE["Code Coverage<br/>Minimum 80% threshold"]
+            STATIC_ANALYSIS["Static Analysis<br/>Security & quality"]
+            DEPENDENCY_CHECK["Dependency Check<br/>Vulnerability scanning"]
+            DOCUMENTATION["Documentation Check<br/>Markdown linting"]
         end
     end
 
     subgraph "Manual Testing Procedures"
         subgraph "Hardware Testing"
-            SHIMMER_TEST[\"Shimmer GSR+ Testing<br/>BLE connection & data\"]
-            TC001_TEST[\"TC001 Thermal Testing<br/>USB connection & frames\"]
-            CAMERA_TEST[\"Camera Testing<br/>CameraX dual pipeline\"]
-            INTEGRATION_TEST[\"Hardware Integration<br/>Multi-sensor coordination\"]
+            SHIMMER_TEST["Shimmer GSR+ Testing<br/>BLE connection & data"]
+            TC001_TEST["TC001 Thermal Testing<br/>USB connection & frames"]
+            CAMERA_TEST["Camera Testing<br/>CameraX dual pipeline"]
+            INTEGRATION_TEST["Hardware Integration<br/>Multi-sensor coordination"]
         end
 
         subgraph "User Acceptance Testing"
-            RESEARCHER_UAT[\"Researcher UAT<br/>Real session workflows\"]
-            USABILITY_TEST[\"Usability Testing<br/>GUI & mobile app UX\"]
-            PERFORMANCE_UAT[\"Performance UAT<br/>Multi-device scalability\"]
-            RELIABILITY_TEST[\"Reliability Testing<br/>Extended operation\"]
+            RESEARCHER_UAT["Researcher UAT<br/>Real session workflows"]
+            USABILITY_TEST["Usability Testing<br/>GUI & mobile app UX"]
+            PERFORMANCE_UAT["Performance UAT<br/>Multi-device scalability"]
+            RELIABILITY_TEST["Reliability Testing<br/>Extended operation"]
         end
     end
 
@@ -251,86 +251,86 @@ def generate_performance_monitoring_architecture():
 graph TB
     subgraph "Performance Monitoring System"
         subgraph "Real-time Metrics"
-            CPU_MONITOR[\"CPU Usage Monitor<br/>Per-core utilization\"]
-            MEMORY_MONITOR[\"Memory Monitor<br/>RAM & heap tracking\"]
-            NETWORK_MONITOR[\"Network Monitor<br/>Bandwidth & latency\"]
-            STORAGE_MONITOR[\"Storage Monitor<br/>Disk I/O & space\"]
+            CPU_MONITOR["CPU Usage Monitor<br/>Per-core utilization"]
+            MEMORY_MONITOR["Memory Monitor<br/>RAM & heap tracking"]
+            NETWORK_MONITOR["Network Monitor<br/>Bandwidth & latency"]
+            STORAGE_MONITOR["Storage Monitor<br/>Disk I/O & space"]
         end
 
         subgraph "Application Metrics"
-            THREAD_MONITOR[\"Thread Monitor<br/>PyQt6 & Android threads\"]
-            GUI_RESPONSIVE[\"GUI Responsiveness<br/>UI frame rate\"]
-            DATA_THROUGHPUT[\"Data Throughput<br/>Sensor data rates\"]
-            SYNC_PRECISION[\"Sync Precision<br/>Timestamp accuracy\"]
+            THREAD_MONITOR["Thread Monitor<br/>PyQt6 & Android threads"]
+            GUI_RESPONSIVE["GUI Responsiveness<br/>UI frame rate"]
+            DATA_THROUGHPUT["Data Throughput<br/>Sensor data rates"]
+            SYNC_PRECISION["Sync Precision<br/>Timestamp accuracy"]
         end
 
         subgraph "Sensor Performance"
-            GSR_LATENCY[\"GSR Latency<br/>BLE transmission delay\"]
-            THERMAL_FPS[\"Thermal FPS<br/>TC001 frame rate\"]
-            RGB_QUALITY[\"RGB Quality<br/>CameraX pipeline health\"]
-            PREVIEW_LAG[\"Preview Lag<br/>Live feed delay\"]
+            GSR_LATENCY["GSR Latency<br/>BLE transmission delay"]
+            THERMAL_FPS["Thermal FPS<br/>TC001 frame rate"]
+            RGB_QUALITY["RGB Quality<br/>CameraX pipeline health"]
+            PREVIEW_LAG["Preview Lag<br/>Live feed delay"]
         end
     end
 
     subgraph "Performance Optimization"
         subgraph "PC Controller Optimization"
-            THREAD_POOL[\"Thread Pool<br/>Worker thread management\"]
-            ASYNC_IO[\"Async I/O<br/>Non-blocking operations\"]
-            MEMORY_CACHE[\"Memory Cache<br/>Data buffer optimization\"]
-            NATIVE_BACKEND[\"Native Backend<br/>C++ performance critical\"]
+            THREAD_POOL["Thread Pool<br/>Worker thread management"]
+            ASYNC_IO["Async I/O<br/>Non-blocking operations"]
+            MEMORY_CACHE["Memory Cache<br/>Data buffer optimization"]
+            NATIVE_BACKEND["Native Backend<br/>C++ performance critical"]
         end
 
         subgraph "Android Optimization"
-            COROUTINE_POOL[\"Coroutine Pool<br/>Kotlin async management\"]
-            LIFECYCLE_OPT[\"Lifecycle Optimization<br/>Resource management\"]
-            BATTERY_OPT[\"Battery Optimization<br/>Power-efficient sensors\"]
-            STORAGE_OPT[\"Storage Optimization<br/>Compression & cleanup\"]
+            COROUTINE_POOL["Coroutine Pool<br/>Kotlin async management"]
+            LIFECYCLE_OPT["Lifecycle Optimization<br/>Resource management"]
+            BATTERY_OPT["Battery Optimization<br/>Power-efficient sensors"]
+            STORAGE_OPT["Storage Optimization<br/>Compression & cleanup"]
         end
 
         subgraph "Network Optimization"
-            CONNECTION_POOL[\"Connection Pooling<br/>TCP connection reuse\"]
-            DATA_COMPRESSION[\"Data Compression<br/>Transfer optimization\"]
-            PRIORITY_QUEUE[\"Priority Queue<br/>Critical data first\"]
-            RETRY_LOGIC[\"Retry Logic<br/>Failure recovery\"]
+            CONNECTION_POOL["Connection Pooling<br/>TCP connection reuse"]
+            DATA_COMPRESSION["Data Compression<br/>Transfer optimization"]
+            PRIORITY_QUEUE["Priority Queue<br/>Critical data first"]
+            RETRY_LOGIC["Retry Logic<br/>Failure recovery"]
         end
     end
 
     subgraph "Performance Testing & Benchmarks"
         subgraph "Load Testing"
-            MULTI_DEVICE[\"Multi-device Load<br/>8+ concurrent connections\"]
-            EXTENDED_SESSION[\"Extended Sessions<br/>Hours of continuous recording\"]
-            DATA_VOLUME[\"Data Volume Testing<br/>GB-scale transfers\"]
-            MEMORY_LEAK[\"Memory Leak Testing<br/>Long-running stability\"]
+            MULTI_DEVICE["Multi-device Load<br/>8+ concurrent connections"]
+            EXTENDED_SESSION["Extended Sessions<br/>Hours of continuous recording"]
+            DATA_VOLUME["Data Volume Testing<br/>GB-scale transfers"]
+            MEMORY_LEAK["Memory Leak Testing<br/>Long-running stability"]
         end
 
         subgraph "Benchmark Suites"
-            SYNC_BENCHMARK[\"Sync Benchmark<br/>Timing accuracy tests\"]
-            THROUGHPUT_BENCH[\"Throughput Benchmark<br/>Data processing rates\"]
-            LATENCY_BENCH[\"Latency Benchmark<br/>End-to-end delays\"]
-            SCALABILITY_BENCH[\"Scalability Benchmark<br/>Device count limits\"]
+            SYNC_BENCHMARK["Sync Benchmark<br/>Timing accuracy tests"]
+            THROUGHPUT_BENCH["Throughput Benchmark<br/>Data processing rates"]
+            LATENCY_BENCH["Latency Benchmark<br/>End-to-end delays"]
+            SCALABILITY_BENCH["Scalability Benchmark<br/>Device count limits"]
         end
 
         subgraph "Performance Reports"
-            METRICS_DASHBOARD[\"Metrics Dashboard<br/>Real-time monitoring\"]
-            BENCHMARK_REPORTS[\"Benchmark Reports<br/>Performance baselines\"]
-            OPTIMIZATION_GUIDE[\"Optimization Guide<br/>Tuning recommendations\"]
-            CAPACITY_PLANNING[\"Capacity Planning<br/>Resource requirements\"]
+            METRICS_DASHBOARD["Metrics Dashboard<br/>Real-time monitoring"]
+            BENCHMARK_REPORTS["Benchmark Reports<br/>Performance baselines"]
+            OPTIMIZATION_GUIDE["Optimization Guide<br/>Tuning recommendations"]
+            CAPACITY_PLANNING["Capacity Planning<br/>Resource requirements"]
         end
     end
 
     subgraph "Quality Assurance"
         subgraph "Performance Validation"
-            SLA_VALIDATION[\"SLA Validation<br/>±5ms sync requirement\"]
-            RESOURCE_LIMITS[\"Resource Limits<br/>CPU/RAM thresholds\"]
-            SCALABILITY_TEST[\"Scalability Testing<br/>8+ device support\"]
-            RELIABILITY_TEST[\"Reliability Testing<br/>99.9% uptime\"]
+            SLA_VALIDATION["SLA Validation<br/>±5ms sync requirement"]
+            RESOURCE_LIMITS["Resource Limits<br/>CPU/RAM thresholds"]
+            SCALABILITY_TEST["Scalability Testing<br/>8+ device support"]
+            RELIABILITY_TEST["Reliability Testing<br/>99.9% uptime"]
         end
 
         subgraph "Regression Testing"
-            PERFORMANCE_REGRESSION[\"Performance Regression<br/>Baseline comparisons\"]
-            MEMORY_REGRESSION[\"Memory Regression<br/>Leak detection\"]
-            LATENCY_REGRESSION[\"Latency Regression<br/>Timing degradation\"]
-            THROUGHPUT_REGRESSION[\"Throughput Regression<br/>Data rate validation\"]
+            PERFORMANCE_REGRESSION["Performance Regression<br/>Baseline comparisons"]
+            MEMORY_REGRESSION["Memory Regression<br/>Leak detection"]
+            LATENCY_REGRESSION["Latency Regression<br/>Timing degradation"]
+            THROUGHPUT_REGRESSION["Throughput Regression<br/>Data rate validation"]
         end
     end
 

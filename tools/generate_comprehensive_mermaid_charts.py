@@ -23,58 +23,58 @@ def generate_pc_controller_detailed_architecture():
 graph TB
     subgraph "PC Controller Application"
         subgraph "GUI Layer (PyQt6)"
-            MainWindow[\"gui_manager.py<br/>Main PyQt6 Application\"]
-            Dashboard[\"main_dashboard.py<br/>Device grid + live previews\"]
-            CalibrationDialog[\"calibration_dialog.py<br/>Camera calibration UI\"]
+            MainWindow["gui_manager.py<br/>Main PyQt6 Application"]
+            Dashboard["main_dashboard.py<br/>Device grid + live previews"]
+            CalibrationDialog["calibration_dialog.py<br/>Camera calibration UI"]
         end
 
         subgraph "Network Layer"
-            NetworkController[\"network_controller.py<br/>Device discovery + control\"]
-            TCPCommandServer[\"tcp_command_server.py<br/>Command handling server\"]
-            FileTransferServer[\"file_transfer_server.py<br/>File reception server\"]
-            TimeServer[\"time_server.py<br/>UDP time synchronization\"]
-            Protocol[\"protocol.py<br/>Message encoding/decoding\"]
-            TLSEnhanced[\"tls_enhanced.py<br/>TLS security layer\"]
-            TLSUtils[\"tls_utils.py<br/>Certificate management\"]
-            HeartbeatManager[\"heartbeat_manager.py<br/>Connection monitoring\"]
-            AuthManager[\"auth_manager.py<br/>Authentication\"]
-            LSLIntegration[\"lsl_integration.py<br/>Lab Streaming Layer\"]
+            NetworkController["network_controller.py<br/>Device discovery + control"]
+            TCPCommandServer["tcp_command_server.py<br/>Command handling server"]
+            FileTransferServer["file_transfer_server.py<br/>File reception server"]
+            TimeServer["time_server.py<br/>UDP time synchronization"]
+            Protocol["protocol.py<br/>Message encoding/decoding"]
+            TLSEnhanced["tls_enhanced.py<br/>TLS security layer"]
+            TLSUtils["tls_utils.py<br/>Certificate management"]
+            HeartbeatManager["heartbeat_manager.py<br/>Connection monitoring"]
+            AuthManager["auth_manager.py<br/>Authentication"]
+            LSLIntegration["lsl_integration.py<br/>Lab Streaming Layer"]
         end
 
         subgraph "Core Services"
-            DeviceManager[\"device_manager.py<br/>Connected device tracking\"]
-            SessionManager[\"session_manager.py<br/>Recording session control\"]
-            ShimmerManager[\"shimmer_manager.py<br/>Shimmer sensor interface\"]
-            UserExperience[\"user_experience.py<br/>UX optimization\"]
-            GSRProcessor[\"gsr_csv.py<br/>GSR data processing\"]
-            LocalInterfaces[\"local_interfaces.py<br/>Local hardware\"]
-            QuickStartGuide[\"quick_start_guide.py<br/>User onboarding\"]
+            DeviceManager["device_manager.py<br/>Connected device tracking"]
+            SessionManager["session_manager.py<br/>Recording session control"]
+            ShimmerManager["shimmer_manager.py<br/>Shimmer sensor interface"]
+            UserExperience["user_experience.py<br/>UX optimization"]
+            GSRProcessor["gsr_csv.py<br/>GSR data processing"]
+            LocalInterfaces["local_interfaces.py<br/>Local hardware"]
+            QuickStartGuide["quick_start_guide.py<br/>User onboarding"]
         end
 
         subgraph "Data Processing"
-            DataAggregator[\"data_aggregator.py<br/>Multi-modal data collection\"]
-            HDF5Exporter[\"hdf5_exporter.py<br/>Research data export\"]
-            HDF5ExporterProduction[\"hdf5_exporter_production.py<br/>Production export\"]
-            DataLoader[\"data_loader.py<br/>Session data loading\"]
-            MetadataManager[\"metadata_manager.py<br/>Data annotations\"]
+            DataAggregator["data_aggregator.py<br/>Multi-modal data collection"]
+            HDF5Exporter["hdf5_exporter.py<br/>Research data export"]
+            HDF5ExporterProduction["hdf5_exporter_production.py<br/>Production export"]
+            DataLoader["data_loader.py<br/>Session data loading"]
+            MetadataManager["metadata_manager.py<br/>Data annotations"]
         end
 
         subgraph "Tools & Validation"
-            ValidateSyncCore[\"validate_sync_core.py<br/>Timing validation\"]
-            CameraCalibration[\"camera_calibration.py<br/>Camera calibration\"]
-            SystemHealthCheck[\"system_health_check.py<br/>System diagnostics\"]
-            FlashSyncValidator[\"flash_sync_validator.py<br/>Flash sync testing\"]
-            ComprehensiveValidator[\"comprehensive_system_validator.py<br/>Full system validation\"]
-            SessionDemo[\"session_demo.py<br/>Demo recordings\"]
-            ImplementationSummary[\"implementation_summary.py<br/>System reporting\"]
+            ValidateSyncCore["validate_sync_core.py<br/>Timing validation"]
+            CameraCalibration["camera_calibration.py<br/>Camera calibration"]
+            SystemHealthCheck["system_health_check.py<br/>System diagnostics"]
+            FlashSyncValidator["flash_sync_validator.py<br/>Flash sync testing"]
+            ComprehensiveValidator["comprehensive_system_validator.py<br/>Full system validation"]
+            SessionDemo["session_demo.py<br/>Demo recordings"]
+            ImplementationSummary["implementation_summary.py<br/>System reporting"]
         end
     end
 
     subgraph "External Integrations"
-        AndroidDevices[\"Android Sensor Nodes<br/>Zeroconf discovery\"]
-        FileSystem[\"Session Storage<br/>./sessions/ directory\"]
-        ShimmerHardware[\"Shimmer GSR+ Sensors<br/>BLE/Serial connection\"]
-        LocalCameras[\"PC Webcams<br/>OpenCV integration\"]
+        AndroidDevices["Android Sensor Nodes<br/>Zeroconf discovery"]
+        FileSystem["Session Storage<br/>./sessions/ directory"]
+        ShimmerHardware["Shimmer GSR+ Sensors<br/>BLE/Serial connection"]
+        LocalCameras["PC Webcams<br/>OpenCV integration"]
     end
 
     %% Connections
@@ -372,65 +372,65 @@ def generate_sensor_integration_features():
 graph TB
     subgraph "Shimmer GSR+ Integration"
         subgraph "Connection Management"
-            BLE_DISCOVERY[\"BLE Device Discovery<br/>Nordic BLE Library\"]
-            PAIRING[\"Device Pairing<br/>MAC Address Binding\"]
-            CONNECTION[\"Bluetooth LE Connection<br/>GATT Services\"]
+            BLE_DISCOVERY["BLE Device Discovery<br/>Nordic BLE Library"]
+            PAIRING["Device Pairing<br/>MAC Address Binding"]
+            CONNECTION["Bluetooth LE Connection<br/>GATT Services"]
         end
         
         subgraph "Data Acquisition"
-            START_CMD[\"Start Command (0x07)<br/>Begin streaming\"]
-            GSR_STREAM[\"GSR Data Stream<br/>Raw ADC values\"]
-            PPG_STREAM[\"PPG Data Stream<br/>Heart rate data\"]
-            STOP_CMD[\"Stop Command (0x20)<br/>End streaming\"]
+            START_CMD["Start Command (0x07)<br/>Begin streaming"]
+            GSR_STREAM["GSR Data Stream<br/>Raw ADC values"]
+            PPG_STREAM["PPG Data Stream<br/>Heart rate data"]
+            STOP_CMD["Stop Command (0x20)<br/>End streaming"]
         end
         
         subgraph "Data Processing"
-            ADC_CONVERSION[\"12-bit ADC Processing<br/>0-4095 range\"]
-            GSR_CALCULATION[\"GSR Calculation<br/>Microsiemens (μS)\"]
-            TIMESTAMP_SYNC[\"Nanosecond Timestamping<br/>Monotonic clock\"]
-            CSV_OUTPUT[\"CSV Data Export<br/>timestamp,gsr_us,ppg_raw\"]
+            ADC_CONVERSION["12-bit ADC Processing<br/>0-4095 range"]
+            GSR_CALCULATION["GSR Calculation<br/>Microsiemens (μS)"]
+            TIMESTAMP_SYNC["Nanosecond Timestamping<br/>Monotonic clock"]
+            CSV_OUTPUT["CSV Data Export<br/>timestamp,gsr_us,ppg_raw"]
         end
     end
 
     subgraph "Topdon TC001 Thermal Integration" 
         subgraph "SDK Integration"
-            TOPDON_SDK[\"Topdon SDK<br/>IRCMD + LibIRParse\"]
-            DEVICE_DETECTION[\"Hardware Detection<br/>VID:0x0525 PID:0xa4a2/0xa4a5\"]
-            UVC_CONNECTION[\"UVC Camera Connection<br/>USB Video Class\"]
+            TOPDON_SDK["Topdon SDK<br/>IRCMD + LibIRParse"]
+            DEVICE_DETECTION["Hardware Detection<br/>VID:0x0525 PID:0xa4a2/0xa4a5"]
+            UVC_CONNECTION["UVC Camera Connection<br/>USB Video Class"]
         end
         
         subgraph "Thermal Processing"
-            RAW_THERMAL[\"Raw Thermal Frame<br/>Sensor matrix data\"]
-            CALIBRATION[\"Hardware Calibration<br/>±2°C accuracy\"]
-            TEMPERATURE_MAP[\"Temperature Mapping<br/>Celsius values\"]
-            COLOR_PALETTE[\"Color Palette<br/>Iron/Rainbow/Grayscale\"]
+            RAW_THERMAL["Raw Thermal Frame<br/>Sensor matrix data"]
+            CALIBRATION["Hardware Calibration<br/>±2°C accuracy"]
+            TEMPERATURE_MAP["Temperature Mapping<br/>Celsius values"]
+            COLOR_PALETTE["Color Palette<br/>Iron/Rainbow/Grayscale"]
         end
         
         subgraph "Data Export"
-            THERMAL_CSV[\"Thermal CSV Export<br/>timestamp,temp_matrix\"]
-            FRAME_IMAGES[\"Frame Images<br/>Calibrated thermal PNGs\"]
-            METADATA[\"Metadata Logging<br/>Device info, settings\"]
+            THERMAL_CSV["Thermal CSV Export<br/>timestamp,temp_matrix"]
+            FRAME_IMAGES["Frame Images<br/>Calibrated thermal PNGs"]
+            METADATA["Metadata Logging<br/>Device info, settings"]
         end
     end
 
     subgraph "RGB Camera (CameraX) Integration"
         subgraph "Dual Pipeline"
-            VIDEO_CAPTURE[\"Video Capture<br/>1080p MP4 recording\"]
-            IMAGE_CAPTURE[\"Image Capture<br/>High-res JPEG frames\"]
-            PREVIEW_STREAM[\"Preview Stream<br/>Live monitoring\"]
+            VIDEO_CAPTURE["Video Capture<br/>1080p MP4 recording"]
+            IMAGE_CAPTURE["Image Capture<br/>High-res JPEG frames"]
+            PREVIEW_STREAM["Preview Stream<br/>Live monitoring"]
         end
         
         subgraph "Camera Configuration"
-            RESOLUTION[\"Resolution Control<br/>1080p/4K options\"]
-            FRAME_RATE[\"Frame Rate Control<br/>30/60 FPS\"]
-            EXPOSURE[\"Exposure Control<br/>Auto/Manual modes\"]
-            FOCUS[\"Focus Control<br/>Continuous/Single AF\"]
+            RESOLUTION["Resolution Control<br/>1080p/4K options"]
+            FRAME_RATE["Frame Rate Control<br/>30/60 FPS"]
+            EXPOSURE["Exposure Control<br/>Auto/Manual modes"]
+            FOCUS["Focus Control<br/>Continuous/Single AF"]
         end
         
         subgraph "Output Management"
-            MP4_FILE[\"MP4 Video File<br/>H.264 encoding\"]
-            JPEG_SEQUENCE[\"JPEG Frame Sequence<br/>Timestamped images\"]
-            PREVIEW_FRAMES[\"Preview Frames<br/>Base64 encoded\"]
+            MP4_FILE["MP4 Video File<br/>H.264 encoding"]
+            JPEG_SEQUENCE["JPEG Frame Sequence<br/>Timestamped images"]
+            PREVIEW_FRAMES["Preview Frames<br/>Base64 encoded"]
         end
     end
 
@@ -575,15 +575,15 @@ def generate_data_synchronization_architecture():
 flowchart TD
     subgraph "Time Synchronization Layer"
         subgraph "PC Controller (Master Clock)"
-            MASTER_CLOCK[\"System Clock<br/>Master timeline T=0\"]
-            NTP_SERVER[\"NTP-like Server<br/>UDP time service\"]
-            SYNC_ALGORITHM[\"Clock Offset Calculator<br/>Round-trip compensation\"]
+            MASTER_CLOCK["System Clock<br/>Master timeline T=0"]
+            NTP_SERVER["NTP-like Server<br/>UDP time service"]
+            SYNC_ALGORITHM["Clock Offset Calculator<br/>Round-trip compensation"]
         end
 
         subgraph "Android Node (Slave Clock)"  
-            DEVICE_CLOCK[\"Monotonic Clock<br/>nanosecond precision\"]
-            NTP_CLIENT[\"NTP Client<br/>Sync request handler\"]
-            OFFSET_STORAGE[\"Clock Offset Storage<br/>Δt calculation\"]
+            DEVICE_CLOCK["Monotonic Clock<br/>nanosecond precision"]
+            NTP_CLIENT["NTP Client<br/>Sync request handler"]
+            OFFSET_STORAGE["Clock Offset Storage<br/>Δt calculation"]
         end
         
         NTP_SERVER <==> NTP_CLIENT
@@ -592,24 +592,24 @@ flowchart TD
 
     subgraph "Sensor Data Streams"
         subgraph "Shimmer GSR+ Data"
-            GSR_RAW[\"Raw GSR Data<br/>BLE notifications\"]
-            GSR_TIMESTAMP[\"Local Timestamp<br/>monotonic_ns()\"]
-            GSR_PROCESS[\"GSR Processing<br/>12-bit ADC → μS\"]
-            GSR_CSV[\"GSR CSV Output<br/>timestamp,gsr_us,ppg\"]
+            GSR_RAW["Raw GSR Data<br/>BLE notifications"]
+            GSR_TIMESTAMP["Local Timestamp<br/>monotonic_ns()"]
+            GSR_PROCESS["GSR Processing<br/>12-bit ADC → μS"]
+            GSR_CSV["GSR CSV Output<br/>timestamp,gsr_us,ppg"]
         end
 
         subgraph "TC001 Thermal Data"
-            THERMAL_RAW[\"Raw Thermal Frame<br/>UVC capture callback\"]
-            THERMAL_TIMESTAMP[\"Frame Timestamp<br/>monotonic_ns()\"]
-            THERMAL_CALIBRATION[\"TC001 Calibration<br/>±2°C accuracy\"]
-            THERMAL_CSV[\"Thermal CSV Output<br/>timestamp,temp_matrix\"]
+            THERMAL_RAW["Raw Thermal Frame<br/>UVC capture callback"]
+            THERMAL_TIMESTAMP["Frame Timestamp<br/>monotonic_ns()"]
+            THERMAL_CALIBRATION["TC001 Calibration<br/>±2°C accuracy"]
+            THERMAL_CSV["Thermal CSV Output<br/>timestamp,temp_matrix"]
         end
 
         subgraph "CameraX RGB Data"
-            RGB_FRAME[\"RGB Frame Capture<br/>ImageCapture callback\"]
-            RGB_TIMESTAMP[\"Frame Timestamp<br/>monotonic_ns()\"]
-            RGB_DUAL[\"Dual Pipeline<br/>MP4 + JPEG sequence\"]
-            RGB_FILES[\"RGB Files<br/>video.mp4, frame_*.jpg\"]
+            RGB_FRAME["RGB Frame Capture<br/>ImageCapture callback"]
+            RGB_TIMESTAMP["Frame Timestamp<br/>monotonic_ns()"]
+            RGB_DUAL["Dual Pipeline<br/>MP4 + JPEG sequence"]
+            RGB_FILES["RGB Files<br/>video.mp4, frame_*.jpg"]
         end
 
         GSR_RAW --> GSR_TIMESTAMP
@@ -627,23 +627,23 @@ flowchart TD
 
     subgraph "Data Aggregation & Alignment"
         subgraph "File Transfer"
-            ENCRYPTED_TRANSFER[\"TLS 1.2+ Transfer<br/>AES256-GCM encryption\"]
-            FILE_VALIDATION[\"Data Integrity Check<br/>Checksums + validation\"]
-            DECRYPTION[\"Data Decryption<br/>Android Keystore keys\"]
+            ENCRYPTED_TRANSFER["TLS 1.2+ Transfer<br/>AES256-GCM encryption"]
+            FILE_VALIDATION["Data Integrity Check<br/>Checksums + validation"]
+            DECRYPTION["Data Decryption<br/>Android Keystore keys"]
         end
 
         subgraph "Temporal Alignment"
-            OFFSET_CORRECTION[\"Clock Offset Correction<br/>Apply Δt to timestamps\"]
-            TIMELINE_SYNC[\"Timeline Synchronization<br/>Master clock alignment\"]
-            INTERPOLATION[\"Data Interpolation<br/>Sub-millisecond accuracy\"]
-            VALIDATION[\"Sync Validation<br/>±5ms tolerance check\"]
+            OFFSET_CORRECTION["Clock Offset Correction<br/>Apply Δt to timestamps"]
+            TIMELINE_SYNC["Timeline Synchronization<br/>Master clock alignment"]
+            INTERPOLATION["Data Interpolation<br/>Sub-millisecond accuracy"]
+            VALIDATION["Sync Validation<br/>±5ms tolerance check"]
         end
 
         subgraph "Export Pipeline"
-            MULTIMODAL_MERGE[\"Multimodal Data Merge<br/>Synchronized streams\"]
-            METADATA_ENRICHMENT[\"Metadata Enrichment<br/>Device info, settings\"]
-            HDF5_EXPORT[\"HDF5 Export<br/>Research-grade format\"]
-            QUALITY_REPORT[\"Quality Report<br/>Sync accuracy metrics\"]
+            MULTIMODAL_MERGE["Multimodal Data Merge<br/>Synchronized streams"]
+            METADATA_ENRICHMENT["Metadata Enrichment<br/>Device info, settings"]
+            HDF5_EXPORT["HDF5 Export<br/>Research-grade format"]
+            QUALITY_REPORT["Quality Report<br/>Sync accuracy metrics"]
         end
 
         GSR_CSV --> ENCRYPTED_TRANSFER
@@ -687,65 +687,65 @@ def generate_repository_module_dependencies():
 graph TB
     subgraph "Repository Root"
         ROOT["Multi-Modal-Sensing-Platform<br/>Multi-project Gradle root"]
-        BUILD_SYSTEM[\"build.gradle.kts<br/>Build orchestration\"]
-        SETTINGS[\"settings.gradle.kts<br/>Project configuration\"]
-        GRADLE_PROPS[\"gradle.properties<br/>Build properties\"]
+        BUILD_SYSTEM["build.gradle.kts<br/>Build orchestration"]
+        SETTINGS["settings.gradle.kts<br/>Project configuration"]
+        GRADLE_PROPS["gradle.properties<br/>Build properties"]
     end
 
     subgraph "PC Controller Module"
         subgraph "Python Package Structure"
-            PC_ROOT[\"pc_controller/<br/>Python application root\"]
-            PC_SRC[\"src/<br/>Source code\"]
-            PC_TESTS[\"tests/<br/>pytest test suite\"]
-            PC_NATIVE[\"native_backend/<br/>C++ PyBind11 modules\"]
-            PC_CONFIG[\"config.json<br/>Application configuration\"]
-            PC_REQUIREMENTS[\"requirements.txt<br/>Python dependencies\"]
+            PC_ROOT["pc_controller/<br/>Python application root"]
+            PC_SRC["src/<br/>Source code"]
+            PC_TESTS["tests/<br/>pytest test suite"]
+            PC_NATIVE["native_backend/<br/>C++ PyBind11 modules"]
+            PC_CONFIG["config.json<br/>Application configuration"]
+            PC_REQUIREMENTS["requirements.txt<br/>Python dependencies"]
         end
 
         subgraph "Python Module Dependencies"
-            PC_GUI[\"PyQt6<br/>GUI framework\"]
-            PC_NETWORK[\"zeroconf, sockets<br/>Network communication\"]
-            PC_DATA[\"pandas, h5py, numpy<br/>Data processing\"]
-            PC_VISION[\"opencv-python<br/>Computer vision\"]
-            PC_CRYPTO[\"cryptography<br/>Security\"]
-            PC_TESTING[\"pytest, mypy<br/>Testing & validation\"]
+            PC_GUI["PyQt6<br/>GUI framework"]
+            PC_NETWORK["zeroconf, sockets<br/>Network communication"]
+            PC_DATA["pandas, h5py, numpy<br/>Data processing"]
+            PC_VISION["opencv-python<br/>Computer vision"]
+            PC_CRYPTO["cryptography<br/>Security"]
+            PC_TESTING["pytest, mypy<br/>Testing & validation"]
         end
     end
 
     subgraph "Android Module"
         subgraph "Android Project Structure"
-            AND_ROOT[\"android_sensor_node/<br/>Android project root\"]
-            AND_APP[\"app/<br/>Main application module\"]
-            AND_GRADLE[\"build.gradle.kts<br/>Android build config\"]
-            AND_MANIFEST[\"AndroidManifest.xml<br/>App permissions & config\"]
+            AND_ROOT["android_sensor_node/<br/>Android project root"]
+            AND_APP["app/<br/>Main application module"]
+            AND_GRADLE["build.gradle.kts<br/>Android build config"]
+            AND_MANIFEST["AndroidManifest.xml<br/>App permissions & config"]
         end
 
         subgraph "Android Dependencies"
-            AND_ANDROIDX[\"AndroidX Libraries<br/>Lifecycle, Navigation, etc.\"]
-            AND_CAMERAX[\"CameraX<br/>Camera API\"]
-            AND_SHIMMER[\"Shimmer Android SDK<br/>GSR sensor integration\"]
-            AND_TOPDON[\"Topdon TC001 SDK<br/>Thermal camera\"]
-            AND_KOTLIN[\"Kotlin Coroutines<br/>Async programming\"]
-            AND_CRYPTO_AND[\"Android Keystore<br/>Encryption\"]
-            AND_TESTING[\"JUnit, Robolectric<br/>Unit testing\"]
+            AND_ANDROIDX["AndroidX Libraries<br/>Lifecycle, Navigation, etc."]
+            AND_CAMERAX["CameraX<br/>Camera API"]
+            AND_SHIMMER["Shimmer Android SDK<br/>GSR sensor integration"]
+            AND_TOPDON["Topdon TC001 SDK<br/>Thermal camera"]
+            AND_KOTLIN["Kotlin Coroutines<br/>Async programming"]
+            AND_CRYPTO_AND["Android Keystore<br/>Encryption"]
+            AND_TESTING["JUnit, Robolectric<br/>Unit testing"]
         end
     end
 
     subgraph "Documentation & Tools"
-        DOCS[\"documentation/<br/>Project documentation\"]
-        TOOLS[\"tools/<br/>Utility scripts\"]
-        MERMAID_GEN[\"generate_*_visualizations.py<br/>Diagram generators\"]
-        DATA_TOOLS[\"validate_sync.py, backup_script.py<br/>Data utilities\"]
-        BUILD_TOOLS[\"build_production.sh<br/>Build automation\"]
-        DEMOS[\"demos/<br/>Example data & configs\"]
+        DOCS["documentation/<br/>Project documentation"]
+        TOOLS["tools/<br/>Utility scripts"]
+        MERMAID_GEN["generate_*_visualizations.py<br/>Diagram generators"]
+        DATA_TOOLS["validate_sync.py, backup_script.py<br/>Data utilities"]
+        BUILD_TOOLS["build_production.sh<br/>Build automation"]
+        DEMOS["demos/<br/>Example data & configs"]
     end
 
     subgraph "Configuration Files"
-        GITIGNORE[\".gitignore<br/>Version control exclusions\"]
-        PRECOMMIT[\".pre-commit-config.yaml<br/>Code quality hooks\"]
-        PYTEST_INI[\"pytest.ini<br/>Test configuration\"]
-        PYPROJECT[\"pyproject.toml<br/>Python project config\"]
-        MARKDOWN_LINT[\".markdownlint.yaml<br/>Documentation linting\"]
+        GITIGNORE[".gitignore<br/>Version control exclusions"]
+        PRECOMMIT[".pre-commit-config.yaml<br/>Code quality hooks"]
+        PYTEST_INI["pytest.ini<br/>Test configuration"]
+        PYPROJECT["pyproject.toml<br/>Python project config"]
+        MARKDOWN_LINT[".markdownlint.yaml<br/>Documentation linting"]
     end
 
     %% Root dependencies
