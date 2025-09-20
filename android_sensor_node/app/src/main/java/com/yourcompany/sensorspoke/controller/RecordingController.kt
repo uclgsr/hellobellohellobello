@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
+import com.yourcompany.sensorspoke.sensors.thermal.ConnectionStatus
+import com.yourcompany.sensorspoke.sensors.thermal.RecordingStatus
 import com.yourcompany.sensorspoke.utils.SessionDataValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -420,49 +422,85 @@ class RecordingController(
     }
 
     /**
-     * Perform sensor-specific health checks
+     * Perform sensor-specific health checks with actual status verification
      */
     private suspend fun performSensorHealthCheck(entry: RecorderEntry) {
         try {
-            when (entry.name) {
-                "rgb" -> {
-                    // Check RGB camera health
-                    if (entry.recorder is com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder) {
-                        val camera = entry.recorder as com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder
-                        // Check if camera is still responding and recording frames
-                        Log.d(TAG, "RGB camera health check: Active")
+            val currentTime = System.currentTimeMillis()
+            val timeSinceLastCheck = currentTime - entry.lastHealthCheck
+            
+            when (val recorder = entry.recorder) {
+                is com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder -> {
+                    // Check RGB camera health by verifying recording status and connection
+                    val recordingStatus = recorder.recordingStatus.value
+                    val cameraStatus = recorder.cameraStatus.value
+                    
+                    if (recordingStatus != RecordingStatus.RECORDING || cameraStatus == null) {
+                        throw IllegalStateException("RGB camera not in recording state or camera disconnected")
                     }
-                }
-                "thermal" -> {
-                    // Check thermal camera health
-                    if (entry.recorder is com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder) {
-                        val thermal = entry.recorder as com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder
-                        // Check thermal camera connection and data flow
-                        Log.d(TAG, "Thermal camera health check: Active")
+                    
+                    // Additional check: verify no long gaps in health checks (indicates stall)
+                    if (timeSinceLastCheck > 60000) { // 1 minute threshold
+                        Log.w(TAG, "RGB camera health check gap of ${timeSinceLastCheck}ms detected")
                     }
+                    
+                    Log.d(TAG, "RGB camera health check: Recording active, status=$recordingStatus")
                 }
-                "gsr" -> {
-                    // Check GSR sensor health
-                    if (entry.recorder is com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder) {
-                        val gsr = entry.recorder as com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder
-                        // Check Shimmer connection and data streaming
-                        Log.d(TAG, "GSR sensor health check: Active")
+                
+                is com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder -> {
+                    // Check thermal camera health by verifying connection and recording status
+                    val connectionStatus = recorder.connectionStatus.value
+                    val recordingStatus = recorder.recordingStatus.value
+                    
+                    if (connectionStatus !in listOf(ConnectionStatus.CONNECTED, ConnectionStatus.STREAMING) || 
+                        recordingStatus != RecordingStatus.RECORDING) {
+                        throw IllegalStateException("Thermal camera not connected or not recording: connection=$connectionStatus, recording=$recordingStatus")
                     }
+                    
+                    Log.d(TAG, "Thermal camera health check: Active, connection=$connectionStatus, recording=$recordingStatus")
                 }
-                "audio" -> {
-                    // Check audio recorder health
-                    if (entry.recorder is com.yourcompany.sensorspoke.sensors.audio.AudioRecorder) {
-                        val audio = entry.recorder as com.yourcompany.sensorspoke.sensors.audio.AudioRecorder
-                        // Check audio recording state and file writing
-                        Log.d(TAG, "Audio recorder health check: Active")
+                
+                is com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder -> {
+                    // Check GSR sensor health by verifying recording status  
+                    val recordingStatus = recorder.recordingStatus.value
+                    
+                    if (recordingStatus != RecordingStatus.RECORDING) {
+                        throw IllegalStateException("GSR sensor not in recording state: $recordingStatus")
                     }
+                    
+                    // Check for health check gaps indicating potential data flow issues
+                    if (timeSinceLastCheck > 45000) { // 45 second threshold for GSR
+                        Log.w(TAG, "GSR sensor health check gap of ${timeSinceLastCheck}ms detected")
+                    }
+                    
+                    Log.d(TAG, "GSR sensor health check: Streaming active, status=$recordingStatus")
                 }
+                
+                is com.yourcompany.sensorspoke.sensors.audio.AudioRecorder -> {
+                    // Check audio recorder health by verifying recording state
+                    // AudioRecorder has a simple isRecording boolean field
+                    val isRecording = recorder.javaClass.getDeclaredField("isRecording").let { field ->
+                        field.isAccessible = true
+                        field.getBoolean(recorder)
+                    }
+                    
+                    if (!isRecording) {
+                        throw IllegalStateException("Audio recorder not in recording state")
+                    }
+                    
+                    Log.d(TAG, "Audio recorder health check: Recording active")
+                }
+                
                 else -> {
-                    Log.d(TAG, "Health check for ${entry.name}: No specific checks implemented")
+                    Log.d(TAG, "Health check for ${entry.name}: No specific checks implemented for ${recorder::class.simpleName}")
                 }
             }
+            
+            // Health check passed - update last check time
+            entry.lastHealthCheck = currentTime
+            
         } catch (e: Exception) {
-            Log.e(TAG, "Error during ${entry.name} health check: ${e.message}")
+            Log.e(TAG, "Health check failed for ${entry.name}: ${e.message}")
             entry.lastError = "Health check failed: ${e.message}"
             entry.state = RecorderState.ERROR
         }
