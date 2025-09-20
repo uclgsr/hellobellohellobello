@@ -686,7 +686,7 @@ def generate_repository_module_dependencies():
     mermaid_content = """```mermaid
 graph TB
     subgraph "Repository Root"
-        ROOT[\"hellobellohellobello<br/>Multi-project Gradle root\"]
+        ROOT["Multi-Modal-Sensing-Platform<br/>Multi-project Gradle root"]
         BUILD_SYSTEM[\"build.gradle.kts<br/>Build orchestration\"]
         SETTINGS[\"settings.gradle.kts<br/>Project configuration\"]
         GRADLE_PROPS[\"gradle.properties<br/>Build properties\"]
