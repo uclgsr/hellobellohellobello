@@ -41,7 +41,7 @@ class EnhancedMainFragment :
         private const val TAG = "EnhancedMainFragment"
     }
 
-    private lateinit var uiController: TC001UIController
+    // private lateinit var uiController: TC001UIController // TODO: Implement TC001UIController
     private lateinit var adapter: DeviceAdapter
 
     private lateinit var clHasDevice: View
@@ -72,7 +72,7 @@ class EnhancedMainFragment :
         tvConnectDevice = view.findViewById(R.id.tv_connect_device)
         ivAdd = view.findViewById(R.id.iv_add)
 
-        uiController = ViewModelProvider(this)[TC001UIController::class.java]
+        // uiController = ViewModelProvider(this)[TC001UIController::class.java] // TODO: Implement TC001UIController
 
         adapter = DeviceAdapter()
         adapter.hasConnectLine = false

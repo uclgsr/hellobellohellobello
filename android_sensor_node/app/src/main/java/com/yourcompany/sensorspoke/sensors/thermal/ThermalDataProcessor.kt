@@ -2,6 +2,7 @@ package com.yourcompany.sensorspoke.sensors.thermal
 
 import android.graphics.Bitmap
 import android.util.Log
+import com.yourcompany.sensorspoke.sensors.thermal.ThermalFrame
 import java.io.File
 import java.io.FileOutputStream
 
