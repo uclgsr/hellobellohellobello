@@ -223,7 +223,7 @@ find documentation/diagrams -name "*.md" -exec mmdc -i {} -o {}.png \\;
 
 ---
 
-*Generated on {Path(__file__).stat().st_mtime} - Repository validation complete*
+*Generated on {datetime.fromtimestamp(Path(__file__).stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')} - Repository validation complete*
 """
     
     # Save report
