@@ -32,7 +32,7 @@ class TC001IntegrationManager(
 
     private var tc001Connector: TC001Connector? = null
     private var tc001DataManager: TC001DataManager? = null
-    // private var tc001UIController: TC001UIController? = null
+    private var tc001UIController: TC001UIController? = null
 
     private val _integrationState = MutableLiveData<TC001IntegrationState>()
     val integrationState: LiveData<TC001IntegrationState> = _integrationState
@@ -70,7 +70,7 @@ class TC001IntegrationManager(
 
                 tc001DataManager = TC001DataManager(context)
 
-                // tc001UIController = TC001UIController() // TODO: Implement TC001UIController
+                tc001UIController = TC001UIController()
 
                 setupComponentIntegration()
 
@@ -155,14 +155,12 @@ class TC001IntegrationManager(
      */
     private fun setupComponentIntegration() {
         tc001Connector?.connectionState?.observeForever { state ->
-            // TODO: Update UI when TC001UIController is implemented
-            // tc001UIController?.updateDeviceConnection(state == TC001ConnectionState.CONNECTED)
+            tc001UIController?.updateDeviceConnection(state == TC001ConnectionState.CONNECTED)
         }
 
         tc001DataManager?.temperatureData?.observeForever { tempData ->
             tempData?.let {
-                // TODO: Update UI when TC001UIController is implemented
-                // tc001UIController?.updateCurrentTemperature(it.centerTemperature)
+                tc001UIController?.updateCurrentTemperature(it.centerTemperature)
             }
         }
 
@@ -176,7 +174,7 @@ class TC001IntegrationManager(
 
     fun getDataManager(): TC001DataManager? = tc001DataManager
 
-    // fun getUIController(): TC001UIController? = tc001UIController // TODO: Implement TC001UIController
+    fun getUIController(): TC001UIController? = tc001UIController
 
     /**
      * Check if system is ready for use

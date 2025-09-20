@@ -56,7 +56,7 @@ class ThermalDataProcessor {
      * Create thermal frame data from real thermal camera
      */
     fun createThermalFrameData(
-        thermalFrame: RealTopdonIntegration.ThermalFrame,
+        thermalFrame: ThermalFrame,
         frameNumber: Int,
     ): ThermalFrameData {
         val imageFilename = "thermal_real_${thermalFrame.timestamp}.png"
@@ -65,12 +65,26 @@ class ThermalDataProcessor {
             timestampNs = thermalFrame.timestamp,
             timestampMs = System.currentTimeMillis(),
             frameNumber = frameNumber,
-            centerTemperature = thermalFrame.centerTemp,
+            centerTemperature = calculateCenterTemperature(thermalFrame),
             minTemperature = thermalFrame.minTemp,
             maxTemperature = thermalFrame.maxTemp,
             averageTemperature = thermalFrame.avgTemp,
             imageFilename = imageFilename,
         )
+    }
+
+    /**
+     * Calculate center temperature from thermal frame
+     */
+    private fun calculateCenterTemperature(frame: ThermalFrame): Float {
+        val centerX = frame.width / 2
+        val centerY = frame.height / 2
+        val centerIndex = centerY * frame.width + centerX
+        return if (centerIndex < frame.temperatureMatrix.size) {
+            frame.temperatureMatrix[centerIndex]
+        } else {
+            frame.avgTemp
+        }
     }
 
     /**

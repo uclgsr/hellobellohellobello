@@ -579,11 +579,11 @@ class MainActivity : AppCompatActivity() {
             vm.uiState.collect { state ->
                 statusText?.text = state.statusText
 
-                if (state.isRecording && state.recordingDurationSeconds > 0) {
-                    recordingTimer?.visibility = View.VISIBLE
-                    recordingTimer?.text = formatRecordingTime(state.recordingDurationSeconds)
+                if (state.isRecording && state.recordingElapsedTime != "00:00") {
+                    recordingTimeText?.visibility = View.VISIBLE
+                    recordingTimeText?.text = state.recordingElapsedTime
                 } else {
-                    recordingTimer?.visibility = View.GONE
+                    recordingTimeText?.visibility = View.GONE
                 }
 
                 btnStartRecording?.isEnabled = state.startButtonEnabled
@@ -591,10 +591,22 @@ class MainActivity : AppCompatActivity() {
 
                 btnStartRecording?.text = if (state.isRecording) "Recording..." else "Start Recording"
 
-                rgbSensorStatus?.updateStatus("RGB Camera", state.cameraStatus.toSensorStatusIndicator())
-                thermalSensorStatus?.updateStatus("Thermal", state.thermalStatus.toSensorStatusIndicator())
-                gsrSensorStatus?.updateStatus("GSR", state.shimmerStatus.toSensorStatusIndicator())
-                pcSensorStatus?.updateStatus("PC Link", state.pcStatus.toSensorStatusIndicator())
+                rgbSensorStatus?.updateStatus("RGB Camera", SensorStatusIndicator.SensorStatus(
+                    isActive = state.isCameraConnected,
+                    isHealthy = state.isCameraConnected
+                ))
+                thermalSensorStatus?.updateStatus("Thermal", SensorStatusIndicator.SensorStatus(
+                    isActive = state.isThermalConnected,
+                    isHealthy = state.isThermalConnected
+                ))
+                gsrSensorStatus?.updateStatus("GSR", SensorStatusIndicator.SensorStatus(
+                    isActive = state.isShimmerConnected,
+                    isHealthy = state.isShimmerConnected
+                ))
+                pcSensorStatus?.updateStatus("PC Link", SensorStatusIndicator.SensorStatus(
+                    isActive = state.isPcConnected,
+                    isHealthy = state.isPcConnected
+                ))
 
                 if (state.showErrorDialog && !state.errorMessage.isNullOrEmpty()) {
                     showErrorDialog(state.errorMessage)

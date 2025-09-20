@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.yourcompany.sensorspoke.R
 import com.yourcompany.sensorspoke.sensors.thermal.TC001ConnectType
+import com.yourcompany.sensorspoke.sensors.thermal.TC001UIController
 import com.yourcompany.sensorspoke.ui.MainActivity
 import com.yourcompany.sensorspoke.ui.popup.DelPopup
 import kotlinx.coroutines.CoroutineScope
@@ -41,7 +42,7 @@ class EnhancedMainFragment :
         private const val TAG = "EnhancedMainFragment"
     }
 
-    // private lateinit var uiController: TC001UIController // TODO: Implement TC001UIController
+    private lateinit var uiController: TC001UIController
     private lateinit var adapter: DeviceAdapter
 
     private lateinit var clHasDevice: View
@@ -72,7 +73,7 @@ class EnhancedMainFragment :
         tvConnectDevice = view.findViewById(R.id.tv_connect_device)
         ivAdd = view.findViewById(R.id.iv_add)
 
-        // uiController = ViewModelProvider(this)[TC001UIController::class.java] // TODO: Implement TC001UIController
+        uiController = ViewModelProvider(this)[TC001UIController::class.java]
 
         adapter = DeviceAdapter()
         adapter.hasConnectLine = false

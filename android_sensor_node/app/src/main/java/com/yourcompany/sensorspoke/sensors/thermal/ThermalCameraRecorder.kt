@@ -325,13 +325,14 @@ class ThermalCameraRecorder(
     private fun createThermalBitmap(frame: ThermalFrame): Bitmap {
         val bitmap = Bitmap.createBitmap(frame.width, frame.height, Bitmap.Config.ARGB_8888)
         
-        val tempRange = frame.maxTemperature - frame.minTemperature
+        val tempRange = frame.maxTemp - frame.minTemp
         
         for (y in 0 until frame.height) {
             for (x in 0 until frame.width) {
-                val temp = frame.temperatureMatrix[y][x]
+                val index = y * frame.width + x
+                val temp = frame.temperatureMatrix[index]
                 val normalizedTemp = if (tempRange > 0) {
-                    (temp - frame.minTemperature) / tempRange
+                    (temp - frame.minTemp) / tempRange
                 } else {
                     0.5f
                 }
@@ -564,26 +565,37 @@ class ThermalCameraRecorder(
     /**
      * Process real thermal frame from hardware
      */
-    private suspend fun processRealThermalFrame(thermalFrame: RealTopdonIntegration.ThermalFrame) {
+    private suspend fun processRealThermalFrame(thermalFrame: ThermalFrame) {
         frameCount++
         val timestampNs = thermalFrame.timestamp
         val timestampMs = System.currentTimeMillis()
         
         try {
             val imageFileName = "thermal_${timestampNs}.png"
-            thermalFrame.thermalBitmap?.let { bitmap ->
-                val imageFile = File(thermalImagesDir, imageFileName)
-                FileOutputStream(imageFile).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                }
+            
+            // Create thermal bitmap from frame data
+            val thermalBitmap = createThermalBitmap(thermalFrame)
+            val imageFile = File(thermalImagesDir, imageFileName)
+            FileOutputStream(imageFile).use { out ->
+                thermalBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            
+            // Calculate center temperature
+            val centerX = thermalFrame.width / 2
+            val centerY = thermalFrame.height / 2
+            val centerIndex = centerY * thermalFrame.width + centerX
+            val centerTemp = if (centerIndex < thermalFrame.temperatureMatrix.size) {
+                thermalFrame.temperatureMatrix[centerIndex]
+            } else {
+                thermalFrame.avgTemp
             }
             
             csvWriter?.apply {
-                write("$timestampNs,$timestampMs,$frameCount,${thermalFrame.centerTemp},${thermalFrame.minTemp},${thermalFrame.maxTemp},${thermalFrame.avgTemp},$imageFileName,192,256,REAL\n")
+                write("$timestampNs,$timestampMs,$frameCount,$centerTemp,${thermalFrame.minTemp},${thermalFrame.maxTemp},${thermalFrame.avgTemp},$imageFileName,192,256,REAL\n")
                 flush()
             }
             
-            Log.d(TAG, "Processed real thermal frame $frameCount: center=${String.format("%.2f", thermalFrame.centerTemp)}°C, range=${String.format("%.2f", thermalFrame.minTemp)}-${String.format("%.2f", thermalFrame.maxTemp)}°C")
+            Log.d(TAG, "Processed real thermal frame $frameCount: center=${String.format("%.2f", centerTemp)}°C, range=${String.format("%.2f", thermalFrame.minTemp)}-${String.format("%.2f", thermalFrame.maxTemp)}°C")
             
         } catch (e: Exception) {
             Log.e(TAG, "Error processing real thermal frame: ${e.message}", e)
