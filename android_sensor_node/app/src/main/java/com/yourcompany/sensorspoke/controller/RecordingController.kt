@@ -5,7 +5,6 @@ import android.os.Build
 import android.util.Log
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
 import com.yourcompany.sensorspoke.sensors.thermal.ConnectionStatus
-import com.yourcompany.sensorspoke.sensors.thermal.RecordingStatus
 import com.yourcompany.sensorspoke.utils.SessionDataValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +23,22 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+
+/**
+ * Sensor type enumeration to replace fragile string literals
+ */
+enum class SensorType(val displayName: String) {
+    RGB("rgb"),
+    THERMAL("thermal"), 
+    GSR("gsr"),
+    AUDIO("audio");
+    
+    companion object {
+        fun fromString(name: String): SensorType? {
+            return values().find { it.displayName.equals(name, ignoreCase = true) }
+        }
+    }
+}
 
 /**
  * Enhanced RecordingController with crash recovery, health monitoring, and improved coordination.
@@ -58,14 +73,35 @@ class RecordingController(
     }
 
     data class RecorderEntry(
-        val name: String,
+        val sensorType: SensorType,
+        val name: String, // Keep for backwards compatibility but derive from sensorType
         val recorder: SensorRecorder,
         var state: RecorderState = RecorderState.IDLE,
         var isRequired: Boolean = false,
         var lastError: String? = null,
         var recoveryAttempts: Int = 0,
         var lastHealthCheck: Long = 0L,
-    )
+    ) {
+        // Convenience constructor that takes string and converts to SensorType
+        constructor(
+            name: String,
+            recorder: SensorRecorder,
+            state: RecorderState = RecorderState.IDLE,
+            isRequired: Boolean = false,
+            lastError: String? = null,
+            recoveryAttempts: Int = 0,
+            lastHealthCheck: Long = 0L,
+        ) : this(
+            sensorType = SensorType.fromString(name) ?: throw IllegalArgumentException("Unknown sensor type: $name"),
+            name = name,
+            recorder = recorder,
+            state = state,
+            isRequired = isRequired,
+            lastError = lastError,
+            recoveryAttempts = recoveryAttempts,
+            lastHealthCheck = lastHealthCheck
+        )
+    }
 
     /**
      * States that individual sensor recorders can be in
@@ -435,7 +471,7 @@ class RecordingController(
                     val recordingStatus = recorder.recordingStatus.value
                     val cameraStatus = recorder.cameraStatus.value
                     
-                    if (recordingStatus != RecordingStatus.RECORDING || cameraStatus == null) {
+                    if (recordingStatus != com.yourcompany.sensorspoke.sensors.rgb.RgbCameraRecorder.RecordingStatus.RECORDING || cameraStatus == null) {
                         throw IllegalStateException("RGB camera not in recording state or camera disconnected")
                     }
                     
@@ -453,7 +489,7 @@ class RecordingController(
                     val recordingStatus = recorder.recordingStatus.value
                     
                     if (connectionStatus !in listOf(ConnectionStatus.CONNECTED, ConnectionStatus.STREAMING) || 
-                        recordingStatus != RecordingStatus.RECORDING) {
+                        recordingStatus != com.yourcompany.sensorspoke.sensors.thermal.ThermalCameraRecorder.RecordingStatus.RECORDING) {
                         throw IllegalStateException("Thermal camera not connected or not recording: connection=$connectionStatus, recording=$recordingStatus")
                     }
                     
@@ -464,7 +500,7 @@ class RecordingController(
                     // Check GSR sensor health by verifying recording status  
                     val recordingStatus = recorder.recordingStatus.value
                     
-                    if (recordingStatus != RecordingStatus.RECORDING) {
+                    if (recordingStatus != com.yourcompany.sensorspoke.sensors.gsr.ShimmerRecorder.RecordingStatus.RECORDING) {
                         throw IllegalStateException("GSR sensor not in recording state: $recordingStatus")
                     }
                     
@@ -492,7 +528,7 @@ class RecordingController(
                 }
                 
                 else -> {
-                    Log.d(TAG, "Health check for ${entry.name}: No specific checks implemented for ${recorder::class.simpleName}")
+                    Log.d(TAG, "Health check for ${entry.sensorType.displayName}: No specific checks implemented for ${recorder::class.simpleName}")
                 }
             }
             
@@ -500,7 +536,7 @@ class RecordingController(
             entry.lastHealthCheck = currentTime
             
         } catch (e: Exception) {
-            Log.e(TAG, "Health check failed for ${entry.name}: ${e.message}")
+            Log.e(TAG, "Health check failed for ${entry.sensorType.displayName}: ${e.message}")
             entry.lastError = "Health check failed: ${e.message}"
             entry.state = RecorderState.ERROR
         }
@@ -876,25 +912,22 @@ class RecordingController(
                 recorders.forEach { entry ->
                     recordersArray.put(entry.name)
 
-                    when (entry.name.lowercase()) {
-                        "rgb" -> {
+                    when (entry.sensorType) {
+                        SensorType.RGB -> {
                             expectedFilesArray.put("${entry.name}/video.mp4")
                             expectedFilesArray.put("${entry.name}/frames/frame_*.jpg")
                             expectedFilesArray.put("${entry.name}/rgb_frames.csv")
                         }
-                        "thermal" -> {
+                        SensorType.THERMAL -> {
                             expectedFilesArray.put("${entry.name}/thermal_data.csv")
                             expectedFilesArray.put("${entry.name}/thermal_images/")
                         }
-                        "gsr" -> {
+                        SensorType.GSR -> {
                             expectedFilesArray.put("${entry.name}/gsr.csv")
                         }
-                        "audio" -> {
+                        SensorType.AUDIO -> {
                             expectedFilesArray.put("${entry.name}/audio.aac")
                             expectedFilesArray.put("${entry.name}/audio_events.csv")
-                        }
-                        else -> {
-                            expectedFilesArray.put("${entry.name}/data.csv")
                         }
                     }
                 }

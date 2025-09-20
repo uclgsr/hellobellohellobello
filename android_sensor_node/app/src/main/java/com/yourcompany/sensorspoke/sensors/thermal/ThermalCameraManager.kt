@@ -314,8 +314,8 @@ class TC001UIController : ViewModel() {
     private val _deviceStatus = MutableLiveData<TC001DeviceStatus?>(null)
     val deviceStatus: LiveData<TC001DeviceStatus?> = _deviceStatus
 
-    private val _isDeviceConnected = MutableLiveData(false)
-    val isDeviceConnected: LiveData<Boolean> = _isDeviceConnected
+    private val _deviceConnectionStatus = MutableLiveData(false)
+    val deviceConnectionStatus: LiveData<Boolean> = _deviceConnectionStatus
 
     private val _currentTemperature = MutableLiveData<Float?>(null)
     val currentTemperature: LiveData<Float?> = _currentTemperature
@@ -324,7 +324,7 @@ class TC001UIController : ViewModel() {
      * Update device connection status
      */
     fun updateDeviceConnection(connected: Boolean) {
-        _isDeviceConnected.value = connected
+        _deviceConnectionStatus.value = connected
         Log.i(TAG, "Device connection updated: $connected")
     }
 
@@ -401,9 +401,6 @@ class TC001UIController : ViewModel() {
     private val _hasConnectLine = MutableLiveData(false)
     val hasConnectLine: LiveData<Boolean> = _hasConnectLine
 
-    private val _deviceConnectionStatus = MutableLiveData(false)  
-    val deviceConnectionStatus: LiveData<Boolean> = _deviceConnectionStatus
-
     /**
      * Handle device click events
      */
@@ -425,7 +422,6 @@ class TC001UIController : ViewModel() {
      */
     fun updateConnectionStatus(connected: Boolean) {
         _deviceConnectionStatus.value = connected
-        _isDeviceConnected.value = connected
         Log.i(TAG, "Connection status updated: $connected")
     }
 }

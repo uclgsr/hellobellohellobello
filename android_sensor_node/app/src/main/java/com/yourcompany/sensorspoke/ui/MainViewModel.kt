@@ -96,6 +96,7 @@ class MainViewModel : ViewModel() {
         val showErrorDialog: Boolean = false,
 
         val thermalStatus: ThermalStatus = ThermalStatus(),
+        val sensorStatus: Map<String, SensorStatus> = emptyMap(),
 
         val startButtonEnabled: Boolean = false,
         val stopButtonEnabled: Boolean = false,
@@ -179,9 +180,21 @@ class MainViewModel : ViewModel() {
                             com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.ERROR -> "Error"
                             com.yourcompany.sensorspoke.controller.RecordingController.RecorderState.RECOVERING -> "Recovering..."
                         }
-                        SensorStatus(sensorName, isActive, isHealthy, false, System.currentTimeMillis(), statusMessage)
+                        // Determine if sensor is simulated based on recorder type and state
+                        val isSimulated = when (sensorName.lowercase()) {
+                            "thermal" -> {
+                                // Check if thermal is simulated from thermal status
+                                _uiState.value.thermalStatus.isSimulated
+                            }
+                            else -> false // Other sensors are not typically simulated in this system
+                        }
+                        
+                        SensorStatus(sensorName, isActive, isHealthy, isSimulated, System.currentTimeMillis(), statusMessage)
                     }
                     _sensorStatus.value = statusMap
+                    
+                    // Update UI state with sensor status
+                    updateUiState { copy(sensorStatus = statusMap) }
                 }
             }
 

@@ -591,24 +591,54 @@ class MainActivity : AppCompatActivity() {
 
                 btnStartRecording?.text = if (state.isRecording) "Recording..." else "Start Recording"
 
-                rgbSensorStatus?.updateStatus("RGB Camera", SensorStatusIndicator.SensorStatus(
-                    name = "RGB Camera",
-                    isActive = state.isCameraConnected,
-                    isHealthy = state.isCameraConnected,
-                    statusMessage = if (state.isCameraConnected) "Connected" else "Disconnected"
-                ))
-                thermalSensorStatus?.updateStatus("Thermal", SensorStatusIndicator.SensorStatus(
-                    name = "Thermal Camera",
-                    isActive = state.isThermalConnected,
-                    isHealthy = state.isThermalConnected,
-                    statusMessage = if (state.isThermalConnected) "Connected" else "Disconnected"
-                ))
-                gsrSensorStatus?.updateStatus("GSR", SensorStatusIndicator.SensorStatus(
-                    name = "GSR Sensor",
-                    isActive = state.isShimmerConnected,
-                    isHealthy = state.isShimmerConnected,
-                    statusMessage = if (state.isShimmerConnected) "Connected" else "Disconnected"
-                ))
+                rgbSensorStatus?.updateStatus("RGB Camera", 
+                    state.sensorStatus["rgb"]?.let { sensorStatus ->
+                        SensorStatusIndicator.SensorStatus(
+                            name = "RGB Camera",
+                            isActive = sensorStatus.isActive,
+                            isHealthy = sensorStatus.isHealthy,
+                            statusMessage = sensorStatus.statusMessage
+                        )
+                    } ?: SensorStatusIndicator.SensorStatus(
+                        name = "RGB Camera",
+                        isActive = state.isCameraConnected,
+                        isHealthy = state.isCameraConnected,
+                        statusMessage = if (state.isCameraConnected) "Connected" else "Disconnected"
+                    )
+                )
+                
+                thermalSensorStatus?.updateStatus("Thermal", 
+                    state.sensorStatus["thermal"]?.let { sensorStatus ->
+                        SensorStatusIndicator.SensorStatus(
+                            name = "Thermal Camera",
+                            isActive = sensorStatus.isActive,
+                            isHealthy = sensorStatus.isHealthy,
+                            statusMessage = sensorStatus.statusMessage
+                        )
+                    } ?: SensorStatusIndicator.SensorStatus(
+                        name = "Thermal Camera",
+                        isActive = state.isThermalConnected,
+                        isHealthy = state.isThermalConnected,
+                        statusMessage = if (state.isThermalConnected) "Connected" else "Disconnected"
+                    )
+                )
+                
+                gsrSensorStatus?.updateStatus("GSR", 
+                    state.sensorStatus["gsr"]?.let { sensorStatus ->
+                        SensorStatusIndicator.SensorStatus(
+                            name = "GSR Sensor",
+                            isActive = sensorStatus.isActive,
+                            isHealthy = sensorStatus.isHealthy,
+                            statusMessage = sensorStatus.statusMessage
+                        )
+                    } ?: SensorStatusIndicator.SensorStatus(
+                        name = "GSR Sensor",
+                        isActive = state.isShimmerConnected,
+                        isHealthy = state.isShimmerConnected,
+                        statusMessage = if (state.isShimmerConnected) "Connected" else "Disconnected"
+                    )
+                )
+                
                 pcSensorStatus?.updateStatus("PC Link", SensorStatusIndicator.SensorStatus(
                     name = "PC Link",
                     isActive = state.isPcConnected,
