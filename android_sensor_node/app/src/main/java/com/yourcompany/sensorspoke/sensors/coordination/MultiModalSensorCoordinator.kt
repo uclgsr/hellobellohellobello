@@ -96,12 +96,12 @@ class MultiModalSensorCoordinator(
                 shimmerRecorder = ShimmerRecorder(context)
                 Log.i(TAG, "GSR Shimmer recorder initialized")
 
-                tc001IntegrationManager = TC001IntegrationManager(context)
-                val tc001InitResult = tc001IntegrationManager!!.initializeSystem()
-                if (!tc001InitResult) {
-                    Log.w(TAG, "TC001 integration initialization failed")
-                } else {
-                    Log.i(TAG, "TC001 integration initialized successfully")
+                tc001IntegrationManager = TC001IntegrationManager(context).also {
+                    if (!it.initializeSystem()) {
+                        Log.w(TAG, "TC001 integration initialization failed")
+                    } else {
+                        Log.i(TAG, "TC001 integration initialized successfully")
+                    }
                 }
 
                 rgbRecorder =
