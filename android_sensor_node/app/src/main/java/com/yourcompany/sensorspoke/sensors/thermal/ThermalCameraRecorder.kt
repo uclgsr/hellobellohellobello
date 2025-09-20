@@ -11,6 +11,7 @@ import android.hardware.usb.UsbManager
 import android.util.Log
 import com.yourcompany.sensorspoke.network.DeviceConnectionManager
 import com.yourcompany.sensorspoke.sensors.SensorRecorder
+import com.yourcompany.sensorspoke.sensors.thermal.ConnectionStatus
 import com.yourcompany.sensorspoke.sensors.thermal.ThermalFrame
 import com.yourcompany.sensorspoke.utils.PermissionManager
 import com.yourcompany.sensorspoke.utils.TimeManager
